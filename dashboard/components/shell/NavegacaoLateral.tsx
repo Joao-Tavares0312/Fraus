@@ -3,7 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Activity, BarChart3, MessagesSquare } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  MessagesSquare,
+  PlugZap,
+  SlidersHorizontal,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -35,6 +41,16 @@ const SECOES = [
   { href: "/modelo", rotulo: "Modelo", Icone: Activity },
 ] as const;
 
+/**
+ * As telas de MEXER, separadas das de olhar por um grupo proprio: elas mudam o
+ * comportamento do sistema, e misturá-las com as tres de leitura esconderia
+ * essa diferenca no unico lugar onde ela e obvia de graca.
+ */
+const AJUSTES = [
+  { href: "/configuracoes", rotulo: "Configurações", Icone: SlidersHorizontal },
+  { href: "/integracoes", rotulo: "Integrações", Icone: PlugZap },
+] as const;
+
 function estaAtiva(href: string, caminho: string): boolean {
   return href === "/" ? caminho === "/" : caminho.startsWith(href);
 }
@@ -49,6 +65,33 @@ export function NavegacaoLateral() {
     if (valor) consulta.set(chave, valor);
   }
   const sufixo = consulta.toString() ? `?${consulta}` : "";
+
+  function itemDaSecao({
+    href,
+    rotulo,
+    Icone,
+  }: {
+    href: string;
+    rotulo: string;
+    Icone: typeof BarChart3;
+  }) {
+    const ativa = estaAtiva(href, caminho);
+    return (
+      <SidebarMenuItem key={href}>
+        <SidebarMenuButton
+          isActive={ativa}
+          tooltip={rotulo}
+          className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:font-medium"
+          render={
+            <Link href={`${href}${sufixo}`} aria-current={ativa ? "page" : undefined} />
+          }
+        >
+          <Icone aria-hidden />
+          <span>{rotulo}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -81,29 +124,14 @@ export function NavegacaoLateral() {
         <SidebarGroup>
           <SidebarGroupLabel>Seções</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {SECOES.map(({ href, rotulo, Icone }) => {
-                const ativa = estaAtiva(href, caminho);
-                return (
-                  <SidebarMenuItem key={href}>
-                    <SidebarMenuButton
-                      isActive={ativa}
-                      tooltip={rotulo}
-                      className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:font-medium"
-                      render={
-                        <Link
-                          href={`${href}${sufixo}`}
-                          aria-current={ativa ? "page" : undefined}
-                        />
-                      }
-                    >
-                      <Icone aria-hidden />
-                      <span>{rotulo}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <SidebarMenu>{SECOES.map(itemDaSecao)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Ajustes</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>{AJUSTES.map(itemDaSecao)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
