@@ -35,6 +35,15 @@ CAMINHO_MODELO_TEXTO = Path(os.environ.get("DOLOS_CAMINHO_MODELO_TEXTO", "modelo
 CAMINHO_FUSOR = Path(os.environ.get("DOLOS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
 CAMINHO_BANCO = Path(os.environ.get("DOLOS_CAMINHO_BANCO", "dolos.db"))
 
+# Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
+# (uso local, ver README) -- entao ele nao pode aceitar caminho arbitrario do
+# sistema de arquivos: tudo que entra e resolvido DENTRO desta pasta.
+RAIZ_IMPORTACAO = Path(os.environ.get("DOLOS_RAIZ_IMPORTACAO", "dados_brutos"))
+
+# Quantos motivos de rejeicao a resposta carrega. O relato existe para o
+# operador entender o que ficou de fora, nao para devolver o CSV inteiro.
+LIMITE_MOTIVOS = 20
+
 
 class PedidoImportacao(BaseModel):
     caminho: str  # unico campo aceito: veredito nunca vem do cliente
@@ -53,8 +62,27 @@ class Motor:
         return self._fusor.pontuar(montar_features(conversa, self._classificador))
 
 
-def criar_app(banco: Banco, motor) -> FastAPI:
+def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
+    """Resolve `caminho_pedido` DENTRO de `raiz`, recusando qualquer escape.
+
+    Trata os dois vetores de uma vez: `..` e caminho absoluto (que o operador
+    `/` do pathlib faz substituir a raiz inteira). A verificacao de contencao
+    e feita sobre os caminhos ja resolvidos -- `Path.resolve()` normaliza
+    ligacao simbolica, `..` e maiusculas/minusculas do Windows.
+    """
+    raiz_resolvida = raiz.resolve()
+    alvo = (raiz_resolvida / caminho_pedido).resolve()
+    if alvo != raiz_resolvida and raiz_resolvida not in alvo.parents:
+        raise HTTPException(
+            status_code=400,
+            detail=f"caminho fora da raiz de importacao ({raiz_resolvida}): {caminho_pedido}",
+        )
+    return alvo
+
+
+def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastAPI:
     app = FastAPI(title="Dolos", version="0.1.0")
+    raiz = Path(raiz_importacao) if raiz_importacao is not None else RAIZ_IMPORTACAO
 
     @app.get("/saude")
     def saude() -> dict:
@@ -62,21 +90,45 @@ def criar_app(banco: Banco, motor) -> FastAPI:
 
     @app.post("/conversas/importar")
     def importar(pedido: PedidoImportacao) -> dict:
-        caminho = Path(pedido.caminho)
+        caminho = resolver_dentro_da_raiz(raiz, pedido.caminho)
         if not caminho.is_file():
             raise HTTPException(status_code=400, detail=f"arquivo nao encontrado: {caminho}")
 
-        resultado = carregar_csv(caminho)
+        try:
+            resultado = carregar_csv(caminho)
+        except KeyError as erro:
+            # Coluna estrutural ausente. O driver deixa o KeyError propagar de
+            # proposito (erro de esquema nao e dado sujo de uma linha), mas a
+            # borda HTTP nao pode devolver 500 cru: o operador precisa saber
+            # QUAL coluna falta para consertar o arquivo.
+            raise HTTPException(
+                status_code=400,
+                detail=f"coluna ausente no CSV: {erro.args[0]}",
+            ) from erro
+
         for conversa in resultado.conversas:
             score = motor.pontuar_conversa(conversa)
             categoria = categoria_nps(score) if score is not None else None
             banco.salvar(conversa, score, categoria)
 
-        return {"importadas": len(resultado.conversas), "rejeitadas": len(resultado.rejeitadas)}
+        # "Motivo registrado" (spec 9) tem que CHEGAR a alguem: a contagem
+        # sozinha nao diz o que ficou de fora.
+        return {
+            "importadas": len(resultado.conversas),
+            "rejeitadas": len(resultado.rejeitadas),
+            "motivos": [
+                linha.model_dump() for linha in resultado.rejeitadas[:LIMITE_MOTIVOS]
+            ],
+        }
 
     @app.get("/conversas")
     def listar() -> list[dict]:
-        return banco.listar()
+        # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
+        # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
+        return [
+            {**linha, "nota": nota_0_10(linha["score"]) if linha["score"] is not None else None}
+            for linha in banco.listar()
+        ]
 
     @app.get("/conversas/{conversa_id}")
     def detalhar(conversa_id: str) -> dict:
