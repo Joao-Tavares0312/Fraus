@@ -56,7 +56,7 @@ export default async function PaginaDoAtendimento(
     <QuadroRelatorio
       titulo={`Atendimento ${conversa.id}`}
       subtitulo="Nota, categoria e a transcrição inteira, com o tempo de espera anotado em cada resposta e os trechos que puxaram a nota marcados."
-      nomeCsv={`dolos-atendimento-${conversa.id}`}
+      nomeCsv={`fraus-atendimento-${conversa.id}`}
     >
       <main className="mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-6 px-6 py-6">
         <p className="sem-impressao">

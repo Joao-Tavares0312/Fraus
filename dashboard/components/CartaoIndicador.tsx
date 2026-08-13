@@ -31,7 +31,7 @@ export type Medidor = {
  *
  * 1. `natureza` marca a PROVENIENCIA do numero. "estimado" ganha o sublinhado
  *    pontilhado e a palavra "estimativa"; "observado" nao ganha nada. O NPS do
- *    Dolos e inferido do texto, nunca perguntado ao cliente, e a interface
+ *    Fraus e inferido do texto, nunca perguntado ao cliente, e a interface
  *    nao pode deixar isso implicito.
  * 2. `erro` e por celula. Se um indicador falha, so esta celula mostra falha --
  *    as outras continuam renderizando (regra de produto 5).

@@ -1,6 +1,6 @@
-# Treinamento dos modelos do Dolos
+# Treinamento dos modelos do Fraus
 
-O Dolos tem DOIS artefatos treinados, produzidos por dois notebooks que rodam **nesta ordem**:
+O Fraus tem DOIS artefatos treinados, produzidos por dois notebooks que rodam **nesta ordem**:
 
 | # | Notebook | O que produz | Precisa de GPU? |
 |---|---|---|---|
@@ -9,7 +9,7 @@ O Dolos tem DOIS artefatos treinados, produzidos por dois notebooks que rodam **
 
 O notebook 02 **depende do artefato do 01**: ele carrega o BERTimbau treinado para extrair o sinal de texto de cada conversa. A primeira celula do 02 falha com erro explicito se `modelos/bertimbau-satisfacao` nao estiver no Drive.
 
-**Os dois artefatos sao obrigatorios para o app real subir.** `dolos/api/main.py` carrega o classificador e o fusor no boot e propaga o erro sem fallback — servir predicao sem modelo carregado e pior do que estar fora do ar. Com so um dos dois, o unico servidor que sobe e `scripts/api_demo.py`, que usa motor duble e nao serve para producao.
+**Os dois artefatos sao obrigatorios para o app real subir.** `fraus/api/main.py` carrega o classificador e o fusor no boot e propaga o erro sem fallback — servir predicao sem modelo carregado e pior do que estar fora do ar. Com so um dos dois, o unico servidor que sobe e `scripts/api_demo.py`, que usa motor duble e nao serve para producao.
 
 O treino roda inteiramente no Google Colab, fora deste repositorio — nao ha teste automatizado local para essas etapas.
 
@@ -32,12 +32,12 @@ A primeira celula do notebook faz `assert torch.cuda.is_available()` e falha com
 
 O notebook monta o Google Drive (`drive.mount('/content/drive')`) e usa dois diretorios dentro dele, para sobreviver a uma queda de sessao do Colab — o mesmo padrao ja usado no notebook de RVC do projeto Neuro-ai:
 
-- `/content/drive/MyDrive/dolos/checkpoints` — checkpoints intermediarios salvos pelo `Trainer` a cada epoca (`save_strategy="epoch"`, `save_total_limit=2`). Se a sessao cair, o proximo `Trainer.train()` pode retomar a partir do ultimo checkpoint salvo aqui.
-- `/content/drive/MyDrive/dolos/modelos/bertimbau-satisfacao` — destino final do modelo treinado, do tokenizador e do `metricas.json`, escritos na ultima celula do notebook.
+- `/content/drive/MyDrive/fraus/checkpoints` — checkpoints intermediarios salvos pelo `Trainer` a cada epoca (`save_strategy="epoch"`, `save_total_limit=2`). Se a sessao cair, o proximo `Trainer.train()` pode retomar a partir do ultimo checkpoint salvo aqui.
+- `/content/drive/MyDrive/fraus/modelos/bertimbau-satisfacao` — destino final do modelo treinado, do tokenizador e do `metricas.json`, escritos na ultima celula do notebook.
 
 ### Para onde copiar o artefato no repo local
 
-Depois que o notebook terminar (celula de avaliacao e export), baixe a pasta `dolos/modelos/bertimbau-satisfacao` do Google Drive e copie o conteudo para:
+Depois que o notebook terminar (celula de avaliacao e export), baixe a pasta `fraus/modelos/bertimbau-satisfacao` do Google Drive e copie o conteudo para:
 
 ```
 modelos/bertimbau-satisfacao/
@@ -52,7 +52,7 @@ na raiz deste repositorio. Os arquivos esperados sao:
 - `special_tokens_map.json`
 - `metricas.json` — `{"acuracia": float, "f1_macro": float, "classes": ["insatisfeito", "neutro", "satisfeito"]}`
 
-`dolos/sinais/texto.py` carrega esse diretorio para servir o classificador — e o notebook 02 tambem, para extrair o sinal de texto das conversas de treino do fusor.
+`fraus/sinais/texto.py` carrega esse diretorio para servir o classificador — e o notebook 02 tambem, para extrair o sinal de texto das conversas de treino do fusor.
 
 **Importante:** `modelos/` esta no `.gitignore` deste repositorio. O artefato do modelo treinado (pesos, tokenizer, metricas) **nao vai para o git** — ele fica local, versionado apenas via o checkpoint no Drive.
 
@@ -73,15 +73,15 @@ O corpus e balanceado por subamostragem da classe majoritaria antes do split de 
 Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 
 1. monta o Drive e confere `modelos/bertimbau-satisfacao` (falha alto apontando o notebook 01 se faltar);
-2. clona este repositorio e instala o pacote `dolos` — a extracao de features usa o MESMO codigo da API (`dolos.fusor.montar_features`), nunca uma reimplementacao;
+2. clona este repositorio e instala o pacote `fraus` — a extracao de features usa o MESMO codigo da API (`fraus.fusor.montar_features`), nunca uma reimplementacao;
 3. carrega o B2W-Reviews01 e rotula por `recommend_to_a_friend` (ver abaixo);
-4. costura as frases em conversas sinteticas com `dolos.ingest.simulador.gerar_lote`, deterministico por semente, com latencia calibrada por rotulo;
+4. costura as frases em conversas sinteticas com `fraus.ingest.simulador.gerar_lote`, deterministico por semente, com latencia calibrada por rotulo;
 5. extrai as 16 features de cada conversa com o BERTimbau do notebook 01 carregado;
 6. treina o `Fusor` (`treinar(exemplos, rotulos)`);
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).
 
-Os dois arquivos saem em `/content/drive/MyDrive/dolos/modelos/`. Baixe para `modelos/` na raiz do repositorio local, ao lado de `bertimbau-satisfacao/`.
+Os dois arquivos saem em `/content/drive/MyDrive/fraus/modelos/`. Baixe para `modelos/` na raiz do repositorio local, ao lado de `bertimbau-satisfacao/`.
 
 ### Rotulo do fusor: `recommend_to_a_friend`
 

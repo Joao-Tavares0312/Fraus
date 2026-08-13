@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CONTRATO DE DIREÇÃO — painel principal do Dolos (modo Operate)
+ * CONTRATO DE DIREÇÃO — painel principal do Fraus (modo Operate)
  *
  * THESIS: a tela é um instrumento de leitura de um depoimento não confiável.
  *   Recusa a grade de KPIs isolados, que é o arranjo padrão da categoria e é
@@ -90,7 +90,7 @@ export default async function Pagina() {
       titulo="Satisfação nos atendimentos"
       subtitulo="O cliente escreve “ok, obrigado 🙂” e sai insatisfeito. Esta tela lê o que foi dito de verdade — texto, emoji e tempo de resposta — e estima a satisfação sem perguntar nada a ele."
       linhas={linhas}
-      nomeCsv="dolos-atendimentos"
+      nomeCsv="fraus-atendimentos"
     >
       <main className="mx-auto flex w-full max-w-[1220px] flex-1 flex-col gap-6 px-6 py-6">
         <FaixaIndicadores

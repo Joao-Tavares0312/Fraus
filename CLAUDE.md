@@ -1,4 +1,4 @@
-# Dolos — instruções do projeto
+# Fraus — instruções do projeto
 
 Ferramenta de IA que analisa atendimentos de chatbot e mede satisfação do cliente
 **sem LLM em runtime**. Trabalho acadêmico, será apresentado numa banca.
@@ -9,8 +9,8 @@ Ferramenta de IA que analisa atendimentos de chatbot e mede satisfação do clie
 
 ```
 CSV / Discord / WhatsApp
-        ↓  adapter de ingestão (dolos/ingest/)
-   Conversa  ← modelo canônico único (dolos/modelos.py)
+        ↓  adapter de ingestão (fraus/ingest/)
+   Conversa  ← modelo canônico único (fraus/modelos.py)
         ↓
   ┌─────────┴─────────┬──────────────┐
   │ texto             │ emoji        │ tempo
@@ -29,16 +29,16 @@ CSV / Discord / WhatsApp
 
 | Caminho | Responsabilidade |
 |---|---|
-| `dolos/modelos.py` | `Conversa` / `Mensagem` — modelo canônico |
-| `dolos/ingest/csv_driver.py` | CSV → conversas, isolando linha malformada |
-| `dolos/ingest/simulador.py` | conversas sintéticas determinísticas (treino do sinal de tempo) |
-| `dolos/sinais/texto.py` | BERTimbau, probabilidade **por mensagem** |
-| `dolos/sinais/emoji.py` | lexicon + posição relativa |
-| `dolos/sinais/tempo.py` | latência, escalação, abandono |
-| `dolos/fusor.py` | `NOMES_FEATURES` (16) e o `Fusor` |
-| `dolos/indicadores.py` | NPS, CSAT, containment, nota, categoria |
-| `dolos/db.py` | SQLite, sem ORM |
-| `dolos/api/main.py` | FastAPI: `criar_app` (fábrica) e `app` (lazy, PEP 562) |
+| `fraus/modelos.py` | `Conversa` / `Mensagem` — modelo canônico |
+| `fraus/ingest/csv_driver.py` | CSV → conversas, isolando linha malformada |
+| `fraus/ingest/simulador.py` | conversas sintéticas determinísticas (treino do sinal de tempo) |
+| `fraus/sinais/texto.py` | BERTimbau, probabilidade **por mensagem** |
+| `fraus/sinais/emoji.py` | lexicon + posição relativa |
+| `fraus/sinais/tempo.py` | latência, escalação, abandono |
+| `fraus/fusor.py` | `NOMES_FEATURES` (16) e o `Fusor` |
+| `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
+| `fraus/db.py` | SQLite, sem ORM |
+| `fraus/api/main.py` | FastAPI: `criar_app` (fábrica) e `app` (lazy, PEP 562) |
 | `dashboard/` | Next.js — ver `dashboard/DESIGN.md` |
 | `notebooks/` | treino no Colab (BERTimbau, depois fusor) |
 | `scripts/api_demo.py` | servidor de demonstração, motor dublê — **nunca em produção** |
@@ -49,7 +49,7 @@ CSV / Discord / WhatsApp
 uv sync --extra dev              # `uv sync` puro REMOVE o pytest (grupo dev é opt-in)
 uv run pytest -q
 uv run python scripts/api_demo.py      # API de demonstração, sem modelo
-uv run uvicorn dolos.api.main:app      # API real — exige modelos/ treinado
+uv run uvicorn fraus.api.main:app      # API real — exige modelos/ treinado
 cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há package.json na raiz
 ```
 

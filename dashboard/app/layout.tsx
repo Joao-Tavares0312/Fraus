@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dolos — satisfação em atendimentos por chatbot",
+  title: "Fraus — satisfação em atendimentos por chatbot",
   description:
     "Painel de satisfação inferida a partir do texto, dos emojis e do tempo de resposta dos atendimentos.",
 };

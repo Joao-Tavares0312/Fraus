@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/assets/dolos-logo.svg" alt="Dolos" width="140">
+  <img src="docs/assets/fraus-logo.svg" alt="Fraus" width="140">
 </p>
 
-<h1 align="center">Dolos</h1>
+<h1 align="center">Fraus</h1>
 
 <p align="center">
   <em>Análise de satisfação em atendimentos por chatbot — sem LLM em runtime.</em>
@@ -20,7 +20,9 @@ explicam cerca de **10% da variância** da satisfação declarada[^1], e há
 inconsistência sistemática entre a nota que o cliente dá e o texto que ele
 escreve[^2].
 
-Dolos, o daemon grego do ardil e do engano, lê o que foi dito de verdade.
+Fraus, a divindade romana da fraude e do engano — contraparte latina de
+Ápate/Dolos, postada por Virgílio à entrada do Inferno ao lado do Medo e da
+Discórdia (*Eneida*, VI)[^4] — lê o que foi dito de verdade.
 
 ## Como funciona
 
@@ -81,7 +83,7 @@ uv run pytest -q       # ou -v para ver caso a caso
 ### 3. API
 
 ```bash
-uv run uvicorn dolos.api.main:app --reload   # http://localhost:8000
+uv run uvicorn fraus.api.main:app --reload   # http://localhost:8000
 ```
 
 A API real **exige o modelo treinado** em `modelos/` (BERTimbau fine-tunado e
@@ -95,10 +97,10 @@ Variáveis de ambiente reconhecidas:
 
 | Variável | Padrão | O que faz |
 |---|---|---|
-| `DOLOS_CAMINHO_MODELO_TEXTO` | `modelos/bertimbau-satisfacao` | modelo de texto |
-| `DOLOS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
-| `DOLOS_CAMINHO_BANCO` | `dolos.db` | SQLite |
-| `DOLOS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
+| `FRAUS_CAMINHO_MODELO_TEXTO` | `modelos/bertimbau-satisfacao` | modelo de texto |
+| `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
+| `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
+| `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
 
 Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
 caminho relativo a ela:
@@ -138,7 +140,7 @@ mudar depois exige reiniciar o processo.
 - **A API não tem autenticação e é destinada a uso local.** Não há login, token
   nem CORS restrito: quem alcança a porta lê tudo e importa qualquer arquivo
   dentro da raiz de importação. Não exponha na internet. A raiz configurável
-  (`DOLOS_RAIZ_IMPORTACAO`) limita o estrago, não substitui autenticação.
+  (`FRAUS_RAIZ_IMPORTACAO`) limita o estrago, não substitui autenticação.
 - O NPS é **inferido do texto**, nunca perguntado ao cliente. A interface
   rotula como estimativa em todo lugar onde o número aparece.
 - Não há endpoint de série temporal nem de latência agregada: a dashboard
@@ -170,3 +172,4 @@ são predição de modelo.
 [^1]: [Conversation logs as a source of insight: predicting user satisfaction for customer service chatbots](https://link.springer.com/article/10.1007/s41233-025-00071-8) — Quality and User Experience, Springer, 2025.
 [^2]: [Refining the prediction of user satisfaction on chat-based AI applications](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11793979/).
 [^3]: [RAG vs Fine-Tuning 2026: A Decision Framework](https://winder.ai/rag-vs-fine-tuning-2026-decision-framework/).
+[^4]: Virgílio, *Eneida*, Livro VI, v. 273-281 — Fraus (Fraude/Engano) personificada no vestíbulo do Orco, ao lado de Luto, Curae, Morbi, Senectus e Metus.

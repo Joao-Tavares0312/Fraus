@@ -50,7 +50,7 @@ export function QuadroRelatorio({
 
   const imprimir = useReactToPrint({
     contentRef: area,
-    documentTitle: nomeCsv ?? "dolos-relatorio",
+    documentTitle: nomeCsv ?? "fraus-relatorio",
   });
 
   const baixarCsv = () => {
@@ -77,7 +77,7 @@ export function QuadroRelatorio({
     const url = URL.createObjectURL(blob);
     const ancora = document.createElement("a");
     ancora.href = url;
-    ancora.download = `${nomeCsv ?? "dolos-atendimentos"}.csv`;
+    ancora.download = `${nomeCsv ?? "fraus-atendimentos"}.csv`;
     ancora.click();
     URL.revokeObjectURL(url);
   };
@@ -92,7 +92,7 @@ export function QuadroRelatorio({
                 aria-hidden
                 className="inline-block h-[9px] w-[9px] rotate-45 border border-[var(--regua)]"
               />
-              DOLOS
+              FRAUS
             </p>
             <h1 className="mt-1.5 text-[1.5rem] leading-[1.2] font-semibold tracking-[-0.02em] text-[var(--tinta)]">
               {titulo}

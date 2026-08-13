@@ -1,5 +1,5 @@
 /**
- * Cliente da API do Dolos.
+ * Cliente da API do Fraus.
  *
  * Toda leitura e `no-store`: a dashboard e um instrumento de leitura de um
  * banco que muda a cada importacao, e um numero em cache seria um numero

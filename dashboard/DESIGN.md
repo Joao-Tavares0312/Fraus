@@ -1,4 +1,4 @@
-# Dolos — Design System
+# Fraus — Design System
 
 Contrato visual da interface. Qualquer pessoa (ou agente) que escreva UI neste
 projeto segue este documento. Ele não descreve como as telas estão hoje: descreve
@@ -8,8 +8,8 @@ como elas devem ser.
 
 ## 1. A metáfora, e por que ela governa a cor
 
-Dolos é o daemon grego do engano. O produto existe porque **o cliente mente**: ele
-escreve "ok, obrigado 🙂" e sai insatisfeito.
+Fraus é a divindade romana da fraude e do engano. O produto existe porque **o
+cliente mente**: ele escreve "ok, obrigado 🙂" e sai insatisfeito.
 
 Disso sai a única regra de encoding que atravessa a interface inteira:
 

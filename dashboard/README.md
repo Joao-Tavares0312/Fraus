@@ -1,4 +1,4 @@
-# Dashboard do Dolos
+# Dashboard do Fraus
 
 Interface de leitura dos atendimentos: quatro indicadores, o gráfico sobreposto
 de NPS × latência, a distribuição das notas inferidas, o vocabulário

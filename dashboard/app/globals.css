@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Dolos — sistema visual da dashboard (modo Operate)
+   Fraus — sistema visual da dashboard (modo Operate)
 
    Estratégia de cor: Restrained. Tinta quase-neutra sobre um plano de papel,
    filetes de 1px no lugar de cartões com sombra, e exatamente dois acentos de
@@ -149,7 +149,7 @@ body {
 
 /* Marca de proveniência: todo número ESTIMADO carrega este sublinhado
    pontilhado. Número observado nunca carrega. É o detalhe de marca do
-   produto — o Dolos existe porque a origem do dado importa. */
+   produto — o Fraus existe porque a origem do dado importa. */
 .estimado {
   text-decoration: underline dotted var(--tinta-3);
   text-underline-offset: 0.28em;

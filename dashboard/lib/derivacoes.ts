@@ -1,7 +1,7 @@
 /**
  * Derivacoes feitas no cliente da API a partir do que os endpoints DAO.
  *
- * A API do Dolos expoe indicadores agregados, a lista de conversas, a
+ * A API do Fraus expoe indicadores agregados, a lista de conversas, a
  * transcricao e a atribuicao por sentenca. Ela NAO expoe serie temporal,
  * latencia agregada nem lexico por classe. Tudo que este arquivo calcula sai
  * dos timestamps e do texto que a transcricao ja entrega -- nada aqui inventa
@@ -12,7 +12,7 @@
  * `GET /conversas/{id}/atribuicao`. As funcoes desta secao so dao FORMA ao
  * que o servidor mandou (classe dominante, saldo, agregacao por sinal).
  *
- * A regra de latencia e a MESMA de `dolos/sinais/tempo.py`: o intervalo de
+ * A regra de latencia e a MESMA de `fraus/sinais/tempo.py`: o intervalo de
  * cada mensagem do cliente ate a proxima resposta (bot ou humano).
  */
 
@@ -43,7 +43,7 @@ export const CSAT_SAUDAVEL = { de: 75, ate: 85 };
 
 /*
  * NAO existe aqui uma funcao `notaDeScore`. A nota 0-10 e derivada NO SERVIDOR
- * (`dolos/indicadores.py::nota_0_10`) e vem pronta em `/conversas` e em
+ * (`fraus/indicadores.py::nota_0_10`) e vem pronta em `/conversas` e em
  * `/conversas/{id}`. Recalcular no cliente ja custou uma divergencia real:
  * `round` do Python e bancario (`round(6.5) == 6`) e `Math.round` arredonda
  * meio para cima (`Math.round(6.5) == 7`), entao score 65 exibia nota 7 na
@@ -284,7 +284,7 @@ const SEGMENTADOR = new Intl.Segmenter("pt-BR", { granularity: "grapheme" });
 /**
  * Extrai emojis do texto recortando por CLUSTER DE GRAFEMA, nao por codepoint.
  *
- * E o mesmo recorte de `emoji.emoji_list` em `dolos/sinais/emoji.py`: 👍🏽
+ * E o mesmo recorte de `emoji.emoji_list` em `fraus/sinais/emoji.py`: 👍🏽
  * (com modificador de tom de pele) e 👨‍👩‍👧 (sequencia ZWJ) contam como UM
  * emoji, e nao como os 2-3 codepoints pictograficos que os compoem. Sem isso
  * a contagem de "top emojis" e a evidencia marcada divergiam do motor.
@@ -299,7 +299,7 @@ export function emojisDoTexto(texto: string): string[] {
 
 /**
  * Polaridade do emoji no Emoji Sentiment Ranking, a MESMA tabela que
- * `dolos/sinais/emoji.py` usa (exportada por `scripts/gerar_lexico_emoji.py`).
+ * `fraus/sinais/emoji.py` usa (exportada por `scripts/gerar_lexico_emoji.py`).
  *
  * Isto e exibicao de uma tabela publicada, nao atribuicao: quem diz o que
  * puxou a nota de um atendimento e `GET /conversas/{id}/atribuicao`.
