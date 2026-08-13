@@ -1959,8 +1959,18 @@ Invocar `impeccable` para calibrar hierarquia visual, tipografia e paleta antes 
 ```bash
 cd dashboard
 npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --eslint
-npm install recharts
+npm install recharts @tanstack/react-table react-to-print
 ```
+
+Next.js é React rodando em Node — atende o requisito de stack sem camada extra.
+Bibliotecas e o papel de cada uma:
+
+| Biblioteca | Onde é usada |
+|---|---|
+| **Recharts** | os três gráficos; composição de eixos Y duplos para sobrepor NPS e latência |
+| **TanStack Table** | tabela de atendimentos — ordenação, filtro e paginação sem impor visual |
+| **react-to-print** | export do relatório em PDF reaproveitando a própria tela |
+| `Blob` nativo | export CSV — não justifica dependência |
 
 - [ ] **Step 3: Criar o cliente de API em `dashboard/lib/api.ts`**
 
