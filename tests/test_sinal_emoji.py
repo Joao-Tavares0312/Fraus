@@ -25,7 +25,8 @@ def test_emoji_negativo_tem_score_negativo():
 
 
 def test_emoji_desconhecido_tem_score_zero():
-    assert score_do_emoji("\N{PEACE SYMBOL}") == 0.0 or -1 <= score_do_emoji("\N{PEACE SYMBOL}") <= 1
+    # U+1FAE0 MELTING FACE nao esta no lexicon
+    assert score_do_emoji("\U0001fae0") == 0.0
 
 
 def test_texto_sem_emoji_zera_as_features():
