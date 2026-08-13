@@ -137,10 +137,14 @@ mudar depois exige reiniciar o processo.
 
 ## Limitações conhecidas
 
-- **A API não tem autenticação e é destinada a uso local.** Não há login, token
-  nem CORS restrito: quem alcança a porta lê tudo e importa qualquer arquivo
-  dentro da raiz de importação. Não exponha na internet. A raiz configurável
+- **A API não tem autenticação e é destinada a uso local.** Não há login nem
+  token: quem alcança a porta lê tudo e importa qualquer arquivo dentro da raiz
+  de importação. Não exponha na internet. A raiz configurável
   (`FRAUS_RAIZ_IMPORTACAO`) limita o estrago, não substitui autenticação.
+  As origens liberadas para o navegador são uma **lista explícita**
+  (`FRAUS_ORIGENS`, padrão `localhost`/`127.0.0.1` nas portas 3000 e 3001) e
+  nunca `*` — sem autenticação, `*` deixaria qualquer página aberta no mesmo
+  navegador varrer as conversas.
 - O NPS é **inferido do texto**, nunca perguntado ao cliente. A interface
   rotula como estimativa em todo lugar onde o número aparece.
 - Não há endpoint de série temporal nem de latência agregada: a dashboard
@@ -150,6 +154,58 @@ mudar depois exige reiniciar o processo.
   transcrição marca só evidência **observável** (polaridade de emoji e tempo de
   espera) — e diz isso em voz alta em vez de fingir atribuição.
 - Latência **não é persistida**: é sempre derivada dos timestamps na leitura.
+
+## Pendências
+
+O que falta, em ordem de importância. Cada item diz o que existe hoje e o que
+o desbloqueia.
+
+### 1. Treinar o modelo — bloqueia tudo o que é "IA de verdade"
+
+Enquanto os artefatos não existirem, o que roda é o **motor dublê** do servidor
+de demonstração: pontuação determinística derivada do texto, sem modelo nenhum.
+A interface é honesta sobre isso — a tela **Modelo** mostra as métricas de
+treino em estado vazio em vez de inventar número — mas nada do que ela exibe é
+predição.
+
+Para destravar: rodar `notebooks/01_treino_bertimbau.ipynb` e depois
+`notebooks/02_treino_fusor.ipynb` no Colab, e colocar em `modelos/` a pasta
+`bertimbau-satisfacao/`, o `fusor.joblib` e o `metricas.json`. Aí
+`uvicorn fraus.api.main:app` sobe com o motor real.
+
+### 2. Telas de Integrações e Configurações
+
+Não existem, e não foram construídas de propósito: dependem de endpoints que a
+API ainda não tem. Precisam, no mínimo, de persistência de configuração
+(faixas de NPS, limiares de latência, quais sinais estão ativos) e de um
+cadastro de fonte de conversa. Credencial de plataforma **não** deve ir para o
+SQLite em texto puro — a decisão de onde guardar ainda está em aberto.
+
+### 3. `GET /serie-temporal` — a dívida de escala
+
+A Visão geral monta o gráfico de NPS × latência baixando **todas** as
+transcrições do recorte para ler timestamps. É um N+1 aceitável em dezenas de
+atendimentos e insustentável em milhares. Os primos `GET /conversas?de=&ate=` e
+`GET /indicadores?de=&ate=` tirariam o filtro de período do cliente.
+
+### 4. Atribuição por sentença do classificador
+
+O endpoint de atribuição existe, mas a transcrição só marca evidência
+**observável** (polaridade de emoji e tempo de espera). A contribuição do sinal
+de texto por sentença depende do modelo treinado — cai junto com a pendência 1.
+
+### 5. Definição da empresa
+
+A spec ainda não fixa a empresa fictícia do trabalho, e ela atravessa a
+apresentação inteira: define o volume plausível de atendimentos, os canais e o
+que conta como bom tempo de resposta.
+
+### 6. Decisões em aberto
+
+- **Tema claro.** A dashboard é dark-only, herdado do chassi. Projetor de banca
+  costuma lavar tema escuro, e adicionar depois é retrabalho.
+- **Merge da branch.** `feat/motor-e-dashboard` está no PR #1, ainda não
+  integrada em `main`.
 
 ## Desenvolvimento
 
