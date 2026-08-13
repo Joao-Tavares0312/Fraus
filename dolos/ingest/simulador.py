@@ -85,12 +85,13 @@ def gerar_lote(
     """Gera `quantidade` conversas com rotulos equilibrados entre as classes."""
     aleatorio = random.Random(semente)
     rotulos = sorted(frases_por_rotulo)
+    sementes = aleatorio.sample(range(10**9), quantidade)
     lote = []
     for indice in range(quantidade):
         rotulo = rotulos[indice % len(rotulos)]
         lote.append(
             (
-                gerar_conversa(rotulo, frases_por_rotulo[rotulo], semente=aleatorio.randrange(10**9)),
+                gerar_conversa(rotulo, frases_por_rotulo[rotulo], semente=sementes[indice]),
                 rotulo,
             )
         )

@@ -45,3 +45,10 @@ def test_lote_respeita_a_quantidade_e_devolve_rotulos():
     assert len(lote) == 30
     assert {rotulo for _, rotulo in lote} == {0, 1, 2}
     assert len({conversa.id for conversa, _ in lote}) == 30
+
+
+def test_lote_grande_nao_tem_ids_colidindo():
+    for semente in (1, 2, 3):
+        lote = gerar_lote(FRASES, quantidade=100_000, semente=semente)
+        ids = {conversa.id for conversa, _ in lote}
+        assert len(ids) == 100_000
