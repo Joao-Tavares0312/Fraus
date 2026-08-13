@@ -13,6 +13,14 @@
    verificado com `validate_palette.js` nos dois modos (PASS em todos os
    checks: banda de luminosidade, croma, separação CVD, piso de visão normal
    e contraste contra a superfície).
+
+   Contraste: as variaveis de TEXTO foram verificadas por calculo da razao WCAG
+   contra as tres superficies (--plano, --superficie, --superficie-2) nos dois
+   temas, e todas cruzam 4.5:1 (AA para texto normal). --tinta-3 carrega o
+   rotulo "sem sinal", que e o estado mais importante do produto: ele nao pode
+   ser o texto mais fraco da tela. As cores de STATUS continuam sendo cor de
+   marcacao (barra, ponto, borda); quando uma delas vira texto, e a variante
+   --*-texto que entra.
 --------------------------------------------------------------------------- */
 
 :root {
@@ -24,7 +32,7 @@
 
   --tinta: #0b0b0b;
   --tinta-2: #52514e;
-  --tinta-3: #898781;        /* eixos, rótulos, texto auxiliar */
+  --tinta-3: #6e6c62;        /* eixos, rótulos, texto auxiliar — AA 5.13:1 */
 
   --filete: #e1e0d9;         /* grade e divisórias hairline */
   --regua: #c3c2b7;          /* linha de base / eixo */
@@ -35,7 +43,10 @@
   --detrator: #d03b3b;
   --neutro: #fab219;
   --promotor: #0ca30c;
-  --sem-sinal: #898781;
+  --sem-sinal: #6e6c62;
+
+  /* Variante de TEXTO do status: a de marcação não cruza AA como tipografia. */
+  --detrator-texto: #c22e2e;  /* AA 5.49:1 */
 
   --faixa-saudavel: rgba(12, 163, 12, 0.1);
   --foco: #2a78d6;
@@ -51,7 +62,7 @@
 
     --tinta: #ffffff;
     --tinta-2: #c3c2b7;
-    --tinta-3: #898781;
+    --tinta-3: #9b998f;  /* AA 6.09:1 */
 
     --filete: #2c2c2a;
     --regua: #383835;
@@ -62,7 +73,9 @@
     --detrator: #d03b3b;
     --neutro: #fab219;
     --promotor: #0ca30c;
-    --sem-sinal: #898781;
+    --sem-sinal: #9b998f;
+
+    --detrator-texto: #e97a7a;  /* AA 6.24:1 */
 
     --faixa-saudavel: rgba(12, 163, 12, 0.14);
     --foco: #3987e5;
@@ -78,13 +91,16 @@
 
   --tinta: #ffffff;
   --tinta-2: #c3c2b7;
-  --tinta-3: #898781;
+  --tinta-3: #9b998f;  /* AA 6.09:1 */
 
   --filete: #2c2c2a;
   --regua: #383835;
 
   --serie-nps: #3987e5;
   --serie-latencia: #d95926;
+
+  --sem-sinal: #9b998f;
+  --detrator-texto: #e97a7a;  /* AA 6.24:1 */
 
   --faixa-saudavel: rgba(12, 163, 12, 0.14);
   --foco: #3987e5;
@@ -105,6 +121,7 @@
   --color-neutro: var(--neutro);
   --color-promotor: var(--promotor);
   --color-sem-sinal: var(--sem-sinal);
+  --color-detrator-texto: var(--detrator-texto);
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -156,7 +173,8 @@ body {
     --superficie-2: #ffffff;
     --tinta: #000000;
     --tinta-2: #333333;
-    --tinta-3: #555555;
+    --tinta-3: #555555;   /* 7.46:1 sobre papel branco */
+    --detrator-texto: #a51f1f;
     --filete: #cccccc;
     --regua: #999999;
   }

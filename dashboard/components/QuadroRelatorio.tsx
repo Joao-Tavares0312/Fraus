@@ -15,6 +15,24 @@ import { ROTULO_CATEGORIA, ROTULO_SEM_SINAL } from "@/lib/formato";
  * O CSV escreve "sem sinal" na coluna de nota; escrever 0 ali seria propagar
  * para a planilha exatamente a mentira que o produto combate.
  */
+
+/** Caracteres que fazem o Excel/Sheets tratar a celula como FORMULA. */
+const GATILHOS_DE_FORMULA = ["=", "+", "-", "@"];
+
+/**
+ * Escapa um campo para CSV.
+ *
+ * Alem das aspas, neutraliza injecao de formula: `id` e `canal` vem do CSV
+ * ingerido, entao um campo como `=HYPERLINK(...)` viraria formula executavel
+ * ao abrir a planilha. A aspa simples a frente faz a planilha tratar tudo
+ * como texto, e some da exibicao.
+ */
+function escaparCampo(campo: string): string {
+  const seguro = GATILHOS_DE_FORMULA.some((gatilho) => campo.startsWith(gatilho))
+    ? `'${campo}`
+    : campo;
+  return `"${seguro.replaceAll('"', '""')}"`;
+}
 export function QuadroRelatorio({
   titulo,
   subtitulo,
@@ -48,7 +66,7 @@ export function QuadroRelatorio({
 
     const texto = [cabecalho, ...corpo]
       .map((campos) =>
-        campos.map((campo) => `"${campo.replaceAll('"', '""')}"`).join(","),
+        campos.map(escaparCampo).join(","),
       )
       .join("\r\n");
 

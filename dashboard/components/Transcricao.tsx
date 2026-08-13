@@ -2,16 +2,19 @@ import type { DetalheConversa } from "@/lib/api";
 import {
   evidenciasDaConversa,
   latenciasAnotadas,
+  ROTULO_LATENCIA,
   severidadeLatencia,
   type Evidencia,
+  type SeveridadeLatencia,
 } from "@/lib/derivacoes";
 import { formatarHora, formatarSegundos, ROTULO_AUTOR } from "@/lib/formato";
 
-const COR_SEVERIDADE = {
-  boa: "var(--tinta-3)",
-  atencao: "var(--neutro)",
-  critica: "var(--detrator)",
-} as const;
+const COR_SEVERIDADE: Record<SeveridadeLatencia, string> = {
+  pico: "var(--promotor)",
+  saudavel: "var(--tinta-3)",
+  degradando: "var(--neutro)",
+  abandono: "var(--detrator)",
+};
 
 /**
  * Transcricao com as tres coisas que transformam "nota ruim" em "oportunidade
@@ -88,6 +91,7 @@ export function Transcricao({ conversa }: { conversa: DetalheConversa }) {
                     style={{
                       background: COR_SEVERIDADE[severidadeLatencia(latencia)],
                     }}
+                    title={ROTULO_LATENCIA[severidadeLatencia(latencia)].detalhe}
                   />
                   <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--tinta-2)]">
                     {formatarSegundos(latencia)}
