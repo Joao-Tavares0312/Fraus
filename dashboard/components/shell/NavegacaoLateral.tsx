@@ -1,0 +1,116 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Activity, BarChart3, MessagesSquare } from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
+import { EstadoSaude } from "./EstadoSaude";
+
+/**
+ * Navegacao do aplicativo.
+ *
+ * Cada item CARREGA o periodo atual na propria URL. Sem isso o filtro global
+ * nao seria global: bastaria trocar de secao para o recorte sumir, e as tres
+ * telas passariam a falar de conjuntos diferentes sem avisar ninguem.
+ *
+ * A secao ativa nao e indicada so por cor (o lime da marca): o item ativo
+ * tambem carrega `aria-current="page"` e uma barra de 2px a esquerda -- cor
+ * nunca e o unico canal.
+ */
+const SECOES = [
+  { href: "/", rotulo: "Visão geral", Icone: BarChart3 },
+  { href: "/atendimentos", rotulo: "Atendimentos", Icone: MessagesSquare },
+  { href: "/modelo", rotulo: "Modelo", Icone: Activity },
+] as const;
+
+function estaAtiva(href: string, caminho: string): boolean {
+  return href === "/" ? caminho === "/" : caminho.startsWith(href);
+}
+
+export function NavegacaoLateral() {
+  const caminho = usePathname();
+  const parametros = useSearchParams();
+
+  const consulta = new URLSearchParams();
+  for (const chave of ["de", "ate"] as const) {
+    const valor = parametros.get(chave);
+    if (valor) consulta.set(chave, valor);
+  }
+  const sufixo = consulta.toString() ? `?${consulta}` : "";
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <Link
+          href={`/${sufixo}`}
+          aria-label="Fraus — voltar para a visão geral"
+          className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Image
+            src="/fraus-logo.svg"
+            alt=""
+            width={28}
+            height={28}
+            className="size-7 shrink-0 rounded-md"
+            priority
+          />
+          <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
+            <span className="truncate text-sm font-semibold tracking-tight">
+              Fraus
+            </span>
+            <span className="truncate text-xs text-muted-foreground">
+              satisfação inferida
+            </span>
+          </span>
+        </Link>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Seções</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {SECOES.map(({ href, rotulo, Icone }) => {
+                const ativa = estaAtiva(href, caminho);
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton
+                      isActive={ativa}
+                      tooltip={rotulo}
+                      className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:font-medium"
+                      render={
+                        <Link
+                          href={`${href}${sufixo}`}
+                          aria-current={ativa ? "page" : undefined}
+                        />
+                      }
+                    >
+                      <Icone aria-hidden />
+                      <span>{rotulo}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border">
+        <EstadoSaude />
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
