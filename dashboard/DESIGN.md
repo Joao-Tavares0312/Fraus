@@ -211,8 +211,10 @@ for derivado, o gráfico, e a alternância para tabela. Altura fixa por breakpoi
 gráfico que muda de altura ao trocar de dado causa salto de layout.
 
 **App shell.** Sidebar (primitivo `sidebar` do chassi) com o logo, as três
-seções — Visão geral, Atendimentos, Modelo — e o estado de saúde da API sempre
-visível no rodapé. A seção ativa se marca por `aria-current="page"` **e** por
+seções de leitura — Visão geral, Atendimentos, Modelo —, o grupo **Ajustes**
+com as duas telas que mexem no sistema — Configurações e Integrações — e o
+estado de saúde da API sempre visível no rodapé. Os dois grupos são separados
+de propósito: olhar e mexer não são a mesma postura. A seção ativa se marca por `aria-current="page"` **e** por
 uma barra de 2px em `--primary`: item ativo é o único lugar onde o lime toca a
 navegação, e cor nunca é o único canal.
 
@@ -223,6 +225,34 @@ nunca divergem. Todo link da navegação carrega o recorte adiante. Os atalhos s
 ancoram no **último dia com dado**, não em `hoje`, e mostram o intervalo real que
 aplicam; ancorar em hoje devolveria recorte vazio sem explicar por quê. Uma
 seção que o filtro não afeta — a de Modelo — não exibe o filtro.
+
+**Tela de configuração.** Um painel por grupo de valores, e três regras:
+
+1. **A validação mora no servidor.** O `400` da API nomeia o problema ("buraco
+   entre detrator e neutro: nenhuma faixa cobre a nota 6") e é essa frase que
+   aparece na tela — nunca "erro ao salvar". Reimplementar a regra no
+   TypeScript criaria a segunda fonte da mesma verdade que este projeto já
+   pagou uma vez para não ter.
+2. **A consequência vem antes do botão.** Mexer nas faixas reclassifica
+   atendimento já pontuado (a categoria é derivada na leitura; o `score` não é
+   recalculado). Quem aperta salvar lê isso antes de apertar.
+3. **Voltar ao padrão usa os valores de fábrica que o `GET` devolve**, nunca
+   números digitados de novo na interface.
+
+O controle só existe se a API persistir o valor **e** ele mudar comportamento.
+Não há interruptor por sinal (texto/emoji/tempo): os três estão fundidos nos
+coeficientes de um modelo treinado, e um controle que não faz o que diz é pior
+que a ausência dele. A tela declara essa ausência em vez de escondê-la.
+
+**Segredo, nunca.** Onde a interface fala de credencial, o campo é o **nome de
+uma variável de ambiente** — não existe campo de senha em tela nenhuma, e o
+rótulo diz isso, porque alguém vai tentar colar um token ali. `configurada:
+false` significa "a variável não existe no ambiente da API", não "a credencial
+está errada".
+
+**Ação destrutiva.** A confirmação diz o que a ação NÃO faz, quando isso for a
+dúvida real: remover uma fonte apaga o cadastro da origem e nenhum atendimento.
+Confirmação inline no lugar de modal — a tela é de trabalho, não de interrupção.
 
 **Contribuição × importância.** As duas nunca aparecem com a mesma forma. Peso
 global (`importancias`) é barra que cresce da esquerda, colorida por tipo de

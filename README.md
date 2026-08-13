@@ -154,6 +154,13 @@ mudar depois exige reiniciar o processo.
   transcrição marca só evidência **observável** (polaridade de emoji e tempo de
   espera) — e diz isso em voz alta em vez de fingir atribuição.
 - Latência **não é persistida**: é sempre derivada dos timestamps na leitura.
+- Os cortes de latência da interface (10 s / 60 s / 180 s por padrão) são de
+  **exibição** e saem de `GET /configuracoes`: eles movem onde a leitura chama
+  a espera de imediata, saudável, longa ou crítica, e não mexem em nenhuma
+  feature do modelo.
+- A tela **Configurações** não reimplementa a validação: quando a faixa de NPS
+  não cobre 0–10 de forma contígua, quem escreve a mensagem é a API, que nomeia
+  a nota descoberta.
 
 ## Pendências
 
@@ -173,45 +180,26 @@ Para destravar: rodar `notebooks/01_treino_bertimbau.ipynb` e depois
 `bertimbau-satisfacao/`, o `fusor.joblib` e o `metricas.json`. Aí
 `uvicorn fraus.api.main:app` sobe com o motor real.
 
-### 2. Telas de Integrações e Configurações
-
-Os **endpoints existem** — `GET`/`PUT /configuracoes`, `GET`/`POST`/`PATCH`/
-`DELETE /integracoes/fontes` e `GET /integracoes/importacoes`. Falta a
-interface em `dashboard/`.
-
-Duas decisões que a tela precisa respeitar:
-
-- **Não há interruptor por sinal** (texto/emoji/tempo). Os três estão fundidos
-  nos coeficientes de um modelo já treinado: desligar um exigiria retreinar o
-  fusor. Um controle que não faz o que diz é pior que a ausência dele.
-- **Segredo de plataforma não entra no SQLite.** A fonte guarda o **nome da
-  variável de ambiente** que carrega a credencial; a API responde apenas
-  `configurada: true/false`, nunca o valor — nem mascarado.
-
-Mudar a faixa de NPS muda a categoria de atendimento **já pontuado**: a
-categoria é derivada na leitura, a partir do `score` gravado (esse nunca é
-recalculado) e da faixa vigente.
-
-### 3. `GET /serie-temporal` — a dívida de escala
+### 2. `GET /serie-temporal` — a dívida de escala
 
 A Visão geral monta o gráfico de NPS × latência baixando **todas** as
 transcrições do recorte para ler timestamps. É um N+1 aceitável em dezenas de
 atendimentos e insustentável em milhares. Os primos `GET /conversas?de=&ate=` e
 `GET /indicadores?de=&ate=` tirariam o filtro de período do cliente.
 
-### 4. Atribuição por sentença do classificador
+### 3. Atribuição por sentença do classificador
 
 O endpoint de atribuição existe, mas a transcrição só marca evidência
 **observável** (polaridade de emoji e tempo de espera). A contribuição do sinal
 de texto por sentença depende do modelo treinado — cai junto com a pendência 1.
 
-### 5. Definição da empresa
+### 4. Definição da empresa
 
 A spec ainda não fixa a empresa fictícia do trabalho, e ela atravessa a
 apresentação inteira: define o volume plausível de atendimentos, os canais e o
 que conta como bom tempo de resposta.
 
-### 6. Decisões em aberto
+### 5. Decisões em aberto
 
 - **Tema claro.** A dashboard é dark-only, herdado do chassi. Projetor de banca
   costuma lavar tema escuro, e adicionar depois é retrabalho.
