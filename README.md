@@ -59,17 +59,95 @@ vence RAG em acurácia e latência[^3].
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
 - [Treinamento](docs/treinamento.md) — notebook Colab e artefato do modelo
 
+## Como rodar
+
+Requisitos: Python 3.11+ com [`uv`](https://docs.astral.sh/uv/), Node 20+ e npm.
+
+### 1. Dependências do Python
+
+```bash
+uv sync --extra dev
+```
+
+> Use `--extra dev`. O `uv sync` puro **remove o pytest**: o grupo `dev` é
+> opt-in, e sem ele a suíte não roda.
+
+### 2. Testes
+
+```bash
+uv run pytest -q       # ou -v para ver caso a caso
+```
+
+### 3. API
+
+```bash
+uv run uvicorn dolos.api.main:app --reload   # http://localhost:8000
+```
+
+A API real **exige o modelo treinado** em `modelos/` (BERTimbau fine-tunado e
+`fusor.joblib`) e **falha alto no boot** se ele não existir — por design:
+servir predição sem modelo carregado é pior do que estar fora do ar. Veja
+[docs/treinamento.md](docs/treinamento.md) para gerar o artefato.
+
+Variáveis de ambiente reconhecidas:
+
+| Variável | Padrão | O que faz |
+|---|---|---|
+| `DOLOS_CAMINHO_MODELO_TEXTO` | `modelos/bertimbau-satisfacao` | modelo de texto |
+| `DOLOS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
+| `DOLOS_CAMINHO_BANCO` | `dolos.db` | SQLite |
+| `DOLOS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
+
+Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
+caminho relativo a ela:
+
+```bash
+curl -X POST localhost:8000/conversas/importar \
+  -H 'content-type: application/json' \
+  -d '{"caminho": "atendimentos.csv"}'
+```
+
+Qualquer caminho que escape dessa raiz (`../..`, caminho absoluto de fora) é
+rejeitado com **400**. Coluna estrutural ausente no CSV também dá **400**,
+nomeando a coluna; linha individual malformada não derruba o lote — ela volta
+na resposta, em `motivos`.
+
+### 4. Dashboard
+
+```bash
+cd dashboard
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # build de produção
+```
+
+A dashboard fala com a API pelo endereço de `NEXT_PUBLIC_API_URL`
+(padrão `http://localhost:8000`):
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
+
+Como é uma variável `NEXT_PUBLIC_*`, ela é lida **em tempo de build/boot** —
+mudar depois exige reiniciar o processo.
+
+## Limitações conhecidas
+
+- **A API não tem autenticação e é destinada a uso local.** Não há login, token
+  nem CORS restrito: quem alcança a porta lê tudo e importa qualquer arquivo
+  dentro da raiz de importação. Não exponha na internet. A raiz configurável
+  (`DOLOS_RAIZ_IMPORTACAO`) limita o estrago, não substitui autenticação.
+- O NPS é **inferido do texto**, nunca perguntado ao cliente. A interface
+  rotula como estimativa em todo lugar onde o número aparece.
+- Não há endpoint de série temporal nem de latência agregada: a dashboard
+  deriva as duas das transcrições, o que custa um N+1 aceitável no volume do
+  trabalho (dezenas de atendimentos).
+- A atribuição por sentença do classificador de texto não tem endpoint, então a
+  transcrição marca só evidência **observável** (polaridade de emoji e tempo de
+  espera) — e diz isso em voz alta em vez de fingir atribuição.
+- Latência **não é persistida**: é sempre derivada dos timestamps na leitura.
+
 ## Desenvolvimento
-
-```bash
-uv sync
-uv run pytest -v
-uv run uvicorn dolos.api.main:app --reload   # exige modelos/ treinado; falha alto sem ele
-```
-
-```bash
-cd dashboard && npm install && npm run dev
-```
 
 ### Servidor de demonstração da interface
 
