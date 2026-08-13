@@ -11,29 +11,40 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 import type { PontoSerie } from "@/lib/derivacoes";
 import { formatarNps, formatarSegundos } from "@/lib/formato";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { EstadoVazio } from "./EstadoVazio";
 
 /**
  * O grafico que carrega a tese do trabalho: NPS inferido e latencia mediana
  * SOBREPOSTOS, com eixos Y distintos.
  *
- * Sobrepor duas escalas e, em geral, um erro de dataviz -- o alinhamento entre
- * elas e arbitrario e sugere correlacao que o dado nao tem. Aqui a sobreposicao
- * e requisito de produto e existe justamente para expor o trade-off que cards
- * isolados escondem (empurrar deflexao derruba CSAT). As tres mitigacoes:
+ * Sobrepor duas escalas e, em geral, antipadrao reconhecido -- o alinhamento
+ * entre as curvas e arbitrario e sugere correlacao que o dado nao tem. Aqui a
+ * sobreposicao e requisito de produto: otimizar um KPI isolado quebra outro
+ * (empurrar deflexao derruba CSAT), e cartoes separados escondem exatamente o
+ * trade-off que o produto existe para mostrar. As TRES mitigacoes obrigatorias:
  *
- *   1. o eixo do NPS e fixo em [-100, +100], o dominio REAL do indicador --
- *      nao um intervalo ajustado ao dado, que seria a origem do alinhamento
- *      arbitrario; o eixo de latencia comeca em zero;
- *   2. cada eixo leva o nome e a cor da sua serie, e a legenda de rodape diz em
- *      voz alta que as escalas sao independentes;
- *   3. existe a visao de tabela, onde os dois numeros aparecem sem geometria
- *      nenhuma entre eles.
+ *   1. dominio FIXO em cada eixo -- NPS em [-100, +100], que e o dominio real
+ *      do indicador, e latencia a partir de zero. Nenhum dos dois se ajusta ao
+ *      dado, que e de onde vem o alinhamento arbitrario;
+ *   2. cada eixo rotulado e colorido com a sua serie, e a latencia SEMPRE
+ *      tracejada -- cor nao e o unico canal;
+ *   3. visao de tabela no mesmo painel: quem precisa do numero exato nao
+ *      depende da leitura cruzada.
  *
- * Cores: azul = grandeza inferida, laranja = grandeza observada. E a mesma
- * convencao da faixa de indicadores e do detalhe do atendimento.
+ * Cor: azul (`--medido`) e o que foi medido/inferido pela maquina; magenta
+ * (`--tempo`) e latencia. O ambar (`--dito`) nao aparece aqui -- nao ha fala
+ * neste painel -- e o lime da marca nunca entra em dado.
  */
 export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
   const [verTabela, setVerTabela] = useState(false);
@@ -42,83 +53,114 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
   if (serie.length === 0) {
     return (
       <EstadoVazio
+        className="m-5"
         titulo="Sem série temporal para desenhar"
-        explicacao="Nenhum atendimento foi devolvido pela API, então não há dias para agregar. A série é montada no cliente, agrupando as conversas por data de início."
-        endpoint="GET /serie-temporal"
+        explicacao="Nenhum atendimento no período selecionado, então não há dias para agregar. A série é montada no cliente, agrupando as conversas por data de início."
+        endpoint="GET /serie-temporal?de=&ate="
       />
     );
   }
 
+  // Domínio da latência: fixo a partir de zero e arredondado para o próximo
+  // múltiplo de 30 s. Amarrar o topo ao maior valor exato do recorte faria o
+  // eixo mudar a cada filtro, e a mesma curva pareceria outra.
+  // Dia sem latencia e FILTRADO, nao convertido em zero: um `?? 0` aqui seria
+  // inofensivo por causa do piso de 30 s, mas o produto nao mantem excecoes
+  // convenientes para a propria regra.
   const maiorLatencia = Math.max(
-    10,
-    ...serie.map((ponto) => ponto.latenciaMediana ?? 0),
+    30,
+    ...serie
+      .map((ponto) => ponto.latenciaMediana)
+      .filter((valor): valor is number => valor !== null),
   );
+  const topoLatencia = Math.ceil(maiorLatencia / 30) * 30;
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4 px-5 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
         <Legenda />
-        <button
+        <Button
           type="button"
+          size="sm"
+          variant="outline"
           onClick={() => setVerTabela((antes) => !antes)}
           aria-expanded={verTabela}
           aria-controls={idTabela}
-          className="sem-impressao shrink-0 rounded-[2px] border border-[var(--filete)] px-2.5 py-1 text-[0.75rem] text-[var(--tinta-2)] transition-colors duration-150 hover:border-[var(--regua)] hover:text-[var(--tinta)]"
+          className="sem-impressao"
         >
           {verTabela ? "Ver gráfico" : "Ver tabela"}
-        </button>
+        </Button>
       </div>
 
       {verTabela ? (
         <TabelaDaSerie id={idTabela} serie={serie} />
       ) : (
-        <div className="px-2 pt-3 pb-1">
-          <ResponsiveContainer width="100%" height={320}>
-            <ComposedChart data={serie} margin={{ top: 8, right: 16, bottom: 28, left: 4 }}>
+        // Altura FIXA por breakpoint: gráfico que muda de altura ao trocar de
+        // dado causa salto de layout.
+        <div className="h-[300px] px-2 pb-2 sm:h-[340px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={serie}
+              margin={{ top: 8, right: 18, bottom: 22, left: 6 }}
+            >
               <CartesianGrid
-                stroke="var(--filete)"
+                stroke="var(--border)"
                 strokeWidth={1}
                 vertical={false}
               />
               <XAxis
                 dataKey="rotulo"
-                tick={{ fill: "var(--tinta-3)", fontSize: 11 }}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--regua)" }}
+                axisLine={{ stroke: "var(--border)" }}
                 minTickGap={16}
+                label={{
+                  value: "Dia de início do atendimento",
+                  position: "insideBottom",
+                  offset: -14,
+                  style: {
+                    fill: "var(--muted-foreground)",
+                    fontSize: 11,
+                    textAnchor: "middle",
+                  },
+                }}
               />
               <YAxis
                 yAxisId="nps"
                 domain={[-100, 100]}
                 ticks={[-100, -50, 0, 50, 100]}
-                width={44}
-                tick={{ fill: "var(--serie-nps)", fontSize: 11 }}
+                width={52}
+                tick={{ fill: "var(--medido-texto)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 label={{
-                  value: "NPS inferido",
+                  value: "NPS inferido (−100 a +100)",
                   angle: -90,
                   position: "insideLeft",
-                  offset: 12,
-                  style: { fill: "var(--serie-nps)", fontSize: 11, textAnchor: "middle" },
+                  offset: 14,
+                  style: {
+                    fill: "var(--medido-texto)",
+                    fontSize: 11,
+                    textAnchor: "middle",
+                  },
                 }}
               />
               <YAxis
                 yAxisId="latencia"
                 orientation="right"
-                domain={[0, Math.ceil(maiorLatencia * 1.15)]}
-                width={52}
-                tick={{ fill: "var(--serie-latencia)", fontSize: 11 }}
+                domain={[0, topoLatencia]}
+                width={58}
+                tick={{ fill: "var(--tempo-texto)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(valor: number) => `${Math.round(valor)}s`}
                 label={{
-                  value: "Latência mediana",
+                  value: "Latência mediana (a partir de 0 s)",
                   angle: 90,
                   position: "insideRight",
-                  offset: 12,
+                  offset: 14,
                   style: {
-                    fill: "var(--serie-latencia)",
+                    fill: "var(--tempo-texto)",
                     fontSize: 11,
                     textAnchor: "middle",
                   },
@@ -127,11 +169,11 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
               <ReferenceLine
                 yAxisId="nps"
                 y={0}
-                stroke="var(--regua)"
+                stroke="var(--border)"
                 strokeWidth={1}
               />
               <Tooltip
-                cursor={{ stroke: "var(--regua)", strokeWidth: 1 }}
+                cursor={{ stroke: "var(--muted-foreground)", strokeWidth: 1 }}
                 content={<Dica />}
               />
               <Line
@@ -139,10 +181,10 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                 type="monotone"
                 dataKey="nps"
                 name="NPS inferido"
-                stroke="var(--serie-nps)"
+                stroke="var(--medido)"
                 strokeWidth={2}
-                dot={{ r: 3, fill: "var(--superficie)", strokeWidth: 2 }}
-                activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--superficie)" }}
+                dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
                 connectNulls={false}
                 isAnimationActive={false}
               />
@@ -151,11 +193,11 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                 type="monotone"
                 dataKey="latenciaMediana"
                 name="Latência mediana"
-                stroke="var(--serie-latencia)"
+                stroke="var(--tempo)"
                 strokeWidth={2}
                 strokeDasharray="5 3"
-                dot={{ r: 3, fill: "var(--superficie)", strokeWidth: 2 }}
-                activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--superficie)" }}
+                dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
                 connectNulls={false}
                 isAnimationActive={false}
               />
@@ -163,15 +205,6 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
           </ResponsiveContainer>
         </div>
       )}
-
-      <p className="border-t border-[var(--filete)] px-5 py-3 text-[0.75rem] leading-[1.5] text-[var(--tinta-3)]">
-        As duas escalas são independentes: a altura de uma curva em relação à
-        outra não significa nada, só o formato de cada uma ao longo do tempo. O
-        eixo do NPS é o domínio inteiro do indicador (−100 a +100) e o da
-        latência começa em zero, para que o alinhamento não seja escolhido.
-        Dias sem nenhum atendimento pontuado ficam com a linha do NPS
-        interrompida — nunca em zero.
-      </p>
     </div>
   );
 }
@@ -179,32 +212,34 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
 function Legenda() {
   return (
     <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-      <li className="flex items-center gap-2 text-[0.8125rem] text-[var(--tinta-2)]">
-        <svg width="20" height="8" aria-hidden>
+      <li className="flex items-center gap-2 text-xs text-muted-foreground">
+        <svg width="22" height="8" aria-hidden>
           <line
             x1="0"
             y1="4"
-            x2="20"
+            x2="22"
             y2="4"
-            stroke="var(--serie-nps)"
+            stroke="var(--medido)"
             strokeWidth="2"
           />
         </svg>
-        NPS inferido <span className="text-[var(--tinta-3)]">(estimativa)</span>
+        <span className="text-medido-texto">NPS inferido</span>
+        <span>(estimativa, linha contínua)</span>
       </li>
-      <li className="flex items-center gap-2 text-[0.8125rem] text-[var(--tinta-2)]">
-        <svg width="20" height="8" aria-hidden>
+      <li className="flex items-center gap-2 text-xs text-muted-foreground">
+        <svg width="22" height="8" aria-hidden>
           <line
             x1="0"
             y1="4"
-            x2="20"
+            x2="22"
             y2="4"
-            stroke="var(--serie-latencia)"
+            stroke="var(--tempo)"
             strokeWidth="2"
             strokeDasharray="5 3"
           />
         </svg>
-        Latência mediana <span className="text-[var(--tinta-3)]">(observada)</span>
+        <span className="text-tempo-texto">Latência mediana</span>
+        <span>(observada, tracejada)</span>
       </li>
     </ul>
   );
@@ -220,23 +255,25 @@ function Dica({ active, payload }: DicaProps) {
   const ponto = payload[0].payload;
 
   return (
-    <div className="border border-[var(--regua)] bg-[var(--superficie)] px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.12)]">
-      <p className="text-[0.75rem] font-semibold text-[var(--tinta)]">
-        {ponto.rotulo}
-      </p>
-      <dl className="mt-1.5 grid grid-cols-[auto_auto] gap-x-3 gap-y-1 text-[0.75rem]">
-        <dt className="text-[var(--tinta-2)]">NPS inferido</dt>
-        <dd className="text-right font-medium tabular-nums text-[var(--tinta)]">
-          {ponto.nps === null ? "sem sinal" : formatarNps(ponto.nps)}
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-popover-foreground">
+      <p className="text-xs font-semibold">{ponto.rotulo}</p>
+      <dl className="mt-1.5 grid grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs">
+        <dt className="text-medido-texto">NPS inferido</dt>
+        <dd className="num text-right font-medium">
+          {ponto.nps === null ? (
+            <span className="text-muted-foreground">sem sinal</span>
+          ) : (
+            formatarNps(ponto.nps)
+          )}
         </dd>
-        <dt className="text-[var(--tinta-2)]">Latência mediana</dt>
-        <dd className="text-right font-medium tabular-nums text-[var(--tinta)]">
+        <dt className="text-tempo-texto">Latência mediana</dt>
+        <dd className="num text-right font-medium">
           {ponto.latenciaMediana === null
             ? "—"
             : formatarSegundos(ponto.latenciaMediana)}
         </dd>
-        <dt className="text-[var(--tinta-2)]">Atendimentos</dt>
-        <dd className="text-right font-medium tabular-nums text-[var(--tinta)]">
+        <dt className="text-muted-foreground">Atendimentos</dt>
+        <dd className="num text-right font-medium">
           {ponto.atendimentos}
           {ponto.comScore < ponto.atendimentos
             ? ` (${ponto.atendimentos - ponto.comScore} sem sinal)`
@@ -247,41 +284,42 @@ function Dica({ active, payload }: DicaProps) {
   );
 }
 
+/** Mitigacao 3: o mesmo dado sem geometria nenhuma entre as duas grandezas. */
 function TabelaDaSerie({ id, serie }: { id: string; serie: PontoSerie[] }) {
   return (
-    <div id={id} className="max-h-[352px] overflow-auto">
-      <table className="w-full border-collapse text-[0.8125rem]">
-        <thead className="sticky top-0 bg-[var(--superficie-2)]">
-          <tr className="text-left text-[0.75rem] text-[var(--tinta-2)]">
-            <th scope="col" className="px-5 py-2 font-medium">Dia</th>
-            <th scope="col" className="px-5 py-2 text-right font-medium">NPS inferido</th>
-            <th scope="col" className="px-5 py-2 text-right font-medium">Latência mediana</th>
-            <th scope="col" className="px-5 py-2 text-right font-medium">Atendimentos</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div id={id} className="max-h-[340px] overflow-auto">
+      <Table className="text-xs">
+        <TableHeader className="sticky top-0 z-10 bg-muted">
+          <TableRow>
+            <TableHead>Dia</TableHead>
+            <TableHead className="text-right">NPS inferido</TableHead>
+            <TableHead className="text-right">Latência mediana</TableHead>
+            <TableHead className="text-right">Atendimentos</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {serie.map((ponto) => (
-            <tr key={ponto.dia} className="border-t border-[var(--filete)]">
-              <td className="px-5 py-2 tabular-nums text-[var(--tinta)]">{ponto.rotulo}</td>
-              <td className="px-5 py-2 text-right tabular-nums text-[var(--tinta)]">
+            <TableRow key={ponto.dia}>
+              <TableCell className="num">{ponto.rotulo}</TableCell>
+              <TableCell className="num text-right">
                 {ponto.nps === null ? (
-                  <span className="text-[var(--tinta-3)]">sem sinal</span>
+                  <span className="text-muted-foreground">sem sinal</span>
                 ) : (
                   formatarNps(ponto.nps)
                 )}
-              </td>
-              <td className="px-5 py-2 text-right tabular-nums text-[var(--tinta)]">
+              </TableCell>
+              <TableCell className="num text-right">
                 {ponto.latenciaMediana === null
                   ? "—"
                   : formatarSegundos(ponto.latenciaMediana)}
-              </td>
-              <td className="px-5 py-2 text-right tabular-nums text-[var(--tinta-2)]">
+              </TableCell>
+              <TableCell className="num text-right text-muted-foreground">
                 {ponto.atendimentos}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

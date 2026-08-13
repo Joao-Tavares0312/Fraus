@@ -11,15 +11,15 @@ const COR: Record<string, string> = {
 /**
  * Palavras e emojis mais caracteristicos de cada classe.
  *
- * Isto e contado na dashboard a partir das transcricoes: a API nao expoe
+ * Contado na dashboard a partir das transcricoes do periodo: a API nao expoe
  * lexico por classe. O criterio de ordenacao NAO e frequencia bruta -- e
  * distincao: quanto o termo aparece mais nesta classe do que nas outras.
  * "obrigado" aparece em todo lugar e nao explica nada; e o termo que so
  * aparece entre detratores que vira oportunidade de melhoria.
  *
- * A polaridade dos emojis vem do mesmo Emoji Sentiment Ranking que o sinal de
- * emoji do backend usa (exportado por `scripts/gerar_lexico_emoji.py`), e nao
- * de um criterio inventado aqui.
+ * O termo do cliente e FALA, entao ele veste ambar (`--dito`). A polaridade
+ * dos emojis vem do mesmo Emoji Sentiment Ranking do sinal de emoji do
+ * backend, nao de um criterio inventado aqui.
  */
 export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
   const temAlgo = classes.some(
@@ -29,103 +29,94 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
   if (!temAlgo) {
     return (
       <EstadoVazio
+        className="m-5"
         titulo="Sem vocabulário suficiente para comparar as classes"
-        explicacao="Nenhum atendimento pontuado trouxe fala do cliente com palavras fora da lista de parada. O ranking é por distinção entre classes, então precisa de pelo menos duas classes povoadas."
-        endpoint="GET /palavras-chave"
+        explicacao="Nenhum atendimento pontuado do período trouxe fala do cliente com palavras fora da lista de parada. O ranking é por distinção entre classes, então precisa de pelo menos duas classes povoadas."
+        endpoint="GET /palavras-chave?de=&ate="
       />
     );
   }
 
   return (
-    <div className="grid grid-cols-1 divide-y divide-[var(--filete)] md:grid-cols-3 md:divide-x md:divide-y-0">
+    <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
       {classes.map((classe) => (
         <div key={classe.categoria} className="flex flex-col gap-4 px-5 py-4">
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-2">
             <span
               aria-hidden
-              className="h-[7px] w-[7px] shrink-0 translate-y-[-1px] rounded-full"
+              className="size-2 shrink-0 -translate-y-px rounded-full"
               style={{ background: COR[classe.categoria] }}
             />
-            <h3 className="text-[0.875rem] font-semibold text-[var(--tinta)]">
+            <h3 className="text-sm font-semibold text-foreground">
               {ROTULO_CATEGORIA[classe.categoria]}
             </h3>
-            <span className="text-[0.75rem] tabular-nums text-[var(--tinta-3)]">
+            <span className="num text-xs text-muted-foreground">
               {classe.atendimentos}{" "}
               {classe.atendimentos === 1 ? "atendimento" : "atendimentos"}
             </span>
           </div>
 
-          <Bloco titulo="Palavras" vazio="nenhuma palavra distintiva">
-            {classe.palavras.map((termo) => (
-              <li
-                key={termo.termo}
-                className="flex items-baseline justify-between gap-3 py-1"
-              >
-                <span className="truncate text-[0.8125rem] text-[var(--tinta)]">
-                  {termo.termo}
-                </span>
-                <span className="shrink-0 text-[0.75rem] tabular-nums text-[var(--tinta-3)]">
-                  {termo.ocorrencias}×
-                </span>
-              </li>
-            ))}
-          </Bloco>
+          <div>
+            <h4 className="mb-1 text-[0.6875rem] font-medium text-muted-foreground">
+              Palavras
+            </h4>
+            {classe.palavras.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                nenhuma palavra distintiva
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {classe.palavras.map((termo) => (
+                  <li
+                    key={termo.termo}
+                    className="flex items-baseline justify-between gap-3 py-1"
+                  >
+                    <span className="truncate text-sm text-dito-texto">
+                      {termo.termo}
+                    </span>
+                    <span className="num shrink-0 text-xs text-muted-foreground">
+                      {termo.ocorrencias}×
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-          <Bloco titulo="Emojis" vazio="nenhum emoji nesta classe">
-            {classe.emojis.length > 0 ? (
-              <li className="flex flex-wrap gap-2 pt-1">
+          <div>
+            <h4 className="mb-1 text-[0.6875rem] font-medium text-muted-foreground">
+              Emojis
+            </h4>
+            {classe.emojis.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                nenhum emoji nesta classe
+              </p>
+            ) : (
+              <ul className="flex flex-wrap gap-2 pt-1">
                 {classe.emojis.map((termo) => {
                   const polaridade = polaridadeDoEmoji(termo.termo);
                   return (
-                    <span
+                    <li
                       key={termo.termo}
                       title={`polaridade ${polaridade > 0 ? "+" : ""}${polaridade.toFixed(2)} no Emoji Sentiment Ranking`}
-                      className="inline-flex items-center gap-1.5 border border-[var(--filete)] px-2 py-1 text-[0.8125rem] text-[var(--tinta-2)]"
+                      className="inline-flex items-center gap-1.5 rounded-sm border border-border px-2 py-1 text-xs text-muted-foreground"
                     >
-                      <span aria-hidden className="text-[1rem] leading-none">
+                      <span aria-hidden className="text-base leading-none">
                         {termo.termo}
                       </span>
-                      <span className="tabular-nums text-[0.75rem]">
-                        {termo.ocorrencias}×
-                      </span>
-                      <span className="tabular-nums text-[0.6875rem] text-[var(--tinta-3)]">
+                      <span className="num">{termo.ocorrencias}×</span>
+                      <span className="num text-[0.6875rem]">
                         {polaridade > 0 ? "+" : ""}
                         {polaridade.toFixed(2)}
                       </span>
-                    </span>
+                    </li>
                   );
                 })}
-              </li>
-            ) : null}
-          </Bloco>
+              </ul>
+            )}
+          </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function Bloco({
-  titulo,
-  vazio,
-  children,
-}: {
-  titulo: string;
-  vazio: string;
-  children: React.ReactNode;
-}) {
-  const vazioDeFato =
-    !children || (Array.isArray(children) && children.length === 0);
-
-  return (
-    <div>
-      <h4 className="mb-1 text-[0.6875rem] font-medium text-[var(--tinta-3)]">
-        {titulo}
-      </h4>
-      {vazioDeFato ? (
-        <p className="text-[0.8125rem] text-[var(--tinta-3)]">{vazio}</p>
-      ) : (
-        <ul className="divide-y divide-[var(--filete)]">{children}</ul>
-      )}
     </div>
   );
 }
