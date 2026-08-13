@@ -1,4 +1,4 @@
-# Dolos — Análise de Satisfação em Atendimentos por Chatbot
+# Fraus — Análise de Satisfação em Atendimentos por Chatbot
 
 **Data:** 2026-08-13
 **Status:** spec aprovada, aguardando plano de implementação
@@ -18,11 +18,15 @@ a eficiência do atendimento e identificar oportunidades de melhoria.
 A classificação roda em CPU, com modelo próprio treinado. Isso é requisito, não
 otimização — é o que torna o trabalho um projeto de IA e não uma integração de API.
 
-### 1.1 Por que "Dolos"
+### 1.1 Por que "Fraus"
 
-Dolos é o daemon grego do ardil e do engano, contraparte masculina de Ápate. O nome
-descreve o problema real: **o cliente mente**. Ele digita "ok, obrigado 🙂" e sai
-insatisfeito.
+Fraus é a divindade romana da fraude e do engano, contraparte latina de Ápate/Dolos:
+onde os gregos personificaram o embuste em Dolos, filho da Noite (Nyx) na
+*Teogonia* de Hesíodo, os romanos deram a mesma força um nome próprio — Fraus,
+que Virgílio posta no vestíbulo do Orco, ao lado de Luto, das Doenças, da Velhice
+e do Medo, como uma das primeiras coisas que se encontra ao cruzar para o mundo
+dos mortos (*Eneida*, Livro VI). O nome descreve o problema real: **o cliente
+mente**. Ele digita "ok, obrigado 🙂" e sai insatisfeito.
 
 Isso não é retórica — é o achado central da literatura:
 
@@ -35,7 +39,7 @@ Isso não é retórica — é o achado central da literatura:
   antes de treinar.
   ([PMC11793979](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11793979/))
 
-Dolos lê o que foi dito de verdade, não a nota que o cliente teve preguiça de dar.
+Fraus lê o que foi dito de verdade, não a nota que o cliente teve preguiça de dar.
 
 ---
 
@@ -335,9 +339,9 @@ declarado seria falso.
 
 ## 8. Repositórios
 
-- **`Dolos`** (novo, privado) — projeto inteiro: engine, API, dashboard, notebooks Colab.
+- **`Fraus`** (novo, privado) — projeto inteiro: engine, API, dashboard, notebooks Colab.
 - **`Neuro-ai`**, branch nova — extrai o detector de humor existente num pacote
-  reutilizável que o Dolos consome. Escopo limitado a isso; nada de feature nova na Neuro.
+  reutilizável que o Fraus consome. Escopo limitado a isso; nada de feature nova na Neuro.
 
 ---
 
@@ -374,7 +378,7 @@ declarado seria falso.
 | Task | Onde está resolvida |
 |---|---|
 | Definir escopo do projeto (épico) | Seção 2 |
-| Definir nome do projeto | Seção 0/1.1 — **Dolos** |
+| Definir nome do projeto | Seção 0/1.1 — **Fraus** |
 | Pesquisar dependências e linguagem | Seção 6 |
 | OKF ou RAG — o que é viável | Seção 4.5 — nenhum dos dois no núcleo; fine-tune |
 | Dashboard para verificar resultados, API | Seções 6 e 7 |

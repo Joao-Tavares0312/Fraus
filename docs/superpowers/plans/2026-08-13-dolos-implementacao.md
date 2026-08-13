@@ -1,4 +1,4 @@
-# Dolos — Plano de Implementação
+# Fraus — Plano de Implementação
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -27,17 +27,17 @@
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `dolos/modelos.py` | modelo canônico `Mensagem` / `Conversa` |
-| `dolos/ingest/csv_driver.py` | CSV/JSON → `list[Conversa]` |
-| `dolos/ingest/simulador.py` | gera conversas sintéticas com timestamps |
-| `dolos/sinais/emoji.py` | features de emoji via lexicon |
-| `dolos/sinais/tempo.py` | features de latência/estrutura da conversa |
-| `dolos/sinais/texto.py` | wrapper do BERTimbau fine-tuned |
-| `dolos/fusor.py` | funde os três sinais → score 0–100 |
-| `dolos/indicadores.py` | agregações: NPS, CSAT, containment |
-| `dolos/db.py` | persistência SQLite |
-| `dolos/api/main.py` | FastAPI |
-| `dolos/dados/emoji_sentiment_ranking.csv` | lexicon estático |
+| `fraus/modelos.py` | modelo canônico `Mensagem` / `Conversa` |
+| `fraus/ingest/csv_driver.py` | CSV/JSON → `list[Conversa]` |
+| `fraus/ingest/simulador.py` | gera conversas sintéticas com timestamps |
+| `fraus/sinais/emoji.py` | features de emoji via lexicon |
+| `fraus/sinais/tempo.py` | features de latência/estrutura da conversa |
+| `fraus/sinais/texto.py` | wrapper do BERTimbau fine-tuned |
+| `fraus/fusor.py` | funde os três sinais → score 0–100 |
+| `fraus/indicadores.py` | agregações: NPS, CSAT, containment |
+| `fraus/db.py` | persistência SQLite |
+| `fraus/api/main.py` | FastAPI |
+| `fraus/dados/emoji_sentiment_ranking.csv` | lexicon estático |
 | `notebooks/01_treino_bertimbau.ipynb` | fine-tune no Colab |
 | `dashboard/` | Next.js |
 
@@ -46,7 +46,7 @@
 ### Task 1: Esqueleto do projeto e modelo canônico
 
 **Files:**
-- Create: `pyproject.toml`, `dolos/__init__.py`, `dolos/modelos.py`, `tests/test_modelos.py`, `.gitignore`, `README.md`
+- Create: `pyproject.toml`, `fraus/__init__.py`, `fraus/modelos.py`, `tests/test_modelos.py`, `.gitignore`, `README.md`
 
 **Interfaces:**
 - Consumes: nada
@@ -56,7 +56,7 @@
 
 ```toml
 [project]
-name = "dolos"
+name = "fraus"
 version = "0.1.0"
 description = "Analise de satisfacao em atendimentos por chatbot"
 requires-python = ">=3.11"
@@ -83,7 +83,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 
 def _ts(segundo: int) -> datetime:
@@ -128,9 +128,9 @@ def test_timestamp_naive_e_rejeitado():
 - [ ] **Step 3: Rodar o teste e confirmar que falha**
 
 Run: `uv run pytest tests/test_modelos.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.modelos'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.modelos'`
 
-- [ ] **Step 4: Implementar `dolos/modelos.py`**
+- [ ] **Step 4: Implementar `fraus/modelos.py`**
 
 ```python
 """Modelo canonico de conversa. Toda fonte de dado e normalizada para ca."""
@@ -173,7 +173,7 @@ class Conversa(BaseModel):
         return len(self.mensagens_cliente) > 0
 ```
 
-Criar `dolos/__init__.py` vazio e `.gitignore` com:
+Criar `fraus/__init__.py` vazio e `.gitignore` com:
 
 ```
 __pycache__/
@@ -194,7 +194,7 @@ Expected: 4 passed
 - [ ] **Step 6: Commit**
 
 ```bash
-git add pyproject.toml dolos tests .gitignore README.md
+git add pyproject.toml fraus tests .gitignore README.md
 git commit -m "feat(modelos): modelo canonico de conversa e mensagem"
 ```
 
@@ -203,7 +203,7 @@ git commit -m "feat(modelos): modelo canonico de conversa e mensagem"
 ### Task 2: Driver de ingestão CSV
 
 **Files:**
-- Create: `dolos/ingest/__init__.py`, `dolos/ingest/csv_driver.py`, `tests/test_csv_driver.py`
+- Create: `fraus/ingest/__init__.py`, `fraus/ingest/csv_driver.py`, `tests/test_csv_driver.py`
 
 **Interfaces:**
 - Consumes: `Conversa`, `Mensagem` da Task 1
@@ -218,7 +218,7 @@ Criar `tests/test_csv_driver.py`:
 ```python
 from pathlib import Path
 
-from dolos.ingest.csv_driver import carregar_csv
+from fraus.ingest.csv_driver import carregar_csv
 
 CABECALHO = "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
 
@@ -280,9 +280,9 @@ def test_timestamp_sem_offset_e_rejeitado(tmp_path):
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_csv_driver.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.ingest'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.ingest'`
 
-- [ ] **Step 3: Implementar `dolos/ingest/csv_driver.py`**
+- [ ] **Step 3: Implementar `fraus/ingest/csv_driver.py`**
 
 ```python
 """Driver de ingestao CSV. Uma linha por mensagem, agrupada por conversa_id."""
@@ -294,7 +294,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 VERDADEIROS = {"true", "1", "sim", "yes"}
 
@@ -358,7 +358,7 @@ def carregar_csv(caminho: Path) -> ResultadoIngestao:
     return ResultadoIngestao(conversas=conversas, rejeitadas=rejeitadas)
 ```
 
-Criar `dolos/ingest/__init__.py` vazio.
+Criar `fraus/ingest/__init__.py` vazio.
 
 - [ ] **Step 4: Rodar e confirmar que passam**
 
@@ -368,7 +368,7 @@ Expected: 4 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add dolos/ingest tests/test_csv_driver.py
+git add fraus/ingest tests/test_csv_driver.py
 git commit -m "feat(ingest): driver CSV com isolamento de linha malformada"
 ```
 
@@ -377,7 +377,7 @@ git commit -m "feat(ingest): driver CSV com isolamento de linha malformada"
 ### Task 3: Sinal de emoji
 
 **Files:**
-- Create: `dolos/sinais/__init__.py`, `dolos/sinais/emoji.py`, `dolos/dados/emoji_sentiment_ranking.csv`, `tests/test_sinal_emoji.py`
+- Create: `fraus/sinais/__init__.py`, `fraus/sinais/emoji.py`, `fraus/dados/emoji_sentiment_ranking.csv`, `tests/test_sinal_emoji.py`
 
 **Interfaces:**
 - Consumes: `Conversa` da Task 1
@@ -394,8 +394,8 @@ Criar `tests/test_sinal_emoji.py`:
 ```python
 from datetime import datetime, timezone
 
-from dolos.modelos import Conversa, Mensagem
-from dolos.sinais.emoji import features_emoji, score_do_emoji
+from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.emoji import features_emoji, score_do_emoji
 
 
 def _conversa(textos: list[str]) -> Conversa:
@@ -464,7 +464,7 @@ def test_fracoes_somam_no_maximo_um():
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_sinal_emoji.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.sinais'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.sinais'`
 
 - [ ] **Step 3: Adicionar a dependência `emoji`**
 
@@ -472,9 +472,9 @@ Em `pyproject.toml`, `dependencies` passa a ser `["pydantic>=2.7", "emoji>=2.12"
 
 - [ ] **Step 4: Baixar o lexicon**
 
-Salvar o Emoji Sentiment Ranking em `dolos/dados/emoji_sentiment_ranking.csv` com o cabeçalho `emoji,negativo,neutro,positivo` e uma linha por emoji com as contagens absolutas de anotação. O arquivo é versionado no repo — o runtime não pode depender de rede.
+Salvar o Emoji Sentiment Ranking em `fraus/dados/emoji_sentiment_ranking.csv` com o cabeçalho `emoji,negativo,neutro,positivo` e uma linha por emoji com as contagens absolutas de anotação. O arquivo é versionado no repo — o runtime não pode depender de rede.
 
-- [ ] **Step 5: Implementar `dolos/sinais/emoji.py`**
+- [ ] **Step 5: Implementar `fraus/sinais/emoji.py`**
 
 ```python
 """Sinal de emoji.
@@ -493,7 +493,7 @@ from pathlib import Path
 
 import emoji as lib_emoji
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 CAMINHO_LEXICON = Path(__file__).parent.parent / "dados" / "emoji_sentiment_ranking.csv"
 LIMIAR_POLARIDADE = 0.1
@@ -558,7 +558,7 @@ def features_emoji(conversa: Conversa) -> dict[str, float]:
     }
 ```
 
-Criar `dolos/sinais/__init__.py` vazio.
+Criar `fraus/sinais/__init__.py` vazio.
 
 - [ ] **Step 6: Rodar e confirmar que passam**
 
@@ -568,7 +568,7 @@ Expected: 8 passed
 - [ ] **Step 7: Commit**
 
 ```bash
-git add dolos/sinais dolos/dados pyproject.toml tests/test_sinal_emoji.py
+git add fraus/sinais fraus/dados pyproject.toml tests/test_sinal_emoji.py
 git commit -m "feat(sinais): sinal de emoji com lexicon e posicao relativa"
 ```
 
@@ -577,7 +577,7 @@ git commit -m "feat(sinais): sinal de emoji com lexicon e posicao relativa"
 ### Task 4: Sinal de tempo
 
 **Files:**
-- Create: `dolos/sinais/tempo.py`, `tests/test_sinal_tempo.py`
+- Create: `fraus/sinais/tempo.py`, `tests/test_sinal_tempo.py`
 
 **Interfaces:**
 - Consumes: `Conversa` da Task 1
@@ -585,7 +585,7 @@ git commit -m "feat(sinais): sinal de emoji com lexicon e posicao relativa"
 
 Latência é o intervalo entre uma mensagem do cliente e a primeira resposta seguinte do bot ou humano. Nunca persistida — sempre derivada.
 
-`abandonou` é verdadeiro quando a última mensagem da conversa é do bot e a conversa está encerrada — ou seja, o cliente saiu sem responder.
+`abandonou` é verdadeiro quando a última mensagem da conversa é do bot ou do humano — ou seja, o cliente saiu sem responder. Não depende de `encerrada_em`: uma conversa aberta cuja última fala é do bot já é abandono em curso.
 
 Não há penalidade linear codificada aqui: a relação entre latência e satisfação é não-linear e moderada por contexto (IJHCI 2025), então o peso é aprendido pelo fusor na Task 8.
 
@@ -596,8 +596,8 @@ Criar `tests/test_sinal_tempo.py`:
 ```python
 from datetime import datetime, timedelta, timezone
 
-from dolos.modelos import Conversa, Mensagem
-from dolos.sinais.tempo import features_tempo
+from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.tempo import features_tempo
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
 
@@ -668,9 +668,9 @@ def test_cliente_que_responde_por_ultimo_nao_e_abandono():
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_sinal_tempo.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.sinais.tempo'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.sinais.tempo'`
 
-- [ ] **Step 3: Implementar `dolos/sinais/tempo.py`**
+- [ ] **Step 3: Implementar `fraus/sinais/tempo.py`**
 
 ```python
 """Sinal de tempo.
@@ -686,7 +686,7 @@ Nada aqui e persistido: tudo deriva dos timestamps do modelo canonico.
 
 from statistics import median
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 RESPONDENTES = {"bot", "humano"}
 
@@ -737,7 +737,7 @@ Expected: 7 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add dolos/sinais/tempo.py tests/test_sinal_tempo.py
+git add fraus/sinais/tempo.py tests/test_sinal_tempo.py
 git commit -m "feat(sinais): features de latencia, escalacao e abandono"
 ```
 
@@ -746,7 +746,7 @@ git commit -m "feat(sinais): features de latencia, escalacao e abandono"
 ### Task 5: Simulador de conversas
 
 **Files:**
-- Create: `dolos/ingest/simulador.py`, `tests/test_simulador.py`
+- Create: `fraus/ingest/simulador.py`, `tests/test_simulador.py`
 
 **Interfaces:**
 - Consumes: `Conversa`, `Mensagem` da Task 1
@@ -761,8 +761,8 @@ Isso é limitação metodológica declarada: o sinal de tempo é treinado em dad
 Criar `tests/test_simulador.py`:
 
 ```python
-from dolos.ingest.simulador import gerar_conversa, gerar_lote
-from dolos.sinais.tempo import features_tempo
+from fraus.ingest.simulador import gerar_conversa, gerar_lote
+from fraus.sinais.tempo import features_tempo
 
 FRASES = {
     0: ["que absurdo, ninguem resolve", "pessimo atendimento"],
@@ -813,9 +813,9 @@ def test_lote_respeita_a_quantidade_e_devolve_rotulos():
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_simulador.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.ingest.simulador'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.ingest.simulador'`
 
-- [ ] **Step 3: Implementar `dolos/ingest/simulador.py`**
+- [ ] **Step 3: Implementar `fraus/ingest/simulador.py`**
 
 ```python
 """Simulador de conversas sinteticas.
@@ -833,7 +833,7 @@ em dados sinteticos calibrados por literatura, nao observados.
 import random
 from datetime import datetime, timedelta, timezone
 
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 INICIO = datetime(2026, 8, 1, 9, 0, 0, tzinfo=timezone.utc)
 
@@ -925,7 +925,7 @@ Expected: 5 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add dolos/ingest/simulador.py tests/test_simulador.py
+git add fraus/ingest/simulador.py tests/test_simulador.py
 git commit -m "feat(ingest): simulador de conversas com latencia calibrada"
 ```
 
@@ -956,8 +956,8 @@ from google.colab import drive
 drive.mount('/content/drive')
 
 import os
-DIR_CHECKPOINT = '/content/drive/MyDrive/dolos/checkpoints'
-DIR_SAIDA = '/content/drive/MyDrive/dolos/modelos/bertimbau-satisfacao'
+DIR_CHECKPOINT = '/content/drive/MyDrive/fraus/checkpoints'
+DIR_SAIDA = '/content/drive/MyDrive/fraus/modelos/bertimbau-satisfacao'
 os.makedirs(DIR_CHECKPOINT, exist_ok=True)
 os.makedirs(DIR_SAIDA, exist_ok=True)
 ```
@@ -1090,7 +1090,7 @@ git commit -m "feat(treino): notebook Colab de fine-tune do BERTimbau"
 ### Task 7: Sinal de texto
 
 **Files:**
-- Create: `dolos/sinais/texto.py`, `tests/test_sinal_texto.py`
+- Create: `fraus/sinais/texto.py`, `tests/test_sinal_texto.py`
 
 **Interfaces:**
 - Consumes: `Conversa` da Task 1; artefato de modelo da Task 6
@@ -1110,8 +1110,8 @@ from pathlib import Path
 
 import pytest
 
-from dolos.modelos import Conversa, Mensagem
-from dolos.sinais.texto import ClassificadorTexto, ModeloAusenteError, features_texto
+from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.texto import ClassificadorTexto, ModeloAusenteError, features_texto
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
 
@@ -1174,13 +1174,13 @@ def test_conversa_sem_fala_do_cliente_zera_as_features():
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_sinal_texto.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.sinais.texto'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.sinais.texto'`
 
 - [ ] **Step 3: Adicionar as dependências de inferência**
 
 Em `pyproject.toml`, acrescentar `"transformers>=4.44"` e `"torch>=2.3"` a `dependencies`. Rodar `uv sync`.
 
-- [ ] **Step 4: Implementar `dolos/sinais/texto.py`**
+- [ ] **Step 4: Implementar `fraus/sinais/texto.py`**
 
 ```python
 """Sinal de texto: BERTimbau fine-tunado, rodando em CPU.
@@ -1197,7 +1197,7 @@ from pathlib import Path
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
 TAMANHO_MAXIMO = 192
@@ -1264,7 +1264,7 @@ Expected: 5 passed
 - [ ] **Step 6: Commit**
 
 ```bash
-git add dolos/sinais/texto.py tests/test_sinal_texto.py pyproject.toml
+git add fraus/sinais/texto.py tests/test_sinal_texto.py pyproject.toml
 git commit -m "feat(sinais): classificador BERTimbau com predicao por mensagem"
 ```
 
@@ -1273,7 +1273,7 @@ git commit -m "feat(sinais): classificador BERTimbau com predicao por mensagem"
 ### Task 8: Fusor
 
 **Files:**
-- Create: `dolos/fusor.py`, `tests/test_fusor.py`
+- Create: `fraus/fusor.py`, `tests/test_fusor.py`
 
 **Interfaces:**
 - Consumes: `features_emoji` (Task 3), `features_tempo` (Task 4), `features_texto` (Task 7)
@@ -1288,7 +1288,7 @@ Criar `tests/test_fusor.py`:
 ```python
 import pytest
 
-from dolos.fusor import NOMES_FEATURES, Fusor, vetorizar
+from fraus.fusor import NOMES_FEATURES, Fusor, vetorizar
 
 
 def _features(**sobrescritas) -> dict[str, float]:
@@ -1380,13 +1380,13 @@ def test_importancias_cobrem_todas_as_features():
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_fusor.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.fusor'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.fusor'`
 
 - [ ] **Step 3: Adicionar as dependências**
 
 Em `pyproject.toml`, acrescentar `"scikit-learn>=1.5"` e `"joblib>=1.4"`. Rodar `uv sync`.
 
-- [ ] **Step 4: Implementar `dolos/fusor.py`**
+- [ ] **Step 4: Implementar `fraus/fusor.py`**
 
 ```python
 """Fusor dos tres sinais.
@@ -1406,10 +1406,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from dolos.modelos import Conversa
-from dolos.sinais.emoji import features_emoji
-from dolos.sinais.tempo import features_tempo
-from dolos.sinais.texto import features_texto
+from fraus.modelos import Conversa
+from fraus.sinais.emoji import features_emoji
+from fraus.sinais.tempo import features_tempo
+from fraus.sinais.texto import features_texto
 
 NOMES_FEATURES = [
     "texto_prob_insatisfeito_media",
@@ -1489,7 +1489,7 @@ Expected: 7 passed
 - [ ] **Step 6: Commit**
 
 ```bash
-git add dolos/fusor.py tests/test_fusor.py pyproject.toml
+git add fraus/fusor.py tests/test_fusor.py pyproject.toml
 git commit -m "feat(fusor): fusao dos tres sinais com regressao logistica"
 ```
 
@@ -1498,7 +1498,7 @@ git commit -m "feat(fusor): fusao dos tres sinais com regressao logistica"
 ### Task 9: Indicadores, persistência e API
 
 **Files:**
-- Create: `dolos/indicadores.py`, `dolos/db.py`, `dolos/api/__init__.py`, `dolos/api/main.py`, `tests/test_indicadores.py`, `tests/test_api.py`
+- Create: `fraus/indicadores.py`, `fraus/db.py`, `fraus/api/__init__.py`, `fraus/api/main.py`, `tests/test_indicadores.py`, `tests/test_api.py`
 
 **Interfaces:**
 - Consumes: `Conversa` (Task 1), `carregar_csv` (Task 2), `ClassificadorTexto` (Task 7), `Fusor` e `montar_features` (Task 8)
@@ -1523,9 +1523,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from dolos.indicadores import (calcular_csat, calcular_nps, categoria_nps,
+from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10)
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
 
@@ -1578,9 +1578,9 @@ def test_containment_rate_ignora_conversas_escaladas():
 - [ ] **Step 2: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_indicadores.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.indicadores'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.indicadores'`
 
-- [ ] **Step 3: Implementar `dolos/indicadores.py`**
+- [ ] **Step 3: Implementar `fraus/indicadores.py`**
 
 ```python
 """Indicadores agregados.
@@ -1594,7 +1594,7 @@ Categoria SEMPRE derivada no servidor.
 
 from typing import Literal
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 Categoria = Literal["detrator", "neutro", "promotor"]
 NOTA_MINIMA_SATISFEITO = 7
@@ -1653,8 +1653,8 @@ Criar `tests/test_api.py`:
 import pytest
 from fastapi.testclient import TestClient
 
-from dolos.api.main import criar_app
-from dolos.db import Banco
+from fraus.api.main import criar_app
+from fraus.db import Banco
 
 CSV = (
     "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
@@ -1671,7 +1671,7 @@ class MotorFalso:
 
 @pytest.fixture
 def cliente(tmp_path):
-    banco = Banco(tmp_path / "dolos.db")
+    banco = Banco(tmp_path / "fraus.db")
     banco.migrar()
     return TestClient(criar_app(banco=banco, motor=MotorFalso()))
 
@@ -1741,13 +1741,13 @@ def test_indicadores_sem_dado_nao_quebra(cliente):
 - [ ] **Step 6: Rodar e confirmar que falha**
 
 Run: `uv run pytest tests/test_api.py -v`
-Expected: FAIL com `ModuleNotFoundError: No module named 'dolos.db'`
+Expected: FAIL com `ModuleNotFoundError: No module named 'fraus.db'`
 
 - [ ] **Step 7: Adicionar as dependências**
 
 Em `pyproject.toml`, acrescentar `"fastapi>=0.115"`, `"uvicorn>=0.30"`; em `dev`, `"httpx>=0.27"`. Rodar `uv sync`.
 
-- [ ] **Step 8: Implementar `dolos/db.py`**
+- [ ] **Step 8: Implementar `fraus/db.py`**
 
 ```python
 """Persistencia SQLite. Sem ORM: o esquema e pequeno e estavel.
@@ -1759,7 +1759,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS conversas (
@@ -1825,10 +1825,10 @@ class Banco:
         return [(Conversa(**json.loads(l["payload"])), l["score"]) for l in linhas]
 ```
 
-- [ ] **Step 9: Implementar `dolos/api/main.py`**
+- [ ] **Step 9: Implementar `fraus/api/main.py`**
 
 ```python
-"""API do Dolos.
+"""API do Fraus.
 
 Score e categoria SAO SEMPRE derivados no servidor: campos vindos do corpo da
 requisicao que se pareçam com veredito sao ignorados por construcao -- o modelo
@@ -1840,12 +1840,12 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from dolos.db import Banco
-from dolos.fusor import Fusor, montar_features
-from dolos.indicadores import (calcular_csat, calcular_nps, categoria_nps,
+from fraus.db import Banco
+from fraus.fusor import Fusor, montar_features
+from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10)
-from dolos.ingest.csv_driver import carregar_csv
-from dolos.sinais.texto import ClassificadorTexto
+from fraus.ingest.csv_driver import carregar_csv
+from fraus.sinais.texto import ClassificadorTexto
 
 
 class PedidoImportacao(BaseModel):
@@ -1866,7 +1866,7 @@ class Motor:
 
 
 def criar_app(banco: Banco, motor) -> FastAPI:
-    app = FastAPI(title="Dolos", version="0.1.0")
+    app = FastAPI(title="Fraus", version="0.1.0")
 
     @app.get("/saude")
     def saude() -> dict:
@@ -1919,7 +1919,7 @@ def criar_app(banco: Banco, motor) -> FastAPI:
     return app
 ```
 
-Criar `dolos/api/__init__.py` vazio.
+Criar `fraus/api/__init__.py` vazio.
 
 - [ ] **Step 10: Rodar a suíte inteira**
 
@@ -1929,7 +1929,7 @@ Expected: todos os testes passam (modelos, csv, emoji, tempo, simulador, texto, 
 - [ ] **Step 11: Commit**
 
 ```bash
-git add dolos/indicadores.py dolos/db.py dolos/api tests/test_indicadores.py tests/test_api.py pyproject.toml
+git add fraus/indicadores.py fraus/db.py fraus/api tests/test_indicadores.py tests/test_api.py pyproject.toml
 git commit -m "feat(api): indicadores, persistencia SQLite e endpoints FastAPI"
 ```
 
@@ -1959,8 +1959,18 @@ Invocar `impeccable` para calibrar hierarquia visual, tipografia e paleta antes 
 ```bash
 cd dashboard
 npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --eslint
-npm install recharts
+npm install recharts @tanstack/react-table react-to-print
 ```
+
+Next.js é React rodando em Node — atende o requisito de stack sem camada extra.
+Bibliotecas e o papel de cada uma:
+
+| Biblioteca | Onde é usada |
+|---|---|
+| **Recharts** | os três gráficos; composição de eixos Y duplos para sobrepor NPS e latência |
+| **TanStack Table** | tabela de atendimentos — ordenação, filtro e paginação sem impor visual |
+| **react-to-print** | export do relatório em PDF reaproveitando a própria tela |
+| `Blob` nativo | export CSV — não justifica dependência |
 
 - [ ] **Step 3: Criar o cliente de API em `dashboard/lib/api.ts`**
 
@@ -2027,7 +2037,7 @@ Essa marcação existe porque o sinal de texto é calculado por mensagem (Task 7
 - [ ] **Step 6: Verificar contra a API real**
 
 ```bash
-uv run uvicorn dolos.api.main:app --reload   # em um terminal
+uv run uvicorn fraus.api.main:app --reload   # em um terminal
 cd dashboard && npm run dev                   # em outro
 ```
 
@@ -2065,7 +2075,7 @@ Tasks 2, 3, 4 e 5 são independentes entre si e podem ser feitas em qualquer ord
 ## Verificação final
 
 - [ ] `uv run pytest -v` — suíte inteira verde
-- [ ] `uv run uvicorn dolos.api.main:app` sobe sem erro com o modelo presente
+- [ ] `uv run uvicorn fraus.api.main:app` sobe sem erro com o modelo presente
 - [ ] Subir a API **sem** `modelos/bertimbau-satisfacao/` falha alto com mensagem apontando `docs/treinamento.md`
 - [ ] Importar CSV de exemplo e conferir NPS calculado à mão contra o valor da API
 - [ ] Dashboard renderiza os quatro indicadores, o gráfico sobreposto e o detalhe do atendimento

@@ -1,0 +1,241 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ---------------------------------------------------------------------------
+   Fraus — chassi visual da dashboard (modo Operate)
+
+   Chassi: shadcn/ui sobre Tailwind v4, tokens em OKLCH, tema escuro unico.
+   Herdado do sistema do `wascer-kronos` — mesma arquitetura de `@theme inline`,
+   mesma escala de raio derivada de `--radius`, mesmos tokens de sidebar e
+   mesmas superficies "rich".
+
+   A CAMADA DE DADO e propria do Fraus e substitui os `--chart-1..5` do Kronos
+   (uma rampa monocromatica de lime, correta para dado sequencial e errada
+   aqui). Ver `DESIGN.md`, secao 2.2.
+
+   Regra de encoding que atravessa a interface inteira:
+     ambar (`--dito`)  = o que foi DITO   — fala, texto, emoji
+     azul  (`--medido`)= o que foi MEDIDO — score, probabilidade, tendencia
+   E o lime da marca NUNCA aparece em dado.
+
+   Contraste: os tokens que carregam TEXTO tem variante `-texto`, e todas as
+   razoes WCAG contra `--background`, `--card` e `--muted` sao verificadas por
+   calculo em `scripts/contraste.mjs` (`npm run contraste`). Cor de marcacao e
+   cor de tipo nao sao a mesma coisa.
+--------------------------------------------------------------------------- */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--fonte-sans);
+  --font-mono: var(--fonte-mono);
+
+  /* Curva "fluida" (iOS/Vaul): acelera e desacelera sem overshoot. */
+  --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-rich: var(--destructive-rich);
+  --color-destructive-rich-border: var(--destructive-rich-border);
+  --color-destructive-rich-text: var(--destructive-rich-text);
+  --color-success: var(--success);
+  --color-success-rich: var(--success-rich);
+  --color-success-rich-border: var(--success-rich-border);
+  --color-success-rich-text: var(--success-rich-text);
+  --color-warning: var(--warning);
+  --color-warning-rich: var(--warning-rich);
+  --color-warning-rich-border: var(--warning-rich-border);
+  --color-warning-rich-text: var(--warning-rich-text);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* --- camada de dado (Fraus) --- */
+  --color-dito: var(--dito);
+  --color-dito-fraco: var(--dito-fraco);
+  --color-dito-texto: var(--dito-texto);
+  --color-medido: var(--medido);
+  --color-medido-fraco: var(--medido-fraco);
+  --color-medido-texto: var(--medido-texto);
+  --color-tempo: var(--tempo);
+  --color-tempo-fraco: var(--tempo-fraco);
+  --color-tempo-texto: var(--tempo-texto);
+  --color-detrator: var(--detrator);
+  --color-detrator-texto: var(--detrator-texto);
+  --color-neutro: var(--neutro);
+  --color-neutro-texto: var(--neutro-texto);
+  --color-promotor: var(--promotor);
+  --color-promotor-texto: var(--promotor-texto);
+  --color-sem-sinal: var(--sem-sinal);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Tema unico (dark). `:root` e `.dark` recebem os mesmos valores porque o app
+   renderiza sempre com a classe `.dark` (app/layout.tsx) — trava a identidade. */
+:root,
+.dark {
+  color-scheme: dark;
+
+  --fonte-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --fonte-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono",
+    Menlo, Consolas, monospace;
+
+  --duration-sidebar: 300ms;
+
+  /* --- chassi Kronos (nao alterar) --- */
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.843 0.179 134);
+  --primary-foreground: oklch(0.22 0.05 134);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --success: oklch(0.78 0.16 150);
+  --warning: oklch(0.8 0.14 80);
+
+  --destructive-rich: hsl(358 76% 10%);
+  --destructive-rich-border: hsl(357 89% 16%);
+  --destructive-rich-text: hsl(358 100% 81%);
+  --success-rich: hsl(150 100% 6%);
+  --success-rich-border: hsl(147 100% 12%);
+  --success-rich-text: hsl(150 86% 65%);
+  --warning-rich: hsl(64 100% 6%);
+  --warning-rich-border: hsl(60 100% 9%);
+  --warning-rich-text: hsl(46 87% 65%);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.843 0.179 134);
+  --radius: 0.625rem;
+
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.843 0.179 134);
+  --sidebar-primary-foreground: oklch(0.22 0.05 134);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.843 0.179 134);
+
+  /* --- camada de dado (Fraus) — substitui --chart-1..5 do Kronos --- */
+
+  /* ambar: o que foi DITO */
+  --dito: oklch(0.8 0.15 60);
+  --dito-fraco: color-mix(in oklch, var(--dito) 18%, transparent);
+  --dito-texto: oklch(0.85 0.13 60); /* AA sobre card e muted */
+
+  /* azul: o que foi MEDIDO */
+  --medido: oklch(0.7 0.15 265);
+  --medido-fraco: color-mix(in oklch, var(--medido) 18%, transparent);
+  --medido-texto: oklch(0.78 0.13 265);
+
+  /* magenta: tempo — a serie e SEMPRE tracejada, cor nunca e o unico canal */
+  --tempo: oklch(0.72 0.13 320);
+  --tempo-fraco: color-mix(in oklch, var(--tempo) 18%, transparent);
+  --tempo-texto: oklch(0.8 0.12 320);
+
+  /* escala divergente de NPS: 0-6 detrator, 7-8 neutro, 9-10 promotor */
+  --detrator: oklch(0.65 0.2 22);
+  --detrator-texto: oklch(0.76 0.16 22);
+  --neutro: oklch(0.74 0.1 90);
+  --neutro-texto: oklch(0.82 0.1 90);
+  --promotor: oklch(0.75 0.13 190);
+  --promotor-texto: oklch(0.82 0.11 190);
+
+  /* ausencia de dado NAO pertence a escala de satisfacao: e cinza de proposito. */
+  --sem-sinal: oklch(0.705 0.015 286.067);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* O `body` NUNCA rola na horizontal: conteudo largo rola no proprio container. */
+    overflow-x: hidden;
+  }
+  html {
+    @apply font-sans;
+  }
+  ::selection {
+    background-color: color-mix(in oklch, var(--primary) 20%, transparent);
+  }
+  /* Todo numero que se compara e monoespacado e tabular. Numero que dança na
+     vertical entre linhas de tabela e erro, nao estilo. */
+  .num {
+    font-family: var(--fonte-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Marca de proveniencia: todo numero ESTIMADO carrega este sublinhado
+     pontilhado; numero observado nunca carrega. E o detalhe de marca do
+     produto — o Fraus existe porque a origem do dado importa. */
+  .estimado {
+    text-decoration: underline dotted var(--muted-foreground);
+    text-underline-offset: 0.3em;
+    text-decoration-thickness: 1.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Impressao / PDF: o relatorio reaproveita a propria tela. */
+@media print {
+  .sem-impressao {
+    display: none !important;
+  }
+  .quebra-evitar {
+    break-inside: avoid;
+  }
+}

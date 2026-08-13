@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+modelos/
+dados_brutos/
+*.db
+node_modules/
+.next/
+.superpowers/

@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Dolos">
-  <title>Dolos</title>
-  <desc>A letra D em duas camadas deslocadas: a mascara visivel e a verdade atras dela.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Fraus">
+  <title>Fraus</title>
+  <desc>A letra F em duas camadas deslocadas: a mascara visivel e a verdade atras dela.</desc>
 
   <defs>
     <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
@@ -19,15 +19,18 @@
       <stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
 
-    <path id="letraD" fill-rule="evenodd" d="
-      M120 104 H252
-      C 348 104, 410 168, 410 256
-      C 410 344, 348 408, 252 408
-      H120 Z
-      M186 168 H252
-      C 306 168, 340 204, 340 256
-      C 340 308, 306 344, 252 344
-      H186 Z
+    <path id="letraF" d="
+      M132 104
+      H404
+      V170
+      H202
+      V236
+      H348
+      V302
+      H202
+      V408
+      H132
+      Z
     "/>
   </defs>
 
@@ -36,11 +39,11 @@
 
   <!-- a verdade: a mesma letra, atras e deslocada, so contorno -->
   <g transform="translate(-26 -22)">
-    <use href="#letraD" fill="none" stroke="#5A6BF0" stroke-width="6" stroke-opacity="0.85"/>
+    <use href="#letraF" fill="none" stroke="#5A6BF0" stroke-width="6" stroke-opacity="0.85"/>
   </g>
 
   <!-- a mascara: o que se ve -->
-  <use href="#letraD" fill="url(#mascara)"/>
+  <use href="#letraF" fill="url(#mascara)"/>
 
   <rect x="8" y="8" width="496" height="496" rx="106" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="2"/>
 </svg>
