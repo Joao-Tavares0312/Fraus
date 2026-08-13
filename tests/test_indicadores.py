@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
-                               containment_rate, nota_0_10)
+from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
+                               categoria_nps, containment_rate, nota_0_10,
+                               validar_faixas_nps)
 from fraus.modelos import Conversa, Mensagem
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
@@ -73,3 +74,44 @@ def test_containment_rate_ignora_conversas_escaladas():
 
     conversas = [conversa(False, 1), conversa(False, 2), conversa(True, 3), conversa(True, 4)]
     assert containment_rate(conversas) == pytest.approx(50.0)
+
+
+# --- faixas de NPS configuraveis -------------------------------------------
+
+
+def test_categoria_aceita_faixas_alternativas_por_parametro():
+    """Faixa vem por parametro -- nunca de estado global mutavel."""
+    faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
+    assert categoria_nps(50.0, faixas) == "neutro"
+    assert categoria_nps(50.0) == "detrator"  # padrao de fabrica intacto
+
+
+def test_faixas_de_fabrica_sao_validas():
+    validar_faixas_nps(FAIXAS_NPS)
+
+
+@pytest.mark.parametrize("faixas,trecho", [
+    ({"detrator": (0, 5), "neutro": (7, 8), "promotor": (9, 10)}, "buraco"),
+    ({"detrator": (0, 7), "neutro": (7, 8), "promotor": (9, 10)}, "sobrepoe"),
+    ({"detrator": (1, 6), "neutro": (7, 8), "promotor": (9, 10)}, "0"),
+    ({"detrator": (0, 6), "neutro": (7, 8), "promotor": (9, 9)}, "10"),
+    ({"detrator": (0, 6), "neutro": (8, 7), "promotor": (9, 10)}, "vazia"),
+])
+def test_faixas_invalidas_nomeiam_o_problema(faixas, trecho):
+    with pytest.raises(ValueError) as erro:
+        validar_faixas_nps(faixas)
+    assert trecho in str(erro.value)
+
+
+def test_faixas_sem_as_tres_categorias_sao_recusadas():
+    with pytest.raises(ValueError) as erro:
+        validar_faixas_nps({"detrator": (0, 6), "promotor": (7, 10)})
+    assert "neutro" in str(erro.value)
+
+
+def test_nps_agregado_usa_as_faixas_recebidas():
+    """`/indicadores` e `/conversas` precisam concordar: mesma faixa, uma fonte."""
+    scores = [80.0] * 4  # nota 8: neutro de fabrica, promotor com faixa alternativa
+    assert calcular_nps(scores) == pytest.approx(0.0)
+    faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
+    assert calcular_nps(scores, faixas) == pytest.approx(100.0)
