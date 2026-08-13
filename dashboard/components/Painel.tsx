@@ -1,50 +1,64 @@
 import type { ReactNode } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 /**
- * Casca unica de painel: filete de 1px, sem sombra, sem raio grande.
- * Existe para que toda a superficie use a MESMA moldura -- consistencia vale
- * mais que variedade numa tela de operacao.
+ * Painel de conteudo: titulo, subtitulo com o metodo quando o numero e
+ * derivado, corpo e rodape opcional.
+ *
+ * Elevacao por BORDA e superficie, nunca por sombra difusa -- o `Card` do
+ * chassi ja e assim. O subtitulo nao e decoracao: quando o numero do painel foi
+ * derivado no cliente e nao lido de um endpoint, e nele que isso esta escrito.
  */
 export function Painel({
   titulo,
   legenda,
   acessorio,
+  rodape,
+  semPadding,
+  className,
   children,
-  className = "",
 }: {
   titulo: string;
   legenda?: ReactNode;
   acessorio?: ReactNode;
-  children: ReactNode;
+  rodape?: ReactNode;
+  /** Para tabela e grafico, que gerenciam o proprio respiro. */
+  semPadding?: boolean;
   className?: string;
+  children: ReactNode;
 }) {
   return (
-    <section
-      className={`quebra-evitar border border-[var(--filete)] bg-[var(--superficie)] ${className}`}
-    >
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--filete)] px-5 py-3.5">
-        <div className="min-w-0">
-          <h2 className="text-[0.9375rem] font-semibold tracking-[-0.01em] text-[var(--tinta)]">
+    <Card className={cn("quebra-evitar gap-0 overflow-hidden py-0", className)}>
+      <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <CardTitle className="text-sm font-semibold tracking-tight">
             {titulo}
-          </h2>
+          </CardTitle>
           {legenda ? (
-            <p className="mt-1 max-w-[68ch] text-[0.8125rem] leading-[1.45] text-[var(--tinta-2)]">
+            <CardDescription className="mt-1 max-w-[80ch] text-xs leading-relaxed">
               {legenda}
-            </p>
+            </CardDescription>
           ) : null}
         </div>
         {acessorio ? <div className="shrink-0">{acessorio}</div> : null}
-      </header>
-      {children}
-    </section>
-  );
-}
+      </CardHeader>
 
-/** Rotulo de secao/eixo: pequeno, discreto, sem caixa alta decorativa. */
-export function Rotulo({ children }: { children: ReactNode }) {
-  return (
-    <span className="text-[0.6875rem] font-medium text-[var(--tinta-3)]">
-      {children}
-    </span>
+      <CardContent className={cn("min-w-0", semPadding ? "p-0" : "p-5")}>
+        {children}
+      </CardContent>
+
+      {rodape ? (
+        <div className="border-t border-border px-5 py-3 text-xs leading-relaxed text-muted-foreground">
+          {rodape}
+        </div>
+      ) : null}
+    </Card>
   );
 }

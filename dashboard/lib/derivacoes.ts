@@ -558,3 +558,161 @@ export function tempoMedianoDeResposta(detalhes: DetalheConversa[]): number | nu
   );
   return mediana(todas);
 }
+
+// ---------------------------------------------------------------------------
+// Agregados do PERIODO
+// ---------------------------------------------------------------------------
+
+/**
+ * Os quatro indicadores recortados por periodo.
+ *
+ * Existe porque a API nao aceita filtro de data em `/indicadores`: com um
+ * periodo ativo, o numero do servidor responde a outra pergunta (o banco
+ * inteiro) e exibi-lo ao lado de uma tabela recortada seria mentira.
+ *
+ * NADA aqui recalcula score, nota ou categoria -- invariante 3. O que se
+ * agrega e a CATEGORIA que o servidor ja gravou:
+ *   NPS  = %promotores - %detratores            (identico a calcular_nps)
+ *   CSAT = %(neutro ou promotor), ou seja nota >= 7 (identico a calcular_csat)
+ * A contencao sai de `escalou_para_humano`, que tambem vem do servidor.
+ *
+ * Sem nenhuma conversa no recorte, TODOS os campos vem null: agregado sem dado
+ * e estado vazio, nunca zero. `containment` inclusive -- o servidor devolve
+ * 0.0 para lista vazia, e propagar esse zero seria afirmar "nenhum atendimento
+ * foi contido" onde nao houve atendimento nenhum.
+ */
+export type IndicadoresDoPeriodo = {
+  nps: number | null;
+  csat: number | null;
+  containment: number | null;
+  total: number;
+  semSinal: number;
+  /** Quantas conversas entraram nos calculos de NPS/CSAT (as com categoria). */
+  comSinal: number;
+  /** Quantas conversas tinham transcricao para medir contencao. */
+  comTranscricao: number;
+};
+
+export function indicadoresDoPeriodo(
+  resumos: ResumoConversa[],
+  detalhes: DetalheConversa[],
+): IndicadoresDoPeriodo {
+  const categorias = resumos
+    .map((resumo) => resumo.categoria)
+    .filter((categoria): categoria is Categoria => categoria !== null);
+
+  const total = resumos.length;
+  const semSinal = total - categorias.length;
+
+  const csat =
+    categorias.length === 0
+      ? null
+      : (100 * categorias.filter((c) => c !== "detrator").length) /
+        categorias.length;
+
+  const containment =
+    detalhes.length === 0
+      ? null
+      : (100 * detalhes.filter((d) => !d.escalou_para_humano).length) /
+        detalhes.length;
+
+  return {
+    nps: npsDeCategorias(categorias),
+    csat,
+    containment,
+    total,
+    semSinal,
+    comSinal: categorias.length,
+    comTranscricao: detalhes.length,
+  };
+}
+
+/**
+ * Os atendimentos que mais precisam de atencao no periodo.
+ *
+ * Conversa sem nota NAO entra: ordenar "os piores" jogando os mudos no topo
+ * seria exatamente o `?? 0` que o produto combate. Elas aparecem contadas a
+ * parte, como "sem sinal".
+ */
+export function pioresAtendimentos(
+  resumos: ResumoConversa[],
+  limite: number,
+): ResumoConversa[] {
+  return resumos
+    .filter((resumo) => resumo.nota !== null)
+    .sort((a, b) => (a.nota as number) - (b.nota as number))
+    .slice(0, limite);
+}
+
+// ---------------------------------------------------------------------------
+// Features do fusor: importancia GLOBAL x contribuicao DAQUELE atendimento
+// ---------------------------------------------------------------------------
+
+export type PesoDaFeature = {
+  nome: string;
+  rotulo: string;
+  sinal: SinalDaFeature;
+  valor: number;
+  /** |valor| dividido pelo maior |valor| da lista -- largura da barra. */
+  fracao: number;
+};
+
+/** Nome tecnico da feature -> rotulo legivel, sem inventar semantica nova. */
+export const ROTULO_FEATURE: Record<string, string> = {
+  texto_prob_insatisfeito_media: "P(insatisfeito) média",
+  texto_prob_satisfeito_media: "P(satisfeito) média",
+  texto_prob_insatisfeito_max: "P(insatisfeito) máxima",
+  texto_prob_satisfeito_ultima: "P(satisfeito) na última fala",
+  emoji_score_medio: "Score médio dos emojis",
+  emoji_frac_positivos: "Fração de emojis positivos",
+  emoji_frac_negativos: "Fração de emojis negativos",
+  emoji_contagem: "Quantidade de emojis",
+  emoji_posicao_relativa_media: "Posição relativa média do emoji",
+  latencia_mediana_s: "Latência mediana (s)",
+  latencia_p90_s: "Latência p90 (s)",
+  latencia_primeira_resposta_s: "Latência da 1ª resposta (s)",
+  duracao_total_s: "Duração total (s)",
+  qtd_turnos_cliente: "Turnos do cliente",
+  escalou: "Escalou para humano",
+  abandonou: "Abandonou",
+};
+
+export function rotuloDaFeature(nome: string): string {
+  return ROTULO_FEATURE[nome] ?? nome;
+}
+
+/**
+ * Ordena um mapa de pesos por MAGNITUDE e normaliza a largura da barra.
+ *
+ * Serve tanto para `importancias` (peso global, sempre positivo) quanto para
+ * `contribuicoes` (o que pesou naquele atendimento, COM SINAL). A funcao e a
+ * mesma; o que nunca se mistura e a exibicao -- sao perguntas diferentes, e a
+ * interface precisa dizer qual esta respondendo.
+ */
+export function ordenarPorMagnitude(
+  pesos: Record<string, number>,
+): PesoDaFeature[] {
+  const entradas = Object.entries(pesos);
+  const maior = Math.max(0, ...entradas.map(([, valor]) => Math.abs(valor)));
+
+  return entradas
+    .map(([nome, valor]) => ({
+      nome,
+      rotulo: rotuloDaFeature(nome),
+      sinal: sinalDaFeature(nome),
+      valor,
+      fracao: maior === 0 ? 0 : Math.abs(valor) / maior,
+    }))
+    .sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
+}
+
+/** As mesmas features, agrupadas pelos tres sinais do trabalho. */
+export function agruparPorSinal(
+  pesos: Record<string, number>,
+): { sinal: SinalDaFeature; features: PesoDaFeature[] }[] {
+  const ordenadas = ordenarPorMagnitude(pesos);
+  return (["texto", "emoji", "tempo"] as SinalDaFeature[]).map((sinal) => ({
+    sinal,
+    features: ordenadas.filter((feature) => feature.sinal === sinal),
+  }));
+}

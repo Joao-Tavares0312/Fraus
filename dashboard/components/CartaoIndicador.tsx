@@ -1,184 +1,184 @@
 import type { ReactNode } from "react";
-import { ROTULO_SEM_SINAL } from "@/lib/formato";
-
-export type Marca = {
-  /** Posicao no dominio do medidor. */
-  em: number;
-  rotulo: string;
-};
-
-export type Faixa = {
-  de: number;
-  ate: number;
-  cor: string;
-  rotulo: string;
-};
-
-export type Medidor = {
-  min: number;
-  max: number;
-  valor: number;
-  /** Faixa de referencia pintada atras do trilho (ex.: CSAT saudavel 75-85%). */
-  faixas?: Faixa[];
-  marcas?: Marca[];
-  cor: string;
-};
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 /**
- * Uma celula da faixa de indicadores.
+ * Uma faixa de referencia no trilho do indicador.
  *
- * Duas decisoes carregam o produto inteiro:
+ * `de` e `ate` estao na MESMA unidade do indicador; a conversao para
+ * percentual do trilho acontece aqui, uma vez so.
+ */
+export type FaixaReferencia = {
+  de: number;
+  ate: number;
+  rotulo: string;
+  /** Classe de fundo do token; sempre chapada -- degrade distorce leitura de area. */
+  cor: string;
+};
+
+export type Trilho = {
+  minimo: number;
+  maximo: number;
+  faixas: FaixaReferencia[];
+  /** Marcas de escala (o valor extremo e o zero do NPS, por exemplo). */
+  marcas?: { valor: number; rotulo: string }[];
+};
+
+function posicao(valor: number, trilho: Trilho): number {
+  const fracao = (valor - trilho.minimo) / (trilho.maximo - trilho.minimo);
+  return Math.min(100, Math.max(0, fracao * 100));
+}
+
+/**
+ * Cartao de indicador.
  *
- * 1. `natureza` marca a PROVENIENCIA do numero. "estimado" ganha o sublinhado
- *    pontilhado e a palavra "estimativa"; "observado" nao ganha nada. O NPS do
- *    Fraus e inferido do texto, nunca perguntado ao cliente, e a interface
- *    nao pode deixar isso implicito.
- * 2. `erro` e por celula. Se um indicador falha, so esta celula mostra falha --
- *    as outras continuam renderizando (regra de produto 5).
+ * As tres regras que ele existe para cumprir:
  *
- * `semDado` e uma TERCEIRA coisa, diferente das duas: a API respondeu bem, mas
- * nao ha o que medir (nenhum atendimento com score). Nao e falha e muito menos
- * zero -- "NPS +0" seria exatamente a mentira que o produto existe para nao
- * contar. Cai no mesmo rotulo "sem sinal" usado no resto da interface.
+ *   1. `valor: null` e "sem dado", nunca zero. Um agregado sem medicao vira
+ *      estado vazio dentro do proprio cartao, com o motivo escrito -- "NPS +0"
+ *      sem medicao e mentira com cara de medicao.
+ *   2. numero que se compara e MONOESPACADO e tabular (`.num`).
+ *   3. falha isolada: `erro` mostra o problema aqui dentro sem derrubar os
+ *      cartoes vizinhos.
+ *
+ * A faixa de referencia nao e enfeite: um indicador so significa alguma coisa
+ * contra a faixa em que ele deveria estar.
  */
 export function CartaoIndicador({
   rotulo,
   valor,
   unidade,
-  natureza,
-  nota,
-  medidor,
+  formatado,
+  qualificacao,
+  estimativa,
+  explicacaoVazio,
   erro,
-  semDado,
+  trilho,
+  rodape,
 }: {
   rotulo: string;
-  valor?: string;
+  valor: number | null;
   unidade?: string;
-  natureza: "estimado" | "observado";
-  nota?: ReactNode;
-  medidor?: Medidor;
+  /** Ja formatado em pt-BR pelo chamador -- uma fonte so de formatacao. */
+  formatado?: string;
+  /** Etiqueta curta ao lado do rotulo: "estimativa", "observado". */
+  qualificacao?: string;
+  /** Marca o numero com o sublinhado pontilhado de proveniencia. */
+  estimativa?: boolean;
+  /** Por que nao ha numero. Obrigatorio na pratica quando `valor` e null. */
+  explicacaoVazio?: string;
   erro?: string;
-  /** Explicacao do porque nao ha o que medir. Exclui `valor` e `medidor`. */
-  semDado?: string;
+  trilho?: Trilho;
+  rodape?: ReactNode;
 }) {
-  const estimado = natureza === "estimado";
-
   return (
-    <div className="flex min-w-0 flex-col gap-3 px-5 py-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-[0.8125rem] font-medium text-[var(--tinta-2)]">
-          {rotulo}
-        </h3>
-        {estimado ? (
-          <span className="shrink-0 rounded-[2px] border border-[var(--filete)] px-1.5 py-px text-[0.625rem] font-medium text-[var(--tinta-3)]">
-            estimativa
-          </span>
+    <Card
+      size="sm"
+      className="quebra-evitar gap-2 px-4 py-3.5"
+      data-slot="indicador"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-xs font-medium text-muted-foreground">{rotulo}</h3>
+        {qualificacao ? (
+          <Badge
+            variant="outline"
+            className="shrink-0 rounded-sm text-[0.625rem] text-muted-foreground"
+          >
+            {qualificacao}
+          </Badge>
         ) : null}
       </div>
 
       {erro ? (
-        <FalhaDaCelula erro={erro} />
-      ) : semDado ? (
-        <SemDado explicacao={semDado} />
-      ) : (
+        <p className="text-xs leading-relaxed text-destructive">{erro}</p>
+      ) : valor === null ? (
         <>
-          <p className="flex items-baseline gap-1.5">
-            <span
-              className={`text-[2.125rem] leading-none font-semibold tracking-[-0.02em] text-[var(--tinta)] ${
-                estimado ? "estimado" : ""
-              }`}
-            >
-              {valor}
-            </span>
-            {unidade ? (
-              <span className="text-[0.875rem] text-[var(--tinta-3)]">{unidade}</span>
-            ) : null}
+          <p className="text-lg leading-none font-medium text-muted-foreground">
+            sem dado
           </p>
-
-          {medidor ? <Trilho {...medidor} /> : null}
-
-          {nota ? (
-            <p className="text-[0.75rem] leading-[1.45] text-[var(--tinta-3)]">{nota}</p>
+          {explicacaoVazio ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {explicacaoVazio}
+            </p>
           ) : null}
         </>
+      ) : (
+        <>
+          <p className="flex items-baseline gap-1">
+            <span
+              className={cn(
+                "num text-[1.75rem] leading-none font-semibold tracking-tight text-foreground",
+                estimativa && "estimado",
+              )}
+            >
+              {formatado ?? valor}
+            </span>
+            {unidade ? (
+              <span className="text-sm text-muted-foreground">{unidade}</span>
+            ) : null}
+          </p>
+          {trilho ? <TrilhoDeReferencia valor={valor} trilho={trilho} /> : null}
+        </>
       )}
-    </div>
+
+      {rodape ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{rodape}</p>
+      ) : null}
+    </Card>
   );
 }
 
-function SemDado({ explicacao }: { explicacao: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <p className="text-[1.25rem] leading-none font-semibold text-[var(--tinta-3)]">
-        {ROTULO_SEM_SINAL}
-      </p>
-      <p className="text-[0.75rem] leading-[1.45] text-[var(--tinta-3)]">
-        {explicacao}
-      </p>
-    </div>
-  );
-}
-
-function FalhaDaCelula({ erro }: { erro: string }) {
-  return (
-    <div role="status" className="flex flex-col gap-1">
-      <p className="text-[1.25rem] leading-none font-semibold text-[var(--tinta-3)]">
-        indisponível
-      </p>
-      <p className="text-[0.75rem] leading-[1.45] text-[var(--detrator-texto)]">{erro}</p>
-      <p className="text-[0.75rem] leading-[1.45] text-[var(--tinta-3)]">
-        Os demais indicadores continuam válidos.
-      </p>
-    </div>
-  );
-}
-
-/**
- * Trilho de escala: mostra ONDE o valor cai no proprio dominio. Um numero de
- * NPS sem a escala -100..+100 ao lado nao diz nada a quem ve pela primeira vez.
- */
-function Trilho({ min, max, valor, faixas = [], marcas = [], cor }: Medidor) {
-  const amplitude = max - min || 1;
-  const posicao = (n: number) =>
-    `${Math.min(100, Math.max(0, ((n - min) / amplitude) * 100))}%`;
+function TrilhoDeReferencia({
+  valor,
+  trilho,
+}: {
+  valor: number;
+  trilho: Trilho;
+}) {
+  const legenda = trilho.faixas.map((faixa) => faixa.rotulo).join(" · ");
 
   return (
-    <div className="pt-0.5">
-      <div className="relative h-[6px] w-full bg-[var(--superficie-2)]">
-        {faixas.map((faixa) => (
-          <div
+    <div className="mt-1 flex flex-col gap-1">
+      <div
+        className="relative h-1.5 w-full overflow-hidden rounded-sm bg-muted"
+        role="img"
+        aria-label={`Faixas de referência: ${legenda}.`}
+      >
+        {trilho.faixas.map((faixa) => (
+          <span
             key={faixa.rotulo}
+            aria-hidden
             title={faixa.rotulo}
-            className="absolute inset-y-0"
+            className={cn("absolute inset-y-0", faixa.cor)}
             style={{
-              left: posicao(faixa.de),
-              width: `calc(${posicao(faixa.ate)} - ${posicao(faixa.de)})`,
-              background: faixa.cor,
+              left: `${posicao(faixa.de, trilho)}%`,
+              width: `${posicao(faixa.ate, trilho) - posicao(faixa.de, trilho)}%`,
             }}
           />
         ))}
-        <div
-          className="absolute top-[-3px] bottom-[-3px] w-[2px]"
-          style={{ left: posicao(valor), background: cor }}
-        />
-      </div>
-      <div className="relative mt-1 h-[0.875rem]">
-        <span className="absolute left-0 text-[0.6875rem] tabular-nums text-[var(--tinta-3)]">
-          {min}
-        </span>
-        {marcas.map((marca) => (
+        {trilho.marcas?.map((marca) => (
           <span
             key={marca.rotulo}
-            className="absolute -translate-x-1/2 text-[0.6875rem] whitespace-nowrap text-[var(--tinta-3)]"
-            style={{ left: posicao(marca.em) }}
-          >
-            {marca.rotulo}
-          </span>
+            aria-hidden
+            title={marca.rotulo}
+            className="absolute inset-y-0 w-px bg-border"
+            style={{ left: `${posicao(marca.valor, trilho)}%` }}
+          />
         ))}
-        <span className="absolute right-0 text-[0.6875rem] tabular-nums text-[var(--tinta-3)]">
-          {max}
-        </span>
+        {/* O ponteiro do valor: barra de 2px na cor do texto, sempre por cima
+            das faixas -- e o unico elemento do trilho que representa medicao. */}
+        <span
+          aria-hidden
+          className="absolute inset-y-0 w-0.5 rounded-full bg-foreground"
+          style={{
+            left: `calc(${posicao(valor, trilho)}% - 1px)`,
+          }}
+        />
       </div>
+      <p className="text-[0.6875rem] leading-tight text-muted-foreground">
+        {legenda}
+      </p>
     </div>
   );
 }

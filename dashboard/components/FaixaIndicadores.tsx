@@ -1,177 +1,164 @@
-import type { Indicadores, Resultado } from "@/lib/api";
-import { CSAT_SAUDAVEL, LIMIARES_LATENCIA } from "@/lib/derivacoes";
-import { formatarNps, formatarNumero, formatarSegundos } from "@/lib/formato";
-import { CartaoIndicador } from "./CartaoIndicador";
+import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
+import {
+  CSAT_SAUDAVEL,
+  LIMIARES_LATENCIA,
+  type IndicadoresDoPeriodo,
+} from "@/lib/derivacoes";
+import {
+  formatarNps,
+  formatarNumero,
+  formatarSegundos,
+} from "@/lib/formato";
 
 /**
- * A faixa nao e uma grade de cartoes: e UM painel dividido por filetes, para
- * que os quatro numeros leiam como um so instrumento.
+ * Os quatro indicadores do periodo.
  *
- * A isolacao de falha e por celula. Como `/indicadores` entrega os quatro
- * numeros num payload unico, ha dois niveis de falha:
- *   - a requisicao inteira falha -> as quatro celulas falham, mas o resto da
- *     pagina (grafico, tabela) continua renderizando;
- *   - um campo vem ausente ou nao-numerico -> so a celula dele falha.
+ * NPS e CSAT levam a etiqueta "estimativa" e o sublinhado de proveniencia: os
+ * dois sao INFERIDOS do texto, nao perguntados ao cliente. Contencao e latencia
+ * sao OBSERVADAS -- saem de `escalou_para_humano` e dos timestamps -- e por
+ * isso nao levam nem etiqueta nem sublinhado. A diferenca entre as duas
+ * origens e o produto inteiro.
  *
- * Ausencia de MEDIDA nao e nenhuma das duas: `nps` e `csat` chegam `null`
- * quando nenhum atendimento tem score, e a celula cai no estado "sem sinal" --
- * o mesmo que o grafico ja mostra. Nunca 0.
+ * Cada cartao falha sozinho: `erro` pinta so o proprio cartao.
  */
+
+const TRILHO_NPS: Trilho = {
+  minimo: -100,
+  maximo: 100,
+  // O NPS nao tem "faixa saudavel" universal publicada que caiba aqui sem
+  // inventar limiar, entao o trilho marca apenas o ZERO -- a fronteira entre
+  // mais detratores e mais promotores, que e definicao, nao benchmark.
+  faixas: [],
+  marcas: [{ valor: 0, rotulo: "zero: tantos promotores quanto detratores" }],
+};
+
+const TRILHO_CSAT: Trilho = {
+  minimo: 0,
+  maximo: 100,
+  faixas: [
+    {
+      de: CSAT_SAUDAVEL.de,
+      ate: CSAT_SAUDAVEL.ate,
+      rotulo: `banda saudável ${CSAT_SAUDAVEL.de}–${CSAT_SAUDAVEL.ate}%`,
+      cor: "bg-medido-fraco",
+    },
+  ],
+};
+
+const TRILHO_LATENCIA: Trilho = {
+  minimo: 0,
+  maximo: LIMIARES_LATENCIA.degradando,
+  faixas: [
+    {
+      de: 0,
+      ate: LIMIARES_LATENCIA.pico,
+      rotulo: `até ${LIMIARES_LATENCIA.pico}s pico de CSAT (~84,7%)`,
+      cor: "bg-promotor",
+    },
+    {
+      de: LIMIARES_LATENCIA.pico,
+      ate: LIMIARES_LATENCIA.saudavel,
+      rotulo: `até ${LIMIARES_LATENCIA.saudavel}s saudável`,
+      cor: "bg-neutro",
+    },
+    {
+      de: LIMIARES_LATENCIA.saudavel,
+      ate: LIMIARES_LATENCIA.degradando,
+      rotulo: `até ${LIMIARES_LATENCIA.degradando / 60}min degradando`,
+      cor: "bg-detrator",
+    },
+  ],
+};
+
 export function FaixaIndicadores({
   indicadores,
   tempoMediano,
-  erroTempo,
+  erro,
+  rotuloDoPeriodo,
 }: {
-  indicadores: Resultado<Indicadores>;
+  indicadores: IndicadoresDoPeriodo;
   tempoMediano: number | null;
-  erroTempo?: string;
+  /** Falha da listagem: todos os quatro dependem dela. */
+  erro?: string;
+  rotuloDoPeriodo: string;
 }) {
-  const erroGeral = indicadores.ok ? undefined : indicadores.erro;
-  const dado = indicadores.ok ? indicadores.dado : null;
-
-  const campo = (
-    nome: keyof Indicadores,
-  ): { valor?: number; erro?: string; semDado?: string } => {
-    if (erroGeral) return { erro: erroGeral };
-    const bruto = dado?.[nome];
-    if (bruto === null) {
-      return {
-        semDado:
-          "nenhum atendimento com fala do cliente para pontuar — não há o que medir",
-      };
-    }
-    if (typeof bruto !== "number" || !Number.isFinite(bruto)) {
-      return { erro: `campo "${nome}" ausente na resposta de /indicadores` };
-    }
-    return { valor: bruto };
-  };
-
-  const nps = campo("nps");
-  const csat = campo("csat");
-  const contencao = campo("containment_rate");
-  const total = dado?.total_conversas;
-  const semSinal = dado?.sem_sinal;
+  const semSinalTexto =
+    indicadores.semSinal > 0
+      ? `${indicadores.semSinal} de ${indicadores.total} sem fala do cliente — fora do cálculo, nunca como zero.`
+      : undefined;
 
   return (
-    <div className="grid grid-cols-1 divide-y divide-[var(--filete)] border border-[var(--filete)] bg-[var(--superficie)] sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
-      <div className="sm:border-b sm:border-[var(--filete)] lg:border-b-0 lg:border-r">
-        <CartaoIndicador
-          rotulo="NPS inferido"
-          natureza="estimado"
-          valor={nps.valor === undefined ? undefined : formatarNps(nps.valor)}
-          erro={nps.erro}
-          semDado={nps.semDado}
-          medidor={
-            nps.valor === undefined
-              ? undefined
-              : {
-                  min: -100,
-                  max: 100,
-                  valor: nps.valor,
-                  cor: "var(--serie-nps)",
-                  marcas: [{ em: 0, rotulo: "0" }],
-                }
-          }
-          nota="Derivado do texto do atendimento. Não é pergunta declarada ao cliente."
-        />
-      </div>
-
-      <div className="sm:border-b sm:border-[var(--filete)] lg:border-b-0 lg:border-r">
-        <CartaoIndicador
-          rotulo="CSAT"
-          natureza="estimado"
-          valor={csat.valor === undefined ? undefined : formatarNumero(csat.valor)}
-          unidade="%"
-          erro={csat.erro}
-          semDado={csat.semDado}
-          medidor={
-            csat.valor === undefined
-              ? undefined
-              : {
-                  min: 0,
-                  max: 100,
-                  valor: csat.valor,
-                  cor: "var(--serie-nps)",
-                  faixas: [
-                    {
-                      de: CSAT_SAUDAVEL.de,
-                      ate: CSAT_SAUDAVEL.ate,
-                      cor: "var(--faixa-saudavel)",
-                      rotulo: `faixa saudável de referência: ${CSAT_SAUDAVEL.de}–${CSAT_SAUDAVEL.ate}%`,
-                    },
-                  ],
-                  marcas: [
-                    { em: (CSAT_SAUDAVEL.de + CSAT_SAUDAVEL.ate) / 2, rotulo: "75–85 saudável" },
-                  ],
-                }
-          }
-          nota="Atendimentos com nota inferida ≥ 7. Faixa saudável de referência marcada no trilho."
-        />
-      </div>
-
-      <div className="sm:border-b sm:border-[var(--filete)] lg:border-b-0 lg:border-r">
-        <CartaoIndicador
-          rotulo="Containment rate"
-          natureza="observado"
-          valor={
-            contencao.valor === undefined
-              ? undefined
-              : formatarNumero(contencao.valor)
-          }
-          unidade="%"
-          erro={contencao.erro}
-          semDado={contencao.semDado}
-          medidor={
-            contencao.valor === undefined
-              ? undefined
-              : {
-                  min: 0,
-                  max: 100,
-                  valor: contencao.valor,
-                  cor: "var(--serie-latencia)",
-                }
-          }
-          nota={
-            total === undefined || semSinal === undefined
-              ? "Atendimentos resolvidos sem passar para humano."
-              : `Resolvidos sem passar para humano, sobre ${total} atendimentos — ${semSinal} deles sem fala do cliente.`
-          }
-        />
-      </div>
+    <section
+      aria-label={`Indicadores de ${rotuloDoPeriodo}`}
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      <CartaoIndicador
+        rotulo="NPS inferido"
+        qualificacao="estimativa"
+        estimativa
+        erro={erro}
+        valor={indicadores.nps}
+        formatado={
+          indicadores.nps === null ? undefined : formatarNps(indicadores.nps)
+        }
+        trilho={TRILHO_NPS}
+        explicacaoVazio={
+          indicadores.total === 0
+            ? "Nenhum atendimento no período selecionado."
+            : "Nenhum atendimento do período tem fala do cliente, então não há categoria para agregar."
+        }
+        rodape={
+          indicadores.nps === null
+            ? undefined
+            : `Sobre ${indicadores.comSinal} atendimento(s) com sinal. ${semSinalTexto ?? ""}`
+        }
+      />
 
       <CartaoIndicador
-        rotulo="Tempo mediano de resposta"
-        natureza="observado"
-        valor={tempoMediano === null ? undefined : formatarSegundos(tempoMediano)}
-        erro={
-          erroTempo ??
-          (tempoMediano === null
-            ? "nenhuma resposta com par cliente→bot na janela"
-            : undefined)
-        }
-        medidor={
-          tempoMediano === null
+        rotulo="CSAT inferido"
+        qualificacao="estimativa"
+        estimativa
+        unidade="%"
+        erro={erro}
+        valor={indicadores.csat}
+        formatado={
+          indicadores.csat === null
             ? undefined
-            : {
-                min: 0,
-                max: LIMIARES_LATENCIA.degradando,
-                valor: Math.min(tempoMediano, LIMIARES_LATENCIA.degradando),
-                cor: "var(--serie-latencia)",
-                faixas: [
-                  {
-                    de: 0,
-                    ate: LIMIARES_LATENCIA.pico,
-                    cor: "var(--faixa-saudavel)",
-                    rotulo: `pico de satisfação na literatura de live chat: até ${LIMIARES_LATENCIA.pico} s (CSAT ~84,7%)`,
-                  },
-                ],
-                marcas: [
-                  { em: LIMIARES_LATENCIA.saudavel, rotulo: "60 s saudável" },
-                ],
-              }
+            : formatarNumero(indicadores.csat)
         }
-        nota="Mediana dos intervalos entre a fala do cliente e a resposta seguinte, calculada dos timestamps. Acima de 3 min é a faixa de abandono: 57% dos clientes desistem."
+        trilho={TRILHO_CSAT}
+        explicacaoVazio="Sem atendimento pontuado no período, não há proporção de satisfeitos a calcular."
+        rodape={`Proporção de atendimentos com nota ≥ 7, a mesma regra do servidor.`}
       />
-    </div>
+
+      <CartaoIndicador
+        rotulo="Taxa de contenção"
+        qualificacao="observado"
+        unidade="%"
+        erro={erro}
+        valor={indicadores.containment}
+        formatado={
+          indicadores.containment === null
+            ? undefined
+            : formatarNumero(indicadores.containment)
+        }
+        trilho={{ minimo: 0, maximo: 100, faixas: [] }}
+        explicacaoVazio="Nenhuma transcrição carregada no período — a contenção sai de escalou_para_humano, que vem com a conversa."
+        rodape="Atendimentos resolvidos sem passar para um humano. Não depende de score."
+      />
+
+      <CartaoIndicador
+        rotulo="Latência mediana"
+        qualificacao="observado"
+        erro={erro}
+        valor={tempoMediano}
+        formatado={
+          tempoMediano === null ? undefined : formatarSegundos(tempoMediano)
+        }
+        trilho={TRILHO_LATENCIA}
+        explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
+        rodape="Mediana do intervalo entre a fala do cliente e a resposta seguinte, derivada dos timestamps."
+      />
+    </section>
   );
 }

@@ -4,28 +4,38 @@
  */
 export function NotaMetodologica({ derivados }: { derivados?: string[] }) {
   return (
-    <footer className="quebra-evitar border border-[var(--filete)] bg-[var(--superficie)] px-5 py-4">
-      <h2 className="text-[0.8125rem] font-semibold text-[var(--tinta)]">
+    <footer className="quebra-evitar rounded-xl bg-card px-5 py-4 ring-1 ring-foreground/10">
+      <h2 className="text-sm font-semibold text-foreground">
         Nota metodológica
       </h2>
-      <div className="mt-2 grid gap-3 md:grid-cols-2">
-        <p className="max-w-[68ch] text-[0.8125rem] leading-[1.6] text-[var(--tinta-2)]">
-          <strong className="font-medium text-[var(--tinta)]">
-            NPS inferido a partir do texto do atendimento, não de pergunta
-            declarada ao cliente. Estimativa.
-          </strong>{" "}
-          O valor é derivado da fusão de três sinais — texto, emoji e tempo de
-          resposta — e convertido para a escala 0–10 antes de cair nas faixas
-          canônicas (0–6 detrator, 7–8 neutro, 9–10 promotor). Todo número
-          estimado nesta tela carrega{" "}
-          <span className="estimado">este sublinhado pontilhado</span>; números
-          observados não carregam.
-        </p>
-        <div className="text-[0.8125rem] leading-[1.6] text-[var(--tinta-2)]">
+      <div className="mt-2 grid gap-4 md:grid-cols-2">
+        <div className="max-w-[68ch] text-xs leading-relaxed text-muted-foreground">
+          <p>
+            <strong className="font-medium text-foreground">
+              NPS inferido a partir do texto do atendimento, não de pergunta
+              declarada ao cliente. Estimativa.
+            </strong>{" "}
+            O valor é derivado da fusão de três sinais — texto, emoji e tempo de
+            resposta — e convertido para a escala 0–10 antes de cair nas faixas
+            canônicas, que a interface lê de{" "}
+            <code className="num text-foreground">GET /modelo</code>. Todo
+            número estimado carrega{" "}
+            <span className="estimado text-foreground">
+              este sublinhado pontilhado
+            </span>
+            ; número observado não carrega.
+          </p>
+          <p className="mt-2">
+            O sinal de tempo é treinado em dados sintéticos calibrados por
+            literatura, porque nenhum corpus público de review em português tem
+            timestamps de diálogo. Limitação declarada, não escondida.
+          </p>
+        </div>
+        <div className="text-xs leading-relaxed text-muted-foreground">
           <p>
             Atendimento sem fala do cliente aparece como{" "}
-            <strong className="font-medium text-[var(--tinta)]">sem sinal</strong>{" "}
-            e nunca como nota 0: ausência de dado não é insatisfação.
+            <strong className="font-medium text-foreground">sem sinal</strong> e
+            nunca como nota 0: ausência de dado não é insatisfação.
           </p>
           {derivados && derivados.length > 0 ? (
             <>

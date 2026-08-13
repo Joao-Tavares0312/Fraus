@@ -5,8 +5,25 @@ export const ROTULO_SEM_SINAL = "sem sinal";
 const NUMERO = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const INTEIRO = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 
+/**
+ * Numero em pt-BR com `casas` decimais no maximo.
+ *
+ * Os dois formatadores mais usados (0 e 1 casa) sao memoizados no modulo
+ * porque `Intl.NumberFormat` e caro e a tabela chama isto por celula.
+ */
+const CACHE_FORMATADOR = new Map<number, Intl.NumberFormat>();
+
 export function formatarNumero(valor: number, casas = 1): string {
-  return casas === 0 ? INTEIRO.format(valor) : NUMERO.format(valor);
+  if (casas === 0) return INTEIRO.format(valor);
+  if (casas === 1) return NUMERO.format(valor);
+  let formatador = CACHE_FORMATADOR.get(casas);
+  if (!formatador) {
+    formatador = new Intl.NumberFormat("pt-BR", {
+      maximumFractionDigits: casas,
+    });
+    CACHE_FORMATADOR.set(casas, formatador);
+  }
+  return formatador.format(valor);
 }
 
 export function formatarPercentual(valor: number): string {

@@ -88,6 +88,54 @@ export type Atribuicao = {
   contribuicoes: Record<string, number> | null;
 };
 
+/** Metricas do treino, exportadas pelo notebook 01. `null` ate o treino rodar. */
+export type MetricasTreino = {
+  acuracia?: number;
+  f1_macro?: number;
+  [chave: string]: unknown;
+};
+
+/** Resposta de `GET /modelo` -- a ficha do modelo. */
+export type FichaModelo = {
+  /** Peso GLOBAL de cada uma das 16 features. Nao e especifico de conversa. */
+  importancias: Record<string, number>;
+  /** `null` enquanto o notebook 01 nao exportou metricas.json. NUNCA zero. */
+  metricas: MetricasTreino | null;
+  classes: string[];
+  /** Faixas de NPS lidas do SERVIDOR (fonte unica), nao digitadas no front. */
+  faixas_nps: Record<string, [number, number]>;
+  total_emojis_lexicon: number;
+};
+
+export type ItemLexicon = {
+  emoji: string;
+  score: number;
+  negativo: number;
+  neutro: number;
+  positivo: number;
+};
+
+export type PaginaLexicon = {
+  total: number;
+  itens: ItemLexicon[];
+};
+
+export type EmojiDetectado = {
+  emoji: string;
+  score: number;
+  /** Posicao do emoji no texto, em [0, 1]: 1 = no fim da frase. */
+  posicao_relativa: number;
+};
+
+/** Resposta de `POST /modelo/simular`. */
+export type Simulacao = {
+  texto: string;
+  prob_insatisfeito: number;
+  prob_neutro: number;
+  prob_satisfeito: number;
+  emojis: EmojiDetectado[];
+};
+
 export type Resultado<T> =
   | { ok: true; dado: T }
   | { ok: false; erro: string };
@@ -130,6 +178,59 @@ export const obterAtribuicao = (id: string) =>
   proteger(
     buscar<Atribuicao>(`/conversas/${encodeURIComponent(id)}/atribuicao`),
   );
+
+export const obterModelo = () => proteger(buscar<FichaModelo>("/modelo"));
+
+/** Uma pagina do lexicon de emoji. `busca` casa o emoji exato, como a API faz. */
+export const obterLexicon = (
+  { busca, limite, deslocamento }: {
+    busca?: string;
+    limite: number;
+    deslocamento: number;
+  },
+) => {
+  const parametros = new URLSearchParams({
+    limite: String(limite),
+    deslocamento: String(deslocamento),
+  });
+  if (busca) parametros.set("busca", busca);
+  return proteger(buscar<PaginaLexicon>(`/modelo/lexicon?${parametros}`));
+};
+
+/**
+ * Roda o classificador numa frase avulsa. Nao persiste nada.
+ *
+ * Ao contrario das leituras, esta e uma chamada do NAVEGADOR (o simulador e
+ * interativo), entao `BASE` precisa ser alcancavel do cliente -- por isso a
+ * variavel de ambiente e `NEXT_PUBLIC_API_URL`.
+ */
+export async function simularTexto(texto: string): Promise<Resultado<Simulacao>> {
+  return proteger(
+    (async () => {
+      const resposta = await fetch(`${BASE}/modelo/simular`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto }),
+        cache: "no-store",
+      });
+      if (!resposta.ok) {
+        // A API responde 400 com `{detail}` -- mostrar o motivo real vale mais
+        // que "erro 400" para quem esta demonstrando o produto.
+        const corpo = (await resposta.json().catch(() => null)) as
+          | { detail?: string }
+          | null;
+        throw new Error(
+          corpo?.detail ?? `/modelo/simular respondeu ${resposta.status}`,
+        );
+      }
+      return (await resposta.json()) as Simulacao;
+    })(),
+  );
+}
+
+/** Estado de saude da API -- alimenta o indicador do app shell. */
+export const obterSaude = () =>
+  proteger(buscar<{ status: string }>("/saude"));
 
 const LOTE_DETALHES = 8;
 
