@@ -3,7 +3,7 @@ name = "dolos"
 version = "0.1.0"
 description = "Analise de satisfacao em atendimentos por chatbot"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.7", "emoji>=2.12", "transformers>=4.44", "torch>=2.3"]
+dependencies = ["pydantic>=2.7", "emoji>=2.12", "transformers>=4.44", "torch>=2.3", "scikit-learn>=1.5", "joblib>=1.4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

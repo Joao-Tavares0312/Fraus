@@ -1,0 +1,89 @@
+import pytest
+
+from dolos.fusor import NOMES_FEATURES, Fusor, vetorizar
+
+
+def _features(**sobrescritas) -> dict[str, float]:
+    base = {nome: 0.0 for nome in NOMES_FEATURES}
+    base.update(sobrescritas)
+    return base
+
+
+def _fusor_treinado() -> Fusor:
+    exemplos, rotulos = [], []
+    for _ in range(40):
+        exemplos.append(_features(
+            texto_prob_satisfeito_media=0.9,
+            texto_prob_satisfeito_ultima=0.9,
+            emoji_score_medio=0.8,
+            latencia_mediana_s=8.0,
+        ))
+        rotulos.append(2)
+        exemplos.append(_features(
+            texto_prob_insatisfeito_media=0.9,
+            texto_prob_insatisfeito_max=0.95,
+            emoji_score_medio=-0.7,
+            latencia_mediana_s=300.0,
+            escalou=1.0,
+        ))
+        rotulos.append(0)
+    fusor = Fusor()
+    fusor.treinar(exemplos, rotulos)
+    return fusor
+
+
+def test_vetorizar_respeita_a_ordem_canonica():
+    vetor = vetorizar(_features(emoji_contagem=3.0))
+    assert len(vetor) == len(NOMES_FEATURES)
+    assert vetor[NOMES_FEATURES.index("emoji_contagem")] == 3.0
+
+
+def test_feature_faltando_e_erro_e_nao_zero_silencioso():
+    incompleto = _features()
+    del incompleto["emoji_contagem"]
+    with pytest.raises(KeyError):
+        vetorizar(incompleto)
+
+
+def test_conversa_positiva_pontua_alto():
+    fusor = _fusor_treinado()
+    score = fusor.pontuar(_features(
+        texto_prob_satisfeito_media=0.9,
+        texto_prob_satisfeito_ultima=0.9,
+        emoji_score_medio=0.8,
+        latencia_mediana_s=8.0,
+    ))
+    assert score > 70
+
+
+def test_conversa_negativa_pontua_baixo():
+    fusor = _fusor_treinado()
+    score = fusor.pontuar(_features(
+        texto_prob_insatisfeito_media=0.9,
+        texto_prob_insatisfeito_max=0.95,
+        emoji_score_medio=-0.7,
+        latencia_mediana_s=300.0,
+        escalou=1.0,
+    ))
+    assert score < 30
+
+
+def test_score_fica_sempre_entre_zero_e_cem():
+    fusor = _fusor_treinado()
+    for valor in (-5.0, 0.0, 9999.0):
+        score = fusor.pontuar(_features(latencia_mediana_s=valor))
+        assert 0.0 <= score <= 100.0
+
+
+def test_salvar_e_carregar_preserva_o_score(tmp_path):
+    fusor = _fusor_treinado()
+    entrada = _features(texto_prob_satisfeito_media=0.9, emoji_score_medio=0.8)
+    esperado = fusor.pontuar(entrada)
+
+    caminho = tmp_path / "fusor.joblib"
+    fusor.salvar(caminho)
+    assert Fusor.carregar(caminho).pontuar(entrada) == pytest.approx(esperado)
+
+
+def test_importancias_cobrem_todas_as_features():
+    assert set(_fusor_treinado().importancias()) == set(NOMES_FEATURES)
