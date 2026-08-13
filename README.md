@@ -175,11 +175,22 @@ Para destravar: rodar `notebooks/01_treino_bertimbau.ipynb` e depois
 
 ### 2. Telas de Integrações e Configurações
 
-Não existem, e não foram construídas de propósito: dependem de endpoints que a
-API ainda não tem. Precisam, no mínimo, de persistência de configuração
-(faixas de NPS, limiares de latência, quais sinais estão ativos) e de um
-cadastro de fonte de conversa. Credencial de plataforma **não** deve ir para o
-SQLite em texto puro — a decisão de onde guardar ainda está em aberto.
+Os **endpoints existem** — `GET`/`PUT /configuracoes`, `GET`/`POST`/`PATCH`/
+`DELETE /integracoes/fontes` e `GET /integracoes/importacoes`. Falta a
+interface em `dashboard/`.
+
+Duas decisões que a tela precisa respeitar:
+
+- **Não há interruptor por sinal** (texto/emoji/tempo). Os três estão fundidos
+  nos coeficientes de um modelo já treinado: desligar um exigiria retreinar o
+  fusor. Um controle que não faz o que diz é pior que a ausência dele.
+- **Segredo de plataforma não entra no SQLite.** A fonte guarda o **nome da
+  variável de ambiente** que carrega a credencial; a API responde apenas
+  `configurada: true/false`, nunca o valor — nem mascarado.
+
+Mudar a faixa de NPS muda a categoria de atendimento **já pontuado**: a
+categoria é derivada na leitura, a partir do `score` gravado (esse nunca é
+recalculado) e da faixa vigente.
 
 ### 3. `GET /serie-temporal` — a dívida de escala
 

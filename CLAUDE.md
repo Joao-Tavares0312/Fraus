@@ -37,6 +37,7 @@ CSV / Discord / WhatsApp
 | `fraus/sinais/tempo.py` | latência, escalação, abandono |
 | `fraus/fusor.py` | `NOMES_FEATURES` (16) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
+| `fraus/configuracao.py` | configuração vigente: padrão de fábrica no código, delta no banco |
 | `fraus/db.py` | SQLite, sem ORM |
 | `fraus/api/main.py` | FastAPI: `criar_app` (fábrica) e `app` (lazy, PEP 562) |
 | `dashboard/` | Next.js — ver `dashboard/DESIGN.md` |
@@ -66,7 +67,12 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
    requisição, nunca recalculados no cliente. O modelo de entrada de importação
    aceita só `caminho`. Duplicar a regra no TypeScript já causou divergência de
    arredondamento nas fronteiras 6/7 e 8/9 — não repita.
-4. **Faixas de NPS: 0–6 detrator, 7–8 neutro, 9–10 promotor.** Fixas.
+4. **Faixas de NPS: 0–6 detrator, 7–8 neutro, 9–10 promotor** — padrão de fábrica,
+   em `FAIXAS_NPS`. Configuráveis por `PUT /configuracoes`, e só se cobrirem 0..10
+   de forma contígua. A faixa vigente é passada **por parâmetro** para
+   `categoria_nps`/`calcular_nps` — nunca estado global mutável, nunca digitada
+   de novo em outro lugar. A categoria é **derivada na leitura**; o `score`
+   gravado nunca é recalculado.
 5. **Latência nunca é persistida.** Sempre derivada dos timestamps na leitura.
 6. **Timestamps timezone-aware.** `datetime` naive é erro de validação.
 7. **Modelo ausente é falha alta e explícita.** Servir predição sem modelo
