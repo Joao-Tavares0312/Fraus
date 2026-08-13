@@ -695,3 +695,52 @@ def test_apagar_fonte_nao_apaga_conversa_nenhuma(cliente, tmp_path):
 
     assert cliente.get("/integracoes/fontes").json() == []
     assert len(cliente.get("/conversas").json()) == 1
+
+
+# --- Integracoes: historico de importacoes ----------------------------------
+
+CSV_COM_LINHA_SUJA = (
+    "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
+    "c1,csv,cliente,otimo,2026-08-13T10:00:00+00:00,false\n"
+    "c2,csv,cliente,oi,data-invalida,false\n"
+)
+
+
+def test_historico_comeca_vazio_e_nao_inventa_importacao(cliente):
+    assert cliente.get("/integracoes/importacoes").json() == []
+
+
+def test_importar_registra_o_que_entrou_e_o_que_ficou_de_fora(cliente, tmp_path):
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV_COM_LINHA_SUJA, encoding="utf-8")
+    resposta = cliente.post("/conversas/importar", json={"caminho": str(caminho)}).json()
+
+    historico = cliente.get("/integracoes/importacoes").json()
+    assert len(historico) == 1
+    registro = historico[0]
+    assert registro["arquivo"] == "entrada.csv"
+    assert registro["aceitas"] == resposta["importadas"]
+    assert registro["rejeitadas"] == resposta["rejeitadas"]
+    assert registro["rejeitadas"] > 0
+    assert registro["motivos"] == resposta["motivos"]
+    assert registro["ocorrida_em"]
+
+
+def test_historico_vem_com_a_importacao_mais_recente_primeiro(cliente, tmp_path):
+    primeiro = tmp_path / "primeiro.csv"
+    primeiro.write_text(CSV, encoding="utf-8")
+    segundo = tmp_path / "segundo.csv"
+    segundo.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(primeiro)})
+    cliente.post("/conversas/importar", json={"caminho": str(segundo)})
+
+    arquivos = [r["arquivo"] for r in cliente.get("/integracoes/importacoes").json()]
+    assert arquivos == ["segundo.csv", "primeiro.csv"]
+
+
+def test_importacao_recusada_por_esquema_nao_entra_no_historico(cliente, tmp_path):
+    """Historico e do que a ingestao processou -- arquivo recusado na porta nao e."""
+    caminho = tmp_path / "sem_coluna.csv"
+    caminho.write_text("conversa_id,canal\nc1,csv\n", encoding="utf-8")
+    assert cliente.post("/conversas/importar", json={"caminho": str(caminho)}).status_code == 400
+    assert cliente.get("/integracoes/importacoes").json() == []

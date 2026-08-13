@@ -304,12 +304,23 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
 
         # "Motivo registrado" (spec 9) tem que CHEGAR a alguem: a contagem
         # sozinha nao diz o que ficou de fora.
+        motivos = [linha.model_dump() for linha in resultado.rejeitadas[:LIMITE_MOTIVOS]]
+
+        # O historico guarda o MESMO que a resposta devolve. Sem ele,
+        # "importado com sucesso" e alegacao sem lastro: some da tela no
+        # instante seguinte e ninguem consegue mais dizer o que ficou de fora.
+        banco.registrar_importacao(
+            ocorrida_em=datetime.now(timezone.utc).isoformat(),
+            arquivo=caminho.name,
+            aceitas=len(resultado.conversas),
+            rejeitadas=len(resultado.rejeitadas),
+            motivos=motivos,
+        )
+
         return {
             "importadas": len(resultado.conversas),
             "rejeitadas": len(resultado.rejeitadas),
-            "motivos": [
-                linha.model_dump() for linha in resultado.rejeitadas[:LIMITE_MOTIVOS]
-            ],
+            "motivos": motivos,
         }
 
     @app.get("/conversas")
@@ -457,6 +468,17 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         """
         if not banco.apagar_fonte(fonte_id):
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
+
+    @app.get("/integracoes/importacoes")
+    def listar_importacoes() -> list[dict]:
+        """Historico de importacao, mais recente primeiro.
+
+        Registra so o que a ingestao chegou a processar: arquivo recusado na
+        porta (caminho fora da raiz, coluna estrutural ausente) nao virou
+        importacao nenhuma, e listar como tal seria contar uma tentativa como
+        evento de dado.
+        """
+        return banco.listar_importacoes()
 
     @app.get("/modelo")
     def modelo() -> dict:
