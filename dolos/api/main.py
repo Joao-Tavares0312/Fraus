@@ -76,6 +76,11 @@ class Motor:
 
         O classificador e o fusor NAO vazam daqui: o que sai e o resultado ja
         montado, para a rota nao ter que saber que existe modelo por baixo.
+
+        `contribuicoes` e o quanto cada feature pesou NESTA conversa (sinal:
+        positivo empurra para satisfeito, negativo para insatisfeito) --
+        diferente de `importancias`, que e o peso GLOBAL do modelo. Sem fala
+        do cliente nao ha score, entao tambem nao ha contribuicao: `None`.
         """
         indices_do_cliente = [
             indice
@@ -105,7 +110,16 @@ class Motor:
                 }
             )
 
-        return {"mensagens": mensagens, "importancias": self._fusor.importancias()}
+        contribuicoes = None
+        if conversa.tem_sinal_cliente:
+            features = montar_features(conversa, self._classificador)
+            contribuicoes = self._fusor.contribuicoes(features)
+
+        return {
+            "mensagens": mensagens,
+            "importancias": self._fusor.importancias(),
+            "contribuicoes": contribuicoes,
+        }
 
 
 def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
@@ -210,6 +224,7 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "categoria": categoria,
             "mensagens": atribuicao["mensagens"],
             "importancias": atribuicao["importancias"],
+            "contribuicoes": atribuicao["contribuicoes"],
         }
 
     @app.get("/indicadores")

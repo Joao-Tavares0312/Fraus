@@ -87,3 +87,43 @@ def test_salvar_e_carregar_preserva_o_score(tmp_path):
 
 def test_importancias_cobrem_todas_as_features():
     assert set(_fusor_treinado().importancias()) == set(NOMES_FEATURES)
+
+
+def test_contribuicoes_cobrem_as_dezesseis_features():
+    fusor = _fusor_treinado()
+    contribuicoes = fusor.contribuicoes(_features(emoji_score_medio=0.8))
+    assert set(contribuicoes) == set(NOMES_FEATURES)
+
+
+def test_contribuicoes_conversa_positiva_soma_maior_que_negativa():
+    fusor = _fusor_treinado()
+    positiva = fusor.contribuicoes(_features(
+        texto_prob_satisfeito_media=0.9,
+        texto_prob_satisfeito_ultima=0.9,
+        emoji_score_medio=0.8,
+        latencia_mediana_s=8.0,
+    ))
+    negativa = fusor.contribuicoes(_features(
+        texto_prob_insatisfeito_media=0.9,
+        texto_prob_insatisfeito_max=0.95,
+        emoji_score_medio=-0.7,
+        latencia_mediana_s=300.0,
+        escalou=1.0,
+    ))
+    assert sum(positiva.values()) > sum(negativa.values())
+
+
+def test_contribuicoes_tem_sinal_interpretavel():
+    fusor = _fusor_treinado()
+    contribuicoes = fusor.contribuicoes(_features(
+        texto_prob_satisfeito_media=0.9,
+        texto_prob_satisfeito_ultima=0.9,
+        emoji_score_medio=0.8,
+        latencia_mediana_s=8.0,
+    ))
+    assert contribuicoes["texto_prob_satisfeito_media"] > 0
+
+
+def test_prever_devolve_uma_das_tres_classes():
+    fusor = _fusor_treinado()
+    assert fusor.prever(_features(texto_prob_satisfeito_media=0.9)) in (0, 1, 2)

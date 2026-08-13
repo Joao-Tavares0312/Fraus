@@ -48,9 +48,15 @@ class AtribuicaoDuble:
                     "prob_satisfeito": p[2],
                 }
             )
+        contribuicoes = (
+            {nome: float((indice % 5) - 2) for indice, nome in enumerate(NOMES_FEATURES)}
+            if conversa.tem_sinal_cliente
+            else None
+        )
         return {
             "mensagens": mensagens,
             "importancias": {nome: 1.0 for nome in NOMES_FEATURES},
+            "contribuicoes": contribuicoes,
         }
 
 
@@ -284,6 +290,29 @@ def test_atribuicao_traz_as_dezesseis_importancias(cliente, tmp_path):
     importancias = cliente.get("/conversas/c1/atribuicao").json()["importancias"]
     assert len(importancias) == 16
     assert set(importancias) == set(NOMES_FEATURES)
+
+
+def test_atribuicao_traz_as_dezesseis_contribuicoes(cliente, tmp_path):
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    contribuicoes = cliente.get("/conversas/c1/atribuicao").json()["contribuicoes"]
+    assert contribuicoes is not None
+    assert len(contribuicoes) == 16
+    assert set(contribuicoes) == set(NOMES_FEATURES)
+
+
+def test_atribuicao_sem_fala_do_cliente_tem_contribuicoes_nulas(
+    cliente_com_sinal, tmp_path
+):
+    caminho = tmp_path / "mudo.csv"
+    caminho.write_text(CSV_SEM_CLIENTE, encoding="utf-8")
+    cliente_com_sinal.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    resposta = cliente_com_sinal.get("/conversas/mudo/atribuicao")
+    assert resposta.status_code == 200
+    assert resposta.json()["contribuicoes"] is None
 
 
 # ---------------------------------------------------------------------------

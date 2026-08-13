@@ -74,6 +74,44 @@ class Fusor:
         score = 100.0 * (por_classe.get(SATISFEITO, 0.0) + 0.5 * por_classe.get(NEUTRO, 0.0))
         return max(0.0, min(100.0, score))
 
+    def prever(self, features: dict[str, float]) -> int:
+        """Classe predita: 0 insatisfeito, 1 neutro ou 2 satisfeito."""
+        return int(self._pipeline.predict([vetorizar(features)])[0])
+
+    def contribuicoes(self, features: dict[str, float]) -> dict[str, float]:
+        """Quanto cada feature empurrou a nota DESTA conversa, com sinal.
+
+        Eixo: coeficiente da classe satisfeito menos coeficiente da classe
+        insatisfeito, multiplicado pelo valor JA PADRONIZADO da feature (o
+        `StandardScaler` do pipeline aplicado, nunca o valor bruto). Positivo
+        empurrou a nota para cima (rumo a satisfeito); negativo puxou para
+        baixo (rumo a insatisfeito). E o numero da CONVERSA, diferente de
+        `importancias`, que e o peso medio GLOBAL aprendido pelo modelo.
+
+        Se o modelo aprendeu menos de tres classes e nao tem as duas pontas
+        (insatisfeito e satisfeito) para formar a diferenca, nao ha eixo
+        interpretavel: a contribuicao volta zerada para todas as features,
+        em vez de estourar.
+        """
+        modelo = self._pipeline.named_steps["modelo"]
+        escala = self._pipeline.named_steps["escala"]
+        classes = list(modelo.classes_)
+        vetor_padronizado = escala.transform([vetorizar(features)])[0]
+
+        if len(classes) >= 3:
+            diferenca = modelo.coef_[classes.index(SATISFEITO)] - modelo.coef_[classes.index(INSATISFEITO)]
+        elif len(classes) == 2 and INSATISFEITO in classes and SATISFEITO in classes:
+            # Caso binario: sklearn guarda uma unica linha de coeficiente,
+            # que ja representa a classe mais alta (classes_[1]) contra a
+            # mais baixa (classes_[0]) -- aqui sempre satisfeito vs insatisfeito,
+            # porque classes_ vem ordenado e insatisfeito (0) < satisfeito (2).
+            diferenca = modelo.coef_[0]
+        else:
+            diferenca = [0.0] * len(NOMES_FEATURES)
+
+        contribuicoes = [d * v for d, v in zip(diferenca, vetor_padronizado)]
+        return dict(zip(NOMES_FEATURES, (float(v) for v in contribuicoes)))
+
     def importancias(self) -> dict[str, float]:
         """Peso absoluto medio de cada feature -- alimenta a explicacao na dashboard."""
         coeficientes = self._pipeline.named_steps["modelo"].coef_

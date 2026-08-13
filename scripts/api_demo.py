@@ -119,7 +119,22 @@ class MotorDuble:
             nome: round(0.2 + 0.05 * (indice % 7), 3)
             for indice, nome in enumerate(NOMES_FEATURES)
         }
-        return {"mensagens": mensagens, "importancias": importancias}
+        # Contribuicoes ficticias da CONVERSA -- deterministicas, com sinal,
+        # so para a interface exercitar o "empurrou pra cima/baixo". Sem
+        # fala do cliente nao ha score, entao tambem nao ha contribuicao.
+        contribuicoes = (
+            {
+                nome: round(0.3 * ((indice % 5) - 2), 3)
+                for indice, nome in enumerate(NOMES_FEATURES)
+            }
+            if conversa.tem_sinal_cliente
+            else None
+        )
+        return {
+            "mensagens": mensagens,
+            "importancias": importancias,
+            "contribuicoes": contribuicoes,
+        }
 
     def pontuar_conversa(self, conversa: Conversa) -> float | None:
         if not conversa.tem_sinal_cliente:

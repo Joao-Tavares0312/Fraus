@@ -79,8 +79,13 @@ export type Atribuicao = {
   nota: number | null;
   categoria: Categoria | null;
   mensagens: MensagemAtribuida[];
-  /** Peso absoluto de cada uma das 16 features do fusor. */
+  /** Peso absoluto GLOBAL de cada uma das 16 features do fusor -- aprendido
+   * no treino, nao especifico desta conversa. */
   importancias: Record<string, number>;
+  /** Quanto cada feature pesou NESTA conversa: positivo empurrou para
+   * satisfeito, negativo para insatisfeito. `null` quando nao ha fala do
+   * cliente -- sem score, sem contribuicao. */
+  contribuicoes: Record<string, number> | null;
 };
 
 export type Resultado<T> =
