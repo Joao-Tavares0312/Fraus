@@ -20,6 +20,7 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -87,6 +88,24 @@ RAIZ_IMPORTACAO = Path(os.environ.get("FRAUS_RAIZ_IMPORTACAO", "dados_brutos"))
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o CSV inteiro.
 LIMITE_MOTIVOS = 20
+
+
+# Tipos de fonte que a ingestao de fato sabe tratar hoje. Aceitar um tipo que
+# nenhum adapter le seria cadastrar uma promessa: a tela mostraria uma fonte
+# que nunca traz conversa nenhuma.
+TIPOS_DE_FONTE = ("csv", "webhook")
+
+
+class PedidoFonte(BaseModel):
+    nome: str
+    canal: str
+    tipo: str
+    variavel_segredo: str | None = None  # NOME da variavel, nunca o segredo
+
+
+class PedidoAjusteFonte(BaseModel):
+    nome: str | None = None
+    ativa: bool | None = None
 
 
 class PedidoImportacao(BaseModel):
@@ -209,6 +228,18 @@ def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
             detail=f"caminho fora da raiz de importacao ({raiz_resolvida}): {caminho_pedido}",
         )
     return alvo
+
+
+def _fonte_publica(fonte: dict) -> dict:
+    """Fonte como ela pode sair pela rede: o segredo nao acompanha.
+
+    So o NOME da variavel de ambiente e o fato de ela estar definida. A
+    verificacao e feita na LEITURA, nao no cadastro: a variavel pode aparecer
+    ou sumir do ambiente depois, e responder pelo que era verdade no cadastro
+    seria mentir sobre o estado atual.
+    """
+    variavel = fonte["variavel_segredo"]
+    return {**fonte, "configurada": bool(variavel and os.environ.get(variavel))}
 
 
 def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastAPI:
@@ -371,6 +402,61 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         except ValueError as erro:
             raise HTTPException(status_code=400, detail=str(erro)) from erro
         return {"vigente": vigente, "fabrica": CONFIGURACAO_DE_FABRICA}
+
+    @app.get("/integracoes/fontes")
+    def listar_fontes() -> list[dict]:
+        """Fontes cadastradas, cada uma com `configurada` derivado do ambiente.
+
+        `configurada` responde apenas SE a variavel de ambiente existe. O valor
+        do segredo nunca sai daqui -- nem parcial, nem mascarado: mascara e
+        vazamento de tamanho e de prefixo por um caminho mais lento.
+        """
+        return [_fonte_publica(fonte) for fonte in banco.listar_fontes()]
+
+    @app.post("/integracoes/fontes", status_code=201)
+    def criar_fonte(pedido: PedidoFonte) -> dict:
+        nome = pedido.nome.strip()
+        if not nome:
+            raise HTTPException(status_code=400, detail="nome da fonte vazio")
+        canal = pedido.canal.strip()
+        if not canal:
+            raise HTTPException(status_code=400, detail="canal da fonte vazio")
+        if pedido.tipo not in TIPOS_DE_FONTE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"tipo de fonte desconhecido: {pedido.tipo} "
+                       f"(esperado: {', '.join(TIPOS_DE_FONTE)})",
+            )
+        fonte = banco.criar_fonte(
+            nome=nome,
+            canal=canal,
+            tipo=pedido.tipo,
+            variavel_segredo=(pedido.variavel_segredo or "").strip() or None,
+            criada_em=datetime.now(timezone.utc).isoformat(),
+        )
+        return _fonte_publica(fonte)
+
+    @app.patch("/integracoes/fontes/{fonte_id}")
+    def ajustar_fonte(fonte_id: int, pedido: PedidoAjusteFonte) -> dict:
+        if banco.buscar_fonte(fonte_id) is None:
+            raise HTTPException(status_code=404, detail="fonte nao encontrada")
+        nome = None
+        if pedido.nome is not None:
+            nome = pedido.nome.strip()
+            if not nome:
+                raise HTTPException(status_code=400, detail="nome da fonte vazio")
+        return _fonte_publica(banco.atualizar_fonte(fonte_id, nome=nome, ativa=pedido.ativa))
+
+    @app.delete("/integracoes/fontes/{fonte_id}", status_code=204)
+    def apagar_fonte(fonte_id: int) -> None:
+        """Remove o CADASTRO da fonte. Nenhuma conversa e apagada junto.
+
+        Conversa que ja entrou e dado de atendimento medido; a fonte e so o
+        registro de por onde ele entrou. Apagar a origem nao pode reescrever o
+        historico -- e por isso que nao ha exclusao em cascata aqui.
+        """
+        if not banco.apagar_fonte(fonte_id):
+            raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
     @app.get("/modelo")
     def modelo() -> dict:

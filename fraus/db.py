@@ -27,6 +27,31 @@ CREATE TABLE IF NOT EXISTS configuracoes (
     chave TEXT PRIMARY KEY,
     valor TEXT NOT NULL
 );
+
+-- Fonte de onde conversa entra. `variavel_segredo` guarda o NOME da variavel
+-- de ambiente que carrega a credencial -- NUNCA o valor. Segredo em texto puro
+-- num SQLite de arquivo vaza junto com o backup.
+CREATE TABLE IF NOT EXISTS fontes_integracao (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    canal TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    variavel_segredo TEXT,
+    ativa INTEGER NOT NULL DEFAULT 1,
+    criada_em TEXT NOT NULL
+);
+
+-- Historico de importacao: sem ele, "importado com sucesso" e alegacao sem
+-- lastro. `motivos` e o mesmo JSON que a resposta do endpoint ja devolve.
+CREATE TABLE IF NOT EXISTS importacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ocorrida_em TEXT NOT NULL,
+    arquivo TEXT NOT NULL,
+    aceitas INTEGER NOT NULL,
+    rejeitadas INTEGER NOT NULL,
+    motivos TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_importacoes_ocorrida_em ON importacoes(ocorrida_em);
 """
 
 
@@ -88,6 +113,85 @@ class Banco:
                 "INSERT OR REPLACE INTO configuracoes (chave, valor) VALUES (?, ?)",
                 [(chave, json.dumps(valor)) for chave, valor in valores.items()],
             )
+
+    def criar_fonte(
+        self, nome: str, canal: str, tipo: str, variavel_segredo: str | None, criada_em: str
+    ) -> dict:
+        with self._conectar() as conexao:
+            cursor = conexao.execute(
+                "INSERT INTO fontes_integracao "
+                "(nome, canal, tipo, variavel_segredo, ativa, criada_em) VALUES (?, ?, ?, ?, 1, ?)",
+                (nome, canal, tipo, variavel_segredo, criada_em),
+            )
+            identificador = cursor.lastrowid
+        return self.buscar_fonte(identificador)
+
+    def listar_fontes(self) -> list[dict]:
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT * FROM fontes_integracao ORDER BY criada_em, id"
+            ).fetchall()
+        return [self._fonte(linha) for linha in linhas]
+
+    def buscar_fonte(self, identificador: int) -> dict | None:
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT * FROM fontes_integracao WHERE id = ?", (identificador,)
+            ).fetchone()
+        return self._fonte(linha) if linha is not None else None
+
+    def atualizar_fonte(
+        self, identificador: int, nome: str | None = None, ativa: bool | None = None
+    ) -> dict | None:
+        campos, valores = [], []
+        if nome is not None:
+            campos.append("nome = ?")
+            valores.append(nome)
+        if ativa is not None:
+            campos.append("ativa = ?")
+            valores.append(1 if ativa else 0)
+        if campos:
+            with self._conectar() as conexao:
+                conexao.execute(
+                    f"UPDATE fontes_integracao SET {', '.join(campos)} WHERE id = ?",
+                    (*valores, identificador),
+                )
+        return self.buscar_fonte(identificador)
+
+    def apagar_fonte(self, identificador: int) -> bool:
+        """Remove SO o cadastro da fonte. Nenhuma conversa e tocada aqui.
+
+        Conversa que ja entrou e dado do atendimento, nao propriedade da fonte:
+        apagar a origem nao pode reescrever o historico de satisfacao medido.
+        """
+        with self._conectar() as conexao:
+            cursor = conexao.execute(
+                "DELETE FROM fontes_integracao WHERE id = ?", (identificador,)
+            )
+            return cursor.rowcount > 0
+
+    @staticmethod
+    def _fonte(linha: sqlite3.Row) -> dict:
+        registro = dict(linha)
+        registro["ativa"] = bool(registro["ativa"])
+        return registro
+
+    def registrar_importacao(
+        self, ocorrida_em: str, arquivo: str, aceitas: int, rejeitadas: int, motivos: list[dict]
+    ) -> None:
+        with self._conectar() as conexao:
+            conexao.execute(
+                "INSERT INTO importacoes (ocorrida_em, arquivo, aceitas, rejeitadas, motivos) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (ocorrida_em, arquivo, aceitas, rejeitadas, json.dumps(motivos)),
+            )
+
+    def listar_importacoes(self) -> list[dict]:
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT * FROM importacoes ORDER BY ocorrida_em DESC, id DESC"
+            ).fetchall()
+        return [{**dict(l), "motivos": json.loads(l["motivos"])} for l in linhas]
 
     def todas(self) -> list[tuple[Conversa, float | None]]:
         with self._conectar() as conexao:

@@ -612,3 +612,86 @@ def test_modelo_publica_a_faixa_vigente_e_nao_a_de_fabrica(cliente):
     """`/modelo` e a categoria bebem da MESMA fonte -- faixa duplicada foi bug uma vez."""
     cliente.put("/configuracoes", json={"faixas_nps": FAIXAS_ALTERNATIVAS})
     assert cliente.get("/modelo").json()["faixas_nps"] == FAIXAS_ALTERNATIVAS
+
+
+# --- Integracoes: fontes ----------------------------------------------------
+
+FONTE = {"nome": "Planilha do suporte", "canal": "webchat", "tipo": "csv"}
+
+
+def test_criar_e_listar_fonte(cliente):
+    resposta = cliente.post("/integracoes/fontes", json=FONTE)
+    assert resposta.status_code == 201
+    criada = resposta.json()
+    assert criada["nome"] == FONTE["nome"]
+    assert criada["ativa"] is True
+    assert criada["criada_em"]
+
+    listagem = cliente.get("/integracoes/fontes").json()
+    assert [f["id"] for f in listagem] == [criada["id"]]
+
+
+@pytest.mark.parametrize("corpo,trecho", [
+    ({"nome": "   ", "canal": "webchat", "tipo": "csv"}, "nome"),
+    ({"nome": "x", "canal": "webchat", "tipo": "carteiro"}, "carteiro"),
+])
+def test_fonte_invalida_e_400_nomeando_o_problema(cliente, corpo, trecho):
+    resposta = cliente.post("/integracoes/fontes", json=corpo)
+    assert resposta.status_code == 400
+    assert trecho in resposta.json()["detail"]
+
+
+def test_fonte_expoe_se_o_segredo_esta_configurado_nunca_o_valor(cliente, monkeypatch):
+    """Segredo mora na variavel de ambiente; o banco guarda so o NOME dela."""
+    monkeypatch.delenv("FRAUS_TESTE_TOKEN", raising=False)
+    corpo = {**FONTE, "tipo": "webhook", "variavel_segredo": "FRAUS_TESTE_TOKEN"}
+    criada = cliente.post("/integracoes/fontes", json=corpo).json()
+    assert criada["variavel_segredo"] == "FRAUS_TESTE_TOKEN"
+    assert criada["configurada"] is False
+
+    monkeypatch.setenv("FRAUS_TESTE_TOKEN", "segredo-de-verdade")
+    listada = cliente.get("/integracoes/fontes").json()[0]
+    assert listada["configurada"] is True
+    assert "segredo-de-verdade" not in cliente.get("/integracoes/fontes").text
+
+
+def test_fonte_sem_variavel_de_segredo_nao_finge_estar_configurada(cliente):
+    criada = cliente.post("/integracoes/fontes", json=FONTE).json()
+    assert criada["variavel_segredo"] is None
+    assert criada["configurada"] is False
+
+
+def test_patch_renomeia_e_desativa_a_fonte(cliente):
+    criada = cliente.post("/integracoes/fontes", json=FONTE).json()
+    resposta = cliente.patch(
+        f"/integracoes/fontes/{criada['id']}", json={"nome": "Outro nome", "ativa": False}
+    )
+    assert resposta.status_code == 200
+    assert resposta.json()["nome"] == "Outro nome"
+    assert resposta.json()["ativa"] is False
+    assert cliente.get("/integracoes/fontes").json()[0]["ativa"] is False
+
+
+def test_patch_com_nome_vazio_e_400(cliente):
+    criada = cliente.post("/integracoes/fontes", json=FONTE).json()
+    resposta = cliente.patch(f"/integracoes/fontes/{criada['id']}", json={"nome": " "})
+    assert resposta.status_code == 400
+    assert "nome" in resposta.json()["detail"]
+
+
+def test_patch_e_delete_de_fonte_inexistente_sao_404(cliente):
+    assert cliente.patch("/integracoes/fontes/999", json={"ativa": False}).status_code == 404
+    assert cliente.delete("/integracoes/fontes/999").status_code == 404
+
+
+def test_apagar_fonte_nao_apaga_conversa_nenhuma(cliente, tmp_path):
+    """Fonte e cadastro de origem, nao dona do dado que ja entrou."""
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+    criada = cliente.post("/integracoes/fontes", json=FONTE).json()
+
+    assert cliente.delete(f"/integracoes/fontes/{criada['id']}").status_code == 204
+
+    assert cliente.get("/integracoes/fontes").json() == []
+    assert len(cliente.get("/conversas").json()) == 1
