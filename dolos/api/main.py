@@ -108,12 +108,17 @@ def criar_app(banco: Banco, motor) -> FastAPI:
 
 
 def criar_app_padrao() -> FastAPI:
-    """Monta o app com dependencias reais. Falha alto se modelo/fusor faltarem."""
-    banco = Banco(CAMINHO_BANCO)
-    banco.migrar()
+    """Monta o app com dependencias reais. Falha alto se modelo/fusor faltarem.
+
+    Carrega classificador e fusor ANTES de tocar no banco: se a inicializacao
+    vai falhar por modelo ausente, ela precisa falhar sem sujar o disco com um
+    `dolos.db` de schema vazio.
+    """
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)  # propaga ModeloAusenteError
     fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
     motor = Motor(classificador, fusor)
+    banco = Banco(CAMINHO_BANCO)
+    banco.migrar()
     return criar_app(banco=banco, motor=motor)
 
 

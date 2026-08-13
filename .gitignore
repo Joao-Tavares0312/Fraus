@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 modelos/
 dados_brutos/
+*.db
 node_modules/
 .next/
 .superpowers/
