@@ -58,6 +58,9 @@ export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
     null,
   );
 
+  const podeCadastrar =
+    ocupada !== "nova" && nova.nome.trim() !== "" && nova.canal.trim() !== "";
+
   async function recarregar() {
     const resposta = await listarFontes();
     if (resposta.ok) setFontes(resposta.dado);
@@ -139,6 +142,9 @@ export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
               onChange={(evento) =>
                 setNova({ ...nova, nome: evento.target.value })
               }
+              onKeyDown={(evento) => {
+                if (evento.key === "Enter" && podeCadastrar) adicionar();
+              }}
             />
           </div>
 
@@ -154,6 +160,9 @@ export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
               onChange={(evento) =>
                 setNova({ ...nova, canal: evento.target.value })
               }
+              onKeyDown={(evento) => {
+                if (evento.key === "Enter" && podeCadastrar) adicionar();
+              }}
             />
           </div>
 
@@ -178,6 +187,9 @@ export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
                 ))}
               </SelectContent>
             </Select>
+            <p className="mt-1 text-[0.6875rem] leading-relaxed text-muted-foreground">
+              {TIPOS.find((tipo) => tipo.valor === nova.tipo)?.ajuda}
+            </p>
           </div>
 
           <div className="min-w-0">
@@ -196,6 +208,9 @@ export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
               onChange={(evento) =>
                 setNova({ ...nova, variavel_segredo: evento.target.value })
               }
+              onKeyDown={(evento) => {
+                if (evento.key === "Enter" && podeCadastrar) adicionar();
+              }}
             />
           </div>
 
@@ -203,11 +218,7 @@ export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
             <Button
               type="button"
               onClick={adicionar}
-              disabled={
-                ocupada === "nova" ||
-                nova.nome.trim() === "" ||
-                nova.canal.trim() === ""
-              }
+              disabled={!podeCadastrar}
             >
               <Plus aria-hidden />
               {ocupada === "nova" ? "Cadastrando…" : "Cadastrar"}
@@ -287,6 +298,15 @@ export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
                             onChange={(evento) =>
                               setNomeEmEdicao(evento.target.value)
                             }
+                            onKeyDown={(evento) => {
+                              if (
+                                evento.key === "Enter" &&
+                                nomeEmEdicao.trim() !== ""
+                              ) {
+                                confirmarRenome(fonte);
+                              }
+                              if (evento.key === "Escape") setRenomeando(null);
+                            }}
                           />
                           <Button
                             type="button"

@@ -244,6 +244,9 @@ export function FaixasNps({
                   onChange={(evento) =>
                     alterar(categoria, "de", evento.target.value)
                   }
+                  onKeyDown={(evento) => {
+                    if (evento.key === "Enter" && mudou && !salvando) salvar();
+                  }}
                 />
               </div>
               <span
@@ -271,6 +274,9 @@ export function FaixasNps({
                   onChange={(evento) =>
                     alterar(categoria, "ate", evento.target.value)
                   }
+                  onKeyDown={(evento) => {
+                    if (evento.key === "Enter" && mudou && !salvando) salvar();
+                  }}
                 />
               </div>
             </div>

@@ -199,6 +199,9 @@ export function LimiaresLatencia({
                 step={1}
                 value={rascunho[indice] ?? ""}
                 onChange={(evento) => alterar(indice, evento.target.value)}
+                onKeyDown={(evento) => {
+                  if (evento.key === "Enter" && mudou && !salvando) salvar();
+                }}
                 aria-describedby={`${identificador}-${chave}-ajuda`}
               />
               <span className="num shrink-0 text-xs text-muted-foreground">
