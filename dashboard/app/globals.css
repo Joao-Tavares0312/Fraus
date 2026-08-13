@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Dolos — sistema visual da dashboard (modo Operate)
+
+   Estratégia de cor: Restrained. Tinta quase-neutra sobre um plano de papel,
+   filetes de 1px no lugar de cartões com sombra, e exatamente dois acentos de
+   série: azul = grandeza INFERIDA (NPS), laranja = grandeza OBSERVADA
+   (latência). A paleta de status (detrator/neutro/promotor) é reservada e
+   nunca reaproveitada como cor de série.
+
+   Os hexes vêm da paleta validada da skill `dataviz`; o par de séries foi
+   verificado com `validate_palette.js` nos dois modos (PASS em todos os
+   checks: banda de luminosidade, croma, separação CVD, piso de visão normal
+   e contraste contra a superfície).
+--------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  --plano: #f9f9f7;          /* fundo da página */
+  --superficie: #fcfcfb;     /* superfície de gráfico / painel */
+  --superficie-2: #f2f1ed;   /* segunda camada: barras de cabeçalho, zebra */
+
+  --tinta: #0b0b0b;
+  --tinta-2: #52514e;
+  --tinta-3: #898781;        /* eixos, rótulos, texto auxiliar */
+
+  --filete: #e1e0d9;         /* grade e divisórias hairline */
+  --regua: #c3c2b7;          /* linha de base / eixo */
+
+  --serie-nps: #2a78d6;      /* inferido */
+  --serie-latencia: #eb6834; /* observado */
+
+  --detrator: #d03b3b;
+  --neutro: #fab219;
+  --promotor: #0ca30c;
+  --sem-sinal: #898781;
+
+  --faixa-saudavel: rgba(12, 163, 12, 0.1);
+  --foco: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-tema="claro"])) {
+    color-scheme: dark;
+
+    --plano: #0d0d0d;
+    --superficie: #1a1a19;
+    --superficie-2: #232320;
+
+    --tinta: #ffffff;
+    --tinta-2: #c3c2b7;
+    --tinta-3: #898781;
+
+    --filete: #2c2c2a;
+    --regua: #383835;
+
+    --serie-nps: #3987e5;
+    --serie-latencia: #d95926;
+
+    --detrator: #d03b3b;
+    --neutro: #fab219;
+    --promotor: #0ca30c;
+    --sem-sinal: #898781;
+
+    --faixa-saudavel: rgba(12, 163, 12, 0.14);
+    --foco: #3987e5;
+  }
+}
+
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+
+  --plano: #0d0d0d;
+  --superficie: #1a1a19;
+  --superficie-2: #232320;
+
+  --tinta: #ffffff;
+  --tinta-2: #c3c2b7;
+  --tinta-3: #898781;
+
+  --filete: #2c2c2a;
+  --regua: #383835;
+
+  --serie-nps: #3987e5;
+  --serie-latencia: #d95926;
+
+  --faixa-saudavel: rgba(12, 163, 12, 0.14);
+  --foco: #3987e5;
+}
+
+@theme inline {
+  --color-plano: var(--plano);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-tinta: var(--tinta);
+  --color-tinta-2: var(--tinta-2);
+  --color-tinta-3: var(--tinta-3);
+  --color-filete: var(--filete);
+  --color-regua: var(--regua);
+  --color-nps: var(--serie-nps);
+  --color-latencia: var(--serie-latencia);
+  --color-detrator: var(--detrator);
+  --color-neutro: var(--neutro);
+  --color-promotor: var(--promotor);
+  --color-sem-sinal: var(--sem-sinal);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono",
+    Menlo, Consolas, monospace;
+}
+
+html {
+  background: var(--plano);
+}
+
+body {
+  background: var(--plano);
+  color: var(--tinta);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Foco visível e consistente em toda a superfície. */
+:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Marca de proveniência: todo número ESTIMADO carrega este sublinhado
+   pontilhado. Número observado nunca carrega. É o detalhe de marca do
+   produto — o Dolos existe porque a origem do dado importa. */
+.estimado {
+  text-decoration: underline dotted var(--tinta-3);
+  text-underline-offset: 0.28em;
+  text-decoration-thickness: 1.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Impressão / PDF: o relatório reaproveita a própria tela. */
+@media print {
+  :root {
+    --plano: #ffffff;
+    --superficie: #ffffff;
+    --superficie-2: #ffffff;
+    --tinta: #000000;
+    --tinta-2: #333333;
+    --tinta-3: #555555;
+    --filete: #cccccc;
+    --regua: #999999;
+  }
+
+  .sem-impressao {
+    display: none !important;
+  }
+
+  .quebra-evitar {
+    break-inside: avoid;
+  }
+}

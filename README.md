@@ -64,12 +64,28 @@ vence RAG em acurácia e latência[^3].
 ```bash
 uv sync
 uv run pytest -v
-uv run uvicorn dolos.api.main:app --reload
+uv run uvicorn dolos.api.main:app --reload   # exige modelos/ treinado; falha alto sem ele
 ```
 
 ```bash
 cd dashboard && npm install && npm run dev
 ```
+
+### Servidor de demonstração da interface
+
+O `app` real carrega o BERTimbau do disco e **falha alto** se `modelos/` não
+existir — por design. Enquanto o treino do Colab não roda, a dashboard é
+desenvolvida contra um servidor de demonstração que usa um motor dublê
+(pontuação determinística derivada do texto, sem modelo nenhum) e semeia um
+banco temporário com conversas do simulador, incluindo atendimentos **sem fala
+do cliente** para exercitar o estado "sem sinal":
+
+```bash
+uv run python scripts/api_demo.py   # http://localhost:8000
+```
+
+**Nunca use `scripts/api_demo.py` em produção.** Os números que ele devolve não
+são predição de modelo.
 
 [^1]: [Conversation logs as a source of insight: predicting user satisfaction for customer service chatbots](https://link.springer.com/article/10.1007/s41233-025-00071-8) — Quality and User Experience, Springer, 2025.
 [^2]: [Refining the prediction of user satisfaction on chat-based AI applications](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11793979/).
