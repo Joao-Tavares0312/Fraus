@@ -109,17 +109,49 @@ export function latenciaMediana(mensagens: Mensagem[]): number | null {
 
 /**
  * Limiares de latencia, em segundos, calibrados pela literatura de live chat
- * que a propria tela cita. Sao a UNICA fonte dos numeros que aparecem nos
- * rotulos -- texto e limiar nao podem divergir.
+ * que a propria tela cita.
+ *
+ * ELES VEM DA API (`GET /configuracoes` -> `limiares_latencia_s`), nao de
+ * constante do front: a tela de Configuracoes deixa mexer neles, e um controle
+ * que nao chega a lugar nenhum e exatamente o que este projeto nao aceita. O
+ * objeto abaixo e so o PADRAO DE FABRICA, o mesmo de
+ * `fraus/configuracao.py::LIMIARES_LATENCIA_PADRAO`, usado quando a leitura da
+ * configuracao falha -- caso em que a propria tela ja mostra a API fora do ar.
  */
-export const LIMIARES_LATENCIA = {
+export type LimiaresLatencia = {
   /** Ate aqui a satisfacao esta no pico observado (~84,7% de CSAT). */
-  pico: 10,
+  pico: number;
   /** Ate aqui a espera ainda e saudavel. */
-  saudavel: 60,
+  saudavel: number;
   /** Ate aqui a satisfacao degrada: -2 a -3 pontos de CSAT por minuto extra. */
+  degradando: number;
+};
+
+export const LIMIARES_LATENCIA_PADRAO: LimiaresLatencia = {
+  pico: 10,
+  saudavel: 60,
   degradando: 180,
-} as const;
+};
+
+/**
+ * Converte `limiares_latencia_s` (a lista de tres da API) nos tres nomes que a
+ * interface usa. Lista de tamanho errado nao existe -- o servidor recusa antes
+ * de gravar -- mas a leitura cai no padrao em vez de estourar em runtime.
+ */
+export function limiaresDe(
+  limiares: number[] | undefined | null,
+): LimiaresLatencia {
+  if (!limiares || limiares.length !== 3) return LIMIARES_LATENCIA_PADRAO;
+  const [pico, saudavel, degradando] = limiares;
+  return { pico, saudavel, degradando };
+}
+
+/** Minutos com no maximo uma casa: 180 s vira "3", 90 s vira "1,5". */
+export function emMinutos(segundos: number): string {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(
+    segundos / 60,
+  );
+}
 
 /**
  * Faixa de severidade da espera.
@@ -131,35 +163,58 @@ export const LIMIARES_LATENCIA = {
  */
 export type SeveridadeLatencia = "pico" | "saudavel" | "degradando" | "abandono";
 
-export function severidadeLatencia(segundos: number): SeveridadeLatencia {
-  if (segundos <= LIMIARES_LATENCIA.pico) return "pico";
-  if (segundos <= LIMIARES_LATENCIA.saudavel) return "saudavel";
-  if (segundos <= LIMIARES_LATENCIA.degradando) return "degradando";
+export function severidadeLatencia(
+  segundos: number,
+  limiares: LimiaresLatencia,
+): SeveridadeLatencia {
+  if (segundos <= limiares.pico) return "pico";
+  if (segundos <= limiares.saudavel) return "saudavel";
+  if (segundos <= limiares.degradando) return "degradando";
   return "abandono";
 }
 
-/** Rotulo e justificativa de cada faixa. Um texto so, citado igual em toda a tela. */
-export const ROTULO_LATENCIA: Record<
-  SeveridadeLatencia,
-  { titulo: string; detalhe: string }
-> = {
-  pico: {
-    titulo: "Resposta imediata",
-    detalhe: `até ${LIMIARES_LATENCIA.pico} s — pico de satisfação na literatura de live chat (CSAT ~84,7%)`,
-  },
-  saudavel: {
-    titulo: "Espera saudável",
-    detalhe: `entre ${LIMIARES_LATENCIA.pico} s e ${LIMIARES_LATENCIA.saudavel} s — fora do pico, ainda dentro do saudável`,
-  },
-  degradando: {
-    titulo: "Espera longa",
-    detalhe: `entre ${LIMIARES_LATENCIA.saudavel} s e ${LIMIARES_LATENCIA.degradando / 60} min — a satisfação degrada de 2 a 3 pontos de CSAT por minuto extra`,
-  },
-  abandono: {
-    titulo: "Espera crítica",
-    detalhe: `acima de ${LIMIARES_LATENCIA.degradando / 60} min — faixa de abandono: 57% dos clientes desistem`,
-  },
-};
+/**
+ * Rotulo e justificativa de cada faixa, montados a partir dos limiares
+ * VIGENTES. Uma fonte so: se o operador mudar o corte, o texto que cita o
+ * numero muda junto -- rotulo e limiar nao podem divergir.
+ *
+ * As porcentagens citadas (84,7% de CSAT no pico, 57% de abandono) sao da
+ * literatura e ficam ancoradas ao limiar DE FABRICA. Quando os cortes saem do
+ * padrao, a tela para de atribuir a medida da literatura ao corte novo.
+ */
+export function rotulosLatencia(
+  limiares: LimiaresLatencia,
+): Record<SeveridadeLatencia, { titulo: string; detalhe: string }> {
+  const padrao =
+    limiares.pico === LIMIARES_LATENCIA_PADRAO.pico &&
+    limiares.saudavel === LIMIARES_LATENCIA_PADRAO.saudavel &&
+    limiares.degradando === LIMIARES_LATENCIA_PADRAO.degradando;
+
+  return {
+    pico: {
+      titulo: "Resposta imediata",
+      detalhe: padrao
+        ? `até ${limiares.pico} s — pico de satisfação na literatura de live chat (CSAT ~84,7%)`
+        : `até ${limiares.pico} s — corte configurado em Configurações`,
+    },
+    saudavel: {
+      titulo: "Espera saudável",
+      detalhe: `entre ${limiares.pico} s e ${limiares.saudavel} s — fora do pico, ainda dentro do saudável`,
+    },
+    degradando: {
+      titulo: "Espera longa",
+      detalhe: padrao
+        ? `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — a satisfação degrada de 2 a 3 pontos de CSAT por minuto extra`
+        : `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — corte configurado em Configurações`,
+    },
+    abandono: {
+      titulo: "Espera crítica",
+      detalhe: padrao
+        ? `acima de ${emMinutos(limiares.degradando)} min — faixa de abandono: 57% dos clientes desistem`
+        : `acima de ${emMinutos(limiares.degradando)} min — corte configurado em Configurações`,
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Serie temporal diaria (NPS inferido x latencia mediana)

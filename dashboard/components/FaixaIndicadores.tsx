@@ -1,8 +1,9 @@
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
 import {
   CSAT_SAUDAVEL,
-  LIMIARES_LATENCIA,
+  emMinutos,
   type IndicadoresDoPeriodo,
+  type LimiaresLatencia,
 } from "@/lib/derivacoes";
 import {
   formatarNps,
@@ -45,39 +46,49 @@ const TRILHO_CSAT: Trilho = {
   ],
 };
 
-const TRILHO_LATENCIA: Trilho = {
-  minimo: 0,
-  maximo: LIMIARES_LATENCIA.degradando,
-  faixas: [
-    {
-      de: 0,
-      ate: LIMIARES_LATENCIA.pico,
-      rotulo: `até ${LIMIARES_LATENCIA.pico}s pico de CSAT (~84,7%)`,
-      cor: "bg-promotor",
-    },
-    {
-      de: LIMIARES_LATENCIA.pico,
-      ate: LIMIARES_LATENCIA.saudavel,
-      rotulo: `até ${LIMIARES_LATENCIA.saudavel}s saudável`,
-      cor: "bg-neutro",
-    },
-    {
-      de: LIMIARES_LATENCIA.saudavel,
-      ate: LIMIARES_LATENCIA.degradando,
-      rotulo: `até ${LIMIARES_LATENCIA.degradando / 60}min degradando`,
-      cor: "bg-detrator",
-    },
-  ],
-};
+/**
+ * As faixas de referencia da latencia saem dos limiares VIGENTES
+ * (`GET /configuracoes`), nao de constante do front: e a tela de Configuracoes
+ * que decide onde este trilho corta.
+ */
+function trilhoDeLatencia(limiares: LimiaresLatencia): Trilho {
+  return {
+    minimo: 0,
+    maximo: limiares.degradando,
+    faixas: [
+      {
+        de: 0,
+        ate: limiares.pico,
+        rotulo: `até ${limiares.pico}s resposta imediata`,
+        cor: "bg-promotor",
+      },
+      {
+        de: limiares.pico,
+        ate: limiares.saudavel,
+        rotulo: `até ${limiares.saudavel}s saudável`,
+        cor: "bg-neutro",
+      },
+      {
+        de: limiares.saudavel,
+        ate: limiares.degradando,
+        rotulo: `até ${emMinutos(limiares.degradando)}min degradando`,
+        cor: "bg-detrator",
+      },
+    ],
+  };
+}
 
 export function FaixaIndicadores({
   indicadores,
   tempoMediano,
+  limiares,
   erro,
   rotuloDoPeriodo,
 }: {
   indicadores: IndicadoresDoPeriodo;
   tempoMediano: number | null;
+  /** Limiares vigentes de latencia, lidos de `GET /configuracoes`. */
+  limiares: LimiaresLatencia;
   /** Falha da listagem: todos os quatro dependem dela. */
   erro?: string;
   rotuloDoPeriodo: string;
@@ -155,9 +166,9 @@ export function FaixaIndicadores({
         formatado={
           tempoMediano === null ? undefined : formatarSegundos(tempoMediano)
         }
-        trilho={TRILHO_LATENCIA}
+        trilho={trilhoDeLatencia(limiares)}
         explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
-        rodape="Mediana do intervalo entre a fala do cliente e a resposta seguinte, derivada dos timestamps."
+        rodape={`Mediana do intervalo entre a fala do cliente e a resposta seguinte, derivada dos timestamps. As faixas do trilho cortam em ${limiares.pico} s, ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — configuráveis em Configurações.`}
       />
     </section>
   );

@@ -11,11 +11,16 @@
  * =============================================================================
  */
 
-import { obterIndicadores, type ResumoConversa } from "@/lib/api";
+import {
+  obterConfiguracoes,
+  obterIndicadores,
+  type ResumoConversa,
+} from "@/lib/api";
 import { carregarRecorte } from "@/lib/carregar";
 import {
   distribuicaoDeNotas,
   indicadoresDoPeriodo,
+  limiaresDe,
   lexicoPorClasse,
   pioresAtendimentos,
   serieDiaria,
@@ -42,10 +47,17 @@ export default async function Pagina(props: PageProps<"/">) {
 
   // As duas leituras sao independentes de proposito: se `/indicadores` cair, a
   // serie, a distribuicao e o lexico continuam de pe, e vice-versa.
-  const [recorte, indicadoresDoServidor] = await Promise.all([
+  const [recorte, indicadoresDoServidor, configuracoes] = await Promise.all([
     carregarRecorte(parametros),
     obterIndicadores(),
+    obterConfiguracoes(),
   ]);
+
+  // As faixas de referencia da latencia sao as VIGENTES, nao constantes do
+  // front -- e a tela de Configuracoes que as move.
+  const limiares = limiaresDe(
+    configuracoes.ok ? configuracoes.dado.vigente.limiares_latencia_s : null,
+  );
 
   const { periodo, extensao, rotulo, sufixo, resumos, detalhes, erro } = recorte;
 
@@ -95,6 +107,7 @@ export default async function Pagina(props: PageProps<"/">) {
         <FaixaIndicadores
           indicadores={indicadores}
           tempoMediano={tempoMediano}
+          limiares={limiares}
           erro={erro}
           rotuloDoPeriodo={rotulo}
         />

@@ -136,6 +136,59 @@ export type Simulacao = {
   emojis: EmojiDetectado[];
 };
 
+/**
+ * Configuracao vigente e a de FABRICA, como `GET /configuracoes` devolve.
+ *
+ * As duas vem juntas de proposito: sem a de fabrica, "voltar ao padrao" seria
+ * um botao preenchido com numeros digitados de novo na interface -- e faixa
+ * duplicada em dois lugares ja foi defeito deste projeto uma vez.
+ */
+export type ValoresConfiguracao = {
+  /** categoria -> [nota minima, nota maxima], inclusive nas duas pontas. */
+  faixas_nps: Record<string, [number, number]>;
+  /** [pico, saudavel, degradando] em segundos, estritamente crescentes. */
+  limiares_latencia_s: number[];
+};
+
+export type Configuracoes = {
+  vigente: ValoresConfiguracao;
+  fabrica: ValoresConfiguracao;
+};
+
+/** Fonte de integracao. `variavel_segredo` e o NOME de uma variavel de ambiente. */
+export type FonteIntegracao = {
+  id: number;
+  nome: string;
+  canal: string;
+  tipo: string;
+  /** NOME da variavel de ambiente que carrega a credencial -- nunca o valor. */
+  variavel_segredo: string | null;
+  ativa: boolean;
+  criada_em: string;
+  /**
+   * Se a variavel nomeada acima EXISTE no ambiente da API, verificado na
+   * leitura. `false` nao diz que o segredo esta errado: diz que a variavel
+   * nao esta definida onde a API roda.
+   */
+  configurada: boolean;
+};
+
+export type MotivoRejeicao = {
+  numero_linha: number;
+  motivo: string;
+};
+
+/** Uma linha do historico de `GET /integracoes/importacoes`. */
+export type Importacao = {
+  id: number;
+  ocorrida_em: string;
+  arquivo: string;
+  aceitas: number;
+  rejeitadas: number;
+  /** Ate 20 motivos por importacao — a API trunca; o resto fica no CSV. */
+  motivos: MotivoRejeicao[];
+};
+
 export type Resultado<T> =
   | { ok: true; dado: T }
   | { ok: false; erro: string };
@@ -143,6 +196,43 @@ export type Resultado<T> =
 async function buscar<T>(rota: string): Promise<T> {
   const resposta = await fetch(`${BASE}${rota}`, { cache: "no-store" });
   if (!resposta.ok) throw new Error(`${rota} respondeu ${resposta.status}`);
+  return (await resposta.json()) as T;
+}
+
+/**
+ * Escrita na API, preservando a MENSAGEM do servidor.
+ *
+ * O `400` do Fraus nomeia o problema ("buraco entre detrator e neutro: nenhuma
+ * faixa cobre a nota 6"). Trocar isso por "erro ao salvar" jogaria fora a
+ * unica frase da tela que diz o que consertar -- entao o `detail` sobe inteiro.
+ */
+async function escrever<T>(
+  rota: string,
+  metodo: "POST" | "PUT" | "PATCH" | "DELETE",
+  corpo?: unknown,
+): Promise<T> {
+  const resposta = await fetch(`${BASE}${rota}`, {
+    method: metodo,
+    headers: corpo === undefined ? undefined : { "Content-Type": "application/json" },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+    cache: "no-store",
+  });
+
+  if (!resposta.ok) {
+    const dado = (await resposta.json().catch(() => null)) as
+      | { detail?: unknown }
+      | null;
+    const detalhe = dado?.detail;
+    throw new Error(
+      typeof detalhe === "string"
+        ? detalhe
+        : detalhe
+          ? JSON.stringify(detalhe)
+          : `${metodo} ${rota} respondeu ${resposta.status}`,
+    );
+  }
+
+  if (resposta.status === 204) return undefined as T;
   return (await resposta.json()) as T;
 }
 
@@ -227,6 +317,49 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
     })(),
   );
 }
+
+/**
+ * Configuracao vigente + de fabrica.
+ *
+ * Chamada tambem pelas telas de leitura: os limiares de latencia que qualificam
+ * "rapido/aceitavel/lento" saem daqui, nao de constante no front.
+ */
+export const obterConfiguracoes = () =>
+  proteger(buscar<Configuracoes>("/configuracoes"));
+
+/**
+ * Grava as chaves enviadas. Manda so o que mudou -- o `PUT` valida chave a
+ * chave, entao enviar o bloco inteiro faria um erro de latencia recusar
+ * tambem uma faixa de NPS correta.
+ */
+export const salvarConfiguracoes = (valores: Partial<ValoresConfiguracao>) =>
+  proteger(escrever<Configuracoes>("/configuracoes", "PUT", valores));
+
+export const listarFontes = () =>
+  proteger(buscar<FonteIntegracao[]>("/integracoes/fontes"));
+
+export const criarFonte = (fonte: {
+  nome: string;
+  canal: string;
+  tipo: string;
+  /** NOME da variavel de ambiente. A credencial nunca passa por aqui. */
+  variavel_segredo?: string | null;
+}) => proteger(escrever<FonteIntegracao>("/integracoes/fontes", "POST", fonte));
+
+export const ajustarFonte = (
+  id: number,
+  mudanca: { nome?: string; ativa?: boolean },
+) =>
+  proteger(
+    escrever<FonteIntegracao>(`/integracoes/fontes/${id}`, "PATCH", mudanca),
+  );
+
+/** Remove o CADASTRO da fonte. Nenhum atendimento e apagado junto. */
+export const apagarFonte = (id: number) =>
+  proteger(escrever<void>(`/integracoes/fontes/${id}`, "DELETE"));
+
+export const listarImportacoes = () =>
+  proteger(buscar<Importacao[]>("/integracoes/importacoes"));
 
 /** Estado de saude da API -- alimenta o indicador do app shell. */
 export const obterSaude = () =>

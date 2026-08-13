@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { obterAtribuicao, obterConversa } from "@/lib/api";
+import {
+  obterAtribuicao,
+  obterConfiguracoes,
+  obterConversa,
+} from "@/lib/api";
 import {
   falasDecisivas,
   latenciaMediana,
   latenciasAnotadas,
+  limiaresDe,
   marcasDaAtribuicao,
   type MarcaAtribuicao,
 } from "@/lib/derivacoes";
@@ -37,10 +42,15 @@ export default async function PaginaDoAtendimento(
 
   // As duas leituras sao independentes de proposito: se a atribuicao falhar,
   // so os paineis dela mostram falha -- a transcricao continua na tela.
-  const [resultado, resultadoAtribuicao] = await Promise.all([
+  const [resultado, resultadoAtribuicao, configuracoes] = await Promise.all([
     obterConversa(id),
     obterAtribuicao(id),
+    obterConfiguracoes(),
   ]);
+
+  const limiares = limiaresDe(
+    configuracoes.ok ? configuracoes.dado.vigente.limiares_latencia_s : null,
+  );
 
   if (!resultado.ok) {
     if (/404/.test(resultado.erro)) notFound();
@@ -169,7 +179,11 @@ export default async function PaginaDoAtendimento(
           legenda="Fala do cliente sobre a superfície elevada e em âmbar — é o que foi dito. Resposta do bot ou do atendente recuada, em cinza. A espera do cliente aparece embaixo de cada resposta, e o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala."
           semPadding
         >
-          <Transcricao conversa={conversa} marcas={marcas} />
+          <Transcricao
+            conversa={conversa}
+            marcas={marcas}
+            limiares={limiares}
+          />
         </Painel>
 
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
