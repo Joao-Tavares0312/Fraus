@@ -104,6 +104,21 @@ Quando uma cor de categoria carregar **texto** e não só preenchimento, verifiq
 contraste contra `--card` e clareie o token se não cruzar 4.5:1. Cor de marcação e
 cor de tipo não são a mesma coisa.
 
+**Como isso está implementado.** Clarear caso a caso deixaria o mesmo token com
+duas lightness espalhadas pelos componentes, então cada token de dado tem uma
+variante `-texto` fixa — `--dito-texto`, `--medido-texto`, `--tempo-texto`,
+`--detrator-texto`, `--neutro-texto`, `--promotor-texto`. A regra de uso é
+simples: **preenchimento usa o token base, tipografia usa a variante `-texto`**.
+As razões são verificadas por cálculo em `scripts/contraste.mjs`
+(`npm run contraste`), que lê os tokens do próprio `globals.css` e testa cada
+variante contra `--background`, `--card` e `--muted` — nenhuma lista duplicada,
+então um token editado aparece no relatório sem ninguém lembrar. A menor razão
+do conjunto é 5,66:1.
+
+Os tokens de dado também expõem `--dito-fraco`, `--medido-fraco` e
+`--tempo-fraco` (18% sobre transparente) para preenchimento de área e realce de
+trecho, onde contraste de texto não se aplica.
+
 ### 2.3 Espaço, raio, tipografia
 
 Espaço em múltiplos de 4. Raio sempre pela escala derivada de `--radius` — sem
@@ -194,6 +209,27 @@ própria — o `body` nunca rola na horizontal.
 **Painel de gráfico.** Título, subtítulo com a fonte ou o método quando o número
 for derivado, o gráfico, e a alternância para tabela. Altura fixa por breakpoint;
 gráfico que muda de altura ao trocar de dado causa salto de layout.
+
+**App shell.** Sidebar (primitivo `sidebar` do chassi) com o logo, as três
+seções — Visão geral, Atendimentos, Modelo — e o estado de saúde da API sempre
+visível no rodapé. A seção ativa se marca por `aria-current="page"` **e** por
+uma barra de 2px em `--primary`: item ativo é o único lugar onde o lime toca a
+navegação, e cor nunca é o único canal.
+
+**Filtro de período.** É global e mora na **URL** (`?de=&ate=`), não em estado
+de cliente: as páginas são de servidor, o recorte fica compartilhável, e existe
+uma fonte só do que "o período" significa — indicador, série, tabela e export
+nunca divergem. Todo link da navegação carrega o recorte adiante. Os atalhos se
+ancoram no **último dia com dado**, não em `hoje`, e mostram o intervalo real que
+aplicam; ancorar em hoje devolveria recorte vazio sem explicar por quê. Uma
+seção que o filtro não afeta — a de Modelo — não exibe o filtro.
+
+**Contribuição × importância.** As duas nunca aparecem com a mesma forma. Peso
+global (`importancias`) é barra que cresce da esquerda, colorida por tipo de
+sinal, e vive na tela Modelo. Contribuição daquele atendimento (`contribuicoes`)
+é barra divergente saindo de um eixo central, na escala detrator/promotor, e
+vive na tela do atendimento. Copy, geometria e cor dizem a mesma coisa três
+vezes.
 
 ---
 
