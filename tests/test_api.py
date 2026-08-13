@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from dolos.api.main import criar_app
 from dolos.db import Banco
+from dolos.fusor import NOMES_FEATURES
 
 CSV = (
     "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
@@ -19,12 +20,46 @@ CSV_SEM_CLIENTE = (
 )
 
 
-class MotorFalso:
+def _probabilidades_deterministicas(texto: str) -> list[float]:
+    """Probabilidades estaveis derivadas do texto -- sem modelo nenhum."""
+    peso = (len(texto) % 3) + 1.0
+    bruto = [peso, 1.0, 3.0]
+    total = sum(bruto)
+    return [valor / total for valor in bruto]
+
+
+class AtribuicaoDuble:
+    """Parte de atribuicao comum aos dubles: probabilidade so na fala do cliente."""
+
+    def atribuir_conversa(self, conversa):
+        mensagens = []
+        for indice, mensagem in enumerate(conversa.mensagens):
+            if mensagem.autor == "cliente":
+                p = _probabilidades_deterministicas(mensagem.texto)
+            else:
+                p = [None, None, None]
+            mensagens.append(
+                {
+                    "indice": indice,
+                    "autor": mensagem.autor,
+                    "texto": mensagem.texto,
+                    "prob_insatisfeito": p[0],
+                    "prob_neutro": p[1],
+                    "prob_satisfeito": p[2],
+                }
+            )
+        return {
+            "mensagens": mensagens,
+            "importancias": {nome: 1.0 for nome in NOMES_FEATURES},
+        }
+
+
+class MotorFalso(AtribuicaoDuble):
     def pontuar_conversa(self, conversa):
         return 90.0
 
 
-class MotorRespeitandoSinal:
+class MotorRespeitandoSinal(AtribuicaoDuble):
     """Duble que honra o invariante do Motor real: sem fala do cliente, sem score."""
 
     def pontuar_conversa(self, conversa):
@@ -172,6 +207,83 @@ def test_conversa_muda_nao_derruba_o_nps_das_outras(cliente_com_sinal, tmp_path)
     assert indicadores["csat"] == 100.0
     assert indicadores["total_conversas"] == 2
     assert indicadores["sem_sinal"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Atribuicao por sentenca
+# ---------------------------------------------------------------------------
+
+
+CAMPOS_PROBABILIDADE = ("prob_insatisfeito", "prob_neutro", "prob_satisfeito")
+
+
+def test_atribuicao_so_traz_probabilidade_na_fala_do_cliente(cliente, tmp_path):
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    corpo = cliente.get("/conversas/c1/atribuicao").json()
+    assert corpo["conversa_id"] == "c1"
+    assert corpo["score"] == 90.0
+    assert corpo["nota"] == 9
+    assert corpo["categoria"] == "promotor"
+
+    for mensagem in corpo["mensagens"]:
+        valores = [mensagem[campo] for campo in CAMPOS_PROBABILIDADE]
+        if mensagem["autor"] == "cliente":
+            assert all(isinstance(valor, float) for valor in valores)
+            assert sum(valores) == pytest.approx(1.0)
+        else:
+            assert valores == [None, None, None]
+
+
+def test_atribuicao_alinha_indice_com_a_transcricao(cliente, tmp_path):
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    detalhe = cliente.get("/conversas/c1").json()
+    atribuicao = cliente.get("/conversas/c1/atribuicao").json()
+
+    assert len(atribuicao["mensagens"]) == len(detalhe["mensagens"])
+    for indice, (na_atribuicao, na_transcricao) in enumerate(
+        zip(atribuicao["mensagens"], detalhe["mensagens"])
+    ):
+        assert na_atribuicao["indice"] == indice
+        assert na_atribuicao["texto"] == na_transcricao["texto"]
+        assert na_atribuicao["autor"] == na_transcricao["autor"]
+
+
+def test_atribuicao_sem_fala_do_cliente_e_tudo_nulo_sem_erro(
+    cliente_com_sinal, tmp_path
+):
+    caminho = tmp_path / "mudo.csv"
+    caminho.write_text(CSV_SEM_CLIENTE, encoding="utf-8")
+    cliente_com_sinal.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    resposta = cliente_com_sinal.get("/conversas/mudo/atribuicao")
+    assert resposta.status_code == 200
+    corpo = resposta.json()
+    assert corpo["score"] is None
+    assert corpo["nota"] is None
+    assert corpo["categoria"] is None
+    assert corpo["mensagens"]  # a transcricao inteira continua vindo
+    for mensagem in corpo["mensagens"]:
+        assert [mensagem[campo] for campo in CAMPOS_PROBABILIDADE] == [None, None, None]
+
+
+def test_atribuicao_de_conversa_inexistente_e_404(cliente):
+    assert cliente.get("/conversas/nao-existe/atribuicao").status_code == 404
+
+
+def test_atribuicao_traz_as_dezesseis_importancias(cliente, tmp_path):
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    importancias = cliente.get("/conversas/c1/atribuicao").json()["importancias"]
+    assert len(importancias) == 16
+    assert set(importancias) == set(NOMES_FEATURES)
 
 
 # ---------------------------------------------------------------------------

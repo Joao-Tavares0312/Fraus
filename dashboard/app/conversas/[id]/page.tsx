@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obterConversa } from "@/lib/api";
+import { obterAtribuicao, obterConversa, type Atribuicao } from "@/lib/api";
 import {
-  evidenciasDaConversa,
+  falasDecisivas,
   latenciaMediana,
   latenciasAnotadas,
+  marcasDaAtribuicao,
+  pesoPorSinal,
+  ROTULO_SINAL,
+  type MarcaAtribuicao,
 } from "@/lib/derivacoes";
 import {
   formatarDataHora,
@@ -23,7 +27,12 @@ export default async function PaginaDoAtendimento(
   props: PageProps<"/conversas/[id]">,
 ) {
   const { id } = await props.params;
-  const resultado = await obterConversa(id);
+  // As duas leituras sao independentes de proposito: se a atribuicao falhar,
+  // so o painel dela mostra falha -- a transcricao continua na tela.
+  const [resultado, resultadoAtribuicao] = await Promise.all([
+    obterConversa(id),
+    obterAtribuicao(id),
+  ]);
 
   if (!resultado.ok) {
     if (/404/.test(resultado.erro)) notFound();
@@ -31,7 +40,10 @@ export default async function PaginaDoAtendimento(
   }
 
   const conversa = resultado.dado;
-  const evidencias = evidenciasDaConversa(conversa);
+  const atribuicao = resultadoAtribuicao.ok ? resultadoAtribuicao.dado : null;
+  const marcas = atribuicao
+    ? marcasDaAtribuicao(atribuicao.mensagens)
+    : new Map<number, MarcaAtribuicao>();
   const mediana = latenciaMediana(conversa.mensagens);
   const respostas = latenciasAnotadas(conversa.mensagens).length;
   const duracao = conversa.encerrada_em
@@ -123,60 +135,133 @@ export default async function PaginaDoAtendimento(
           titulo="Transcrição"
           legenda="Falas do cliente sobre a segunda camada de superfície; respostas do bot e do atendente sobre a superfície do painel. A espera do cliente aparece embaixo de cada resposta."
         >
-          <Transcricao conversa={conversa} />
+          <Transcricao conversa={conversa} marcas={marcas} />
         </Painel>
 
         <Painel
           titulo="O que puxou a nota"
-          legenda="Evidência observável na própria transcrição — é isto que transforma “nota ruim” em “oportunidade de melhoria”."
+          legenda="Probabilidade por mensagem do classificador de texto, vinda de GET /conversas/{id}/atribuicao — é isto que transforma “nota ruim” em “oportunidade de melhoria”."
         >
-          {evidencias.length === 0 ? (
+          {atribuicao === null ? (
             <EstadoVazio
-              titulo="Nenhuma evidência observável nesta transcrição"
-              explicacao="Não há emoji com polaridade relevante nem espera acima de 30 s. Isso não significa que a nota não tenha causa: a parcela de texto da atribuição depende da probabilidade por mensagem do classificador, que a API não expõe."
+              titulo="Atribuição indisponível"
+              explicacao={`A transcrição carregou, mas a atribuição por sentença não: ${resultadoAtribuicao.ok ? "" : resultadoAtribuicao.erro}. Sem ela, marcar uma frase como “a que derrubou a nota” seria invenção — então nada é marcado.`}
               endpoint="GET /conversas/{id}/atribuicao"
             />
           ) : (
-            <ul className="divide-y divide-[var(--filete)]">
-              {evidencias.map((evidencia) => (
-                <li
-                  key={`${evidencia.indice}-${evidencia.tipo}-${evidencia.rotulo}`}
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-3"
-                >
-                  <span
-                    aria-hidden
-                    className="h-[7px] w-[7px] shrink-0 translate-y-[-1px] rounded-full"
-                    style={{
-                      background:
-                        evidencia.sentido === "puxou_para_baixo"
-                          ? "var(--detrator)"
-                          : "var(--promotor)",
-                    }}
-                  />
-                  <span className="text-[0.875rem] font-medium text-[var(--tinta)]">
-                    {evidencia.rotulo}
-                  </span>
-                  <span className="text-[0.8125rem] text-[var(--tinta-2)]">
-                    {evidencia.detalhe}
-                  </span>
-                  <span className="ml-auto text-[0.75rem] tabular-nums text-[var(--tinta-3)]">
-                    mensagem {evidencia.indice + 1}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <PainelAtribuicao atribuicao={atribuicao} marcas={marcas} />
           )}
-
-          <div className="border-t border-[var(--filete)]">
-            <EstadoVazio
-              titulo="Atribuição do sinal de texto: indisponível"
-              explicacao="O classificador BERTimbau pontua cada mensagem individualmente, mas a API só devolve o score fundido do atendimento inteiro. Sem essa quebra por mensagem, marcar uma frase específica como “a que derrubou a nota” seria invenção — então a marcação acima usa apenas emoji e tempo, que são verificáveis na transcrição."
-              endpoint="GET /conversas/{id}/atribuicao"
-            />
-          </div>
         </Painel>
+
       </main>
     </QuadroRelatorio>
+  );
+}
+
+/**
+ * As falas do cliente ordenadas pela forca com que inclinaram a nota, mais o
+ * peso que o fusor deu a cada um dos tres sinais.
+ *
+ * O ranking usa o SALDO (P(satisfeito) - P(insatisfeito)) porque e ele que diz
+ * a direcao: uma fala com 90% de neutro nao explica nota nenhuma, mesmo sendo
+ * a predicao mais confiante da conversa.
+ */
+function PainelAtribuicao({
+  atribuicao,
+  marcas,
+}: {
+  atribuicao: Atribuicao;
+  marcas: Map<number, MarcaAtribuicao>;
+}) {
+  const decisivas = falasDecisivas(marcas);
+  const pesos = pesoPorSinal(atribuicao.importancias);
+  const comFala = marcas.size > 0;
+
+  return (
+    <>
+      {!comFala ? (
+        <EstadoVazio
+          titulo="O cliente não falou neste atendimento"
+          explicacao="Sem fala do cliente não há o que atribuir: o classificador de texto pontua mensagem de cliente, e pontuar a fala do bot seria número inventado. Ausência de dado não é insatisfação."
+        />
+      ) : decisivas.length === 0 ? (
+        <EstadoVazio
+          titulo="Nenhuma fala inclinou a nota de forma clara"
+          explicacao="Todas as mensagens do cliente ficaram com P(satisfeito) e P(insatisfeito) próximas demais. A transcrição mostra a probabilidade de cada uma; apontar uma delas como causa seria ler ruído como evidência."
+        />
+      ) : (
+        <ul className="divide-y divide-[var(--filete)]">
+          {decisivas.map((marca) => (
+            <li
+              key={marca.indice}
+              className="flex flex-col gap-1.5 px-5 py-3"
+            >
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span
+                  aria-hidden
+                  className="h-[7px] w-[7px] shrink-0 translate-y-[-1px] rounded-full"
+                  style={{
+                    background:
+                      marca.sentido === "puxou_para_baixo"
+                        ? "var(--detrator)"
+                        : "var(--promotor)",
+                  }}
+                />
+                <span className="text-[0.875rem] font-medium text-[var(--tinta)]">
+                  {marca.sentido === "puxou_para_baixo"
+                    ? "Puxou para baixo"
+                    : "Puxou para cima"}
+                </span>
+                <span className="font-mono text-[0.75rem] tabular-nums text-[var(--tinta-2)]">
+                  {marca.saldo > 0 ? "+" : "−"}
+                  {Math.abs(marca.saldo).toFixed(2)} de saldo
+                </span>
+                <span className="ml-auto text-[0.75rem] tabular-nums text-[var(--tinta-3)]">
+                  mensagem {marca.indice + 1}
+                </span>
+              </div>
+              <p className="max-w-[70ch] text-[0.8125rem] leading-[1.55] text-[var(--tinta-2)]">
+                “{atribuicao.mensagens[marca.indice]?.texto}”
+              </p>
+              <p className="text-[0.75rem] tabular-nums text-[var(--tinta-3)]">
+                insatisfeito {Math.round(marca.probInsatisfeito * 100)}% ·
+                neutro {Math.round(marca.probNeutro * 100)}% · satisfeito{" "}
+                {Math.round(marca.probSatisfeito * 100)}%
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="border-t border-[var(--filete)] px-5 py-4">
+        <h3 className="text-[0.8125rem] font-medium text-[var(--tinta-2)]">
+          Peso de cada sinal no fusor
+        </h3>
+        <p className="mt-1 max-w-[70ch] text-[0.75rem] leading-[1.5] text-[var(--tinta-3)]">
+          Coeficiente absoluto médio da regressão logística, agregado por sinal
+          sobre as {Object.keys(atribuicao.importancias).length} features. Vale
+          para o modelo inteiro, não para este atendimento.
+        </p>
+        <ul className="mt-3 flex flex-col gap-2">
+          {pesos.map((peso) => (
+            <li key={peso.sinal} className="flex items-center gap-3">
+              <span className="w-[3.5rem] shrink-0 text-[0.75rem] text-[var(--tinta-2)]">
+                {ROTULO_SINAL[peso.sinal]}
+              </span>
+              <span className="h-[6px] flex-1 overflow-hidden rounded-[2px] bg-[var(--filete)]">
+                <span
+                  className="block h-full bg-[var(--tinta-2)]"
+                  style={{ width: `${peso.fracao * 100}%` }}
+                />
+              </span>
+              <span className="w-[3rem] shrink-0 text-right font-mono text-[0.75rem] tabular-nums text-[var(--tinta-2)]">
+                {Math.round(peso.fracao * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }
 

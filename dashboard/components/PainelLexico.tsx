@@ -1,4 +1,4 @@
-import type { LexicoDaClasse } from "@/lib/derivacoes";
+import { polaridadeDoEmoji, type LexicoDaClasse } from "@/lib/derivacoes";
 import { ROTULO_CATEGORIA } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
 
@@ -74,19 +74,27 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
           <Bloco titulo="Emojis" vazio="nenhum emoji nesta classe">
             {classe.emojis.length > 0 ? (
               <li className="flex flex-wrap gap-2 pt-1">
-                {classe.emojis.map((termo) => (
-                  <span
-                    key={termo.termo}
-                    className="inline-flex items-center gap-1.5 border border-[var(--filete)] px-2 py-1 text-[0.8125rem] text-[var(--tinta-2)]"
-                  >
-                    <span aria-hidden className="text-[1rem] leading-none">
-                      {termo.termo}
+                {classe.emojis.map((termo) => {
+                  const polaridade = polaridadeDoEmoji(termo.termo);
+                  return (
+                    <span
+                      key={termo.termo}
+                      title={`polaridade ${polaridade > 0 ? "+" : ""}${polaridade.toFixed(2)} no Emoji Sentiment Ranking`}
+                      className="inline-flex items-center gap-1.5 border border-[var(--filete)] px-2 py-1 text-[0.8125rem] text-[var(--tinta-2)]"
+                    >
+                      <span aria-hidden className="text-[1rem] leading-none">
+                        {termo.termo}
+                      </span>
+                      <span className="tabular-nums text-[0.75rem]">
+                        {termo.ocorrencias}×
+                      </span>
+                      <span className="tabular-nums text-[0.6875rem] text-[var(--tinta-3)]">
+                        {polaridade > 0 ? "+" : ""}
+                        {polaridade.toFixed(2)}
+                      </span>
                     </span>
-                    <span className="tabular-nums text-[0.75rem]">
-                      {termo.ocorrencias}×
-                    </span>
-                  </span>
-                ))}
+                  );
+                })}
               </li>
             ) : null}
           </Bloco>

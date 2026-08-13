@@ -29,7 +29,8 @@ from dolos.fusor import Fusor, montar_features
 from dolos.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10)
 from dolos.ingest.csv_driver import carregar_csv
-from dolos.sinais.texto import ClassificadorTexto
+from dolos.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
+                                ClassificadorTexto)
 
 CAMINHO_MODELO_TEXTO = Path(os.environ.get("DOLOS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
 CAMINHO_FUSOR = Path(os.environ.get("DOLOS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
@@ -60,6 +61,51 @@ class Motor:
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
         return self._fusor.pontuar(montar_features(conversa, self._classificador))
+
+    def atribuir_conversa(self, conversa) -> dict:
+        """Quebra a nota por mensagem: quem falou o que, e com que probabilidade.
+
+        SO a fala do cliente recebe probabilidade -- bot e humano vem com os
+        tres campos nulos, porque o classificador foi treinado em texto de
+        cliente e pontuar a fala do bot seria numero inventado. A transcricao
+        inteira volta assim mesmo: a interface precisa dela para alinhar o
+        `indice` com `/conversas/{id}` sem recontar nada.
+
+        A ordem das classes e a de `dolos.sinais.texto`: 0 insatisfeito,
+        1 neutro, 2 satisfeito.
+
+        O classificador e o fusor NAO vazam daqui: o que sai e o resultado ja
+        montado, para a rota nao ter que saber que existe modelo por baixo.
+        """
+        indices_do_cliente = [
+            indice
+            for indice, mensagem in enumerate(conversa.mensagens)
+            if mensagem.autor == "cliente"
+        ]
+        probabilidades = self._classificador.prever_mensagens(
+            [conversa.mensagens[indice].texto for indice in indices_do_cliente]
+        )
+        por_indice = dict(zip(indices_do_cliente, probabilidades))
+
+        mensagens = []
+        for indice, mensagem in enumerate(conversa.mensagens):
+            previsao = por_indice.get(indice)
+            mensagens.append(
+                {
+                    "indice": indice,
+                    "autor": mensagem.autor,
+                    "texto": mensagem.texto,
+                    "prob_insatisfeito": (
+                        float(previsao[INSATISFEITO]) if previsao else None
+                    ),
+                    "prob_neutro": float(previsao[NEUTRO]) if previsao else None,
+                    "prob_satisfeito": (
+                        float(previsao[SATISFEITO]) if previsao else None
+                    ),
+                }
+            )
+
+        return {"mensagens": mensagens, "importancias": self._fusor.importancias()}
 
 
 def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
@@ -141,6 +187,29 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "score": score,
             "categoria": categoria,
             "nota": nota_0_10(score) if score is not None else None,
+        }
+
+    @app.get("/conversas/{conversa_id}/atribuicao")
+    def atribuir(conversa_id: str) -> dict:
+        """Quais falas puxaram a nota para baixo e quais puxaram para cima.
+
+        Score, categoria e nota saem do que o SERVIDOR ja gravou na
+        importacao -- nao sao repontuados aqui. Repontuar criaria uma segunda
+        fonte de verdade que poderia divergir de `/conversas/{id}` se o fusor
+        em disco mudasse entre a importacao e a leitura.
+        """
+        achado = banco.buscar(conversa_id)
+        if achado is None:
+            raise HTTPException(status_code=404, detail="conversa nao encontrada")
+        conversa, score, categoria = achado
+        atribuicao = motor.atribuir_conversa(conversa)
+        return {
+            "conversa_id": conversa.id,
+            "score": score,
+            "nota": nota_0_10(score) if score is not None else None,
+            "categoria": categoria,
+            "mensagens": atribuicao["mensagens"],
+            "importancias": atribuicao["importancias"],
         }
 
     @app.get("/indicadores")

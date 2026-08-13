@@ -54,6 +54,35 @@ export type DetalheConversa = ResumoConversa & {
   mensagens: Mensagem[];
 };
 
+/**
+ * Uma mensagem da transcricao com a probabilidade que o classificador de
+ * texto deu a ela.
+ *
+ * Os tres campos vem `null` para bot e humano: o classificador foi treinado
+ * em fala de CLIENTE, e o servidor recusa pontuar o resto. O `indice` e a
+ * posicao na mesma lista de `/conversas/{id}`, para alinhar sem recontar.
+ */
+export type MensagemAtribuida = {
+  indice: number;
+  autor: Autor;
+  texto: string;
+  prob_insatisfeito: number | null;
+  prob_neutro: number | null;
+  prob_satisfeito: number | null;
+};
+
+/** Resposta de `GET /conversas/{id}/atribuicao`. */
+export type Atribuicao = {
+  conversa_id: string;
+  /** Os mesmos score/nota/categoria de `/conversas/{id}`: gravados na importacao. */
+  score: number | null;
+  nota: number | null;
+  categoria: Categoria | null;
+  mensagens: MensagemAtribuida[];
+  /** Peso absoluto de cada uma das 16 features do fusor. */
+  importancias: Record<string, number>;
+};
+
 export type Resultado<T> =
   | { ok: true; dado: T }
   | { ok: false; erro: string };
@@ -91,6 +120,11 @@ export const listarConversas = () =>
 
 export const obterConversa = (id: string) =>
   proteger(buscar<DetalheConversa>(`/conversas/${encodeURIComponent(id)}`));
+
+export const obterAtribuicao = (id: string) =>
+  proteger(
+    buscar<Atribuicao>(`/conversas/${encodeURIComponent(id)}/atribuicao`),
+  );
 
 const LOTE_DETALHES = 8;
 

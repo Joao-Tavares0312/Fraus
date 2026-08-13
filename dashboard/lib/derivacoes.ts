@@ -1,22 +1,31 @@
 /**
  * Derivacoes feitas no cliente da API a partir do que os endpoints DAO.
  *
- * A API do Dolos expoe indicadores agregados, a lista de conversas e a
- * transcricao. Ela NAO expoe serie temporal, latencia agregada, lexico por
- * classe nem atribuicao por sentenca. Tudo que este arquivo calcula sai dos
- * timestamps e do texto que a transcricao ja entrega -- nada aqui inventa
+ * A API do Dolos expoe indicadores agregados, a lista de conversas, a
+ * transcricao e a atribuicao por sentenca. Ela NAO expoe serie temporal,
+ * latencia agregada nem lexico por classe. Tudo que este arquivo calcula sai
+ * dos timestamps e do texto que a transcricao ja entrega -- nada aqui inventa
  * numero. O que nao da para derivar honestamente nao esta aqui: esta como
  * estado vazio na interface, nomeando o endpoint que resolveria.
+ *
+ * A atribuicao por sentenca NAO e derivada aqui: ela vem pronta de
+ * `GET /conversas/{id}/atribuicao`. As funcoes desta secao so dao FORMA ao
+ * que o servidor mandou (classe dominante, saldo, agregacao por sinal).
  *
  * A regra de latencia e a MESMA de `dolos/sinais/tempo.py`: o intervalo de
  * cada mensagem do cliente ate a proxima resposta (bot ou humano).
  */
 
 import lexicoEmoji from "./lexicoEmoji.json";
-import type { Categoria, DetalheConversa, Mensagem, ResumoConversa } from "./api";
+import type {
+  Categoria,
+  DetalheConversa,
+  Mensagem,
+  MensagemAtribuida,
+  ResumoConversa,
+} from "./api";
 
 const RESPONDENTES = new Set(["bot", "humano"]);
-const LIMIAR_POLARIDADE = 0.1;
 const POLARIDADE: Record<string, number> = lexicoEmoji;
 
 // ---------------------------------------------------------------------------
@@ -288,6 +297,13 @@ export function emojisDoTexto(texto: string): string[] {
   return achados;
 }
 
+/**
+ * Polaridade do emoji no Emoji Sentiment Ranking, a MESMA tabela que
+ * `dolos/sinais/emoji.py` usa (exportada por `scripts/gerar_lexico_emoji.py`).
+ *
+ * Isto e exibicao de uma tabela publicada, nao atribuicao: quem diz o que
+ * puxou a nota de um atendimento e `GET /conversas/{id}/atribuicao`.
+ */
 export function polaridadeDoEmoji(emoji: string): number {
   return POLARIDADE[emoji] ?? 0;
 }
@@ -377,66 +393,159 @@ export function lexicoPorClasse(detalhes: DetalheConversa[]): LexicoDaClasse[] {
 }
 
 // ---------------------------------------------------------------------------
-// Evidencias observaveis no atendimento
+// Atribuicao por sentenca (vem do servidor, nao e derivada aqui)
 // ---------------------------------------------------------------------------
 
-export type Evidencia = {
+export type SentidoAtribuicao =
+  | "puxou_para_baixo"
+  | "puxou_para_cima"
+  | "sem_inclinacao";
+
+export type MarcaAtribuicao = {
+  /** Indice da mensagem dentro de `conversa.mensagens`. */
   indice: number;
-  tipo: "emoji" | "espera";
-  sentido: "puxou_para_baixo" | "puxou_para_cima";
-  rotulo: string;
-  detalhe: string;
+  sentido: SentidoAtribuicao;
+  /** Classe mais provavel segundo o classificador. */
+  classe: "insatisfeito" | "neutro" | "satisfeito";
+  /** Probabilidade da classe mais provavel, em [0, 1]. */
+  probabilidade: number;
+  /** P(satisfeito) - P(insatisfeito): positivo puxa a nota para cima. */
+  saldo: number;
+  probInsatisfeito: number;
+  probNeutro: number;
+  probSatisfeito: number;
 };
 
 /**
- * Marca os trechos que puxaram a nota USANDO SO O QUE E OBSERVAVEL na
- * transcricao: a polaridade dos emojis e o tempo de espera do cliente.
+ * A partir de qual saldo a fala e apresentada como tendo puxado a nota.
  *
- * O que e compartilhado com `dolos/sinais/emoji.py` e a TABELA de polaridade
- * (Emoji Sentiment Ranking, exportada para `lexicoEmoji.json`) E o recorte,
- * que aqui e feito por cluster de grafema para casar com `emoji.emoji_list`.
- * O que NAO e compartilhado: o motor usa tambem a posicao relativa do emoji
- * na mensagem como feature -- a interface so mostra a polaridade media.
- * A regra de espera e a mesma do sinal de tempo.
- *
- * O terceiro sinal -- a probabilidade por mensagem do classificador de texto,
- * que e calculada na Task 7 -- NAO tem endpoint, entao nao aparece aqui e nem
- * e simulado. A interface diz isso em voz alta em vez de fingir atribuicao.
+ * Abaixo disso o classificador esta praticamente indiferente entre as duas
+ * pontas, e chamar a frase de "a que derrubou a nota" seria ler ruido como
+ * causa.
  */
-export function evidenciasDaConversa(conversa: DetalheConversa): Evidencia[] {
-  const evidencias: Evidencia[] = [];
+export const LIMIAR_SALDO = 0.15;
 
-  conversa.mensagens.forEach((mensagem, indice) => {
-    if (mensagem.autor !== "cliente") return;
-    const emojis = emojisDoTexto(mensagem.texto);
-    if (emojis.length === 0) return;
-    const soma = emojis.reduce((total, e) => total + polaridadeDoEmoji(e), 0);
-    const media = soma / emojis.length;
-    if (Math.abs(media) < LIMIAR_POLARIDADE) return;
-    evidencias.push({
-      indice,
-      tipo: "emoji",
-      sentido: media < 0 ? "puxou_para_baixo" : "puxou_para_cima",
-      rotulo: media < 0 ? "Emoji negativo" : "Emoji positivo",
-      detalhe: `${emojis.join(" ")} · polaridade ${media > 0 ? "+" : ""}${media.toFixed(2)} no Emoji Sentiment Ranking`,
+const CLASSES = ["insatisfeito", "neutro", "satisfeito"] as const;
+
+/**
+ * Converte `GET /conversas/{id}/atribuicao` nas marcas da transcricao.
+ *
+ * NADA aqui e heuristica local: as probabilidades sao as do BERTimbau, uma por
+ * mensagem, calculadas no servidor. A versao anterior desta tela marcava os
+ * trechos por polaridade de emoji e tempo de espera porque o endpoint nao
+ * existia; agora existe, e manter as duas seria manter duas fontes de verdade
+ * para a mesma pergunta ("o que puxou a nota"). A anotacao de latencia
+ * continua onde estava -- ela responde outra pergunta ("quanto o cliente
+ * esperou") e sai dos timestamps, nao do classificador.
+ *
+ * Mensagem de bot/humano vem com probabilidade nula do servidor e nao vira
+ * marca: ausencia de dado nao e inclinacao nenhuma.
+ */
+export function marcasDaAtribuicao(
+  mensagens: MensagemAtribuida[],
+): Map<number, MarcaAtribuicao> {
+  const marcas = new Map<number, MarcaAtribuicao>();
+
+  for (const mensagem of mensagens) {
+    const { prob_insatisfeito, prob_neutro, prob_satisfeito } = mensagem;
+    if (
+      prob_insatisfeito === null ||
+      prob_neutro === null ||
+      prob_satisfeito === null
+    ) {
+      continue;
+    }
+
+    const probabilidades = [prob_insatisfeito, prob_neutro, prob_satisfeito];
+    let melhor = 0;
+    probabilidades.forEach((valor, indice) => {
+      if (valor > probabilidades[melhor]) melhor = indice;
     });
-  });
 
-  // So espera que a literatura associa a PERDA vira evidencia: abaixo de 1 min
-  // a resposta esta no saudavel e marcar isso seria inventar problema.
-  for (const { indice, segundos } of latenciasAnotadas(conversa.mensagens)) {
-    const severidade = severidadeLatencia(segundos);
-    if (severidade === "pico" || severidade === "saudavel") continue;
-    evidencias.push({
-      indice,
-      tipo: "espera",
-      sentido: "puxou_para_baixo",
-      rotulo: ROTULO_LATENCIA[severidade].titulo,
-      detalhe: ROTULO_LATENCIA[severidade].detalhe,
+    const saldo = prob_satisfeito - prob_insatisfeito;
+    marcas.set(mensagem.indice, {
+      indice: mensagem.indice,
+      sentido:
+        saldo <= -LIMIAR_SALDO
+          ? "puxou_para_baixo"
+          : saldo >= LIMIAR_SALDO
+            ? "puxou_para_cima"
+            : "sem_inclinacao",
+      classe: CLASSES[melhor],
+      probabilidade: probabilidades[melhor],
+      saldo,
+      probInsatisfeito: prob_insatisfeito,
+      probNeutro: prob_neutro,
+      probSatisfeito: prob_satisfeito,
     });
   }
 
-  return evidencias.sort((a, b) => a.indice - b.indice);
+  return marcas;
+}
+
+/** As falas que de fato inclinaram a nota, da mais decisiva para a menos. */
+export function falasDecisivas(
+  marcas: Map<number, MarcaAtribuicao>,
+): MarcaAtribuicao[] {
+  return [...marcas.values()]
+    .filter((marca) => marca.sentido !== "sem_inclinacao")
+    .sort((a, b) => Math.abs(b.saldo) - Math.abs(a.saldo));
+}
+
+// ---------------------------------------------------------------------------
+// Importancia das features do fusor
+// ---------------------------------------------------------------------------
+
+export type SinalDaFeature = "texto" | "emoji" | "tempo";
+
+const SINAL_POR_PREFIXO: [string, SinalDaFeature][] = [
+  ["texto_", "texto"],
+  ["emoji_", "emoji"],
+];
+
+/** A qual dos tres sinais a feature pertence -- tempo e o caso restante. */
+export function sinalDaFeature(nome: string): SinalDaFeature {
+  for (const [prefixo, sinal] of SINAL_POR_PREFIXO) {
+    if (nome.startsWith(prefixo)) return sinal;
+  }
+  return "tempo";
+}
+
+export const ROTULO_SINAL: Record<SinalDaFeature, string> = {
+  texto: "Texto",
+  emoji: "Emoji",
+  tempo: "Tempo",
+};
+
+export type PesoDoSinal = {
+  sinal: SinalDaFeature;
+  /** Soma dos pesos absolutos das features do sinal, normalizada em [0, 1]. */
+  fracao: number;
+};
+
+/**
+ * Agrega as 16 importancias do fusor nos TRES sinais do trabalho.
+ *
+ * O peso e o coeficiente absoluto medio da regressao logistica -- e por isso
+ * que o fusor e linear: a pergunta "qual sinal pesou mais" tem resposta.
+ */
+export function pesoPorSinal(
+  importancias: Record<string, number>,
+): PesoDoSinal[] {
+  const soma = new Map<SinalDaFeature, number>();
+  let total = 0;
+
+  for (const [nome, peso] of Object.entries(importancias)) {
+    const sinal = sinalDaFeature(nome);
+    const absoluto = Math.abs(peso);
+    soma.set(sinal, (soma.get(sinal) ?? 0) + absoluto);
+    total += absoluto;
+  }
+
+  return (["texto", "emoji", "tempo"] as SinalDaFeature[]).map((sinal) => ({
+    sinal,
+    fracao: total === 0 ? 0 : (soma.get(sinal) ?? 0) / total,
+  }));
 }
 
 // ---------------------------------------------------------------------------

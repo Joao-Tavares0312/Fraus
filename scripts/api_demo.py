@@ -33,6 +33,7 @@ import uvicorn  # noqa: E402
 
 from dolos.api.main import criar_app  # noqa: E402
 from dolos.db import Banco  # noqa: E402
+from dolos.fusor import NOMES_FEATURES  # noqa: E402
 from dolos.indicadores import categoria_nps  # noqa: E402
 from dolos.ingest.simulador import INICIO, gerar_lote  # noqa: E402
 from dolos.modelos import Conversa, Mensagem  # noqa: E402
@@ -83,6 +84,42 @@ class MotorDuble:
     latencia mediana das respostas -- so o suficiente para a dashboard exercitar
     as tres faixas de NPS e o trade-off NPS x latencia.
     """
+
+    @staticmethod
+    def _probabilidades(texto: str) -> list[float]:
+        """[insatisfeito, neutro, satisfeito] a partir da contagem de termos.
+
+        Deterministico e sem modelo -- mesma logica do score do dublê, so que
+        por mensagem, para a dashboard exercitar a atribuicao por sentenca.
+        """
+        minusculo = texto.lower()
+        positivos = sum(minusculo.count(t) for t in TERMOS_POSITIVOS)
+        negativos = sum(minusculo.count(t) for t in TERMOS_NEGATIVOS)
+        bruto = [1.0 + 3.0 * negativos, 1.0, 1.0 + 3.0 * positivos]
+        total = sum(bruto)
+        return [valor / total for valor in bruto]
+
+    def atribuir_conversa(self, conversa: Conversa) -> dict:
+        mensagens = []
+        for indice, mensagem in enumerate(conversa.mensagens):
+            do_cliente = mensagem.autor == "cliente"
+            p = self._probabilidades(mensagem.texto) if do_cliente else [None] * 3
+            mensagens.append(
+                {
+                    "indice": indice,
+                    "autor": mensagem.autor,
+                    "texto": mensagem.texto,
+                    "prob_insatisfeito": p[0],
+                    "prob_neutro": p[1],
+                    "prob_satisfeito": p[2],
+                }
+            )
+        # Pesos ficticios, so para a interface ter as 16 chaves com forma certa.
+        importancias = {
+            nome: round(0.2 + 0.05 * (indice % 7), 3)
+            for indice, nome in enumerate(NOMES_FEATURES)
+        }
+        return {"mensagens": mensagens, "importancias": importancias}
 
     def pontuar_conversa(self, conversa: Conversa) -> float | None:
         if not conversa.tem_sinal_cliente:
