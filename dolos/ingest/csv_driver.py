@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from dolos.modelos import Conversa, Mensagem
 
@@ -41,7 +41,7 @@ def carregar_csv(caminho: Path) -> ResultadoIngestao:
                     texto=linha["texto"],
                     enviada_em=enviada_em,
                 )
-            except Exception as erro:
+            except (ValueError, ValidationError) as erro:
                 rejeitadas.append(LinhaRejeitada(numero_linha=numero_linha, motivo=str(erro)))
                 continue
 

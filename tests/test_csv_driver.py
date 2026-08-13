@@ -57,3 +57,20 @@ def test_timestamp_sem_offset_e_rejeitado(tmp_path):
     resultado = carregar_csv(caminho)
     assert resultado.conversas == []
     assert len(resultado.rejeitadas) == 1
+
+
+def test_coluna_ausente_levanta_keyerror(tmp_path):
+    """Coluna estruturalmente ausente deve propagar KeyError, nao rejeitar silenciosamente linhas."""
+    caminho = tmp_path / "conversas.csv"
+    # Cabeçalho sem a coluna 'enviada_em' (usa 'timestamp' em vez)
+    caminho.write_text(
+        "conversa_id,canal,autor,texto,timestamp,escalou_para_humano\n"
+        "c1,csv,cliente,oi,2026-08-13T10:00:00+00:00,false\n",
+        encoding="utf-8"
+    )
+    # Deve levantar KeyError, nao devolver rejeitadas
+    try:
+        carregar_csv(caminho)
+        assert False, "Esperava KeyError para coluna ausente"
+    except KeyError:
+        pass  # Comportamento esperado
