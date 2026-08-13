@@ -508,3 +508,31 @@ def test_simular_com_emoji_devolve_posicao_relativa(cliente):
     assert len(corpo["emojis"]) == 1
     assert corpo["emojis"][0]["emoji"] == "😄"
     assert isinstance(corpo["emojis"][0]["posicao_relativa"], float)
+
+
+def test_navegador_da_dashboard_recebe_liberacao_de_origem(cliente):
+    """A dashboard chama a API do NAVEGADOR: sem CORS o pedido nem sai.
+
+    O simulador e o indicador de saude rodam no cliente, entao uma resposta
+    200 sem `access-control-allow-origin` chega na tela como "Failed to fetch".
+    Servidor-para-servidor (o render do Next) nao passa por essa checagem, o
+    que faz a falha aparecer SO em parte das telas -- e foi assim que ela
+    apareceu.
+    """
+    resposta = cliente.post(
+        "/modelo/simular",
+        json={"texto": "otimo atendimento"},
+        headers={"Origin": "http://localhost:3000"},
+    )
+    assert resposta.status_code == 200
+    assert resposta.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_origem_desconhecida_nao_e_liberada(cliente):
+    """A liberacao e uma lista, nao `*`: a API le o banco de atendimentos."""
+    resposta = cliente.post(
+        "/modelo/simular",
+        json={"texto": "otimo atendimento"},
+        headers={"Origin": "http://sitio-qualquer.example"},
+    )
+    assert "access-control-allow-origin" not in resposta.headers

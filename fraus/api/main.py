@@ -23,6 +23,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from fraus.db import Banco
@@ -49,6 +50,29 @@ TETO_TEXTO_SIMULACAO = 2000
 
 # Teto de itens que /modelo/lexicon devolve por pagina, mesmo se pedirem mais.
 TETO_LEXICON = 200
+
+# Origens que o NAVEGADOR pode usar para falar com a API. A dashboard busca
+# `/saude` e `/modelo/simular` do lado do cliente, e sem isso o navegador
+# bloqueia o pedido antes de ele sair -- a tela mostra "Failed to fetch"
+# enquanto a API responde 200 no curl.
+#
+# Lista explicita, nunca `*`: esta API le o banco de atendimentos e nao tem
+# autenticacao (uso local, ver README), entao qualquer pagina aberta no mesmo
+# navegador poderia varrer as conversas. `FRAUS_ORIGENS` sobrescreve, separado
+# por virgula, para quando a dashboard rodar em outra porta ou maquina.
+ORIGENS_PADRAO = (
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+)
+
+
+def origens_liberadas() -> list[str]:
+    bruto = os.environ.get("FRAUS_ORIGENS")
+    if not bruto:
+        return list(ORIGENS_PADRAO)
+    return [pedaco.strip() for pedaco in bruto.split(",") if pedaco.strip()]
 LIMITE_LEXICON_PADRAO = 50
 
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
@@ -185,6 +209,12 @@ def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
 
 def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastAPI:
     app = FastAPI(title="Fraus", version="0.1.0")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origens_liberadas(),
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
     raiz = Path(raiz_importacao) if raiz_importacao is not None else RAIZ_IMPORTACAO
 
     @app.get("/saude")
