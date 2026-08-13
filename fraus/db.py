@@ -19,6 +19,14 @@ CREATE TABLE IF NOT EXISTS conversas (
     payload TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_conversas_iniciada_em ON conversas(iniciada_em);
+
+-- Configuracao chave/valor JSON. A tabela guarda SO o que foi mudado: o valor
+-- de fabrica vive no codigo (fraus/configuracao.py), entao banco vazio se
+-- comporta exatamente como antes desta tabela existir.
+CREATE TABLE IF NOT EXISTS configuracoes (
+    chave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL
+);
 """
 
 
@@ -66,6 +74,20 @@ class Banco:
         if linha is None:
             return None
         return Conversa(**json.loads(linha["payload"])), linha["score"], linha["categoria"]
+
+    def ler_configuracoes(self) -> dict:
+        """So o que foi de fato alterado. O padrao de fabrica nao mora no banco."""
+        with self._conectar() as conexao:
+            linhas = conexao.execute("SELECT chave, valor FROM configuracoes").fetchall()
+        return {linha["chave"]: json.loads(linha["valor"]) for linha in linhas}
+
+    def escrever_configuracoes(self, valores: dict) -> None:
+        """Grava as chaves recebidas numa transacao so -- meia configuracao seria pior."""
+        with self._conectar() as conexao:
+            conexao.executemany(
+                "INSERT OR REPLACE INTO configuracoes (chave, valor) VALUES (?, ?)",
+                [(chave, json.dumps(valor)) for chave, valor in valores.items()],
+            )
 
     def todas(self) -> list[tuple[Conversa, float | None]]:
         with self._conectar() as conexao:
