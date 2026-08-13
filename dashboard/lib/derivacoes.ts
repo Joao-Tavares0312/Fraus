@@ -38,6 +38,14 @@ export const FAIXAS_NPS = [
   { categoria: "promotor" as Categoria, de: 9, ate: 10, rotulo: "9–10 promotor" },
 ];
 
+/**
+ * Nota a partir da qual o atendimento conta como satisfeito no CSAT. E a mesma
+ * constante do servidor (`fraus.indicadores.NOTA_MINIMA_SATISFEITO`) e NAO
+ * depende da faixa de NPS configurada -- `calcular_csat` conta nota >= 7
+ * qualquer que seja o corte de detrator.
+ */
+export const NOTA_MINIMA_SATISFEITO = 7;
+
 /** Faixa saudavel de referencia do CSAT, em pontos percentuais. */
 export const CSAT_SAUDAVEL = { de: 75, ate: 85 };
 
@@ -628,7 +636,12 @@ export function tempoMedianoDeResposta(detalhes: DetalheConversa[]): number | nu
  * NADA aqui recalcula score, nota ou categoria -- invariante 3. O que se
  * agrega e a CATEGORIA que o servidor ja gravou:
  *   NPS  = %promotores - %detratores            (identico a calcular_nps)
- *   CSAT = %(neutro ou promotor), ou seja nota >= 7 (identico a calcular_csat)
+ *   CSAT = %(nota >= 7)                          (identico a calcular_csat)
+ *
+ * O CSAT sai da NOTA, nao da categoria, e isso passou a importar quando as
+ * faixas viraram configuraveis: `calcular_csat` no servidor conta nota >= 7 e
+ * ignora a faixa vigente, entao contar "quem nao e detrator" divergiria do
+ * numero do servidor no instante em que alguem movesse o corte de detrator.
  * A contencao sai de `escalou_para_humano`, que tambem vem do servidor.
  *
  * Sem nenhuma conversa no recorte, TODOS os campos vem null: agregado sem dado
@@ -659,11 +672,15 @@ export function indicadoresDoPeriodo(
   const total = resumos.length;
   const semSinal = total - categorias.length;
 
+  const notas = resumos
+    .map((resumo) => resumo.nota)
+    .filter((nota): nota is number => nota !== null);
+
   const csat =
-    categorias.length === 0
+    notas.length === 0
       ? null
-      : (100 * categorias.filter((c) => c !== "detrator").length) /
-        categorias.length;
+      : (100 * notas.filter((nota) => nota >= NOTA_MINIMA_SATISFEITO).length) /
+        notas.length;
 
   const containment =
     detalhes.length === 0
