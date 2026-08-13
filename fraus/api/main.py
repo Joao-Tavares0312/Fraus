@@ -26,10 +26,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from fraus.configuracao import PADROES as CONFIGURACAO_DE_FABRICA
+from fraus.configuracao import carregar as carregar_configuracao
+from fraus.configuracao import faixas_de
+from fraus.configuracao import salvar as salvar_configuracao
 from fraus.db import Banco
 from fraus.fusor import Fusor, montar_features
-from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
-                               categoria_nps, containment_rate, nota_0_10)
+from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
+                               containment_rate, nota_0_10)
 from fraus.ingest.csv_driver import carregar_csv
 from fraus.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
                                 score_do_emoji)
@@ -212,10 +216,30 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origens_liberadas(),
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
     raiz = Path(raiz_importacao) if raiz_importacao is not None else RAIZ_IMPORTACAO
+
+    def faixas_vigentes() -> dict:
+        """Faixa de NPS da configuracao vigente, lida a cada requisicao.
+
+        Ler por requisicao (em vez de guardar num atributo do app) e o que
+        garante que `/indicadores` e `/conversas` NUNCA discordem: nao existe
+        copia da faixa envelhecendo em memoria depois de um PUT.
+        """
+        return faixas_de(carregar_configuracao(banco))
+
+    def categoria_de(score: float | None, faixas: dict) -> str | None:
+        """Categoria DERIVADA NA LEITURA do score gravado e da faixa vigente.
+
+        A coluna `categoria` do banco e o retrato do instante da importacao e
+        NAO e lida aqui: mudar a faixa muda a fatia de atendimento ja pontuado,
+        e derivar na leitura e o que faz toda rota responder pela mesma faixa
+        no mesmo instante -- sem janela de recalculo em massa pela metade. O
+        `score`, esse sim resultado do modelo, nunca e recalculado.
+        """
+        return categoria_nps(score, faixas) if score is not None else None
 
     @app.get("/saude")
     def saude() -> dict:
@@ -239,10 +263,13 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
                 detail=f"coluna ausente no CSV: {erro.args[0]}",
             ) from erro
 
+        faixas = faixas_vigentes()
         for conversa in resultado.conversas:
             score = motor.pontuar_conversa(conversa)
-            categoria = categoria_nps(score) if score is not None else None
-            banco.salvar(conversa, score, categoria)
+            # A coluna `categoria` e o retrato do instante da importacao; quem
+            # le nao a consome (ver `categoria_de`), mas gravar com a faixa
+            # vigente evita que o banco inspecionado a mao conte outra historia.
+            banco.salvar(conversa, score, categoria_de(score, faixas))
 
         # "Motivo registrado" (spec 9) tem que CHEGAR a alguem: a contagem
         # sozinha nao diz o que ficou de fora.
@@ -258,8 +285,13 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
     def listar() -> list[dict]:
         # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
         # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
+        faixas = faixas_vigentes()
         return [
-            {**linha, "nota": nota_0_10(linha["score"]) if linha["score"] is not None else None}
+            {
+                **linha,
+                "categoria": categoria_de(linha["score"], faixas),
+                "nota": nota_0_10(linha["score"]) if linha["score"] is not None else None,
+            }
             for linha in banco.listar()
         ]
 
@@ -268,11 +300,11 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         achado = banco.buscar(conversa_id)
         if achado is None:
             raise HTTPException(status_code=404, detail="conversa nao encontrada")
-        conversa, score, categoria = achado
+        conversa, score, _categoria_gravada = achado
         return {
             **conversa.model_dump(mode="json"),
             "score": score,
-            "categoria": categoria,
+            "categoria": categoria_de(score, faixas_vigentes()),
             "nota": nota_0_10(score) if score is not None else None,
         }
 
@@ -288,13 +320,13 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         achado = banco.buscar(conversa_id)
         if achado is None:
             raise HTTPException(status_code=404, detail="conversa nao encontrada")
-        conversa, score, categoria = achado
+        conversa, score, _categoria_gravada = achado
         atribuicao = motor.atribuir_conversa(conversa)
         return {
             "conversa_id": conversa.id,
             "score": score,
             "nota": nota_0_10(score) if score is not None else None,
-            "categoria": categoria,
+            "categoria": categoria_de(score, faixas_vigentes()),
             "mensagens": atribuicao["mensagens"],
             "importancias": atribuicao["importancias"],
             "contribuicoes": atribuicao["contribuicoes"],
@@ -306,20 +338,48 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         conversas = [conversa for conversa, _ in registros]
         scores = [score for _, score in registros if score is not None]
         return {
-            "nps": calcular_nps(scores),
+            "nps": calcular_nps(scores, faixas_vigentes()),
             "csat": calcular_csat(scores),
             "containment_rate": containment_rate(conversas),
             "total_conversas": len(conversas),
             "sem_sinal": len(conversas) - len(scores),
         }
 
+    @app.get("/configuracoes")
+    def configuracoes() -> dict:
+        """Configuracao vigente E a de fabrica -- a tela precisa das duas.
+
+        Sem a de fabrica, "voltar ao padrao" seria um botao que a interface
+        teria que preencher com numeros digitados de novo, e digitar de novo e
+        exatamente como faixa duplicada nasce.
+        """
+        return {
+            "vigente": carregar_configuracao(banco),
+            "fabrica": CONFIGURACAO_DE_FABRICA,
+        }
+
+    @app.put("/configuracoes")
+    def configurar(pedido: dict) -> dict:
+        """Grava as chaves enviadas. Chave desconhecida ou valor invalido e 400.
+
+        O corpo e um dicionario cru de proposito: chave desconhecida precisa
+        chegar a validacao para ser NOMEADA no erro, e nao ser descartada em
+        silencio por um modelo de entrada tolerante.
+        """
+        try:
+            vigente = salvar_configuracao(banco, pedido)
+        except ValueError as erro:
+            raise HTTPException(status_code=400, detail=str(erro)) from erro
+        return {"vigente": vigente, "fabrica": CONFIGURACAO_DE_FABRICA}
+
     @app.get("/modelo")
     def modelo() -> dict:
         """Ficha do modelo: pesos globais, metricas de treino, faixas e lexicon.
 
         `metricas` e null quando o notebook 01 ainda nao exportou o arquivo --
-        nunca um valor inventado. As faixas de NPS vem de FAIXAS_NPS, a MESMA
-        constante usada por `fraus.indicadores.categoria_nps`.
+        nunca um valor inventado. As faixas de NPS saem da configuracao
+        vigente, a MESMA fonte que alimenta a categoria de cada atendimento --
+        faixa duplicada em dois lugares ja foi defeito deste projeto uma vez.
         """
         metricas = None
         if CAMINHO_METRICAS.is_file():
@@ -328,7 +388,9 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "importancias": motor.importancias(),
             "metricas": metricas,
             "classes": ["insatisfeito", "neutro", "satisfeito"],
-            "faixas_nps": {categoria: list(faixa) for categoria, faixa in FAIXAS_NPS.items()},
+            "faixas_nps": {
+                categoria: list(faixa) for categoria, faixa in faixas_vigentes().items()
+            },
             "total_emojis_lexicon": len(linhas_lexicon()),
         }
 

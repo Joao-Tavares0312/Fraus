@@ -536,3 +536,79 @@ def test_origem_desconhecida_nao_e_liberada(cliente):
         headers={"Origin": "http://sitio-qualquer.example"},
     )
     assert "access-control-allow-origin" not in resposta.headers
+
+
+# --- Configuracoes ----------------------------------------------------------
+
+FAIXAS_ALTERNATIVAS = {"detrator": [0, 7], "neutro": [8, 9], "promotor": [10, 10]}
+
+
+def test_configuracoes_devolve_vigente_e_de_fabrica(cliente):
+    """A tela precisa dos dois para poder oferecer 'voltar ao padrao'."""
+    corpo = cliente.get("/configuracoes").json()
+    assert corpo["vigente"] == corpo["fabrica"]
+    assert corpo["fabrica"]["faixas_nps"] == {
+        categoria: list(faixa) for categoria, faixa in FAIXAS_NPS.items()
+    }
+    assert corpo["fabrica"]["limiares_latencia_s"] == [10, 60, 180]
+
+
+def test_put_configuracoes_grava_e_a_leitura_reflete(cliente):
+    resposta = cliente.put("/configuracoes", json={"limiares_latencia_s": [5, 30, 90]})
+    assert resposta.status_code == 200
+    assert resposta.json()["vigente"]["limiares_latencia_s"] == [5, 30, 90]
+    assert cliente.get("/configuracoes").json()["vigente"]["limiares_latencia_s"] == [5, 30, 90]
+    # fabrica nao se mexe: e o alvo do "voltar ao padrao"
+    assert cliente.get("/configuracoes").json()["fabrica"]["limiares_latencia_s"] == [10, 60, 180]
+
+
+@pytest.mark.parametrize("corpo,trecho", [
+    ({"faixas_nps": {"detrator": [0, 5], "neutro": [7, 8], "promotor": [9, 10]}}, "buraco"),
+    ({"faixas_nps": {"detrator": [0, 7], "neutro": [7, 8], "promotor": [9, 10]}}, "sobrepoe"),
+    ({"faixas_nps": {"detrator": [0, 6], "neutro": [8, 7], "promotor": [9, 10]}}, "vazia"),
+    ({"limiares_latencia_s": [180, 60, 10]}, "crescente"),
+    ({"cor_do_botao": "azul"}, "cor_do_botao"),
+])
+def test_configuracao_invalida_e_400_nomeando_o_problema(cliente, corpo, trecho):
+    resposta = cliente.put("/configuracoes", json=corpo)
+    assert resposta.status_code == 400
+    assert trecho in resposta.json()["detail"]
+
+
+def test_configuracao_recusada_nao_deixa_rastro(cliente):
+    cliente.put("/configuracoes", json={"limiares_latencia_s": [180, 60, 10]})
+    assert cliente.get("/configuracoes").json()["vigente"]["limiares_latencia_s"] == [10, 60, 180]
+
+
+def test_faixa_configurada_muda_a_categoria_de_atendimento_ja_pontuado(cliente, tmp_path):
+    """Categoria e DERIVADA NA LEITURA: score gravado, faixa vigente."""
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+    assert cliente.get("/conversas").json()[0]["categoria"] == "promotor"
+
+    cliente.put("/configuracoes", json={"faixas_nps": FAIXAS_ALTERNATIVAS})
+
+    assert cliente.get("/conversas").json()[0]["categoria"] == "neutro"
+    assert cliente.get("/conversas/c1").json()["categoria"] == "neutro"
+    assert cliente.get("/conversas/c1/atribuicao").json()["categoria"] == "neutro"
+    # o score, esse sim resultado do modelo, nao se mexe
+    assert cliente.get("/conversas/c1").json()["score"] == 90.0
+
+
+def test_indicadores_e_conversas_nao_discordam_apos_mudar_a_faixa(cliente, tmp_path):
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+    assert cliente.get("/indicadores").json()["nps"] == 100.0  # 1 promotor
+
+    cliente.put("/configuracoes", json={"faixas_nps": FAIXAS_ALTERNATIVAS})
+
+    assert cliente.get("/conversas").json()[0]["categoria"] == "neutro"
+    assert cliente.get("/indicadores").json()["nps"] == 0.0  # nem promotor nem detrator
+
+
+def test_modelo_publica_a_faixa_vigente_e_nao_a_de_fabrica(cliente):
+    """`/modelo` e a categoria bebem da MESMA fonte -- faixa duplicada foi bug uma vez."""
+    cliente.put("/configuracoes", json={"faixas_nps": FAIXAS_ALTERNATIVAS})
+    assert cliente.get("/modelo").json()["faixas_nps"] == FAIXAS_ALTERNATIVAS
