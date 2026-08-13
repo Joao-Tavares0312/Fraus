@@ -43,3 +43,27 @@ def test_autor_invalido_e_rejeitado():
 def test_timestamp_naive_e_rejeitado():
     with pytest.raises(ValidationError):
         Mensagem(autor="cliente", texto="oi", enviada_em=datetime(2026, 8, 13, 10, 0, 0))
+
+
+def test_conversa_iniciada_em_naive_e_rejeitado():
+    with pytest.raises(ValidationError):
+        Conversa(
+            id="c1",
+            canal="csv",
+            iniciada_em=datetime(2026, 8, 13, 10, 0, 0),
+            encerrada_em=None,
+            escalou_para_humano=False,
+            mensagens=[],
+        )
+
+
+def test_conversa_encerrada_em_naive_e_rejeitado():
+    with pytest.raises(ValidationError):
+        Conversa(
+            id="c1",
+            canal="csv",
+            iniciada_em=_ts(0),
+            encerrada_em=datetime(2026, 8, 13, 10, 0, 0),
+            escalou_para_humano=False,
+            mensagens=[],
+        )

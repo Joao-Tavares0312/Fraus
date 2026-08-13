@@ -8,6 +8,13 @@ from pydantic import BaseModel, field_validator
 Autor = Literal["cliente", "bot", "humano"]
 
 
+def _exige_timezone(valor: datetime) -> datetime:
+    """Valida que datetime é timezone-aware. Rejeita datetime naive."""
+    if valor.tzinfo is None:
+        raise ValueError("timestamp precisa ser timezone-aware")
+    return valor
+
+
 class Mensagem(BaseModel):
     autor: Autor
     texto: str
@@ -15,10 +22,8 @@ class Mensagem(BaseModel):
 
     @field_validator("enviada_em")
     @classmethod
-    def _exige_timezone(cls, valor: datetime) -> datetime:
-        if valor.tzinfo is None:
-            raise ValueError("enviada_em precisa ser timezone-aware")
-        return valor
+    def _valida_enviada_em(cls, valor: datetime) -> datetime:
+        return _exige_timezone(valor)
 
 
 class Conversa(BaseModel):
@@ -28,6 +33,18 @@ class Conversa(BaseModel):
     encerrada_em: datetime | None = None
     escalou_para_humano: bool = False
     mensagens: list[Mensagem]
+
+    @field_validator("iniciada_em")
+    @classmethod
+    def _valida_iniciada_em(cls, valor: datetime) -> datetime:
+        return _exige_timezone(valor)
+
+    @field_validator("encerrada_em")
+    @classmethod
+    def _valida_encerrada_em(cls, valor: datetime | None) -> datetime | None:
+        if valor is not None:
+            return _exige_timezone(valor)
+        return valor
 
     @property
     def mensagens_cliente(self) -> list[Mensagem]:
