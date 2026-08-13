@@ -78,6 +78,8 @@ def origens_liberadas() -> list[str]:
     if not bruto:
         return list(ORIGENS_PADRAO)
     return [pedaco.strip() for pedaco in bruto.split(",") if pedaco.strip()]
+
+
 LIMITE_LEXICON_PADRAO = 50
 
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
