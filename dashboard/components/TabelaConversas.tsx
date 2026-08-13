@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from "lucide-react";
 import { flexRender } from "@tanstack/react-table";
 import {
   getCoreRowModel,
@@ -16,6 +16,24 @@ import {
 } from "@tanstack/react-table/legacy";
 import type { Categoria } from "@/lib/api";
 import { ROTULO_CATEGORIA, ROTULO_SEM_SINAL } from "@/lib/formato";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
 import { EstadoVazio } from "./EstadoVazio";
 
@@ -32,82 +50,122 @@ export type LinhaConversa = {
 
 const colunas = legacyCreateColumnHelper<LinhaConversa>();
 
-const CLASSE_CABECALHO =
-  "px-4 py-2.5 text-left text-[0.75rem] font-medium text-[var(--tinta-2)] whitespace-nowrap";
+/** Caracteres que fazem o Excel/Sheets tratar a celula como FORMULA. */
+const GATILHOS_DE_FORMULA = ["=", "+", "-", "@"];
 
 /**
- * Tabela de atendimentos. TanStack Table entra headless: ordenacao, filtro e
- * paginacao sem impor visual nenhum.
+ * Escapa um campo para CSV.
  *
- * A nota vazia aparece como "sem sinal" e ORDENA POR ULTIMO nos dois sentidos,
- * em vez de valer zero -- ordenar por nota crescente nao pode fazer os
- * atendimentos mudos aparecerem como os piores.
+ * Alem das aspas, neutraliza injecao de formula: `id` e `canal` vem do CSV
+ * ingerido, entao um campo como `=HYPERLINK(...)` viraria formula executavel
+ * ao abrir a planilha.
  */
-export function TabelaConversas({ linhas }: { linhas: LinhaConversa[] }) {
-  const router = useRouter();
+function escaparCampo(campo: string): string {
+  const seguro = GATILHOS_DE_FORMULA.some((gatilho) => campo.startsWith(gatilho))
+    ? `'${campo}`
+    : campo;
+  return `"${seguro.replaceAll('"', '""')}"`;
+}
+
+/**
+ * Tabela de atendimentos. TanStack Table entra headless -- ordenacao, filtro e
+ * paginacao sem impor visual nenhum -- sobre a `Table` do chassi.
+ *
+ * Duas regras de honestidade moram aqui:
+ *
+ *   1. nota vazia aparece como "sem sinal" e ORDENA POR ULTIMO NOS DOIS
+ *      SENTIDOS. Ordenar por nota crescente nao pode fazer os atendimentos
+ *      mudos aparecerem como os piores;
+ *   2. o CSV escreve "sem sinal" na coluna de nota. Escrever 0 ali propagaria
+ *      para a planilha exatamente a mentira que o produto combate.
+ *
+ * As linhas ja chegam recortadas pelo periodo, entao o que se exporta e
+ * SEMPRE o que esta em tela.
+ */
+export function TabelaConversas({
+  linhas,
+  sufixoDeQuery,
+  nomeCsv,
+  rotuloDoPeriodo,
+}: {
+  linhas: LinhaConversa[];
+  sufixoDeQuery: string;
+  nomeCsv: string;
+  rotuloDoPeriodo: string;
+}) {
   const [filtro, setFiltro] = useState("");
+  const [categoria, setCategoria] = useState<string>("todas");
   const [ordenacao, setOrdenacao] = useState([{ id: "data", desc: true }]);
 
-  // O helper devolve definicoes com o tipo do acessor preso em cada coluna;
-  // a tabela quer a lista homogenea. O `as` aqui e a costura padrao disso.
   const definicoes = useMemo(
     () =>
       [
-      colunas.accessor("id", {
-        header: "Atendimento",
-        cell: (contexto) => (
-          <Link
-            href={`/conversas/${encodeURIComponent(contexto.getValue())}`}
-            className="font-mono text-[0.8125rem] text-[var(--tinta)] underline decoration-[var(--filete)] underline-offset-[3px] transition-colors duration-150 hover:decoration-[var(--foco)]"
-          >
-            {contexto.getValue()}
-          </Link>
-        ),
-      }),
-      colunas.accessor("ordenacao", {
-        id: "data",
-        header: "Início",
-        cell: (contexto) => (
-          <span className="tabular-nums whitespace-nowrap text-[var(--tinta-2)]">
-            {contexto.row.original.data}
-          </span>
-        ),
-      }),
-      colunas.accessor("canal", {
-        header: "Canal",
-        cell: (contexto) => (
-          <span className="text-[var(--tinta-2)]">{contexto.getValue()}</span>
-        ),
-      }),
-      colunas.accessor("nota", {
-        header: "Nota inferida",
-        sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) => {
-          const na = a.original.nota;
-          const nb = b.original.nota;
-          if (na === null && nb === null) return 0;
-          if (na === null) return 1; // sem sinal sempre depois
-          if (nb === null) return -1;
-          return na - nb;
-        },
-        cell: (contexto) => {
-          const nota = contexto.getValue();
-          return nota === null ? (
-            <span className="text-[var(--tinta-3)]">{ROTULO_SEM_SINAL}</span>
-          ) : (
-            <span className="tabular-nums text-[var(--tinta)]">{nota}</span>
-          );
-        },
-      }),
-      colunas.accessor("categoria", {
-        header: "Categoria",
-        cell: (contexto) => <EtiquetaCategoria categoria={contexto.getValue()} />,
-      }),
+        colunas.accessor("id", {
+          header: "Atendimento",
+          cell: (contexto) => (
+            <Link
+              href={`/atendimentos/${encodeURIComponent(contexto.getValue())}${sufixoDeQuery}`}
+              className="num rounded-sm text-foreground underline decoration-border underline-offset-4 outline-none transition-colors duration-150 hover:decoration-primary focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {contexto.getValue()}
+            </Link>
+          ),
+        }),
+        colunas.accessor("ordenacao", {
+          id: "data",
+          header: "Início",
+          cell: (contexto) => (
+            <span className="num whitespace-nowrap text-muted-foreground">
+              {contexto.row.original.data}
+            </span>
+          ),
+        }),
+        colunas.accessor("canal", {
+          header: "Canal",
+          cell: (contexto) => (
+            <span className="text-muted-foreground">{contexto.getValue()}</span>
+          ),
+        }),
+        colunas.accessor("nota", {
+          header: "Nota inferida",
+          sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) => {
+            const na = a.original.nota;
+            const nb = b.original.nota;
+            if (na === null && nb === null) return 0;
+            if (na === null) return 1; // sem sinal sempre depois
+            if (nb === null) return -1;
+            return na - nb;
+          },
+          cell: (contexto) => {
+            const nota = contexto.getValue();
+            return nota === null ? (
+              <span className="text-muted-foreground">{ROTULO_SEM_SINAL}</span>
+            ) : (
+              <span className="num estimado text-foreground">{nota}</span>
+            );
+          },
+        }),
+        colunas.accessor("categoria", {
+          header: "Categoria",
+          cell: (contexto) => (
+            <EtiquetaCategoria categoria={contexto.getValue()} />
+          ),
+        }),
       ] as LegacyColumnDef<LinhaConversa>[],
-    [],
+    [sufixoDeQuery],
   );
 
+  // O recorte por categoria acontece antes da tabela para que o contador, a
+  // paginacao e o EXPORT falem todos do mesmo conjunto.
+  const visiveisPorCategoria = useMemo(() => {
+    if (categoria === "todas") return linhas;
+    if (categoria === "sem-sinal")
+      return linhas.filter((linha) => linha.categoria === null);
+    return linhas.filter((linha) => linha.categoria === categoria);
+  }, [linhas, categoria]);
+
   const tabela = useLegacyTable<LinhaConversa>({
-    data: linhas,
+    data: visiveisPorCategoria,
     columns: definicoes,
     state: { sorting: ordenacao, globalFilter: filtro },
     onSortingChange: setOrdenacao,
@@ -131,11 +189,48 @@ export function TabelaConversas({ linhas }: { linhas: LinhaConversa[] }) {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const filtradas = tabela
+    .getFilteredRowModel()
+    .rows.map((linha) => linha.original);
+
+  const baixarCsv = () => {
+    if (filtradas.length === 0) return;
+    const cabecalho = ["id", "inicio", "canal", "nota_inferida", "categoria"];
+    const corpo = filtradas.map((linha) => [
+      linha.id,
+      linha.ordenacao,
+      linha.canal,
+      linha.nota === null ? ROTULO_SEM_SINAL : String(linha.nota),
+      linha.categoria ? ROTULO_CATEGORIA[linha.categoria] : ROTULO_SEM_SINAL,
+    ]);
+
+    const texto = [
+      [`# Fraus — atendimentos de ${rotuloDoPeriodo}`],
+      ["# nota_inferida é estimativa a partir do texto, não NPS declarado"],
+      cabecalho,
+      ...corpo,
+    ]
+      .map((campos) => campos.map(escaparCampo).join(","))
+      .join("\r\n");
+
+    // BOM para o Excel em pt-BR abrir os acentos corretamente.
+    const blob = new Blob([`﻿${texto}`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const ancora = document.createElement("a");
+    ancora.href = url;
+    ancora.download = `${nomeCsv}.csv`;
+    ancora.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (linhas.length === 0) {
     return (
       <EstadoVazio
-        titulo="Nenhum atendimento importado"
-        explicacao="A API respondeu com uma lista vazia. Importe um CSV pelo endpoint de importação ou suba o servidor de demonstração para popular o banco."
+        className="m-5"
+        titulo="Nenhum atendimento no período"
+        explicacao="Ou o recorte de período não cobre nenhum atendimento, ou a API respondeu com uma lista vazia. Importe um CSV pelo endpoint de importação ou suba o servidor de demonstração para popular o banco."
       />
     );
   }
@@ -143,47 +238,97 @@ export function TabelaConversas({ linhas }: { linhas: LinhaConversa[] }) {
   const visiveis = tabela.getRowModel().rows;
 
   return (
-    <div>
-      <div className="sem-impressao flex flex-wrap items-center gap-3 border-b border-[var(--filete)] px-5 py-3">
-        <label className="flex items-center gap-2 text-[0.8125rem] text-[var(--tinta-2)]">
-          <span>Filtrar</span>
-          <input
+    <div className="min-w-0">
+      <div className="sem-impressao flex flex-wrap items-end gap-3 border-b border-border px-5 py-3">
+        <div className="flex flex-col gap-1">
+          <Label
+            htmlFor="filtro-atendimentos"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            Buscar
+          </Label>
+          <Input
+            id="filtro-atendimentos"
             type="search"
             value={filtro}
             onChange={(evento) => setFiltro(evento.target.value)}
             placeholder="id, canal ou categoria"
-            className="w-56 border border-[var(--filete)] bg-[var(--plano)] px-2.5 py-1.5 text-[0.8125rem] text-[var(--tinta)] placeholder:text-[var(--tinta-3)] transition-colors duration-150 hover:border-[var(--regua)]"
+            className="h-9 w-56"
           />
-        </label>
-        <span className="text-[0.75rem] tabular-nums text-[var(--tinta-3)]">
-          {visiveis.length} de {linhas.length} atendimentos
-        </span>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label
+            htmlFor="filtro-categoria"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            Categoria
+          </Label>
+          {/* O Select do chassi permite limpar a selecao (valor `null`);
+              aqui isso significa "todas", nao "nenhuma categoria". */}
+          <Select
+            value={categoria}
+            onValueChange={(valor) => setCategoria(valor ?? "todas")}
+          >
+            <SelectTrigger id="filtro-categoria" className="h-9 w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas</SelectItem>
+              <SelectItem value="detrator">Detrator</SelectItem>
+              <SelectItem value="neutro">Neutro</SelectItem>
+              <SelectItem value="promotor">Promotor</SelectItem>
+              <SelectItem value="sem-sinal">Sem sinal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <p className="num mb-2 text-xs text-muted-foreground">
+          {filtradas.length} de {linhas.length} atendimentos
+        </p>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mb-1.5 ml-auto"
+          onClick={baixarCsv}
+          disabled={filtradas.length === 0}
+        >
+          <Download aria-hidden />
+          Exportar CSV
+        </Button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-[0.8125rem]">
-          <thead className="bg-[var(--superficie-2)]">
+      {/* Rolagem horizontal PROPRIA: o `body` nunca rola na horizontal. */}
+      <div className="w-full overflow-x-auto">
+        <Table className="min-w-[720px] text-sm">
+          <TableHeader className="sticky top-0 z-10 bg-muted">
             {tabela.getHeaderGroups().map((grupo) => (
-              <tr key={grupo.id}>
+              <TableRow key={grupo.id}>
                 {grupo.headers.map((cabecalho) => {
                   const ordenavel = cabecalho.column.getCanSort();
                   const direcao = cabecalho.column.getIsSorted();
+                  const Icone =
+                    direcao === "asc"
+                      ? ArrowUp
+                      : direcao === "desc"
+                        ? ArrowDown
+                        : ChevronsUpDown;
                   return (
-                    <th key={cabecalho.id} scope="col" className={CLASSE_CABECALHO}>
+                    <TableHead key={cabecalho.id} scope="col">
                       {ordenavel ? (
                         <button
                           type="button"
                           onClick={cabecalho.column.getToggleSortingHandler()}
-                          className="flex items-center gap-1.5 transition-colors duration-150 hover:text-[var(--tinta)]"
                           aria-label={`Ordenar por ${String(cabecalho.column.columnDef.header)}`}
+                          className="flex items-center gap-1.5 rounded-sm outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {flexRender(
                             cabecalho.column.columnDef.header,
                             cabecalho.getContext(),
                           )}
-                          <span aria-hidden className="text-[0.625rem]">
-                            {direcao === "asc" ? "▲" : direcao === "desc" ? "▼" : "•"}
-                          </span>
+                          <Icone aria-hidden className="size-3" />
                         </button>
                       ) : (
                         flexRender(
@@ -191,109 +336,69 @@ export function TabelaConversas({ linhas }: { linhas: LinhaConversa[] }) {
                           cabecalho.getContext(),
                         )
                       )}
-                    </th>
+                    </TableHead>
                   );
                 })}
-              </tr>
+              </TableRow>
             ))}
-          </thead>
-          <tbody>
+          </TableHeader>
+          <TableBody>
             {visiveis.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-8 text-[var(--tinta-3)]">
-                  Nenhum atendimento corresponde a “{filtro}”.
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={5} className="py-8 text-muted-foreground">
+                  Nenhum atendimento corresponde ao filtro atual.
+                </TableCell>
+              </TableRow>
             ) : (
               visiveis.map((linha) => (
-                <tr
+                <TableRow
                   key={linha.id}
-                  onClick={() =>
-                    router.push(
-                      `/conversas/${encodeURIComponent(linha.original.id)}`,
-                    )
-                  }
-                  className="cursor-pointer border-t border-[var(--filete)] transition-colors duration-150 hover:bg-[var(--superficie-2)]"
+                  className="transition-colors duration-150 ease-fluid hover:bg-muted"
                 >
                   {linha.getVisibleCells().map((celula) => (
-                    <td key={celula.id} className="px-4 py-2.5">
+                    <TableCell key={celula.id}>
                       {flexRender(
                         celula.column.columnDef.cell,
                         celula.getContext(),
                       )}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      <Paginacao
-        pagina={tabela.getState().pagination.pageIndex + 1}
-        paginas={Math.max(1, tabela.getPageCount())}
-        podeVoltar={tabela.getCanPreviousPage()}
-        podeAvancar={tabela.getCanNextPage()}
-        voltar={() => tabela.previousPage()}
-        avancar={() => tabela.nextPage()}
-      />
+      <nav
+        aria-label="Paginação dos atendimentos"
+        className="sem-impressao flex items-center justify-between gap-3 border-t border-border px-5 py-3"
+      >
+        <span className="num text-xs text-muted-foreground">
+          Página {tabela.getState().pagination.pageIndex + 1} de{" "}
+          {Math.max(1, tabela.getPageCount())}
+        </span>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => tabela.previousPage()}
+            disabled={!tabela.getCanPreviousPage()}
+          >
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => tabela.nextPage()}
+            disabled={!tabela.getCanNextPage()}
+          >
+            Próxima
+          </Button>
+        </div>
+      </nav>
     </div>
-  );
-}
-
-function Paginacao({
-  pagina,
-  paginas,
-  podeVoltar,
-  podeAvancar,
-  voltar,
-  avancar,
-}: {
-  pagina: number;
-  paginas: number;
-  podeVoltar: boolean;
-  podeAvancar: boolean;
-  voltar: () => void;
-  avancar: () => void;
-}) {
-  return (
-    <nav
-      aria-label="Paginação dos atendimentos"
-      className="sem-impressao flex items-center justify-between gap-3 border-t border-[var(--filete)] px-5 py-3"
-    >
-      <span className="text-[0.75rem] tabular-nums text-[var(--tinta-3)]">
-        Página {pagina} de {paginas}
-      </span>
-      <div className="flex gap-2">
-        <BotaoPagina aoClicar={voltar} desabilitado={!podeVoltar}>
-          Anterior
-        </BotaoPagina>
-        <BotaoPagina aoClicar={avancar} desabilitado={!podeAvancar}>
-          Próxima
-        </BotaoPagina>
-      </div>
-    </nav>
-  );
-}
-
-function BotaoPagina({
-  aoClicar,
-  desabilitado,
-  children,
-}: {
-  aoClicar: () => void;
-  desabilitado: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={aoClicar}
-      disabled={desabilitado}
-      className="rounded-[2px] border border-[var(--filete)] px-2.5 py-1 text-[0.75rem] text-[var(--tinta-2)] transition-colors duration-150 hover:border-[var(--regua)] hover:text-[var(--tinta)] disabled:cursor-not-allowed disabled:border-[var(--filete)] disabled:text-[var(--tinta-3)] disabled:opacity-50"
-    >
-      {children}
-    </button>
   );
 }
