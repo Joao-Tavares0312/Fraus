@@ -18,6 +18,7 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 `app` nao existe como atributo normal do modulo.
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -26,15 +27,29 @@ from pydantic import BaseModel
 
 from dolos.db import Banco
 from dolos.fusor import Fusor, montar_features
-from dolos.indicadores import (calcular_csat, calcular_nps, categoria_nps,
-                               containment_rate, nota_0_10)
+from dolos.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
+                               categoria_nps, containment_rate, nota_0_10)
 from dolos.ingest.csv_driver import carregar_csv
+from dolos.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
+                                score_do_emoji)
 from dolos.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
                                 ClassificadorTexto)
 
 CAMINHO_MODELO_TEXTO = Path(os.environ.get("DOLOS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
 CAMINHO_FUSOR = Path(os.environ.get("DOLOS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
 CAMINHO_BANCO = Path(os.environ.get("DOLOS_CAMINHO_BANCO", "dolos.db"))
+
+# Exportado pelo notebook 01 (acuracia, F1-macro do BERTimbau). Ausente e
+# esperado antes do treino: `/modelo` devolve `metricas: null`, nunca inventa.
+CAMINHO_METRICAS = Path(os.environ.get("DOLOS_CAMINHO_METRICAS", "modelos/metricas.json"))
+
+# Teto de tamanho do texto aceito por /modelo/simular -- nao e limite de
+# modelo (BERTimbau trunca em TAMANHO_MAXIMO tokens), e limite de payload.
+TETO_TEXTO_SIMULACAO = 2000
+
+# Teto de itens que /modelo/lexicon devolve por pagina, mesmo se pedirem mais.
+TETO_LEXICON = 200
+LIMITE_LEXICON_PADRAO = 50
 
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
 # (uso local, ver README) -- entao ele nao pode aceitar caminho arbitrario do
@@ -48,6 +63,10 @@ LIMITE_MOTIVOS = 20
 
 class PedidoImportacao(BaseModel):
     caminho: str  # unico campo aceito: veredito nunca vem do cliente
+
+
+class PedidoSimulacao(BaseModel):
+    texto: str  # unico campo aceito: probabilidade e derivada no servidor
 
 
 class Motor:
@@ -119,6 +138,30 @@ class Motor:
             "mensagens": mensagens,
             "importancias": self._fusor.importancias(),
             "contribuicoes": contribuicoes,
+        }
+
+    def importancias(self) -> dict:
+        """Peso global de cada feature -- usado pela ficha do modelo em `/modelo`."""
+        return self._fusor.importancias()
+
+    def simular_texto(self, texto: str) -> dict:
+        """Roda o classificador de texto sobre uma mensagem avulsa, fora do banco.
+
+        Usado por `/modelo/simular` para deixar o operador testar frases sem
+        importar CSV. So mexe no classificador de texto (nao ha conversa, nao
+        ha as outras 12 features de tempo/emoji agregadas) -- o classificador
+        e o fusor continuam sem vazar para a rota.
+        """
+        probabilidades = self._classificador.prever_mensagens([texto])[0]
+        emojis = [
+            {"emoji": emoji, "score": score_do_emoji(emoji), "posicao_relativa": posicao}
+            for emoji, posicao in emojis_com_posicao(texto)
+        ]
+        return {
+            "prob_insatisfeito": float(probabilidades[INSATISFEITO]),
+            "prob_neutro": float(probabilidades[NEUTRO]),
+            "prob_satisfeito": float(probabilidades[SATISFEITO]),
+            "emojis": emojis,
         }
 
 
@@ -238,6 +281,80 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "containment_rate": containment_rate(conversas),
             "total_conversas": len(conversas),
             "sem_sinal": len(conversas) - len(scores),
+        }
+
+    @app.get("/modelo")
+    def modelo() -> dict:
+        """Ficha do modelo: pesos globais, metricas de treino, faixas e lexicon.
+
+        `metricas` e null quando o notebook 01 ainda nao exportou o arquivo --
+        nunca um valor inventado. As faixas de NPS vem de FAIXAS_NPS, a MESMA
+        constante usada por `dolos.indicadores.categoria_nps`.
+        """
+        metricas = None
+        if CAMINHO_METRICAS.is_file():
+            metricas = json.loads(CAMINHO_METRICAS.read_text(encoding="utf-8"))
+        return {
+            "importancias": motor.importancias(),
+            "metricas": metricas,
+            "classes": ["insatisfeito", "neutro", "satisfeito"],
+            "faixas_nps": {categoria: list(faixa) for categoria, faixa in FAIXAS_NPS.items()},
+            "total_emojis_lexicon": len(linhas_lexicon()),
+        }
+
+    @app.get("/modelo/lexicon")
+    def lexicon(busca: str | None = None, limite: int = LIMITE_LEXICON_PADRAO, deslocamento: int = 0) -> dict:
+        """Pagina o lexicon de emoji, ordenado por total de anotacoes.
+
+        `score` reaproveita `score_do_emoji` -- a mesma fonte usada no sinal
+        de emoji e na simulacao, para nunca divergir da formula real.
+        """
+        limite_efetivo = max(0, min(limite, TETO_LEXICON))
+        deslocamento_efetivo = max(0, deslocamento)
+
+        linhas = linhas_lexicon()
+        if busca:
+            linhas = [linha for linha in linhas if linha["emoji"] == busca]
+        linhas_ordenadas = sorted(
+            linhas,
+            key=lambda linha: linha["negativo"] + linha["neutro"] + linha["positivo"],
+            reverse=True,
+        )
+        pagina = linhas_ordenadas[deslocamento_efetivo:deslocamento_efetivo + limite_efetivo]
+
+        return {
+            "total": len(linhas_ordenadas),
+            "itens": [
+                {
+                    "emoji": linha["emoji"],
+                    "score": score_do_emoji(linha["emoji"]),
+                    "negativo": linha["negativo"],
+                    "neutro": linha["neutro"],
+                    "positivo": linha["positivo"],
+                }
+                for linha in pagina
+            ],
+        }
+
+    @app.post("/modelo/simular")
+    def simular(pedido: PedidoSimulacao) -> dict:
+        """Roda o classificador numa frase avulsa -- nao persiste nada no banco."""
+        texto = pedido.texto
+        if not texto.strip():
+            raise HTTPException(status_code=400, detail="texto vazio")
+        if len(texto) > TETO_TEXTO_SIMULACAO:
+            raise HTTPException(
+                status_code=400,
+                detail=f"texto acima do limite de {TETO_TEXTO_SIMULACAO} caracteres",
+            )
+
+        resultado = motor.simular_texto(texto)
+        return {
+            "texto": texto,
+            "prob_insatisfeito": resultado["prob_insatisfeito"],
+            "prob_neutro": resultado["prob_neutro"],
+            "prob_satisfeito": resultado["prob_satisfeito"],
+            "emojis": resultado["emojis"],
         }
 
     return app

@@ -40,7 +40,13 @@ def score_do_emoji(caractere: str) -> float:
     return _lexicon().get(caractere, 0.0)
 
 
-def _emojis_com_posicao(texto: str) -> list[tuple[str, float]]:
+def emojis_com_posicao(texto: str) -> list[tuple[str, float]]:
+    """Emojis encontrados em `texto`, cada um com sua posicao relativa em [0, 1].
+
+    Publica porque tanto `features_emoji` (agregado por conversa) quanto a
+    rota de simulacao da API (emoji a emoji, texto avulso) precisam da mesma
+    extracao -- reimplementar isso na API duplicaria a formula de posicao.
+    """
     if not texto:
         return []
     achados = lib_emoji.emoji_list(texto)
@@ -51,11 +57,31 @@ def _emojis_com_posicao(texto: str) -> list[tuple[str, float]]:
     ]
 
 
+@lru_cache(maxsize=1)
+def linhas_lexicon() -> list[dict]:
+    """Lexicon cru: uma linha por emoji, com as contagens de anotacao.
+
+    Publica para a rota `/modelo/lexicon` da API poder paginar e buscar sem
+    reler o CSV por conta propria -- a API so enxerga esta funcao, nunca o
+    caminho do arquivo.
+    """
+    linhas: list[dict] = []
+    with CAMINHO_LEXICON.open(encoding="utf-8", newline="") as arquivo:
+        for linha in csv.DictReader(arquivo):
+            linhas.append({
+                "emoji": linha["emoji"],
+                "negativo": int(float(linha["negativo"])),
+                "neutro": int(float(linha["neutro"])),
+                "positivo": int(float(linha["positivo"])),
+            })
+    return linhas
+
+
 def features_emoji(conversa: Conversa) -> dict[str, float]:
     """Agrega os emojis das mensagens DO CLIENTE numa linha de features."""
     pares: list[tuple[str, float]] = []
     for mensagem in conversa.mensagens_cliente:
-        pares.extend(_emojis_com_posicao(mensagem.texto))
+        pares.extend(emojis_com_posicao(mensagem.texto))
 
     if not pares:
         return {

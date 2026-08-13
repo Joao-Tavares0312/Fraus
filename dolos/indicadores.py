@@ -14,6 +14,14 @@ from dolos.modelos import Conversa
 Categoria = Literal["detrator", "neutro", "promotor"]
 NOTA_MINIMA_SATISFEITO = 7
 
+# Fonte UNICA das faixas de NPS: qualquer lugar que precise das faixas (a API,
+# a dashboard) le daqui -- nunca digita os numeros 0, 6, 7, 8, 9, 10 de novo.
+FAIXAS_NPS: dict[Categoria, tuple[int, int]] = {
+    "detrator": (0, 6),
+    "neutro": (7, 8),
+    "promotor": (9, 10),
+}
+
 
 def nota_0_10(score_0_100: float) -> int:
     return int(round(max(0.0, min(100.0, score_0_100)) / 10))
@@ -21,11 +29,10 @@ def nota_0_10(score_0_100: float) -> int:
 
 def categoria_nps(score_0_100: float) -> Categoria:
     nota = nota_0_10(score_0_100)
-    if nota <= 6:
-        return "detrator"
-    if nota <= 8:
-        return "neutro"
-    return "promotor"
+    for categoria, (minima, maxima) in FAIXAS_NPS.items():
+        if minima <= nota <= maxima:
+            return categoria
+    raise ValueError(f"nota {nota} fora de qualquer faixa de FAIXAS_NPS")
 
 
 def calcular_nps(scores: list[float]) -> float | None:

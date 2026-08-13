@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 from dolos.api.main import criar_app
 from dolos.db import Banco
 from dolos.fusor import NOMES_FEATURES
+from dolos.indicadores import FAIXAS_NPS
+from dolos.sinais.emoji import emojis_com_posicao, score_do_emoji
 
 CSV = (
     "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
@@ -57,6 +59,22 @@ class AtribuicaoDuble:
             "mensagens": mensagens,
             "importancias": {nome: 1.0 for nome in NOMES_FEATURES},
             "contribuicoes": contribuicoes,
+        }
+
+    def importancias(self) -> dict:
+        return {nome: 1.0 for nome in NOMES_FEATURES}
+
+    def simular_texto(self, texto: str) -> dict:
+        p = _probabilidades_deterministicas(texto)
+        emojis = [
+            {"emoji": emoji, "score": score_do_emoji(emoji), "posicao_relativa": posicao}
+            for emoji, posicao in emojis_com_posicao(texto)
+        ]
+        return {
+            "prob_insatisfeito": p[0],
+            "prob_neutro": p[1],
+            "prob_satisfeito": p[2],
+            "emojis": emojis,
         }
 
 
@@ -379,3 +397,114 @@ def test_caminho_relativo_dentro_da_raiz_e_aceito(cliente, tmp_path):
     resposta = cliente.post("/conversas/importar", json={"caminho": "entrada.csv"})
     assert resposta.status_code == 200
     assert resposta.json()["importadas"] == 1
+
+
+# ---------------------------------------------------------------------------
+# /modelo -- ficha do modelo (importancias, metricas, faixas, lexicon)
+# ---------------------------------------------------------------------------
+
+
+def test_modelo_traz_as_dezesseis_importancias_e_as_faixas_corretas(cliente):
+    corpo = cliente.get("/modelo").json()
+    assert len(corpo["importancias"]) == 16
+    assert set(corpo["importancias"]) == set(NOMES_FEATURES)
+    assert corpo["classes"] == ["insatisfeito", "neutro", "satisfeito"]
+    assert corpo["faixas_nps"] == {
+        categoria: list(faixa) for categoria, faixa in FAIXAS_NPS.items()
+    }
+
+
+def test_modelo_sem_arquivo_de_metricas_devolve_null(cliente, tmp_path, monkeypatch):
+    import dolos.api.main as main_module
+
+    monkeypatch.setattr(main_module, "CAMINHO_METRICAS", tmp_path / "nao-existe.json")
+    corpo = cliente.get("/modelo").json()
+    assert corpo["metricas"] is None
+
+
+def test_modelo_traz_metricas_quando_arquivo_existe(cliente, tmp_path, monkeypatch):
+    import dolos.api.main as main_module
+
+    caminho_metricas = tmp_path / "metricas.json"
+    caminho_metricas.write_text('{"acuracia": 0.9, "f1_macro": 0.88}', encoding="utf-8")
+    monkeypatch.setattr(main_module, "CAMINHO_METRICAS", caminho_metricas)
+
+    corpo = cliente.get("/modelo").json()
+    assert corpo["metricas"] == {"acuracia": 0.9, "f1_macro": 0.88}
+
+
+def test_modelo_traz_total_de_emojis_do_lexicon(cliente):
+    corpo = cliente.get("/modelo").json()
+    assert corpo["total_emojis_lexicon"] > 0
+
+
+# ---------------------------------------------------------------------------
+# /modelo/lexicon
+# ---------------------------------------------------------------------------
+
+
+def test_lexicon_respeita_limite_e_deslocamento(cliente):
+    pagina1 = cliente.get("/modelo/lexicon?limite=5&deslocamento=0").json()
+    pagina2 = cliente.get("/modelo/lexicon?limite=5&deslocamento=5").json()
+    assert len(pagina1["itens"]) == 5
+    assert len(pagina2["itens"]) == 5
+    assert pagina1["total"] == pagina2["total"]
+    assert pagina1["itens"] != pagina2["itens"]
+
+
+def test_lexicon_tem_teto_de_200_mesmo_pedindo_mais(cliente):
+    corpo = cliente.get("/modelo/lexicon?limite=10000").json()
+    assert len(corpo["itens"]) <= 200
+
+
+def test_lexicon_busca_por_emoji_conhecido_acha(cliente):
+    corpo = cliente.get("/modelo/lexicon?busca=😂").json()
+    assert corpo["total"] >= 1
+    assert any(item["emoji"] == "😂" for item in corpo["itens"])
+
+
+def test_lexicon_busca_sem_resultado_devolve_lista_vazia(cliente):
+    corpo = cliente.get("/modelo/lexicon?busca=🛸🛸🛸-nao-existe").json()
+    assert corpo["total"] == 0
+    assert corpo["itens"] == []
+
+
+def test_lexicon_score_bate_com_score_do_emoji_direto(cliente):
+    corpo = cliente.get("/modelo/lexicon?busca=😂").json()
+    item = corpo["itens"][0]
+    assert item["score"] == pytest.approx(score_do_emoji("😂"))
+
+
+# ---------------------------------------------------------------------------
+# /modelo/simular
+# ---------------------------------------------------------------------------
+
+
+def test_simular_devolve_as_tres_probabilidades(cliente):
+    corpo = cliente.post("/modelo/simular", json={"texto": "otimo atendimento"}).json()
+    assert corpo["texto"] == "otimo atendimento"
+    total = corpo["prob_insatisfeito"] + corpo["prob_neutro"] + corpo["prob_satisfeito"]
+    assert total == pytest.approx(1.0)
+
+
+def test_simular_com_texto_vazio_e_400(cliente):
+    assert cliente.post("/modelo/simular", json={"texto": ""}).status_code == 400
+    assert cliente.post("/modelo/simular", json={"texto": "   "}).status_code == 400
+
+
+def test_simular_com_texto_acima_do_teto_e_400(cliente):
+    texto_longo = "a" * 2001
+    assert cliente.post("/modelo/simular", json={"texto": texto_longo}).status_code == 400
+
+
+def test_simular_no_teto_exato_e_aceito(cliente):
+    texto_no_teto = "a" * 2000
+    resposta = cliente.post("/modelo/simular", json={"texto": texto_no_teto})
+    assert resposta.status_code == 200
+
+
+def test_simular_com_emoji_devolve_posicao_relativa(cliente):
+    corpo = cliente.post("/modelo/simular", json={"texto": "muito bom 😄"}).json()
+    assert len(corpo["emojis"]) == 1
+    assert corpo["emojis"][0]["emoji"] == "😄"
+    assert isinstance(corpo["emojis"][0]["posicao_relativa"], float)

@@ -37,6 +37,7 @@ from dolos.fusor import NOMES_FEATURES  # noqa: E402
 from dolos.indicadores import categoria_nps  # noqa: E402
 from dolos.ingest.simulador import INICIO, gerar_lote  # noqa: E402
 from dolos.modelos import Conversa, Mensagem  # noqa: E402
+from dolos.sinais.emoji import emojis_com_posicao, score_do_emoji  # noqa: E402
 from dolos.sinais.tempo import features_tempo  # noqa: E402
 
 # Frases rotuladas: 0 = insatisfeito, 1 = neutro, 2 = satisfeito.
@@ -152,6 +153,27 @@ class MotorDuble:
             score -= 8.0
 
         return max(0.0, min(100.0, round(score, 2)))
+
+    def importancias(self) -> dict:
+        # Mesmos pesos ficticios de `atribuir_conversa`, so para a ficha do
+        # modelo em `/modelo` ter as 16 chaves com forma certa.
+        return {
+            nome: round(0.2 + 0.05 * (indice % 7), 3)
+            for indice, nome in enumerate(NOMES_FEATURES)
+        }
+
+    def simular_texto(self, texto: str) -> dict:
+        p = self._probabilidades(texto)
+        emojis = [
+            {"emoji": emoji, "score": score_do_emoji(emoji), "posicao_relativa": posicao}
+            for emoji, posicao in emojis_com_posicao(texto)
+        ]
+        return {
+            "prob_insatisfeito": p[0],
+            "prob_neutro": p[1],
+            "prob_satisfeito": p[2],
+            "emojis": emojis,
+        }
 
 
 def conversa_sem_fala_do_cliente() -> Conversa:
