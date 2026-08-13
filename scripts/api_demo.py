@@ -251,7 +251,13 @@ def semear(banco: Banco, motor: MotorDuble, quantidade: int = 60) -> int:
 
 def montar_app():
     caminho = Path(tempfile.gettempdir()) / "fraus-demo.db"
-    caminho.unlink(missing_ok=True)
+    try:
+        caminho.unlink(missing_ok=True)
+    except PermissionError:
+        # No Windows o arquivo continua travado enquanto outra instancia da demo
+        # o mantiver aberto. Cair para um nome unico e melhor que recusar o boot:
+        # o banco e descartavel e resemeado do zero a cada subida.
+        caminho = Path(tempfile.mkdtemp(prefix="fraus-demo-")) / "fraus-demo.db"
     banco = Banco(caminho)
     banco.migrar()
     motor = MotorDuble()
