@@ -28,10 +28,14 @@ def categoria_nps(score_0_100: float) -> Categoria:
     return "promotor"
 
 
-def calcular_nps(scores: list[float]) -> float:
-    """Percentual de promotores menos percentual de detratores, em [-100, 100]."""
+def calcular_nps(scores: list[float]) -> float | None:
+    """Percentual de promotores menos percentual de detratores, em [-100, 100].
+
+    Sem score algum devolve None -- ausencia de dado nao e insatisfacao, e
+    "NPS +0" seria apresentar como medido um numero que ninguem mediu.
+    """
     if not scores:
-        return 0.0
+        return None
     categorias = [categoria_nps(s) for s in scores]
     total = len(categorias)
     promotores = categorias.count("promotor") / total
@@ -39,10 +43,10 @@ def calcular_nps(scores: list[float]) -> float:
     return round(100.0 * (promotores - detratores), 2)
 
 
-def calcular_csat(scores: list[float]) -> float:
-    """Percentual de atendimentos com nota >= 7."""
+def calcular_csat(scores: list[float]) -> float | None:
+    """Percentual de atendimentos com nota >= 7. Sem score algum devolve None."""
     if not scores:
-        return 0.0
+        return None
     satisfeitos = sum(1 for s in scores if nota_0_10(s) >= NOTA_MINIMA_SATISFEITO)
     return round(100.0 * satisfeitos / len(scores), 2)
 

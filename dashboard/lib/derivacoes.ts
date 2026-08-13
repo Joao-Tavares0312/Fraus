@@ -32,9 +32,14 @@ export const FAIXAS_NPS = [
 /** Faixa saudavel de referencia do CSAT, em pontos percentuais. */
 export const CSAT_SAUDAVEL = { de: 75, ate: 85 };
 
-export function notaDeScore(score: number): number {
-  return Math.round(Math.min(100, Math.max(0, score)) / 10);
-}
+/*
+ * NAO existe aqui uma funcao `notaDeScore`. A nota 0-10 e derivada NO SERVIDOR
+ * (`dolos/indicadores.py::nota_0_10`) e vem pronta em `/conversas` e em
+ * `/conversas/{id}`. Recalcular no cliente ja custou uma divergencia real:
+ * `round` do Python e bancario (`round(6.5) == 6`) e `Math.round` arredonda
+ * meio para cima (`Math.round(6.5) == 7`), entao score 65 exibia nota 7 na
+ * mesma linha em que a categoria dizia "Detrator". Uma fonte so.
+ */
 
 export function categoriaDaNota(nota: number): Categoria {
   if (nota <= 6) return "detrator";
@@ -94,15 +99,58 @@ export function latenciaMediana(mensagens: Mensagem[]): number | null {
 }
 
 /**
- * Faixas de latencia calibradas pela literatura de live chat que o proprio
- * projeto cita: pico de satisfacao em 5-10s, degradacao acima de 1min,
- * abandono acima de 3min.
+ * Limiares de latencia, em segundos, calibrados pela literatura de live chat
+ * que a propria tela cita. Sao a UNICA fonte dos numeros que aparecem nos
+ * rotulos -- texto e limiar nao podem divergir.
  */
-export function severidadeLatencia(segundos: number): "boa" | "atencao" | "critica" {
-  if (segundos <= 30) return "boa";
-  if (segundos <= 60) return "atencao";
-  return "critica";
+export const LIMIARES_LATENCIA = {
+  /** Ate aqui a satisfacao esta no pico observado (~84,7% de CSAT). */
+  pico: 10,
+  /** Ate aqui a espera ainda e saudavel. */
+  saudavel: 60,
+  /** Ate aqui a satisfacao degrada: -2 a -3 pontos de CSAT por minuto extra. */
+  degradando: 180,
+} as const;
+
+/**
+ * Faixa de severidade da espera.
+ *
+ * "critica" comeca em 3 MINUTOS, nao em 1: a fonte de live chat atribui o
+ * abandono (57% dos clientes) a espera acima de tres minutos, e a perda por
+ * minuto extra e de 2 a 3 pontos de CSAT. Atribuir 1 minuto ao abandono seria
+ * erro factual numa tela que cita a fonte.
+ */
+export type SeveridadeLatencia = "pico" | "saudavel" | "degradando" | "abandono";
+
+export function severidadeLatencia(segundos: number): SeveridadeLatencia {
+  if (segundos <= LIMIARES_LATENCIA.pico) return "pico";
+  if (segundos <= LIMIARES_LATENCIA.saudavel) return "saudavel";
+  if (segundos <= LIMIARES_LATENCIA.degradando) return "degradando";
+  return "abandono";
 }
+
+/** Rotulo e justificativa de cada faixa. Um texto so, citado igual em toda a tela. */
+export const ROTULO_LATENCIA: Record<
+  SeveridadeLatencia,
+  { titulo: string; detalhe: string }
+> = {
+  pico: {
+    titulo: "Resposta imediata",
+    detalhe: `até ${LIMIARES_LATENCIA.pico} s — pico de satisfação na literatura de live chat (CSAT ~84,7%)`,
+  },
+  saudavel: {
+    titulo: "Espera saudável",
+    detalhe: `entre ${LIMIARES_LATENCIA.pico} s e ${LIMIARES_LATENCIA.saudavel} s — fora do pico, ainda dentro do saudável`,
+  },
+  degradando: {
+    titulo: "Espera longa",
+    detalhe: `entre ${LIMIARES_LATENCIA.saudavel} s e ${LIMIARES_LATENCIA.degradando / 60} min — a satisfação degrada de 2 a 3 pontos de CSAT por minuto extra`,
+  },
+  abandono: {
+    titulo: "Espera crítica",
+    detalhe: `acima de ${LIMIARES_LATENCIA.degradando / 60} min — faixa de abandono: 57% dos clientes desistem`,
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Serie temporal diaria (NPS inferido x latencia mediana)
@@ -175,11 +223,11 @@ export function distribuicaoDeNotas(resumos: ResumoConversa[]): {
   let semSinal = 0;
 
   for (const resumo of resumos) {
-    if (resumo.score === null) {
+    if (resumo.nota === null) {
       semSinal += 1;
       continue;
     }
-    contagem[notaDeScore(resumo.score)] += 1;
+    contagem[Math.min(10, Math.max(0, resumo.nota))] += 1;
   }
 
   return {
@@ -221,10 +269,23 @@ function palavras(texto: string): string[] {
     .filter((palavra) => palavra.length >= 3 && !PARADAS.has(palavra));
 }
 
-const REGEX_EMOJI = /\p{Extended_Pictographic}/gu;
+const REGEX_EMOJI = /\p{Extended_Pictographic}/u;
+const SEGMENTADOR = new Intl.Segmenter("pt-BR", { granularity: "grapheme" });
 
+/**
+ * Extrai emojis do texto recortando por CLUSTER DE GRAFEMA, nao por codepoint.
+ *
+ * E o mesmo recorte de `emoji.emoji_list` em `dolos/sinais/emoji.py`: 👍🏽
+ * (com modificador de tom de pele) e 👨‍👩‍👧 (sequencia ZWJ) contam como UM
+ * emoji, e nao como os 2-3 codepoints pictograficos que os compoem. Sem isso
+ * a contagem de "top emojis" e a evidencia marcada divergiam do motor.
+ */
 export function emojisDoTexto(texto: string): string[] {
-  return texto.match(REGEX_EMOJI) ?? [];
+  const achados: string[] = [];
+  for (const { segment } of SEGMENTADOR.segment(texto)) {
+    if (REGEX_EMOJI.test(segment)) achados.push(segment);
+  }
+  return achados;
 }
 
 export function polaridadeDoEmoji(emoji: string): number {
@@ -329,8 +390,14 @@ export type Evidencia = {
 
 /**
  * Marca os trechos que puxaram a nota USANDO SO O QUE E OBSERVAVEL na
- * transcricao: a polaridade dos emojis (mesmo lexicon do sinal de emoji) e o
- * tempo de espera do cliente (mesma regra do sinal de tempo).
+ * transcricao: a polaridade dos emojis e o tempo de espera do cliente.
+ *
+ * O que e compartilhado com `dolos/sinais/emoji.py` e a TABELA de polaridade
+ * (Emoji Sentiment Ranking, exportada para `lexicoEmoji.json`) E o recorte,
+ * que aqui e feito por cluster de grafema para casar com `emoji.emoji_list`.
+ * O que NAO e compartilhado: o motor usa tambem a posicao relativa do emoji
+ * na mensagem como feature -- a interface so mostra a polaridade media.
+ * A regra de espera e a mesma do sinal de tempo.
  *
  * O terceiro sinal -- a probabilidade por mensagem do classificador de texto,
  * que e calculada na Task 7 -- NAO tem endpoint, entao nao aparece aqui e nem
@@ -355,18 +422,17 @@ export function evidenciasDaConversa(conversa: DetalheConversa): Evidencia[] {
     });
   });
 
+  // So espera que a literatura associa a PERDA vira evidencia: abaixo de 1 min
+  // a resposta esta no saudavel e marcar isso seria inventar problema.
   for (const { indice, segundos } of latenciasAnotadas(conversa.mensagens)) {
     const severidade = severidadeLatencia(segundos);
-    if (severidade === "boa") continue;
+    if (severidade === "pico" || severidade === "saudavel") continue;
     evidencias.push({
       indice,
       tipo: "espera",
       sentido: "puxou_para_baixo",
-      rotulo: severidade === "critica" ? "Espera crítica" : "Espera longa",
-      detalhe:
-        severidade === "critica"
-          ? "acima de 1 min — faixa de abandono na literatura de live chat"
-          : "entre 30 s e 1 min — fora do pico de satisfação (5–10 s)",
+      rotulo: ROTULO_LATENCIA[severidade].titulo,
+      detalhe: ROTULO_LATENCIA[severidade].detalhe,
     });
   }
 

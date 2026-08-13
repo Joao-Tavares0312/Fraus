@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ROTULO_SEM_SINAL } from "@/lib/formato";
 
 export type Marca = {
   /** Posicao no dominio do medidor. */
@@ -34,6 +35,11 @@ export type Medidor = {
  *    nao pode deixar isso implicito.
  * 2. `erro` e por celula. Se um indicador falha, so esta celula mostra falha --
  *    as outras continuam renderizando (regra de produto 5).
+ *
+ * `semDado` e uma TERCEIRA coisa, diferente das duas: a API respondeu bem, mas
+ * nao ha o que medir (nenhum atendimento com score). Nao e falha e muito menos
+ * zero -- "NPS +0" seria exatamente a mentira que o produto existe para nao
+ * contar. Cai no mesmo rotulo "sem sinal" usado no resto da interface.
  */
 export function CartaoIndicador({
   rotulo,
@@ -43,6 +49,7 @@ export function CartaoIndicador({
   nota,
   medidor,
   erro,
+  semDado,
 }: {
   rotulo: string;
   valor?: string;
@@ -51,6 +58,8 @@ export function CartaoIndicador({
   nota?: ReactNode;
   medidor?: Medidor;
   erro?: string;
+  /** Explicacao do porque nao ha o que medir. Exclui `valor` e `medidor`. */
+  semDado?: string;
 }) {
   const estimado = natureza === "estimado";
 
@@ -69,6 +78,8 @@ export function CartaoIndicador({
 
       {erro ? (
         <FalhaDaCelula erro={erro} />
+      ) : semDado ? (
+        <SemDado explicacao={semDado} />
       ) : (
         <>
           <p className="flex items-baseline gap-1.5">
@@ -95,13 +106,26 @@ export function CartaoIndicador({
   );
 }
 
+function SemDado({ explicacao }: { explicacao: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-[1.25rem] leading-none font-semibold text-[var(--tinta-3)]">
+        {ROTULO_SEM_SINAL}
+      </p>
+      <p className="text-[0.75rem] leading-[1.45] text-[var(--tinta-3)]">
+        {explicacao}
+      </p>
+    </div>
+  );
+}
+
 function FalhaDaCelula({ erro }: { erro: string }) {
   return (
     <div role="status" className="flex flex-col gap-1">
       <p className="text-[1.25rem] leading-none font-semibold text-[var(--tinta-3)]">
         indisponível
       </p>
-      <p className="text-[0.75rem] leading-[1.45] text-[var(--detrator)]">{erro}</p>
+      <p className="text-[0.75rem] leading-[1.45] text-[var(--detrator-texto)]">{erro}</p>
       <p className="text-[0.75rem] leading-[1.45] text-[var(--tinta-3)]">
         Os demais indicadores continuam válidos.
       </p>

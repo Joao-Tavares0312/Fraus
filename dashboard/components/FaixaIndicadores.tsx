@@ -1,5 +1,5 @@
 import type { Indicadores, Resultado } from "@/lib/api";
-import { CSAT_SAUDAVEL } from "@/lib/derivacoes";
+import { CSAT_SAUDAVEL, LIMIARES_LATENCIA } from "@/lib/derivacoes";
 import { formatarNps, formatarNumero, formatarSegundos } from "@/lib/formato";
 import { CartaoIndicador } from "./CartaoIndicador";
 
@@ -12,6 +12,10 @@ import { CartaoIndicador } from "./CartaoIndicador";
  *   - a requisicao inteira falha -> as quatro celulas falham, mas o resto da
  *     pagina (grafico, tabela) continua renderizando;
  *   - um campo vem ausente ou nao-numerico -> so a celula dele falha.
+ *
+ * Ausencia de MEDIDA nao e nenhuma das duas: `nps` e `csat` chegam `null`
+ * quando nenhum atendimento tem score, e a celula cai no estado "sem sinal" --
+ * o mesmo que o grafico ja mostra. Nunca 0.
  */
 export function FaixaIndicadores({
   indicadores,
@@ -25,9 +29,17 @@ export function FaixaIndicadores({
   const erroGeral = indicadores.ok ? undefined : indicadores.erro;
   const dado = indicadores.ok ? indicadores.dado : null;
 
-  const campo = (nome: keyof Indicadores): { valor?: number; erro?: string } => {
+  const campo = (
+    nome: keyof Indicadores,
+  ): { valor?: number; erro?: string; semDado?: string } => {
     if (erroGeral) return { erro: erroGeral };
     const bruto = dado?.[nome];
+    if (bruto === null) {
+      return {
+        semDado:
+          "nenhum atendimento com fala do cliente para pontuar — não há o que medir",
+      };
+    }
     if (typeof bruto !== "number" || !Number.isFinite(bruto)) {
       return { erro: `campo "${nome}" ausente na resposta de /indicadores` };
     }
@@ -48,6 +60,7 @@ export function FaixaIndicadores({
           natureza="estimado"
           valor={nps.valor === undefined ? undefined : formatarNps(nps.valor)}
           erro={nps.erro}
+          semDado={nps.semDado}
           medidor={
             nps.valor === undefined
               ? undefined
@@ -70,6 +83,7 @@ export function FaixaIndicadores({
           valor={csat.valor === undefined ? undefined : formatarNumero(csat.valor)}
           unidade="%"
           erro={csat.erro}
+          semDado={csat.semDado}
           medidor={
             csat.valor === undefined
               ? undefined
@@ -106,6 +120,7 @@ export function FaixaIndicadores({
           }
           unidade="%"
           erro={contencao.erro}
+          semDado={contencao.semDado}
           medidor={
             contencao.valor === undefined
               ? undefined
@@ -139,21 +154,23 @@ export function FaixaIndicadores({
             ? undefined
             : {
                 min: 0,
-                max: 180,
-                valor: Math.min(tempoMediano, 180),
+                max: LIMIARES_LATENCIA.degradando,
+                valor: Math.min(tempoMediano, LIMIARES_LATENCIA.degradando),
                 cor: "var(--serie-latencia)",
                 faixas: [
                   {
-                    de: 5,
-                    ate: 10,
+                    de: 0,
+                    ate: LIMIARES_LATENCIA.pico,
                     cor: "var(--faixa-saudavel)",
-                    rotulo: "pico de satisfação na literatura de live chat: 5–10 s",
+                    rotulo: `pico de satisfação na literatura de live chat: até ${LIMIARES_LATENCIA.pico} s (CSAT ~84,7%)`,
                   },
                 ],
-                marcas: [{ em: 60, rotulo: "60 s" }],
+                marcas: [
+                  { em: LIMIARES_LATENCIA.saudavel, rotulo: "60 s saudável" },
+                ],
               }
         }
-        nota="Mediana dos intervalos entre a fala do cliente e a resposta seguinte, calculada dos timestamps."
+        nota="Mediana dos intervalos entre a fala do cliente e a resposta seguinte, calculada dos timestamps. Acima de 3 min é a faixa de abandono: 57% dos clientes desistem."
       />
     </div>
   );

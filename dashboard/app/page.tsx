@@ -55,8 +55,11 @@ function paraLinha(resumo: ResumoConversa): LinhaConversa {
     canal: resumo.canal,
     data: formatarDataHora(resumo.iniciada_em),
     ordenacao: resumo.iniciada_em,
-    // A API já devolve `score` 0-100; a nota 0-10 é a mesma conversão do servidor.
-    nota: resumo.score === null ? null : Math.round(resumo.score / 10),
+    // A nota vem DERIVADA DO SERVIDOR em `/conversas`. Recalcular aqui já
+    // divergiu do Python nas fronteiras 6/7 e 8/9 (arredondamento bancário
+    // contra meio-para-cima) e fazia a tabela exibir nota 7 ao lado da
+    // categoria "Detrator". A fonte da verdade é uma só.
+    nota: resumo.nota,
     categoria: resumo.categoria,
   };
 }

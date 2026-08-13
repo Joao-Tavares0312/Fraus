@@ -25,14 +25,35 @@ def test_score_vira_nota_de_zero_a_dez():
     assert nota_0_10(100.0) == 10
 
 
+@pytest.mark.parametrize("score,nota", [
+    (0.0, 0),
+    (5.0, 0),    # meio exato: arredondamento bancario desempata para o par
+    (65.0, 6),   # fronteira detrator/neutro
+    (85.0, 8),   # fronteira neutro/promotor
+    (100.0, 10),
+])
+def test_nota_nos_pontos_limite(score, nota):
+    """Trava o arredondamento do servidor -- ele e a fonte da verdade da nota.
+
+    A dashboard nao recalcula: consome a `nota` que a API devolve. Se este
+    teste mudar, a interface muda junto, por construcao.
+    """
+    assert nota_0_10(score) == nota
+
+
 def test_nps_calculado_a_mao_confere():
     # 5 promotores (100), 2 neutros (75), 3 detratores (30)
     scores = [100.0] * 5 + [75.0] * 2 + [30.0] * 3
     assert calcular_nps(scores) == pytest.approx(20.0)  # 50% - 30%
 
 
-def test_nps_de_lista_vazia_e_zero():
-    assert calcular_nps([]) == 0.0
+def test_nps_de_lista_vazia_e_ausencia_nao_zero():
+    """Sem score nenhum nao existe NPS: 0 seria um numero medido que ninguem mediu."""
+    assert calcular_nps([]) is None
+
+
+def test_csat_de_lista_vazia_e_ausencia_nao_zero():
+    assert calcular_csat([]) is None
 
 
 def test_csat_e_a_fracao_com_nota_sete_ou_mais():

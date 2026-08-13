@@ -15,8 +15,11 @@ const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export type Categoria = "detrator" | "neutro" | "promotor";
 
 export type Indicadores = {
-  nps: number;
-  csat: number;
+  /** null quando nenhum atendimento tem score: ausencia de dado nao e zero. */
+  nps: number | null;
+  /** null quando nenhum atendimento tem score. */
+  csat: number | null;
+  /** Contencao NAO depende de score, entao sempre e um numero. */
   containment_rate: number;
   total_conversas: number;
   sem_sinal: number;
@@ -28,6 +31,13 @@ export type ResumoConversa = {
   iniciada_em: string;
   score: number | null;
   categoria: Categoria | null;
+  /**
+   * Nota 0-10 DERIVADA NO SERVIDOR a partir do score. A dashboard nunca
+   * recalcula: o arredondamento do Python (bancario) e o do JavaScript
+   * (meio para cima) divergem nas fronteiras 6/7 e 8/9, e a fonte da verdade
+   * e o servidor -- ele e quem grava a categoria.
+   */
+  nota: number | null;
 };
 
 export type Autor = "cliente" | "bot" | "humano";
@@ -42,7 +52,6 @@ export type DetalheConversa = ResumoConversa & {
   encerrada_em: string | null;
   escalou_para_humano: boolean;
   mensagens: Mensagem[];
-  nota: number | null;
 };
 
 export type Resultado<T> =
