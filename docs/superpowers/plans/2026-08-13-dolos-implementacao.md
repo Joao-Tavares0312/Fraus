@@ -585,7 +585,7 @@ git commit -m "feat(sinais): sinal de emoji com lexicon e posicao relativa"
 
 Latência é o intervalo entre uma mensagem do cliente e a primeira resposta seguinte do bot ou humano. Nunca persistida — sempre derivada.
 
-`abandonou` é verdadeiro quando a última mensagem da conversa é do bot e a conversa está encerrada — ou seja, o cliente saiu sem responder.
+`abandonou` é verdadeiro quando a última mensagem da conversa é do bot ou do humano — ou seja, o cliente saiu sem responder. Não depende de `encerrada_em`: uma conversa aberta cuja última fala é do bot já é abandono em curso.
 
 Não há penalidade linear codificada aqui: a relação entre latência e satisfação é não-linear e moderada por contexto (IJHCI 2025), então o peso é aprendido pelo fusor na Task 8.
 
