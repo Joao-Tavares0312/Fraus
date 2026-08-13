@@ -57,7 +57,7 @@ vence RAG em acurácia e latência[^3].
 
 - [Spec de design](docs/superpowers/specs/2026-08-13-dolos-design.md) — decisões e referências
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
-- [Treinamento](docs/treinamento.md) — notebook Colab e artefato do modelo
+- [Treinamento](docs/treinamento.md) — os dois notebooks do Colab (BERTimbau e fusor) e os artefatos que eles produzem
 
 ## Como rodar
 
@@ -86,8 +86,10 @@ uv run uvicorn dolos.api.main:app --reload   # http://localhost:8000
 
 A API real **exige o modelo treinado** em `modelos/` (BERTimbau fine-tunado e
 `fusor.joblib`) e **falha alto no boot** se ele não existir — por design:
-servir predição sem modelo carregado é pior do que estar fora do ar. Veja
-[docs/treinamento.md](docs/treinamento.md) para gerar o artefato.
+servir predição sem modelo carregado é pior do que estar fora do ar. Os dois
+artefatos saem dos notebooks `01_treino_bertimbau.ipynb` e
+`02_treino_fusor.ipynb`, nessa ordem; veja
+[docs/treinamento.md](docs/treinamento.md).
 
 Variáveis de ambiente reconhecidas:
 
