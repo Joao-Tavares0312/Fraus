@@ -1,7 +1,7 @@
 import random
 
-from dolos.ingest.simulador import gerar_conversa, gerar_lote
-from dolos.sinais.tempo import features_tempo
+from fraus.ingest.simulador import gerar_conversa, gerar_lote
+from fraus.sinais.tempo import features_tempo
 
 FRASES = {
     0: ["que absurdo, ninguem resolve", "pessimo atendimento"],

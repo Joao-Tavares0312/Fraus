@@ -11,7 +11,7 @@ Nada aqui e persistido: tudo deriva dos timestamps do modelo canonico.
 
 from statistics import median
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 RESPONDENTES = {"bot", "humano"}
 

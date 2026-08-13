@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 
 def _ts(segundo: int) -> datetime:

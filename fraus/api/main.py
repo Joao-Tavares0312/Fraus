@@ -1,10 +1,10 @@
-"""API do Dolos.
+"""API do Fraus.
 
 Score e categoria SAO SEMPRE derivados no servidor: campos vindos do corpo da
 requisicao que se pareçam com veredito sao ignorados por construcao -- o modelo
 de entrada so aceita `caminho`.
 
-O objeto `app` de nivel de modulo (consumido por `uvicorn dolos.api.main:app`)
+O objeto `app` de nivel de modulo (consumido por `uvicorn fraus.api.main:app`)
 e construido com dependencias REAIS -- Banco em disco e Motor com
 ClassificadorTexto/Fusor carregados do disco -- e deve falhar alto no import
 se o modelo ou o fusor nao existirem (ModeloAusenteError e equivalente do
@@ -13,7 +13,7 @@ que estar fora do ar).
 
 `app` e resolvido de forma preguicosa via `__getattr__` de modulo (PEP 562):
 so e construido quando algo de fato acessa o atributo `app` (como o uvicorn
-faz ao importar `dolos.api.main:app`). O import puro do modulo -- o que os
+faz ao importar `fraus.api.main:app`). O import puro do modulo -- o que os
 testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 `app` nao existe como atributo normal do modulo.
 """
@@ -25,23 +25,23 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from dolos.db import Banco
-from dolos.fusor import Fusor, montar_features
-from dolos.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
+from fraus.db import Banco
+from fraus.fusor import Fusor, montar_features
+from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
                                categoria_nps, containment_rate, nota_0_10)
-from dolos.ingest.csv_driver import carregar_csv
-from dolos.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
+from fraus.ingest.csv_driver import carregar_csv
+from fraus.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
                                 score_do_emoji)
-from dolos.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
+from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
                                 ClassificadorTexto)
 
-CAMINHO_MODELO_TEXTO = Path(os.environ.get("DOLOS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
-CAMINHO_FUSOR = Path(os.environ.get("DOLOS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
-CAMINHO_BANCO = Path(os.environ.get("DOLOS_CAMINHO_BANCO", "dolos.db"))
+CAMINHO_MODELO_TEXTO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
+CAMINHO_FUSOR = Path(os.environ.get("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
+CAMINHO_BANCO = Path(os.environ.get("FRAUS_CAMINHO_BANCO", "fraus.db"))
 
 # Exportado pelo notebook 01 (acuracia, F1-macro do BERTimbau). Ausente e
 # esperado antes do treino: `/modelo` devolve `metricas: null`, nunca inventa.
-CAMINHO_METRICAS = Path(os.environ.get("DOLOS_CAMINHO_METRICAS", "modelos/metricas.json"))
+CAMINHO_METRICAS = Path(os.environ.get("FRAUS_CAMINHO_METRICAS", "modelos/metricas.json"))
 
 # Teto de tamanho do texto aceito por /modelo/simular -- nao e limite de
 # modelo (BERTimbau trunca em TAMANHO_MAXIMO tokens), e limite de payload.
@@ -54,7 +54,7 @@ LIMITE_LEXICON_PADRAO = 50
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
 # (uso local, ver README) -- entao ele nao pode aceitar caminho arbitrario do
 # sistema de arquivos: tudo que entra e resolvido DENTRO desta pasta.
-RAIZ_IMPORTACAO = Path(os.environ.get("DOLOS_RAIZ_IMPORTACAO", "dados_brutos"))
+RAIZ_IMPORTACAO = Path(os.environ.get("FRAUS_RAIZ_IMPORTACAO", "dados_brutos"))
 
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o CSV inteiro.
@@ -90,7 +90,7 @@ class Motor:
         inteira volta assim mesmo: a interface precisa dela para alinhar o
         `indice` com `/conversas/{id}` sem recontar nada.
 
-        A ordem das classes e a de `dolos.sinais.texto`: 0 insatisfeito,
+        A ordem das classes e a de `fraus.sinais.texto`: 0 insatisfeito,
         1 neutro, 2 satisfeito.
 
         O classificador e o fusor NAO vazam daqui: o que sai e o resultado ja
@@ -184,7 +184,7 @@ def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
 
 
 def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastAPI:
-    app = FastAPI(title="Dolos", version="0.1.0")
+    app = FastAPI(title="Fraus", version="0.1.0")
     raiz = Path(raiz_importacao) if raiz_importacao is not None else RAIZ_IMPORTACAO
 
     @app.get("/saude")
@@ -289,7 +289,7 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
 
         `metricas` e null quando o notebook 01 ainda nao exportou o arquivo --
         nunca um valor inventado. As faixas de NPS vem de FAIXAS_NPS, a MESMA
-        constante usada por `dolos.indicadores.categoria_nps`.
+        constante usada por `fraus.indicadores.categoria_nps`.
         """
         metricas = None
         if CAMINHO_METRICAS.is_file():
@@ -365,7 +365,7 @@ def criar_app_padrao() -> FastAPI:
 
     Carrega classificador e fusor ANTES de tocar no banco: se a inicializacao
     vai falhar por modelo ausente, ela precisa falhar sem sujar o disco com um
-    `dolos.db` de schema vazio.
+    `fraus.db` de schema vazio.
     """
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)  # propaga ModeloAusenteError
     fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
@@ -379,7 +379,7 @@ def __getattr__(nome: str):
     """PEP 562: resolve `app` sob demanda, so quando algo acessa o atributo.
 
     Mantem o import puro do modulo barato (o que os testes fazem ao importar
-    `criar_app`) e ainda assim expoe `app` para `uvicorn dolos.api.main:app`,
+    `criar_app`) e ainda assim expoe `app` para `uvicorn fraus.api.main:app`,
     que acessa o atributo de verdade -- disparando a construcao real e
     deixando ModeloAusenteError/erro do fusor propagarem.
     """

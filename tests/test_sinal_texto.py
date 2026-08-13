@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from dolos.modelos import Conversa, Mensagem
-from dolos.sinais.texto import ClassificadorTexto, ModeloAusenteError, features_texto
+from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.texto import ClassificadorTexto, ModeloAusenteError, features_texto
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
 

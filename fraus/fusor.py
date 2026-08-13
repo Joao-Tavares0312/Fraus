@@ -15,10 +15,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from dolos.modelos import Conversa
-from dolos.sinais.emoji import features_emoji
-from dolos.sinais.tempo import features_tempo
-from dolos.sinais.texto import features_texto
+from fraus.modelos import Conversa
+from fraus.sinais.emoji import features_emoji
+from fraus.sinais.tempo import features_tempo
+from fraus.sinais.texto import features_texto
 
 NOMES_FEATURES = [
     "texto_prob_insatisfeito_media",

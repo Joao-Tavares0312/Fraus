@@ -1,6 +1,6 @@
 import pytest
 
-from dolos.fusor import NOMES_FEATURES, Fusor, vetorizar
+from fraus.fusor import NOMES_FEATURES, Fusor, vetorizar
 
 
 def _features(**sobrescritas) -> dict[str, float]:

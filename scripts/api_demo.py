@@ -1,4 +1,4 @@
-"""Servidor de DEMONSTRACAO do Dolos -- APENAS para desenvolver a interface.
+"""Servidor de DEMONSTRACAO do Fraus -- APENAS para desenvolver a interface.
 
 =============================================================================
 NUNCA USE ISTO EM PRODUCAO. Este servidor NAO carrega o BERTimbau nem o fusor:
@@ -8,7 +8,7 @@ NAO e uma predicao do modelo -- e um valor sintetico, estavel, cuja unica funcao
 e dar a dashboard dados com a forma certa (faixas, nulos, datas) enquanto o
 modelo da Task 6 ainda nao foi treinado no Colab.
 
-O `app` real vive em `dolos.api.main` e falha alto sem `modelos/` -- e isso e
+O `app` real vive em `fraus.api.main` e falha alto sem `modelos/` -- e isso e
 por design. Este arquivo existe porque a Task 10 precisa de uma API no ar antes
 disso, nao porque o comportamento real seja opcional.
 
@@ -31,14 +31,14 @@ if str(RAIZ) not in sys.path:
 
 import uvicorn  # noqa: E402
 
-from dolos.api.main import criar_app  # noqa: E402
-from dolos.db import Banco  # noqa: E402
-from dolos.fusor import NOMES_FEATURES  # noqa: E402
-from dolos.indicadores import categoria_nps  # noqa: E402
-from dolos.ingest.simulador import INICIO, gerar_lote  # noqa: E402
-from dolos.modelos import Conversa, Mensagem  # noqa: E402
-from dolos.sinais.emoji import emojis_com_posicao, score_do_emoji  # noqa: E402
-from dolos.sinais.tempo import features_tempo  # noqa: E402
+from fraus.api.main import criar_app  # noqa: E402
+from fraus.db import Banco  # noqa: E402
+from fraus.fusor import NOMES_FEATURES  # noqa: E402
+from fraus.indicadores import categoria_nps  # noqa: E402
+from fraus.ingest.simulador import INICIO, gerar_lote  # noqa: E402
+from fraus.modelos import Conversa, Mensagem  # noqa: E402
+from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji  # noqa: E402
+from fraus.sinais.tempo import features_tempo  # noqa: E402
 
 # Frases rotuladas: 0 = insatisfeito, 1 = neutro, 2 = satisfeito.
 FRASES_POR_ROTULO: dict[int, list[str]] = {
@@ -250,7 +250,7 @@ def semear(banco: Banco, motor: MotorDuble, quantidade: int = 60) -> int:
 
 
 def montar_app():
-    caminho = Path(tempfile.gettempdir()) / "dolos-demo.db"
+    caminho = Path(tempfile.gettempdir()) / "fraus-demo.db"
     caminho.unlink(missing_ok=True)
     banco = Banco(caminho)
     banco.migrar()

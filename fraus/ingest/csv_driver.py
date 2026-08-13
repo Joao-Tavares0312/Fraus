@@ -7,7 +7,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 VERDADEIROS = {"true", "1", "sim", "yes"}
 

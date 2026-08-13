@@ -1,5 +1,5 @@
 [project]
-name = "dolos"
+name = "fraus"
 version = "0.1.0"
 description = "Analise de satisfacao em atendimentos por chatbot"
 requires-python = ">=3.11"

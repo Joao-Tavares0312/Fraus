@@ -2,9 +2,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from dolos.indicadores import (calcular_csat, calcular_nps, categoria_nps,
+from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10)
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
 

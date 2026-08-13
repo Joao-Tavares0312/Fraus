@@ -9,7 +9,7 @@ Categoria SEMPRE derivada no servidor.
 
 from typing import Literal
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 Categoria = Literal["detrator", "neutro", "promotor"]
 NOTA_MINIMA_SATISFEITO = 7

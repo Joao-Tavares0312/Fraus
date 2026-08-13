@@ -12,7 +12,7 @@ from pathlib import Path
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
 TAMANHO_MAXIMO = 192

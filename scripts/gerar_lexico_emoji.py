@@ -1,9 +1,9 @@
 """Exporta o lexicon de emoji para a dashboard.
 
-A dashboard precisa da MESMA polaridade que `dolos.sinais.emoji` usa, senao a
+A dashboard precisa da MESMA polaridade que `fraus.sinais.emoji` usa, senao a
 interface estaria inventando um segundo criterio. Este script deriva o JSON a
-partir de `dolos/dados/emoji_sentiment_ranking.csv` com a formula identica a de
-`dolos.sinais.emoji._lexicon` -- ele nao e uma segunda fonte de verdade, e uma
+partir de `fraus/dados/emoji_sentiment_ranking.csv` com a formula identica a de
+`fraus.sinais.emoji._lexicon` -- ele nao e uma segunda fonte de verdade, e uma
 projecao da primeira.
 
 Rodar apos qualquer mudanca no CSV:
@@ -20,7 +20,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
-from dolos.sinais.emoji import _lexicon  # noqa: E402
+from fraus.sinais.emoji import _lexicon  # noqa: E402
 
 DESTINO = RAIZ / "dashboard" / "lib" / "lexicoEmoji.json"
 

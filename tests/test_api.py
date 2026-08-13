@@ -1,11 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from dolos.api.main import criar_app
-from dolos.db import Banco
-from dolos.fusor import NOMES_FEATURES
-from dolos.indicadores import FAIXAS_NPS
-from dolos.sinais.emoji import emojis_com_posicao, score_do_emoji
+from fraus.api.main import criar_app
+from fraus.db import Banco
+from fraus.fusor import NOMES_FEATURES
+from fraus.indicadores import FAIXAS_NPS
+from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji
 
 CSV = (
     "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
@@ -94,7 +94,7 @@ class MotorRespeitandoSinal(AtribuicaoDuble):
 
 @pytest.fixture
 def cliente(tmp_path):
-    banco = Banco(tmp_path / "dolos.db")
+    banco = Banco(tmp_path / "fraus.db")
     banco.migrar()
     return TestClient(
         criar_app(banco=banco, motor=MotorFalso(), raiz_importacao=tmp_path)
@@ -103,7 +103,7 @@ def cliente(tmp_path):
 
 @pytest.fixture
 def cliente_com_sinal(tmp_path):
-    banco = Banco(tmp_path / "dolos.db")
+    banco = Banco(tmp_path / "fraus.db")
     banco.migrar()
     return TestClient(
         criar_app(
@@ -415,7 +415,7 @@ def test_modelo_traz_as_dezesseis_importancias_e_as_faixas_corretas(cliente):
 
 
 def test_modelo_sem_arquivo_de_metricas_devolve_null(cliente, tmp_path, monkeypatch):
-    import dolos.api.main as main_module
+    import fraus.api.main as main_module
 
     monkeypatch.setattr(main_module, "CAMINHO_METRICAS", tmp_path / "nao-existe.json")
     corpo = cliente.get("/modelo").json()
@@ -423,7 +423,7 @@ def test_modelo_sem_arquivo_de_metricas_devolve_null(cliente, tmp_path, monkeypa
 
 
 def test_modelo_traz_metricas_quando_arquivo_existe(cliente, tmp_path, monkeypatch):
-    import dolos.api.main as main_module
+    import fraus.api.main as main_module
 
     caminho_metricas = tmp_path / "metricas.json"
     caminho_metricas.write_text('{"acuracia": 0.9, "f1_macro": 0.88}', encoding="utf-8")

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from dolos.modelos import Conversa, Mensagem
-from dolos.sinais.tempo import features_tempo
+from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.tempo import features_tempo
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
 

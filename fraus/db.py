@@ -7,7 +7,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS conversas (

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import emoji as lib_emoji
 
-from dolos.modelos import Conversa
+from fraus.modelos import Conversa
 
 CAMINHO_LEXICON = Path(__file__).parent.parent / "dados" / "emoji_sentiment_ranking.csv"
 LIMIAR_POLARIDADE = 0.1

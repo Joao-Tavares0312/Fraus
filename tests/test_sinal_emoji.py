@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from dolos.modelos import Conversa, Mensagem
-from dolos.sinais.emoji import features_emoji, score_do_emoji
+from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.emoji import features_emoji, score_do_emoji
 
 
 def _conversa(textos: list[str]) -> Conversa:

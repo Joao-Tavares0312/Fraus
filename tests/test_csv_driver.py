@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from dolos.ingest.csv_driver import carregar_csv
+from fraus.ingest.csv_driver import carregar_csv
 
 CABECALHO = "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
 

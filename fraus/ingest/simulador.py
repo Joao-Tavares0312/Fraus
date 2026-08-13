@@ -13,7 +13,7 @@ em dados sinteticos calibrados por literatura, nao observados.
 import random
 from datetime import datetime, timedelta, timezone
 
-from dolos.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa, Mensagem
 
 INICIO = datetime(2026, 8, 1, 9, 0, 0, tzinfo=timezone.utc)
 
