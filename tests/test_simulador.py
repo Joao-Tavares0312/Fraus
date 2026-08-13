@@ -1,3 +1,5 @@
+import random
+
 from dolos.ingest.simulador import gerar_conversa, gerar_lote
 from dolos.sinais.tempo import features_tempo
 
@@ -47,8 +49,17 @@ def test_lote_respeita_a_quantidade_e_devolve_rotulos():
     assert len({conversa.id for conversa, _ in lote}) == 30
 
 
-def test_lote_grande_nao_tem_ids_colidindo():
-    for semente in (1, 2, 3):
-        lote = gerar_lote(FRASES, quantidade=100_000, semente=semente)
-        ids = {conversa.id for conversa, _ in lote}
-        assert len(ids) == 100_000
+def test_gerar_lote_amostra_sem_reposicao(monkeypatch):
+    """Protege a regressao: trocar sample por randrange traz de volta a colisao de id."""
+    chamada = {}
+    sample_original = random.Random.sample
+
+    def sample_espiao(self, populacao, k):
+        chamada["k"] = k
+        chamada["tamanho_populacao"] = len(populacao)
+        return sample_original(self, populacao, k)
+
+    monkeypatch.setattr(random.Random, "sample", sample_espiao)
+    gerar_lote(FRASES, quantidade=10, semente=1)
+
+    assert chamada == {"k": 10, "tamanho_populacao": 10**9}
