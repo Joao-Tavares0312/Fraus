@@ -67,3 +67,15 @@ def test_conversa_encerrada_em_naive_e_rejeitado():
             escalou_para_humano=False,
             mensagens=[],
         )
+
+
+def test_conversa_sem_mensagem_nenhuma_e_rejeitado():
+    with pytest.raises(ValidationError):
+        Conversa(
+            id="c1",
+            canal="csv",
+            iniciada_em=_ts(0),
+            encerrada_em=None,
+            escalou_para_humano=False,
+            mensagens=[],
+        )

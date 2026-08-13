@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 Autor = Literal["cliente", "bot", "humano"]
 
@@ -32,7 +32,7 @@ class Conversa(BaseModel):
     iniciada_em: datetime
     encerrada_em: datetime | None = None
     escalou_para_humano: bool = False
-    mensagens: list[Mensagem]
+    mensagens: list[Mensagem] = Field(min_length=1)
 
     @field_validator("iniciada_em")
     @classmethod

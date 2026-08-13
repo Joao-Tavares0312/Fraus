@@ -36,6 +36,7 @@ def test_mediana_com_varias_respostas():
         _conversa([("cliente", 0), ("bot", 10), ("cliente", 20), ("bot", 50)])
     )
     assert features["latencia_mediana_s"] == 20.0
+    assert features["latencia_p90_s"] == 30.0
     assert features["latencia_primeira_resposta_s"] == 10.0
     assert features["qtd_turnos_cliente"] == 2.0
 
