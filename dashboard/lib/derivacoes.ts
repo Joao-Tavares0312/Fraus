@@ -686,8 +686,6 @@ export type IndicadoresDoPeriodo = {
   semSinal: number;
   /** Quantas conversas entraram nos calculos de NPS/CSAT (as com categoria). */
   comSinal: number;
-  /** Quantas conversas tinham transcricao para medir contencao. */
-  comTranscricao: number;
 };
 
 export function indicadoresDoPeriodo(
@@ -724,7 +722,6 @@ export function indicadoresDoPeriodo(
     total,
     semSinal,
     comSinal: categorias.length,
-    comTranscricao: detalhes.length,
   };
 }
 

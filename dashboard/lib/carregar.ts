@@ -27,22 +27,21 @@ export type Recorte = {
 };
 
 /**
- * Carrega e RECORTA por periodo tudo que as telas de atendimento consomem.
+ * Carrega e recorta por periodo tudo que as telas de atendimento consomem.
  *
- * O corte acontece aqui, no cliente da API, porque `/conversas` e
- * `/indicadores` ainda nao aceitam filtro de data. Isso tem um custo real:
- * baixa-se a lista inteira e as transcricoes das conversas do recorte para
- * descartar o resto. Um `GET /conversas?de=&ate=` (e o mesmo par em
- * `/indicadores`) tornaria o corte server-side.
+ * A lista inteira e baixada UMA vez mesmo com filtro: a extensao do conjunto
+ * (que ancora os atalhos do filtro) precisa do todo, e a listagem e barata --
+ * o que custava caro era a transcricao. O corte dos resumos continua no
+ * cliente por isso; `GET /conversas?de=&ate=` existe para quem nao precisa
+ * da extensao.
  *
- * A serie temporal JA saiu daqui: `GET /serie-temporal?de=&ate=` recorta e
- * agrega no servidor, e a pagina principal nao a deriva mais das transcricoes.
- *
- * As transcricoes so sao buscadas para as conversas que sobraram no periodo --
- * e a unica economia possivel sem mudar a API.
+ * As TRANSCRICOES sao o N+1 real, e `comDetalhes: false` as pula: a visao
+ * geral nao precisa mais delas -- serie, lexico e tempo mediano vem agregados
+ * do servidor (`/serie-temporal`, `/lexico`, `/indicadores`).
  */
 export async function carregarRecorte(
   parametros: Record<string, string | string[] | undefined>,
+  { comDetalhes = true }: { comDetalhes?: boolean } = {},
 ): Promise<Recorte> {
   const periodo = lerPeriodo(parametros);
   const sufixo = paraQuery(periodo);
@@ -63,9 +62,9 @@ export async function carregarRecorte(
 
   const extensao = extensaoDosDados(conversas.dado);
   const resumos = filtrarPorPeriodo(conversas.dado, periodo);
-  const { detalhes, falhas } = await obterDetalhes(
-    resumos.map((resumo) => resumo.id),
-  );
+  const { detalhes, falhas } = comDetalhes
+    ? await obterDetalhes(resumos.map((resumo) => resumo.id))
+    : { detalhes: [], falhas: 0 };
 
   return {
     periodo,

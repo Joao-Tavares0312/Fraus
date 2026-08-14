@@ -76,6 +76,11 @@ export type Indicadores = {
   containment_rate: number;
   total_conversas: number;
   sem_sinal: number;
+  /**
+   * Mediana das esperas cliente -> resposta do recorte, derivada dos
+   * timestamps na leitura. null sem nenhum par -- nunca zero.
+   */
+  tempo_mediano_resposta_s: number | null;
 };
 
 export type ResumoConversa = {
@@ -403,11 +408,43 @@ async function proteger<T>(promessa: Promise<T>): Promise<Resultado<T>> {
   }
 }
 
-export const obterIndicadores = () =>
-  proteger(buscar<Indicadores>("/indicadores"));
+/**
+ * `?de=&ate=` (AAAA-MM-DD, pontas inclusivas) para as rotas que recortam no
+ * servidor. Ponta ausente fica fora da query -- a API trata ausencia como
+ * "sem corte", e mandar string vazia viraria 400.
+ */
+function queryDePeriodo(de?: string | null, ate?: string | null): string {
+  const consulta = new URLSearchParams();
+  if (de) consulta.set("de", de);
+  if (ate) consulta.set("ate", ate);
+  const texto = consulta.toString();
+  return texto ? `?${texto}` : "";
+}
 
-export const listarConversas = () =>
-  proteger(buscar<ResumoConversa[]>("/conversas"));
+export const obterIndicadores = (de?: string | null, ate?: string | null) =>
+  proteger(buscar<Indicadores>(`/indicadores${queryDePeriodo(de, ate)}`));
+
+export const listarConversas = (de?: string | null, ate?: string | null) =>
+  proteger(buscar<ResumoConversa[]>(`/conversas${queryDePeriodo(de, ate)}`));
+
+export type TermoDoLexico = {
+  termo: string;
+  ocorrencias: number;
+  /** Quanto o termo e mais frequente nesta classe do que nas outras, em [-1, 1]. */
+  distincao: number;
+};
+
+export type ClasseDoLexico = {
+  categoria: Categoria;
+  atendimentos: number;
+  palavras: TermoDoLexico[];
+  emojis: TermoDoLexico[];
+};
+
+export const obterLexico = (de?: string | null, ate?: string | null) =>
+  proteger(
+    buscar<{ classes: ClasseDoLexico[] }>(`/lexico${queryDePeriodo(de, ate)}`),
+  );
 
 export const obterConversa = (id: string) =>
   proteger(buscar<DetalheConversa>(`/conversas/${encodeURIComponent(id)}`));

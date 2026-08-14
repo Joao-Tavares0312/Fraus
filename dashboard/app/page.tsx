@@ -13,7 +13,9 @@
 
 import {
   obterConfiguracoes,
+  obterDetalhes,
   obterIndicadores,
+  obterLexico,
   obterSerieTemporal,
   type ResumoConversa,
 } from "@/lib/api";
@@ -50,13 +52,31 @@ export default async function Pagina(props: PageProps<"/">) {
   // As leituras sao independentes de proposito: se `/indicadores` cair, a
   // serie, a distribuicao e o lexico continuam de pe, e vice-versa.
   const periodoPedido = lerPeriodo(parametros);
-  const [recorte, indicadoresDoServidor, configuracoes, serieDaApi] =
+  const [recorte, indicadoresDoServidor, configuracoes, serieDaApi, lexicoDaApi] =
     await Promise.all([
-      carregarRecorte(parametros),
-      obterIndicadores(),
+      // Sem transcricoes: serie, lexico e tempo mediano vem AGREGADOS do
+      // servidor agora, e baixar toda conversa so para derivar de novo era o
+      // ultimo N+1 desta tela.
+      carregarRecorte(parametros, { comDetalhes: false }),
+      obterIndicadores(periodoPedido.de, periodoPedido.ate),
       obterConfiguracoes(),
       obterSerieTemporal(periodoPedido.de, periodoPedido.ate),
+      obterLexico(periodoPedido.de, periodoPedido.ate),
     ]);
+
+  // PLANO B: as transcricoes so sao baixadas se algum agregado do servidor
+  // falhou -- e o unico caso em que a derivacao no cliente ainda roda. No
+  // caminho feliz esta tela nao le transcricao nenhuma.
+  let detalhes = recorte.detalhes;
+  let falhasDeDetalhe = recorte.falhas;
+  if (
+    (!serieDaApi.ok || !indicadoresDoServidor.ok || !lexicoDaApi.ok) &&
+    !recorte.erro
+  ) {
+    const baixados = await obterDetalhes(recorte.resumos.map((r) => r.id));
+    detalhes = baixados.detalhes;
+    falhasDeDetalhe = baixados.falhas;
+  }
 
   // As faixas de referencia da latencia sao as VIGENTES, nao constantes do
   // front -- e a tela de Configuracoes que as move.
@@ -64,44 +84,44 @@ export default async function Pagina(props: PageProps<"/">) {
     configuracoes.ok ? configuracoes.dado.vigente.limiares_latencia_s : null,
   );
 
-  const { periodo, extensao, rotulo, sufixo, resumos, detalhes, erro } = recorte;
+  const { periodo, extensao, rotulo, sufixo, resumos, erro } = recorte;
 
   /*
-   * De onde vem cada indicador:
-   *
-   * SEM filtro, o numero e o do SERVIDOR (`/indicadores`) -- fonte da verdade,
-   * calculada em Python pelas mesmas funcoes que gravam a categoria.
-   *
-   * COM filtro, `/indicadores` responde a outra pergunta (o banco inteiro), e
-   * exibi-lo ao lado de uma tabela recortada seria mentira. Entao o recorte
-   * agrega no cliente -- mas agregando a CATEGORIA que o servidor ja gravou,
-   * nunca recalculando score ou nota (invariante 3).
+   * O SERVIDOR responde pelo recorte: `/indicadores?de=&ate=` recebe o mesmo
+   * periodo da URL, entao o numero dele e a fonte da verdade com ou sem
+   * filtro -- calculado em Python pelas mesmas funcoes que gravam a
+   * categoria. A agregacao no cliente sobrevive so como plano B de falha do
+   * endpoint, agregando a CATEGORIA gravada, nunca recalculando score.
    */
   const filtrado = periodoEstaAtivo(periodo);
-  const doCliente = indicadoresDoPeriodo(resumos, detalhes);
-  const indicadores =
-    filtrado || !indicadoresDoServidor.ok
-      ? doCliente
-      : {
-          ...doCliente,
-          nps: indicadoresDoServidor.dado.nps,
-          csat: indicadoresDoServidor.dado.csat,
-          containment: indicadoresDoServidor.dado.total_conversas
-            ? indicadoresDoServidor.dado.containment_rate
-            : null,
-          total: indicadoresDoServidor.dado.total_conversas,
-          semSinal: indicadoresDoServidor.dado.sem_sinal,
-        };
+  const indicadores = indicadoresDoServidor.ok
+    ? {
+        nps: indicadoresDoServidor.dado.nps,
+        csat: indicadoresDoServidor.dado.csat,
+        containment: indicadoresDoServidor.dado.total_conversas
+          ? indicadoresDoServidor.dado.containment_rate
+          : null,
+        total: indicadoresDoServidor.dado.total_conversas,
+        semSinal: indicadoresDoServidor.dado.sem_sinal,
+        comSinal:
+          indicadoresDoServidor.dado.total_conversas -
+          indicadoresDoServidor.dado.sem_sinal,
+      }
+    : indicadoresDoPeriodo(resumos, detalhes);
 
   // A serie vem AGREGADA do servidor. O calculo sobre as transcricoes fica
   // como plano B: se `/serie-temporal` falhar, o grafico continua de pe com o
-  // que a pagina ja baixou, em vez de sumir junto com o endpoint.
+  // que o plano B baixou, em vez de sumir junto com o endpoint.
   const serie = serieDaApi.ok
     ? serieDoServidor(serieDaApi.dado.pontos)
     : serieDiaria(detalhes);
   const distribuicao = distribuicaoDeNotas(resumos);
-  const classes = lexicoPorClasse(detalhes);
-  const tempoMediano = tempoMedianoDeResposta(detalhes);
+  const classes = lexicoDaApi.ok
+    ? lexicoDaApi.dado.classes
+    : lexicoPorClasse(detalhes);
+  const tempoMediano = indicadoresDoServidor.ok
+    ? indicadoresDoServidor.dado.tempo_mediano_resposta_s
+    : tempoMedianoDeResposta(detalhes);
   const piores: ResumoConversa[] = pioresAtendimentos(resumos, PIORES_NA_TELA);
 
   return (
@@ -201,22 +221,32 @@ export default async function Pagina(props: PageProps<"/">) {
           )}
         </Painel>
 
+        {/* A lista de "derivado na interface" agora so existe em FALHA de
+            endpoint: no caminho feliz, serie, indicadores, tempo mediano e
+            lexico vem agregados do servidor e nao ha derivacao a declarar. */}
         <NotaMetodologica
           derivados={[
-            `a série diária de NPS e de latência de ${rotulo}, agregada por data de início a partir das transcrições`,
-            "o tempo mediano de resposta, calculado dos timestamps de cada par cliente → resposta",
-            "as palavras e emojis característicos de cada categoria, contados das falas do cliente",
-            ...(filtrado
+            ...(!serieDaApi.ok
               ? [
-                  "os quatro indicadores do recorte, agregados a partir das categorias que o servidor gravou — porque a API não aceita filtro de data",
+                  `a série diária de NPS e de latência de ${rotulo}, agregada das transcrições — porque GET /serie-temporal falhou`,
+                ]
+              : []),
+            ...(!indicadoresDoServidor.ok
+              ? [
+                  "os indicadores e o tempo mediano de resposta, agregados das categorias e timestamps que o servidor gravou — porque GET /indicadores falhou",
+                ]
+              : []),
+            ...(!lexicoDaApi.ok
+              ? [
+                  "as palavras e emojis característicos de cada categoria, contados das falas do cliente — porque GET /lexico falhou",
                 ]
               : []),
           ]}
         />
 
-        {recorte.falhas > 0 ? (
+        {falhasDeDetalhe > 0 ? (
           <p className="text-xs text-muted-foreground">
-            {recorte.falhas} transcrição(ões) não carregaram e ficaram fora dos
+            {falhasDeDetalhe} transcrição(ões) não carregaram e ficaram fora dos
             agregados derivados. O último atendimento lido começou em{" "}
             {detalhes.length > 0
               ? formatarDataHora(detalhes[detalhes.length - 1].iniciada_em)
