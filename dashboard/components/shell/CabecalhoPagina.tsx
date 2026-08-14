@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { FiltroPeriodo } from "./FiltroPeriodo";
 import { rotuloPeriodo, type Extensao, type Periodo } from "@/lib/periodo";
@@ -48,7 +47,10 @@ export function CabecalhoPagina({
 
         {periodo ? (
           <>
-            <Separator />
+            {/* A regua fraca do sistema (--compasso), nao o separador cheio:
+                titulo e filtro sao o MESMO bloco de contexto, e a divisoria
+                forte os apresentava como secoes independentes. */}
+            <div aria-hidden className="h-px bg-compasso" />
             <div className="sem-impressao flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <FiltroPeriodo periodo={periodo} extensao={extensao ?? null} />
               <p className="text-xs text-muted-foreground">

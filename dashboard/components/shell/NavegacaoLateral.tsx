@@ -87,7 +87,15 @@ export function NavegacaoLateral() {
         <SidebarMenuButton
           isActive={ativa}
           tooltip={rotulo}
-          className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:font-medium"
+          // O icone descansa em muted e so ACENDE no item ativo -- e acende em
+          // dourado porque secao ativa e foco, territorio legitimo do
+          // `--primary` (DESIGN.md 3.3). A barra de 2px e o aria-current
+          // continuam: cor nunca e o unico canal.
+          //
+          // `data-[active]:`, sem `=true`: o base-ui seta `data-active=""`
+          // como atributo booleano, e o seletor com valor nunca casava -- a
+          // barra prometida aqui passou meses sem existir na tela.
+          className="transition-colors duration-150 ease-fluid [&>svg]:text-muted-foreground [&>svg]:transition-colors [&>svg]:duration-150 hover:[&>svg]:text-sidebar-foreground data-[active]:border-l-2 data-[active]:border-primary data-[active]:font-medium data-[active]:[&>svg]:text-primary"
           render={
             <Link href={`${href}${sufixo}`} aria-current={ativa ? "page" : undefined} />
           }
@@ -105,7 +113,7 @@ export function NavegacaoLateral() {
         <Link
           href={`/${sufixo}`}
           aria-label="Fraus — voltar para a visão geral"
-          className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none transition-colors duration-150 ease-fluid hover:bg-sidebar-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Image
             src="/fraus-logo.png"
