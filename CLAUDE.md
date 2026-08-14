@@ -3,6 +3,12 @@
 Ferramenta de IA que analisa atendimentos de chatbot e mede satisfação do cliente
 **sem LLM em runtime**. Trabalho acadêmico, será apresentado numa banca.
 
+> **Sessão nova? Leia [docs/handoff.md](docs/handoff.md) primeiro.** Ele traz o
+> estado atual, as regras que governam este código com o motivo de cada uma
+> (várias parecem erro até você saber por que existem), as pendências em ordem
+> e as armadilhas já pagas. Para trabalho de interface, `dashboard/DESIGN.md` e
+> `dashboard/PRODUCT.md` são obrigatórios.
+
 ---
 
 ## Arquitetura em uma tela

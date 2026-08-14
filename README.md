@@ -209,50 +209,46 @@ mudar depois exige reiniciar o processo.
 O que falta, em ordem de importância. Cada item diz o que existe hoje e o que
 o desbloqueia.
 
-### 1. Treinar o modelo — bloqueia tudo o que é "IA de verdade"
+### 1. Retreinar a cabeça de ironia — vazamento de corpus MEDIDO
 
-Enquanto os artefatos não existirem, o que roda é o **motor dublê** do servidor
-de demonstração: pontuação determinística derivada do texto, sem modelo nenhum.
-A interface é honesta sobre isso — a tela **Modelo** mostra as métricas de
-treino em estado vazio em vez de inventar número — mas nada do que ela exibe é
-predição.
+**As três cabeças estão treinadas e no ar** (satisfação, emoção e ironia), e o
+`api_demo` carrega o motor real quando os pesos estão em `modelos/`. O dublê
+determinístico só entra se eles faltarem, ou com `FRAUS_DEMO_DUBLE=1`.
 
-Para destravar: rodar `notebooks/01_treino_bertimbau.ipynb` e depois
-`notebooks/02_treino_fusor.ipynb` no Colab, e colocar em `modelos/` a pasta
-`bertimbau-satisfacao/`, o `fusor.joblib` e o `metricas.json`. Aí
-`uvicorn fraus.api.main:app` sobe com o motor real.
+O que ficou aberto é a **ironia**. Ela reporta acurácia `1.0` — e não sobrevive
+a fala de atendimento: **6 em 10 frases sinceras** saem marcadas como irônicas,
+com 0,999 de confiança. A causa está medida e nomeada em
+`tests/test_ironia_dominio.py`: as dezoito atenuações do gerador abriam com
+marcador de discurso (`imagina,`, `tranquilo,`, `olha só,`) e nenhuma família
+sincera tinha marcador — o modelo aprendeu **registro conversacional** em vez
+de pragmática. Não dá para consertar por limiar: os falsos positivos saem
+saturados, em 0,97 ou mais.
 
-### 2. Notebooks 03 e 04 — as 7 emoções e a ironia
+**O gerador já foi corrigido** (marcador sorteado nas duas classes, pelo mesmo
+gargalo dos emojis e da caixa) e ganhou o teste que faltava. Falta rodar
+`notebooks/04_treino_ironia.ipynb` de novo e substituir
+`modelos/bertimbau-ironia/`. Até lá a probabilidade de ironia é exibida como
+**indício com a ressalva colada**, nunca como veredito.
 
-Requisito de banca ainda não entregue. Os módulos `fraus/sinais/emocao.py`,
-`fraus/sinais/lexico.py` e `fraus/sinais/ironia.py` existem e estão cobertos por
-testes, e os notebooks `03_treino_emocao.ipynb` e `04_treino_ironia.ipynb` estão
-escritos — falta **rodar**. As features só entram no vetor do fusor depois que os
-modelos existirem: expandir `NOMES_FEATURES` antes disso quebraria o notebook 02
-e a API sem nada em troca.
+### 2. As features de emoção e ironia ainda não entram no fusor
 
-**Os dois rodam hoje.** O 03 usa o `go_emotions_ptbr`, que é público. O 04
-**gera o próprio corpus** (`ORIGEM='sintetico'`), porque não existe corpus de
-ironia PT-BR aberto, com texto e em tamanho treinável — levantamento verificado
-em [docs/treinamento.md](docs/treinamento.md). O corpus mais citado
-(Gonçalves et al., BraSNAM 2015) foi coletado por `#sarcasm`/`#irony` e é **em
-inglês**; traduzir repetiria o vazamento de procedência que já custou o
-primeiro fusor.
+O fusor tem **16 features** — texto, emoji e tempo — e nenhuma vem das cabeças
+de emoção e ironia. Elas são **leitura, não julgamento**: descrevem a fala sem
+mover a nota, e toda resposta que as carrega marca isso em
+`sinais_fora_do_score`.
 
-O gerador é o mesmo movimento já aceito no sinal de tempo, e vem blindado
-contra vazamento: fatos negativos e palavras elogiosas aparecem nas **duas**
-classes, então só a incongruência separa. Cada propriedade tem teste.
-**A métrica interna é otimista por construção** e precisa ser declarada assim.
+Subir o contrato de 16 para 30 features e **retreinar o fusor** é o passo que
+as coloca na nota — e ele só faz sentido depois da pendência 1, porque treinar
+o fusor sobre uma cabeça de ironia que erra 6 em 10 injetaria o vazamento dela
+no score.
 
-Existem dois corpora PT-BR reais, ambos sem download público — a tese de
+Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),
 com 1.186 exemplos anotados por três humanos, e o
 [projeto IDPT/UFPel](https://institucional.ufpel.edu.br/projetos/id/u3345).
 Qualquer um dos dois serve como **conjunto de teste independente**, o papel que
-o XED-pt cumpre no notebook 03.
-
-Depois dos dois: subir o contrato de 16 para 30 features e **retreinar o fusor**.
-Detalhes de corpus, rótulo e limitação em
+o XED-pt cumpre no notebook 03 — e é o que falta para a ironia ter uma métrica
+que não seja otimista por construção. Detalhes de corpus, rótulo e limitação em
 [docs/treinamento.md](docs/treinamento.md).
 
 ### 3. O resto da dívida de escala
@@ -270,11 +266,18 @@ O que ainda falta para matar o N+1 de vez:
 - um agregado de **léxico por classe** e de **tempo mediano de resposta**, os
   dois últimos consumidores de transcrição na Visão geral.
 
-### 4. Atribuição por sentença do classificador
+### 4. Autenticação, antes de qualquer hospedagem
 
-O endpoint de atribuição existe, mas a transcrição só marca evidência
-**observável** (polaridade de emoji e tempo de espera). A contribuição do sinal
-de texto por sentença depende do modelo treinado — cai junto com a pendência 1.
+A **chave de API** protege só a ingestão (`POST /ingestao`). Todo o resto —
+inclusive `POST /integracoes/fontes/{id}/chave`, que gera a chave — continua
+sem autenticação, porque o Fraus foi feito para rodar local. Quem alcança a URL
+lê todas as conversas e gera uma chave para si.
+
+Isso é aceitável no banco do simulador e **não é** com atendimento real: o
+adaptador da Totalk já traz conversa de cliente de verdade para dentro, e o
+texto das mensagens carrega nome, documento e endereço mesmo com as colunas de
+contato descartadas. Publicar com dado real exige autenticação na API inteira
+antes. Ver [docs/hospedagem.md](docs/hospedagem.md).
 
 ### 5. Definição da empresa
 
@@ -286,8 +289,14 @@ que conta como bom tempo de resposta.
 
 - **Tema claro.** A dashboard é dark-only, herdado do chassi. Projetor de banca
   costuma lavar tema escuro, e adicionar depois é retrabalho.
-- **Merge da branch.** `feat/motor-e-dashboard` está no PR #1, ainda não
-  integrada em `main`.
+- **`scikit-learn` sem pin.** O `fusor.joblib` foi serializado com a 1.6.1 e a
+  venv local tem a 1.9.0; o sklearn avisa que o resultado *pode* ser inválido.
+  Os scores conferidos estão sãos (espalhamento 0–99,9, categorias coerentes),
+  mas para o trabalho ser reprodutível o pin precisa existir — o `Dockerfile`
+  já fixa `scikit-learn==1.6.1`, o `pyproject.toml` não.
+- **`content/fraus` na raiz.** Notebook 01 que o Colab salvou no caminho de
+  dentro dele, sem extensão, no commit `66fde10`. Duplicata do que já vive em
+  `notebooks/`; é lixo e pode ser removido.
 
 ## Desenvolvimento
 

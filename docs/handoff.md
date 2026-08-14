@@ -1,0 +1,296 @@
+# Handoff — Fraus, 14/08/2026
+
+Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
+você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
+porque várias delas parecem erro até você saber por que existem.
+
+O trabalho é o **TCC do João** (pt-BR). Fale em português com ele.
+
+---
+
+## 1. O que o Fraus é, em três frases
+
+Ferramenta que lê atendimento por chatbot e **estima satisfação sem perguntar
+nada ao cliente** — a tese é que "ok, obrigado 🙂" e sair insatisfeito é o caso
+que uma pesquisa de NPS declarada não captura.
+
+**Requisito de banca: nenhum LLM em runtime.** Três BERTimbau fine-tunados
+(satisfação, emoção, ironia) e um fusor `LogisticRegression`. Se você se pegar
+propondo chamar uma API de LLM para resolver alguma coisa, parou — isso invalida
+o trabalho.
+
+Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
++ Recharts no front (`dashboard/`).
+
+---
+
+## 2. Estado atual — 14/08/2026
+
+| | |
+|---|---|
+| Branch | `main` (limpa, tudo pushado, `556fb4f`) |
+| Testes | **282 passando**, 1 deselecionado (marcado `lento`) |
+| Modelos | os três em `modelos/`, 1,3 GB, **fora do git** |
+| API | `uv run python scripts/api_demo.py` → :8000 |
+| Dashboard | `cd dashboard && npm run build && npx next start -p 3000` |
+
+### Como subir
+
+```bash
+uv run python scripts/api_demo.py            # :8000, carrega os 3 modelos
+cd dashboard && npm run build && npx next start -p 3000
+```
+
+O boot da API imprime qual motor subiu. Se aparecer "motor dublê", os pesos não
+estão em `modelos/` — números sintéticos, **não** predição.
+
+### Comandos de verificação
+
+```bash
+uv run pytest -q                 # 282, rápido
+uv run pytest -m lento           # o de minutos, obrigatório ao mexer no gerador
+cd dashboard && npx tsc --noEmit # tipos
+cd dashboard && npm run contraste # WCAG AA, por cálculo
+```
+
+---
+
+## 3. As regras que governam este código
+
+Não são preferências de estilo. Cada uma nasceu de um defeito real, e violá-las
+é reintroduzir o defeito.
+
+### 3.1 Ausência nunca vira zero
+
+A regra mais importante do projeto. `None`/`null` e `0` significam coisas
+diferentes e **não podem se confundir em lugar nenhum**:
+
+- conversa sem fala do cliente tem `score: null`, não `0` — "o cliente não
+  falou" não é "o cliente estava insatisfeito";
+- conversa sem atendente humano tem `latencia_mediana_humano_s: null`, exibido
+  como travessão e exportado como célula **vazia** no CSV — `0.0` numa coluna de
+  tempo de resposta se lê como "respondeu na hora", e a conversa que nunca teve
+  atendente apareceria como a mais ágil da operação;
+- palavra acima do teto de medição tem `peso: null`, e palavra medida em zero
+  tem `peso: 0` — "não medimos" e "medimos e não importou" são respostas
+  diferentes;
+- métrica não exportada é `null`, nunca `0%`.
+
+Ordenação segue junto: nota e espera mandam a ausência **para o fim nos dois
+sentidos** (`TabelaConversas.ausenciaPorUltimo`).
+
+### 3.2 Sem horário, sem nota
+
+Latência é uma das 16 features do fusor, com peso aprendido. Uma transcrição de
+`.docx`/`.pdf` sem relógio não recebe nota, e a tela diz por quê.
+
+Zerar os campos de tempo seria o caminho fácil e **zero não é neutro**: o modelo
+aprendeu que resposta rápida acompanha cliente satisfeito, então a conversa
+entraria como se toda resposta tivesse sido instantânea e a nota sairia melhor
+que a verdade — sem nenhum erro aparecer. Ver `fraus/ingest/transcricao.py`.
+
+### 3.3 O veredito é sempre derivado no servidor
+
+`score`, `nota` e `categoria` nunca vêm do cliente. Campos com esses nomes no
+corpo de uma requisição são **ignorados por construção** — há teste para
+`/conversas/importar` e para `/ingestao`. O canal também: na ingestão ele vem
+da **fonte cadastrada**, não do corpo.
+
+A `nota` é derivada no Python e o front só exibe. Recalcular no JavaScript já
+divergiu nas fronteiras 6/7 e 8/9 (arredondamento bancário contra meio-para-cima)
+e fazia a tabela mostrar nota 7 ao lado de "Detrator".
+
+### 3.4 Emoção e ironia são leitura, não julgamento
+
+O fusor tem **16 features** e nenhuma vem dessas duas cabeças (confira
+`fraus.fusor.NOMES_FEATURES`). Toda resposta que as carrega marca
+`sinais_fora_do_score`, e a interface as mantém **visualmente separadas** da
+nota — encostar "ironia 99%" na barra de satisfação convida a ler uma como causa
+da outra.
+
+### 3.5 O que ficou de fora é relatado
+
+Importação diz quantas linhas rejeitou e por quê. Análise diz quantas conversas
+cortou. O adaptador da Totalk diz **o que inferiu**. "Importado com sucesso" sem
+a contagem de rejeitadas esconde exatamente a linha que precisa de conserto.
+
+### 3.6 Estado vazio nomeia o próximo passo
+
+Nada de "sem dados". O estado vazio diz o endpoint ou o notebook que preenche
+aquilo. Ver `components/EstadoVazio.tsx`.
+
+### 3.7 Ressalva repetida vira ruído
+
+Já corrigido duas vezes: o aviso de métrica suspeita era por cartão (3×) e virou
+por cabeça; a prosa do desprezo/ironia era por mensagem (até 19×) e virou uma
+vez na legenda do painel. Se você repetir uma explicação em cada item de uma
+lista, ela para de ser lida.
+
+---
+
+## 4. Mapa do código
+
+### Back — `fraus/`
+
+| arquivo | o que é |
+|---|---|
+| `modelos.py` | modelo canônico: `Conversa`, `Mensagem`. Timestamp **timezone-aware** obrigatório |
+| `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 16 |
+| `resumo.py` | ficha operacional: contagem por autor, latências **separadas** bot/humano, `desfecho` |
+| `indicadores.py` | NPS, CSAT, contenção, série diária |
+| `credencial.py` | chave de API: gerar, hash, conferir em tempo constante |
+| `db.py` | SQLite. `_fonte()` remove `chave_hash` **na origem** |
+| `sinais/texto.py` | BERTimbau de satisfação — **o único que pontua** |
+| `sinais/emocao.py` | 7 de Ekman + desprezo derivado (Plutchik, média geométrica) |
+| `sinais/ironia.py` | binária. **Ver pendência 1** |
+| `sinais/palavras.py` | peso por palavra via **oclusão** + vocabulário comparado |
+| `sinais/tempo.py` | latências. `latencias_da_conversa` é pública de propósito |
+| `ingest/csv_driver.py` | o driver **canônico** |
+| `ingest/totalk.py` | adaptador do export da Totalk |
+| `ingest/transcricao.py` | prosa (`Autor: mensagem`) de docx/pdf |
+| `ingest/arquivos.py` | decide o formato e traduz erro em mensagem útil |
+| `ingest/gerador_ironia.py` | corpus sintético blindado contra vazamento |
+| `api/main.py` | ~1200 linhas. `criar_app(banco, motor, raiz)` recebe tudo por parâmetro |
+
+### Front — `dashboard/`
+
+Telas: `/` (visão geral), `/atendimentos`, `/analisar`, `/modelo`,
+`/configuracoes`, `/integracoes`.
+
+`lib/api.ts` é a **única** porta para a API — tipos e funções. `lib/formato.ts`
+concentra formatação (`formatarEsperaOuTraco` é quem transforma `null` em `—`).
+
+`components/CabecasDeLeitura.tsx` é **compartilhado** entre o simulador e a
+análise. Não faça uma segunda cópia: duas cópias de um painel que explica um
+modelo envelhecem separadas, e a que envelhece é sempre a que ninguém olha.
+
+---
+
+## 5. Design — leia antes de mexer em pixel
+
+**`dashboard/DESIGN.md` e `dashboard/PRODUCT.md` são obrigatórios.** O mundo
+visual se chama **"Pauta"** e a regra mestra é:
+
+> Acima da linha é o que foi **DITO**. Abaixo da linha é o que foi **MEDIDO**.
+
+Encoding que atravessa tudo:
+
+- **âmbar** (`--dito`) = fala, texto, emoji;
+- **azul** (`--medido`) = score, probabilidade, tendência;
+- **dourado** (`--primary`) = ação e foco, **nunca dado**.
+
+O `--primary` é o dourado do R da logo, medido do arquivo:
+`oklch(0.78 0.085 80)`. Ele convive com o âmbar porque o que os separa é o
+**croma** (0,085 fosco contra 0,15 saturado), e porque nunca dividem superfície.
+Detalhes e o par de risco em `DESIGN.md` §3.3.
+
+**Intocáveis declarados pelo João:** os textos de honestidade, o gráfico
+sobreposto NPS × latência, e âmbar=dito / azul=medido.
+
+`npm run contraste` verifica AA **por cálculo**, incluindo o rótulo dentro do
+botão. Rode depois de mexer em cor.
+
+---
+
+## 6. Skills a usar
+
+Instaladas em `~/.claude/skills/`. As que servem a este projeto:
+
+| skill | quando |
+|---|---|
+| **impeccable** | qualquer trabalho de UI. Modo **Operate** (é ferramenta de dados, não landing page). `PRODUCT.md` e `DESIGN.md` já existem — ela os lê |
+| **taste-skill** | auditoria de frontend, antes de propor redesenho |
+| **redesign-skill** | auditoria de execução: ritmo tipográfico, densidade, estados |
+| **security-audit** | **relevante de verdade aqui** — API sem autenticação nas rotas de leitura + PII de cliente real |
+| **superpowers:brainstorming** | antes de planejar feature nova |
+| **superpowers:systematic-debugging** | antes de caçar bug |
+
+As demais (`access`, `configure`, `silence`, `who`, `decisions`,
+`flow-patterns`) são do assistente Discord do João, **não deste projeto**.
+
+Ao invocar a `impeccable`, não deixe ela redirecionar a paleta: as decisões de
+cor estão fechadas e documentadas.
+
+---
+
+## 7. Pendências, em ordem
+
+O `README.md` tem a lista canônica e foi atualizado hoje. Resumo:
+
+### P0 — Retreinar a ironia
+
+A cabeça reporta acurácia `1.0` e erra **6 em 10** falas sinceras de
+atendimento, com 0,999 de confiança. Causa medida: vazamento de marcador de
+discurso no gerador. **O gerador já foi corrigido**; falta rodar
+`notebooks/04_treino_ironia.ipynb` no Colab e substituir
+`modelos/bertimbau-ironia/`.
+
+Verificação: `uv run pytest tests/test_ironia_dominio.py`. Se o modelo melhorar,
+**aperte os limiares desse arquivo junto** — limiar frouxo que nunca falha não
+mede nada. E se `test_acuracia_perfeita_do_relatorio_vale_so_no_corpus_gerado`
+passar a falhar, a limitação foi superada e os textos de ressalva na interface
+precisam ser reescritos, não mantidos por inércia.
+
+### P0 — Autenticação, antes de hospedar
+
+A chave protege só `POST /ingestao`. As rotas de leitura são abertas, e o
+adaptador da Totalk já traz conversa de cliente real. **Não publique com dado
+real antes disso.** Ver `docs/hospedagem.md`.
+
+### P1 — Emoção e ironia no fusor
+
+Subir o contrato de 16 para 30 features e retreinar. Só depois do P0 da ironia:
+treinar sobre uma cabeça que erra 6 em 10 injetaria o vazamento dela no score.
+
+### P1 — Hospedagem
+
+`Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**
+(torch instalado = 497 MB contra teto de 250 MB da Vercel, mais 1,3 GB de
+pesos). Precisa de container com volume e ~2 GB de RAM. O front na Vercel é um
+comando — e mostra "API não respondeu" até a API ter endereço.
+
+### P2 — Dívida de escala
+
+`GET /conversas?de=&ate=` e `GET /indicadores?de=&ate=`; agregado de léxico por
+classe e de tempo mediano de resposta.
+
+### P2 — Decisões do João
+
+Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
+`scikit-learn==1.6.1` no `pyproject.toml`, e remover `content/fraus` da raiz.
+
+---
+
+## 8. Armadilhas já pagas — não repita
+
+1. **Data da Totalk é `MM/DD/YYYY`**, não `DD/MM`. Lida como brasileira, espalha
+   as mensagens por cinco meses e a latência sai absurda **em silêncio**.
+2. **Não mate servidor com `pkill`** — não casa `npx next start`. Use a porta:
+   `Get-NetTCPConnection -LocalPort 3000 -State Listen | Stop-Process -Force`.
+3. **Não rode `npm run build` com o `next dev` do João no ar** — invalida os
+   hashes dos chunks e a tela vira 403 em tudo. Já foi diagnosticado como "tela
+   feia" uma vez.
+4. **CORS é lista explícita**: `FRAUS_ORIGENS` libera 3000/3001. Teste na 3002 e
+   a chamada do navegador falha — foi assim que descobrimos que a proteção
+   funciona.
+5. **Coluna ausente é defeito do ARQUIVO**, não da linha: o driver deixa o
+   `KeyError` propagar e a borda HTTP traduz em 400 nomeando a coluna. Não
+   capture no driver.
+6. **`<input type=file>` só dispara `change` quando o valor muda.** Zere
+   `evento.target.value` ou reenviar o mesmo arquivo não faz nada.
+7. **Oclusão quebra expressão fixa**: "Bom dia" sem "dia" vira "Bom" solto, e
+   "dia" recebe peso alto e enganoso. Está declarado na interface — não trate
+   como bug.
+
+---
+
+## 9. Convenções
+
+Commits em **conventional commits**, assunto **sem acento**, corpo em pt-BR
+explicando **por quê** (veja o histórico — a régua é alta e é intencional; esses
+commits são material de defesa do TCC).
+
+**Não assine commits com Claude como co-autor.**
+
+Comentários e docstrings em pt-BR sem acento no código Python; texto de
+interface em pt-BR **com** acento.
