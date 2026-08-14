@@ -42,13 +42,13 @@ export default async function PaginaModelo() {
           titulo="Modelo"
           subtitulo="Pesos, métricas, lexicon e simulador — a ficha da IA que pontua os atendimentos."
         />
-        <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
           <EstadoVazio
             titulo="A ficha do modelo não carregou"
             explicacao={`${resultado.erro}. Sem ela não há peso, métrica nem faixa a exibir — e preencher com valores plausíveis seria descrever um modelo que ninguém consultou.`}
             endpoint="GET /modelo"
           />
-        </main>
+        </div>
       </>
     );
   }
@@ -63,7 +63,7 @@ export default async function PaginaModelo() {
         subtitulo="A ficha da IA que pontua os atendimentos: quanto cada sinal pesa, o que o treino mediu, que tabela de emoji está em uso e o que o classificador responde a uma frase nova."
       />
 
-      <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         <Painel
           titulo="Simulador ao vivo"
           legenda="Escreva uma fala de cliente e veja a resposta do classificador agora. Nada é persistido, nada é inventado: as três probabilidades e os emojis detectados vêm inteiros de POST /modelo/simular."
@@ -154,7 +154,7 @@ export default async function PaginaModelo() {
         >
           <LexiconEmoji total={modelo.total_emojis_lexicon} />
         </Painel>
-      </main>
+      </div>
     </>
   );
 }

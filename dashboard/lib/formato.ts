@@ -78,6 +78,41 @@ export function formatarDiaCurto(dia: string): string {
   return `${resto}/${mes}`;
 }
 
+/**
+ * Tempo de espera, ou o travessão quando ele NAO EXISTIU.
+ *
+ * O nulo tem que virar traço, nunca "0 s": zero numa coluna de tempo de
+ * resposta se le como "respondeu na hora", e a conversa que nunca teve
+ * atendente humano apareceria como a mais agil da operacao. O travessao diz a
+ * verdade -- nao houve essa espera para medir.
+ */
+export function formatarEsperaOuTraco(segundos: number | null): string {
+  return segundos === null ? "—" : formatarSegundos(segundos);
+}
+
+/**
+ * Como o atendimento terminou. Conjunto fechado, definido em `fraus.resumo`.
+ *
+ * "Encerrada" nao afirma que o problema foi resolvido -- afirma que a conversa
+ * fechou, que e o unico fato que o dado sustenta.
+ */
+export const ROTULO_DESFECHO: Record<string, string> = {
+  sem_sinal: "Sem sinal",
+  escalada: "Escalada",
+  sem_resposta: "Sem resposta",
+  encerrada: "Encerrada",
+  em_aberto: "Em aberto",
+};
+
+/** O que cada desfecho quer dizer, para o `title` e a legenda da tela. */
+export const EXPLICACAO_DESFECHO: Record<string, string> = {
+  sem_sinal: "O cliente não falou. Não há atendimento a avaliar.",
+  escalada: "Passou para atendente humano.",
+  sem_resposta: "A última fala é do cliente e ninguém respondeu.",
+  encerrada: "A conversa fechou com o atendimento respondendo por último.",
+  em_aberto: "Sem registro de encerramento.",
+};
+
 export const ROTULO_CATEGORIA: Record<string, string> = {
   detrator: "Detrator",
   neutro: "Neutro",

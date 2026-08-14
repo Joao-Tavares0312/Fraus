@@ -3,6 +3,7 @@ import { formatarDataHora } from "@/lib/formato";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
+import { ResumoDaLista } from "@/components/atendimentos/ResumoDaLista";
 import {
   TabelaConversas,
   type LinhaConversa,
@@ -23,6 +24,18 @@ function paraLinha(resumo: ResumoConversa): LinhaConversa {
     // categoria "Detrator". A fonte da verdade e uma so.
     nota: resumo.nota,
     categoria: resumo.categoria,
+    // A ficha operacional vem DERIVADA do servidor (`fraus.resumo`), a mesma
+    // funcao que alimenta `/conversas/{id}`. A tela nao recalcula tempo de
+    // resposta: duas definicoes de latencia -- uma para a lista, outra para o
+    // detalhe -- fariam as duas telas discordarem sobre o mesmo atendimento.
+    qtd_mensagens: resumo.qtd_mensagens,
+    qtd_cliente: resumo.qtd_cliente,
+    qtd_bot: resumo.qtd_bot,
+    qtd_humano: resumo.qtd_humano,
+    latencia_primeira_resposta_s: resumo.latencia_primeira_resposta_s,
+    latencia_mediana_bot_s: resumo.latencia_mediana_bot_s,
+    latencia_mediana_humano_s: resumo.latencia_mediana_humano_s,
+    desfecho: resumo.desfecho,
   };
 }
 
@@ -42,10 +55,10 @@ export default async function PaginaAtendimentos(
         extensao={extensao}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         <Painel
           titulo={`Atendimentos de ${rotulo}`}
-          legenda="Ordenar por nota manda “sem sinal” para o fim nos dois sentidos — atendimento sem fala do cliente não é o pior atendimento, é um atendimento sem medição. O CSV exporta exatamente o que o filtro deixou em tela, com “sem sinal” escrito por extenso."
+          legenda="Ordenar por nota ou por espera manda a ausência para o fim nos dois sentidos — atendimento sem fala do cliente não é o pior atendimento, e conversa que nunca teve resposta humana não é a mais rápida da operação. Os tempos são medianas, não médias: espera de atendimento tem cauda longa, e um punhado de conversas esquecidas por horas puxaria a média para um valor que não descreve atendimento nenhum. “Encerrada” diz que a conversa fechou, não que o problema foi resolvido — resolução é julgamento, e nada no dado a sustenta. O CSV exporta o que o filtro deixou em tela, com “sem sinal” por extenso e a célula de tempo em branco quando a espera não existiu."
           semPadding
         >
           {erro ? (
@@ -56,15 +69,18 @@ export default async function PaginaAtendimentos(
               endpoint="GET /conversas"
             />
           ) : (
-            <TabelaConversas
-              linhas={resumos.map(paraLinha)}
-              sufixoDeQuery={sufixo}
-              nomeCsv="fraus-atendimentos"
-              rotuloDoPeriodo={rotulo}
-            />
+            <>
+              <ResumoDaLista linhas={resumos} />
+              <TabelaConversas
+                linhas={resumos.map(paraLinha)}
+                sufixoDeQuery={sufixo}
+                nomeCsv="fraus-atendimentos"
+                rotuloDoPeriodo={rotulo}
+              />
+            </>
           )}
         </Painel>
-      </main>
+      </div>
     </>
   );
 }

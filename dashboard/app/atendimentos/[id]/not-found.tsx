@@ -3,7 +3,7 @@ import { EstadoVazio } from "@/components/EstadoVazio";
 
 export default function NaoEncontrado() {
   return (
-    <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-10 sm:px-6">
+    <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-10 sm:px-6">
       <h1 className="text-lg font-semibold text-foreground">
         Atendimento não encontrado
       </h1>
@@ -20,6 +20,6 @@ export default function NaoEncontrado() {
           ← Todos os atendimentos
         </Link>
       </p>
-    </main>
+    </div>
   );
 }

@@ -113,7 +113,7 @@ export default async function Pagina(props: PageProps<"/">) {
         extensao={extensao}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col gap-7 px-4 py-5 sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-7 px-4 py-5 sm:px-6">
         {/*
           O PRIMEIRO SISTEMA. A tese da tela — o trade-off entre satisfação e
           tempo — abre a página, e os indicadores agregados ficam à esquerda
@@ -226,7 +226,7 @@ export default async function Pagina(props: PageProps<"/">) {
             .
           </p>
         ) : null}
-      </main>
+      </div>
     </>
   );
 }

@@ -38,7 +38,40 @@ export type ResumoConversa = {
    * e o servidor -- ele e quem grava a categoria.
    */
   nota: number | null;
+
+  /**
+   * Ficha operacional derivada pelo servidor em `fraus.resumo`.
+   *
+   * Os tempos vem `null` -- nunca `0` -- quando a espera nao existiu. Zero
+   * numa coluna de tempo de resposta se le como "respondeu na hora", e uma
+   * conversa que nunca teve atendente humano apareceria como a mais agil da
+   * operacao. Toda exibicao daqui precisa tratar o nulo como "não houve".
+   */
+  qtd_mensagens: number;
+  qtd_cliente: number;
+  qtd_bot: number;
+  qtd_humano: number;
+  latencia_primeira_resposta_s: number | null;
+  latencia_mediana_s: number | null;
+  latencia_mediana_bot_s: number | null;
+  latencia_mediana_humano_s: number | null;
+  duracao_s: number;
+  escalou_para_humano: boolean;
+  encerrada_em: string | null;
+  desfecho: Desfecho;
 };
+
+/**
+ * Como o atendimento terminou. Conjunto FECHADO e cada um verificavel no dado
+ * -- nao existe "resolvida", porque resolucao e julgamento sobre o problema do
+ * cliente e nada no dado a sustenta. A precedencia esta em `fraus.resumo`.
+ */
+export type Desfecho =
+  | "sem_sinal"
+  | "escalada"
+  | "sem_resposta"
+  | "encerrada"
+  | "em_aberto";
 
 export type Autor = "cliente" | "bot" | "humano";
 
@@ -49,8 +82,6 @@ export type Mensagem = {
 };
 
 export type DetalheConversa = ResumoConversa & {
-  encerrada_em: string | null;
-  escalou_para_humano: boolean;
   mensagens: Mensagem[];
 };
 

@@ -91,6 +91,38 @@ class Banco:
             ).fetchall()
         return [dict(linha) for linha in linhas]
 
+    def listar_com_conversa(self) -> list[tuple[dict, Conversa]]:
+        """Como `listar`, mas trazendo a conversa inteira junto de cada linha.
+
+        Existe para a lista de atendimentos poder mostrar tempo de resposta,
+        contagem de mensagens e desfecho -- coisas que so o `payload` sabe. A
+        alternativa era o cliente pedir `/conversas/{id}` de cada linha, um
+        N+1 que a dashboard ja pagou caro em outras telas.
+
+        Os agregados sao DERIVADOS na leitura, nunca gravados em coluna. Coluna
+        denormalizada envelheceria em silencio no dia em que a regra de
+        latencia mudasse, e a tabela passaria a exibir um numero que o resto do
+        sistema nao reconhece mais. O custo e ler e desserializar o JSON de
+        todas as conversas do recorte -- aceitavel na ordem de grandeza deste
+        projeto (milhares), e o ponto a trocar por uma materializacao se um dia
+        deixar de ser.
+        """
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT id, canal, iniciada_em, score, categoria, payload FROM conversas "
+                "ORDER BY iniciada_em DESC"
+            ).fetchall()
+        return [
+            (
+                {
+                    chave: linha[chave]
+                    for chave in ("id", "canal", "iniciada_em", "score", "categoria")
+                },
+                Conversa(**json.loads(linha["payload"])),
+            )
+            for linha in linhas
+        ]
+
     def buscar(self, conversa_id: str) -> tuple[Conversa, float | None, str | None] | None:
         with self._conectar() as conexao:
             linha = conexao.execute(

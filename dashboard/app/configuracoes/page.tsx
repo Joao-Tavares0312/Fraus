@@ -35,13 +35,13 @@ export default async function PaginaConfiguracoes() {
     return (
       <>
         <CabecalhoPagina titulo="Configurações" subtitulo={SUBTITULO} />
-        <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
           <EstadoVazio
             titulo="A configuração não carregou"
             explicacao={`${resultado.erro}. Sem ela não há faixa vigente nem padrão de fábrica a exibir — e preencher os campos com 0–6/7–8/9–10 digitados aqui criaria uma segunda fonte da mesma regra, que é exatamente o defeito que esta tela existe para não ter.`}
             endpoint="GET /configuracoes"
           />
-        </main>
+        </div>
       </>
     );
   }
@@ -52,7 +52,7 @@ export default async function PaginaConfiguracoes() {
     <>
       <CabecalhoPagina titulo="Configurações" subtitulo={SUBTITULO} />
 
-      <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         <Painel
           titulo="Faixas de NPS"
           legenda="Qual nota é detrator, neutro e promotor. É a mesma faixa que o servidor usa para responder /indicadores e /conversas, no mesmo instante — não existe cópia dela na interface."
@@ -107,7 +107,7 @@ export default async function PaginaConfiguracoes() {
             </li>
           </ul>
         </Painel>
-      </main>
+      </div>
     </>
   );
 }

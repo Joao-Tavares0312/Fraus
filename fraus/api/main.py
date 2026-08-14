@@ -36,6 +36,7 @@ from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10, serie_diaria)
 from fraus.ingest.csv_driver import carregar_csv
+from fraus.resumo import resumir
 from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
                                  desprezo_derivado)
 from fraus.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
@@ -424,6 +425,14 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
 
     @app.get("/conversas")
     def listar() -> list[dict]:
+        """Lista de atendimentos com a ficha operacional de cada um.
+
+        Alem de nota e categoria, cada linha carrega o que `fraus.resumo`
+        deriva da conversa: contagem de mensagens por autor, tempo de resposta
+        do bot e do humano SEPARADOS, duracao e desfecho. Vem tudo junto de
+        proposito -- a tela precisa disso por linha, e busca-los um a um era um
+        N+1 contra a API.
+        """
         # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
         # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
         faixas = faixas_vigentes()
@@ -432,8 +441,9 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
                 **linha,
                 "categoria": categoria_de(linha["score"], faixas),
                 "nota": nota_0_10(linha["score"]) if linha["score"] is not None else None,
+                **resumir(conversa),
             }
-            for linha in banco.listar()
+            for linha, conversa in banco.listar_com_conversa()
         ]
 
     @app.get("/conversas/{conversa_id}")
@@ -447,6 +457,11 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "score": score,
             "categoria": categoria_de(score, faixas_vigentes()),
             "nota": nota_0_10(score) if score is not None else None,
+            # A MESMA ficha operacional de `/conversas`, pela mesma funcao. A
+            # lista e o detalhe nao podem calcular tempo de resposta por
+            # caminhos diferentes: seria a divergencia que a nota derivada no
+            # servidor ja existe para evitar, repetida na coluna do lado.
+            **resumir(conversa),
         }
 
     @app.get("/conversas/{conversa_id}/atribuicao")

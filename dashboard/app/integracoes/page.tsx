@@ -45,7 +45,7 @@ export default async function PaginaIntegracoes() {
         subtitulo="De onde vêm os atendimentos: as fontes cadastradas, o estado de cada credencial no ambiente da API, e o histórico do que cada importação aceitou e rejeitou."
       />
 
-      <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         {/* A IMPORTACAO vem primeiro: e a acao da tela. Cadastro de fonte e
             historico descrevem e comprovam; so este bloco traz atendimento
             para dentro do produto. */}
@@ -115,7 +115,7 @@ export default async function PaginaIntegracoes() {
             <HistoricoImportacoes historico={importacoes.dado} />
           )}
         </Painel>
-      </main>
+      </div>
     </>
   );
 }
