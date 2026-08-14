@@ -106,6 +106,57 @@ def test_revogacao_vale_na_chamada_seguinte(tmp_path):
     assert resposta.json()["detail"] == "chave invalida"
 
 
+def _criar_fonte(cliente, cabecalhos):
+    resposta = cliente.post(
+        "/integracoes/fontes",
+        json={"nome": "totalk", "canal": "whatsapp", "tipo": "webhook"},
+        headers=cabecalhos,
+    )
+    assert resposta.status_code == 201
+    return resposta.json()
+
+
+def test_gerar_chave_de_fonte_exige_a_mestra(tmp_path):
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    mestra = {"Authorization": f"Bearer {MESTRA}"}
+    fonte = _criar_fonte(cliente, mestra)
+    corpo_acesso = _criar_chave_de_acesso(cliente)
+    leitura = {"Authorization": f"Bearer {corpo_acesso['chave']}"}
+    assert cliente.post(f"/integracoes/fontes/{fonte['id']}/chave", headers=leitura).status_code == 403
+    assert cliente.post(f"/integracoes/fontes/{fonte['id']}/chave", headers=mestra).status_code == 201
+    assert cliente.delete(f"/integracoes/fontes/{fonte['id']}/chave", headers=leitura).status_code == 403
+
+
+def test_ingestao_segue_regida_pela_chave_de_fonte(tmp_path):
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    mestra = {"Authorization": f"Bearer {MESTRA}"}
+    fonte = _criar_fonte(cliente, mestra)
+    chave_da_fonte = cliente.post(
+        f"/integracoes/fontes/{fonte['id']}/chave", headers=mestra
+    ).json()["chave"]
+
+    pedido = {
+        "id": "abc-1",
+        "mensagens": [
+            {
+                "autor": "cliente",
+                "texto": "obrigado",
+                "enviada_em": "2026-08-14T12:00:00+00:00",
+            }
+        ],
+    }
+    # A MESTRA nao autoriza a ingestao: uma credencial por rota.
+    recusada = cliente.post(
+        "/ingestao", json=pedido, headers=mestra
+    )
+    assert recusada.status_code == 401
+    aceita = cliente.post(
+        "/ingestao", json=pedido,
+        headers={"Authorization": f"Bearer {chave_da_fonte}"},
+    )
+    assert aceita.status_code == 201
+
+
 def test_listagem_nunca_expoe_hash(tmp_path):
     cliente = _cliente(tmp_path, chave_mestra=MESTRA)
     _criar_chave_de_acesso(cliente)

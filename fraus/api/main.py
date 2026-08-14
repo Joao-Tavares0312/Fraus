@@ -818,7 +818,9 @@ def criar_app(
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
     @app.post("/integracoes/fontes/{fonte_id}/chave", status_code=201)
-    def gerar_chave(fonte_id: int) -> dict:
+    def gerar_chave(
+        fonte_id: int, authorization: str | None = Header(default=None)
+    ) -> dict:
         """Gera a chave de API da fonte e a devolve EM CLARO uma unica vez.
 
         Nao ha rota para reler a chave depois, e isso e a feature: o banco
@@ -829,6 +831,7 @@ def criar_app(
         rotacao sem risco, mas a antiga seguiria aceita sem ninguem saber quem
         ainda a usa.
         """
+        _exigir_mestra(authorization)
         if banco.buscar_fonte(fonte_id) is None:
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
@@ -850,8 +853,11 @@ def criar_app(
         }
 
     @app.delete("/integracoes/fontes/{fonte_id}/chave", status_code=204)
-    def revogar_chave(fonte_id: int) -> None:
+    def revogar_chave(
+        fonte_id: int, authorization: str | None = Header(default=None)
+    ) -> None:
         """Invalida a chave da fonte. A fonte e as conversas dela continuam."""
+        _exigir_mestra(authorization)
         if banco.buscar_fonte(fonte_id) is None:
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
         banco.revogar_chave(fonte_id)
