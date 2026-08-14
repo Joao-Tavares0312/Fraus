@@ -23,7 +23,7 @@ import os
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError
 
@@ -37,7 +37,8 @@ from fraus.modelos import Conversa, Mensagem
 from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10, serie_diaria)
-from fraus.ingest.csv_driver import carregar_csv, carregar_texto
+from fraus.ingest.arquivos import ArquivoIlegivelError, extrair
+from fraus.ingest.csv_driver import carregar_csv
 from fraus.resumo import resumir
 from fraus.sinais.palavras import (contar_palavras, pesos_das_palavras,
                                    vocabulario)
@@ -147,6 +148,7 @@ class PedidoSimulacao(BaseModel):
 
 class PedidoAnalise(BaseModel):
     csv: str  # conteudo do arquivo; veredito continua sendo derivado aqui
+    nome: str | None = None  # so para escolher o leitor pela extensao
 
 
 class PedidoIngestao(BaseModel):
@@ -1011,23 +1013,61 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
                 ),
             )
 
-        try:
-            resultado = carregar_texto(pedido.csv)
-        except KeyError as erro:
-            # Mesma borda da importacao: o driver deixa coluna ausente
-            # propagar (defeito de esquema nao e dado sujo de uma linha) e quem
-            # fala HTTP traduz, nomeando a coluna que falta.
+        extracao = _extrair_ou_400(pedido.nome or "conversa.csv", pedido.csv.encode("utf-8"))
+        return _montar_analise(extracao)
+
+    @app.post("/analisar/arquivo")
+    async def analisar_arquivo(arquivo: UploadFile = File(...)) -> dict:
+        """Mesma analise, aceitando csv, xlsx, docx ou pdf.
+
+        Existe separada de `/analisar` porque formato binario nao cabe em JSON:
+        planilha e PDF nao sao texto, e obrigar o cliente a codificar em base64
+        inflaria o corpo em um terco por nada.
+
+        Continua sem gravar coisa alguma -- os bytes sao lidos em memoria e
+        descartados. Nao ha `open()` de escrita em lugar nenhum deste caminho.
+        """
+        dados = await arquivo.read()
+        if not dados:
+            raise HTTPException(status_code=400, detail="arquivo vazio")
+        if len(dados) > TETO_ARQUIVO_ANALISE:
             raise HTTPException(
                 status_code=400,
-                detail=f"coluna ausente no CSV: {erro.args[0]}",
+                detail=(
+                    f"arquivo de {len(dados) // 1024} kB, acima do limite de "
+                    f"{TETO_ARQUIVO_ANALISE // 1024} kB. Esta tela examina um "
+                    "atendimento por vez; para um lote, use a importacao."
+                ),
+            )
+
+        extracao = _extrair_ou_400(arquivo.filename or "arquivo", dados)
+        return _montar_analise(extracao)
+
+    def _extrair_ou_400(nome: str, dados: bytes):
+        """Traduz toda falha de leitura em 400 que NOMEIA o que se esperava.
+
+        Arquivo que nao entra e o caso comum, nao a excecao: as pessoas
+        exportam do sistema que tem, nao do formato que o Fraus pede. Um 500 ou
+        um "formato invalido" seco obrigaria a adivinhar qual e o problema.
+        """
+        try:
+            return extrair(nome, dados)
+        except ArquivoIlegivelError as erro:
+            raise HTTPException(status_code=400, detail=str(erro)) from erro
+        except KeyError as erro:
+            raise HTTPException(
+                status_code=400, detail=f"coluna ausente no arquivo: {erro.args[0]}"
             ) from erro
 
+    def _montar_analise(extracao) -> dict:
+        resultado = extracao
         if not resultado.conversas:
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "nenhuma conversa valida no arquivo. Esperado um CSV com as colunas "
-                    "conversa_id, canal, autor, texto, enviada_em, escalou_para_humano."
+                    "nenhuma conversa valida no arquivo. Esperado um CSV/planilha com as "
+                    "colunas conversa_id, canal, autor, texto, enviada_em, "
+                    "escalou_para_humano, ou uma transcricao com linhas 'Autor: mensagem'."
                 ),
             )
 
@@ -1047,7 +1087,17 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         analises = []
         for conversa in analisadas:
             analise = motor.analisar_conversa(conversa, referencia)
-            score = analise["score"]
+
+            # SEM HORARIO, SEM NOTA. Latencia e uma das dezesseis features do
+            # fusor, com peso aprendido. Numa transcricao de Word ou PDF sem
+            # relogio, esses campos sairiam zerados -- e zero nao e neutro: o
+            # modelo aprendeu que resposta rapida acompanha cliente satisfeito,
+            # entao a conversa entraria como se toda resposta tivesse sido
+            # instantanea e a nota sairia melhor do que a verdade, sem erro
+            # nenhum aparecer. A leitura por mensagem (classificacao, emocao,
+            # ironia, peso de palavra) nao depende de tempo e continua valendo.
+            score = analise["score"] if resultado.tem_tempo else None
+
             analises.append(
                 {
                     "conversa": conversa.model_dump(mode="json"),
@@ -1073,9 +1123,15 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             # arquivo inteiro.
             "conversas_no_arquivo": len(resultado.conversas),
             "conversas_analisadas": len(analisadas),
-            "rejeitadas": [linha.model_dump() for linha in resultado.rejeitadas[:LIMITE_MOTIVOS]],
+            "rejeitadas": resultado.rejeitadas[:LIMITE_MOTIVOS],
             "total_rejeitadas": len(resultado.rejeitadas),
             "referencia_conversas": len(banco.listar()),
+            # Como o arquivo foi entendido, e o que a leitura teve que inferir.
+            # A tela mostra isto SEMPRE, nao so quando da errado: analise cuja
+            # procedencia nao aparece e numero sem lastro.
+            "formato": resultado.formato,
+            "tem_tempo": resultado.tem_tempo,
+            "avisos": resultado.avisos,
         }
 
     return app

@@ -595,6 +595,19 @@ export type ResultadoAnalise = {
   total_rejeitadas: number;
   /** Quantas conversas do banco serviram de referencia para o `destaque`. */
   referencia_conversas: number;
+  /** Como o arquivo foi entendido: "export da Totalk", "transcrição em pdf"… */
+  formato: string;
+  /**
+   * Falso quando o arquivo nao traz horario (tipico de .docx e .pdf).
+   *
+   * Sem horario nao ha latencia, e latencia e uma das dezesseis features do
+   * fusor -- entao a conversa NAO recebe nota. Nao e falha: e a resposta
+   * honesta. Zerar o tempo faria o modelo ler como se toda resposta tivesse
+   * sido instantanea e a nota sairia melhor que a verdade.
+   */
+  tem_tempo: boolean;
+  /** O que a leitura teve que inferir. Exibir sempre, não só quando dá errado. */
+  avisos: string[];
 };
 
 /**
@@ -606,6 +619,36 @@ export type ResultadoAnalise = {
  */
 export const analisarArquivo = (csv: string) =>
   proteger(escrever<ResultadoAnalise>("/analisar", "POST", { csv }));
+
+/**
+ * Analisa um arquivo binario -- csv, xlsx, docx ou pdf.
+ *
+ * Vai como multipart e nao como JSON porque planilha e PDF nao sao texto:
+ * codificar em base64 para caber num campo de string inflaria o corpo em um
+ * terco sem ganhar nada. Continua sem gravar coisa alguma no servidor.
+ */
+export async function analisarUpload(
+  arquivo: File,
+): Promise<Resultado<ResultadoAnalise>> {
+  return proteger(
+    (async () => {
+      const corpo = new FormData();
+      corpo.append("arquivo", arquivo);
+      const resposta = await fetch(`${BASE}/analisar/arquivo`, {
+        method: "POST",
+        body: corpo,
+      });
+      if (!resposta.ok) {
+        // O `detail` do FastAPI e a mensagem que NOMEIA o que se esperava --
+        // ela e o produto principal de uma recusa, e perde-la deixaria o
+        // operador com "erro 400" e nada para consertar.
+        const erro = await resposta.json().catch(() => null);
+        throw new Error(erro?.detail ?? `A API respondeu ${resposta.status}.`);
+      }
+      return (await resposta.json()) as ResultadoAnalise;
+    })(),
+  );
+}
 
 export type PontoSerieApi = {
   dia: string; // AAAA-MM-DD

@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileText, Upload } from "lucide-react";
+import { FileText, RefreshCw, Upload } from "lucide-react";
 import {
-  analisarArquivo,
+  analisarUpload,
   type ConversaAnalisada,
   type ResultadoAnalise,
 } from "@/lib/api";
@@ -23,36 +23,50 @@ import { EstadoVazio } from "@/components/EstadoVazio";
 import { TextoComPesos } from "./TextoComPesos";
 
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
-const TETO_CARACTERES = 200_000;
+const TETO_BYTES = 200_000;
+
+const ACEITOS = ".csv,.xlsx,.xlsm,.docx,.pdf";
 
 export function Analisador() {
   const entrada = useRef<HTMLInputElement>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [arquivo, setArquivo] = useState<string | null>(null);
+  /** O último arquivo escolhido, para "tentar de novo" sem reabrir o seletor. */
+  const [ultimo, setUltimo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<ResultadoAnalise | null>(null);
 
-  async function aoEscolher(evento: React.ChangeEvent<HTMLInputElement>) {
-    const escolhido = evento.target.files?.[0];
-    if (!escolhido) return;
-
+  async function analisar(escolhido: File) {
     setErro(null);
     setResultado(null);
     setArquivo(escolhido.name);
+    setUltimo(escolhido);
 
-    const conteudo = await escolhido.text();
-    if (conteudo.length > TETO_CARACTERES) {
+    if (escolhido.size > TETO_BYTES) {
       setErro(
-        `O arquivo tem ${conteudo.length.toLocaleString("pt-BR")} caracteres, acima do limite de ${TETO_CARACTERES.toLocaleString("pt-BR")}. Esta tela examina um atendimento por vez; para um lote inteiro, use a importação em Integrações.`,
+        `O arquivo tem ${Math.round(escolhido.size / 1024).toLocaleString("pt-BR")} kB, acima do limite de ${Math.round(TETO_BYTES / 1024).toLocaleString("pt-BR")} kB. Esta tela examina um atendimento por vez; para um lote inteiro, use a importação em Integrações.`,
       );
       return;
     }
 
     setOcupado(true);
-    const resposta = await analisarArquivo(conteudo);
+    const resposta = await analisarUpload(escolhido);
     setOcupado(false);
     if (resposta.ok) setResultado(resposta.dado);
     else setErro(resposta.erro);
+  }
+
+  async function aoEscolher(evento: React.ChangeEvent<HTMLInputElement>) {
+    const escolhido = evento.target.files?.[0];
+
+    // Zerar o valor do input É O CONSERTO, não faxina. Um `<input type=file>`
+    // só dispara `change` quando o valor MUDA -- escolher o mesmo arquivo de
+    // novo não dispara nada, e a tela ficava parada mostrando o erro anterior
+    // sem nenhum sinal de que o clique foi ignorado. Justamente o caso mais
+    // comum: corrigir o arquivo e reenviar com o mesmo nome.
+    evento.target.value = "";
+
+    if (escolhido) await analisar(escolhido);
   }
 
   return (
@@ -62,19 +76,36 @@ export function Analisador() {
         legenda="Nada aqui entra no banco: nem a conversa, nem a nota, nem o arquivo. Analisar não muda o NPS de ninguém — é a diferença entre esta tela e a importação. O conteúdo é lido no seu navegador e interpretado em memória pelo servidor; nenhum byte é gravado em disco."
       >
         <div className="flex flex-col gap-3 px-5 py-4">
-          <p className="text-sm text-muted-foreground">
-            Um CSV com as colunas{" "}
-            <code className="num rounded-sm bg-muted px-1 py-0.5 text-foreground">
-              conversa_id, canal, autor, texto, enviada_em, escalou_para_humano
-            </code>{" "}
-            — o mesmo formato da importação, uma linha por mensagem.
-          </p>
+          <div className="text-sm text-muted-foreground">
+            <p>Aceito quatro formatos, e leio cada um pelo que ele consegue dar:</p>
+            <ul className="mt-1.5 flex flex-col gap-1 text-xs">
+              <li>
+                <strong className="text-foreground">.csv</strong> e{" "}
+                <strong className="text-foreground">.xlsx</strong> — no formato
+                do Fraus (
+                <code className="num">
+                  conversa_id, canal, autor, texto, enviada_em,
+                  escalou_para_humano
+                </code>
+                ) ou o export da Totalk, que reconheço sozinho. Trazem horário,
+                então a conversa recebe nota.
+              </li>
+              <li>
+                <strong className="text-foreground">.docx</strong> e{" "}
+                <strong className="text-foreground">.pdf</strong> — transcrição
+                em linhas <code className="num">Autor: mensagem</code>, com o
+                autor sendo cliente, bot ou atendente. Sem horário no texto{" "}
+                <strong>não há nota</strong>, só a leitura por mensagem — o
+                porquê aparece no resultado.
+              </li>
+            </ul>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <input
               ref={entrada}
               type="file"
-              accept=".csv,text/csv"
+              accept={ACEITOS}
               className="sr-only"
               onChange={aoEscolher}
             />
@@ -105,10 +136,42 @@ export function Analisador() {
         </div>
       </Painel>
 
+      {/* O erro carrega o MOTIVO e as duas saídas: corrigir e reenviar o mesmo
+          arquivo, ou escolher outro. Recusa que só diz "não foi possível"
+          deixa a pessoa sem próximo passo — e o arquivo errado é o caso comum,
+          porque cada um exporta do sistema que tem. */}
       {erro ? (
         <Alert variant="destructive">
-          <AlertTitle>Não foi possível analisar</AlertTitle>
-          <AlertDescription>{erro}</AlertDescription>
+          <AlertTitle>
+            Não consegui ler{arquivo ? ` ${arquivo}` : " o arquivo"}
+          </AlertTitle>
+          <AlertDescription>
+            <p className="whitespace-pre-line">{erro}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {ultimo ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => analisar(ultimo)}
+                  disabled={ocupado}
+                >
+                  <RefreshCw aria-hidden />
+                  Tentar de novo com este arquivo
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => entrada.current?.click()}
+                disabled={ocupado}
+              >
+                <Upload aria-hidden />
+                Escolher outro arquivo
+              </Button>
+            </div>
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -122,6 +185,30 @@ function Resultado({ resultado }: { resultado: ResultadoAnalise }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Como o arquivo foi ENTENDIDO vem antes de tudo. Uma análise cuja
+          procedência não aparece é número sem lastro: o mesmo CSV pode ser
+          lido como formato do Fraus ou como export da Totalk, e as duas
+          leituras inferem coisas diferentes. */}
+      <Alert>
+        <AlertTitle>Lido como {resultado.formato}</AlertTitle>
+        <AlertDescription>
+          {!resultado.tem_tempo ? (
+            <p className="mb-1 text-warning-rich-text">
+              Sem nota para a conversa — o arquivo não traz horário.
+            </p>
+          ) : null}
+          {resultado.avisos.length > 0 ? (
+            <ul className="flex flex-col gap-1">
+              {resultado.avisos.map((aviso) => (
+                <li key={aviso}>{aviso}</li>
+              ))}
+            </ul>
+          ) : (
+            "Nada precisou ser inferido na leitura."
+          )}
+        </AlertDescription>
+      </Alert>
+
       {/* O que ficou de FORA vem antes do resultado, na mesma linha do que a
           importação já faz: silenciar o corte faria o operador achar que
           analisou o arquivo inteiro. */}
@@ -163,6 +250,7 @@ function Resultado({ resultado }: { resultado: ResultadoAnalise }) {
           key={analise.conversa.id}
           analise={analise}
           referencia={resultado.referencia_conversas}
+          temTempo={resultado.tem_tempo}
         />
       ))}
     </div>
@@ -181,11 +269,20 @@ function Medida({ rotulo, valor }: { rotulo: string; valor: string }) {
 function Analise({
   analise,
   referencia,
+  temTempo,
 }: {
   analise: ConversaAnalisada;
   referencia: number;
+  temTempo: boolean;
 }) {
-  const semSinal = analise.score === null;
+  // Duas causas MUITO diferentes para não haver nota, e a tela precisa
+  // distinguir: "o cliente não falou" é um fato sobre o atendimento; "o
+  // arquivo não tem horário" é um limite do que foi enviado. Dizer a mesma
+  // frase nos dois casos mandaria procurar problema no lugar errado.
+  const semNota = analise.score === null;
+  const motivoSemNota = !temTempo
+    ? "o arquivo não traz horário"
+    : "sem fala do cliente";
 
   return (
     <div className="flex flex-col gap-4">
@@ -197,9 +294,9 @@ function Analise({
           <div className="flex min-w-0 flex-col gap-1">
             <dt className="text-xs text-muted-foreground">Nota inferida</dt>
             <dd className="flex items-baseline gap-2">
-              {semSinal ? (
+              {semNota ? (
                 <span className="text-sm text-muted-foreground">
-                  sem sinal do cliente
+                  {motivoSemNota}
                 </span>
               ) : (
                 <>

@@ -1065,3 +1065,111 @@ def test_cabeca_de_emocao_declara_o_desprezo_como_derivado(cliente):
 
     assert emocao["classes"][-1] == "desprezo"
     assert len(emocao["classes"]) == 8
+
+
+# ---------------------------------------------------------------------------
+# /analisar/arquivo -- csv, xlsx, docx e pdf
+
+
+def _docx_bytes(texto: str) -> bytes:
+    import io as _io
+
+    import docx
+
+    documento = docx.Document()
+    for linha in texto.splitlines():
+        documento.add_paragraph(linha)
+    buffer = _io.BytesIO()
+    documento.save(buffer)
+    return buffer.getvalue()
+
+
+def test_upload_de_csv_analisa_sem_gravar(cliente_com_sinal):
+    resposta = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={"arquivo": ("conversa.csv", CSV.encode("utf-8"), "text/csv")},
+    )
+    assert resposta.status_code == 200
+    assert resposta.json()["analises"]
+    assert cliente_com_sinal.get("/conversas").json() == []
+
+
+def test_transcricao_sem_horario_nao_recebe_nota(cliente_com_sinal):
+    """Zerar a latencia faria o fusor ler como resposta instantanea.
+
+    Latencia e uma das dezesseis features, com peso aprendido: sem horario o
+    modelo veria toda resposta como imediata e a nota sairia melhor do que a
+    verdade, sem erro nenhum aparecer. A ausencia da nota E a resposta honesta.
+    """
+    transcricao = (
+        "Cliente: minha cobranca veio duplicada\n"
+        "Bot: vou verificar\n"
+        "Cliente: obrigado\n"
+    )
+    corpo = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={
+            "arquivo": (
+                "conversa.docx",
+                _docx_bytes(transcricao),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    ).json()
+
+    assert corpo["tem_tempo"] is False
+    analise = corpo["analises"][0]
+    assert analise["score"] is None
+    assert analise["nota"] is None
+    assert analise["categoria"] is None
+    # A leitura por mensagem NAO depende de tempo e continua valendo.
+    assert any(m["palavras"] for m in analise["mensagens"])
+    assert any("latência" in aviso for aviso in corpo["avisos"])
+
+
+def test_upload_declara_como_o_arquivo_foi_entendido(cliente_com_sinal):
+    """Analise cuja procedencia nao aparece e numero sem lastro."""
+    corpo = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={"arquivo": ("conversa.csv", CSV.encode("utf-8"), "text/csv")},
+    ).json()
+    assert "Fraus" in corpo["formato"]
+    assert corpo["tem_tempo"] is True
+
+
+def test_upload_de_formato_desconhecido_e_400_listando_os_aceitos(cliente_com_sinal):
+    resposta = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={"arquivo": ("foto.png", b"\x89PNG\r\n", "image/png")},
+    )
+    assert resposta.status_code == 400
+    detalhe = resposta.json()["detail"]
+    assert ".csv" in detalhe and ".pdf" in detalhe
+
+
+def test_upload_com_colunas_erradas_diz_o_que_falta(cliente_com_sinal):
+    resposta = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={"arquivo": ("errado.csv", b"nome,idade\nana,30\n", "text/csv")},
+    )
+    assert resposta.status_code == 400
+    assert "conversa_id" in resposta.json()["detail"]
+
+
+def test_upload_vazio_e_400(cliente_com_sinal):
+    resposta = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={"arquivo": ("vazio.csv", b"", "text/csv")},
+    )
+    assert resposta.status_code == 400
+
+
+def test_upload_acima_do_teto_e_recusado_antes_de_rodar_o_modelo(cliente_com_sinal):
+    from fraus.api.main import TETO_ARQUIVO_ANALISE
+
+    resposta = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={"arquivo": ("grande.csv", b"x" * (TETO_ARQUIVO_ANALISE + 1), "text/csv")},
+    )
+    assert resposta.status_code == 400
+    assert "limite" in resposta.json()["detail"]
