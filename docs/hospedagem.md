@@ -114,6 +114,13 @@ com atendimento real. Definir a mestra fecha a API inteira, inclusive a rota
 que gera chave (`POST /acesso/chaves` e `POST /integracoes/fontes/{id}/chave`
 exigem a mestra; nenhuma chave de acesso gerencia outras chaves).
 
+**A mestra protege a API, não a dashboard.** O proxy do Next é um relay: ele
+anexa a chave do deploy em toda chamada que chega nele, e a dashboard publicada
+continua **sem login** — quem alcança a URL da Vercel lê os dados pelo proxy,
+usando a chave do deploy, sem apresentar credencial nenhuma. Para publicar com
+dado real, proteja também o deploy (por exemplo, Vercel Deployment Protection)
+— ou não publique com dado real.
+
 Publicar com dado real de cliente exige a mestra definida **antes** de expor a
 URL — o adaptador da Totalk já traz conversa real, com nome, documento e
 endereço no texto das mensagens mesmo com as colunas de contato descartadas.

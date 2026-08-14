@@ -154,6 +154,12 @@ quando essa variável existe. A chave de acesso nunca toca o navegador.
 FRAUS_API_URL=http://localhost:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
 ```
 
+O proxy é um **relay sem autenticação própria**: ele anexa a chave do deploy em
+toda chamada que chega nele, e a dashboard publicada continua sem login — quem
+alcança a URL dela lê os dados pelo proxy. A mestra fecha a API, não a
+dashboard; para publicar com dado real, proteja o deploy (por exemplo, Vercel
+Deployment Protection) ou não publique com dado real.
+
 Sem `FRAUS_CHAVE_ACESSO`, o proxy repassa sem header — desenvolvimento local
 contra uma API aberta continua funcionando com zero configuração. Como são
 variáveis **server-side**, mudar depois exige reiniciar o processo — mas,
