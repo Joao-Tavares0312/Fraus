@@ -6,6 +6,7 @@ from fraus.db import Banco
 from fraus.fusor import NOMES_FEATURES
 from fraus.indicadores import FAIXAS_NPS
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji
+from fraus.sinais.palavras import PALAVRA, vocabulario
 
 CSV = (
     "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
@@ -63,6 +64,35 @@ class AtribuicaoDuble:
 
     def importancias(self) -> dict:
         return {nome: 1.0 for nome in NOMES_FEATURES}
+
+    def analisar_conversa(self, conversa, referencia=None) -> dict:
+        """Analise avulsa do dublê: peso de palavra deterministico, sem modelo.
+
+        O peso e o comprimento da palavra dividido por dez, com sinal positivo
+        -- numero sem significado nenhum, so com a FORMA certa. O que os testes
+        de `/analisar` verificam e a mecanica da rota (nada e gravado, o que
+        ficou de fora e relatado, so a fala do cliente recebe peso), e nao a
+        opiniao do BERTimbau, que muda a cada retreino.
+        """
+        atribuicao = self.atribuir_conversa(conversa)
+        for mensagem in atribuicao["mensagens"]:
+            if mensagem["autor"] != "cliente":
+                mensagem["palavras"] = None
+                continue
+            mensagem["palavras"] = [
+                {
+                    "palavra": achado.group(),
+                    "inicio": achado.start(),
+                    "fim": achado.end(),
+                    "peso": len(achado.group()) / 10,
+                }
+                for achado in PALAVRA.finditer(mensagem["texto"])
+            ]
+        return {
+            **atribuicao,
+            "score": self.pontuar_conversa(conversa),
+            "vocabulario": vocabulario(conversa, referencia),
+        }
 
     def simular_texto(self, texto: str) -> dict:
         p = _probabilidades_deterministicas(texto)
@@ -879,3 +909,123 @@ def test_arquivo_listado_pode_ser_importado_direto(cliente, tmp_path):
 def test_raiz_sem_csv_devolve_lista_vazia_e_nao_erro(cliente):
     corpo = cliente.get("/integracoes/arquivos").json()
     assert corpo["arquivos"] == []
+
+
+# ---------------------------------------------------------------------------
+# /analisar -- exame de um atendimento avulso, sem gravar nada
+
+
+def test_analisar_nao_grava_a_conversa_no_banco(cliente_com_sinal):
+    """A diferenca entre esta rota e a importacao: analisar nao muda o NPS.
+
+    Se a conversa analisada entrasse no banco, bastaria examinar um atendimento
+    ruim para a operacao inteira piorar nos indicadores -- e o operador nao
+    teria pedido isso em lugar nenhum.
+    """
+    antes = cliente_com_sinal.get("/indicadores").json()
+
+    resposta = cliente_com_sinal.post("/analisar", json={"csv": CSV})
+    assert resposta.status_code == 200
+
+    assert cliente_com_sinal.get("/conversas").json() == []
+    assert cliente_com_sinal.get("/indicadores").json() == antes
+
+
+def test_analisar_devolve_peso_so_na_fala_do_cliente(cliente_com_sinal):
+    """Pontuar o roteiro do bot seria numero bonito e sem lastro."""
+    corpo = cliente_com_sinal.post("/analisar", json={"csv": CSV}).json()
+    mensagens = corpo["analises"][0]["mensagens"]
+
+    for mensagem in mensagens:
+        if mensagem["autor"] == "cliente":
+            assert mensagem["palavras"], "fala do cliente tem que ter peso"
+        else:
+            assert mensagem["palavras"] is None
+
+
+def test_analisar_traz_a_ficha_operacional_da_conversa(cliente_com_sinal):
+    """Mesma funcao de `/conversas`: a analise nao pode discordar da lista."""
+    corpo = cliente_com_sinal.post("/analisar", json={"csv": CSV}).json()
+    analise = corpo["analises"][0]
+
+    assert analise["qtd_mensagens"] == 3
+    assert analise["qtd_cliente"] == 2
+    assert analise["desfecho"] == "sem_resposta"  # a ultima fala e do cliente
+    assert analise["latencia_primeira_resposta_s"] == 8.0
+
+
+def test_analisar_conversa_muda_nao_inventa_nota(cliente_com_sinal):
+    corpo = cliente_com_sinal.post("/analisar", json={"csv": CSV_SEM_CLIENTE}).json()
+    analise = corpo["analises"][0]
+
+    assert analise["score"] is None
+    assert analise["nota"] is None
+    assert analise["categoria"] is None
+    assert analise["desfecho"] == "sem_sinal"
+    assert analise["vocabulario"] == []
+
+
+def test_analisar_arquivo_vazio_e_400(cliente_com_sinal):
+    resposta = cliente_com_sinal.post("/analisar", json={"csv": "   \n  "})
+    assert resposta.status_code == 400
+
+
+def test_analisar_sem_conversa_valida_explica_o_formato_esperado(cliente_com_sinal):
+    """Recusar sem dizer o que se esperava obriga o operador a adivinhar."""
+    so_cabecalho = "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
+    resposta = cliente_com_sinal.post("/analisar", json={"csv": so_cabecalho})
+
+    assert resposta.status_code == 400
+    assert "conversa_id" in resposta.json()["detail"]
+
+
+def test_analisar_coluna_ausente_nomeia_a_coluna(cliente_com_sinal):
+    """Coluna faltando e defeito do ARQUIVO -- 400 nomeando, nunca 500 cru."""
+    sem_canal = (
+        "conversa_id,autor,texto,enviada_em,escalou_para_humano\n"
+        "c1,cliente,otimo,2026-08-13T10:00:00+00:00,false\n"
+    )
+    resposta = cliente_com_sinal.post("/analisar", json={"csv": sem_canal})
+
+    assert resposta.status_code == 400
+    assert "canal" in resposta.json()["detail"]
+
+
+def test_analisar_relata_a_linha_rejeitada_em_vez_de_derrubar_o_arquivo(
+    cliente_com_sinal,
+):
+    com_lixo = CSV + "c1,csv,cliente,texto,data-invalida,false\n"
+    corpo = cliente_com_sinal.post("/analisar", json={"csv": com_lixo}).json()
+
+    assert corpo["total_rejeitadas"] == 1
+    assert corpo["rejeitadas"][0]["numero_linha"] == 5
+    assert corpo["analises"], "a conversa valida tem que sobreviver a linha ruim"
+
+
+def test_analisar_relata_quando_corta_conversas_do_arquivo(cliente_com_sinal):
+    """Silenciar o corte faria o operador achar que analisou o arquivo inteiro."""
+    from fraus.api.main import TETO_CONVERSAS_ANALISE
+
+    linhas = ["conversa_id,canal,autor,texto,enviada_em,escalou_para_humano"]
+    for indice in range(TETO_CONVERSAS_ANALISE + 3):
+        linhas.append(
+            f"c{indice},csv,cliente,otimo,2026-08-13T10:00:00+00:00,false"
+        )
+    corpo = cliente_com_sinal.post("/analisar", json={"csv": "\n".join(linhas)}).json()
+
+    assert corpo["conversas_no_arquivo"] == TETO_CONVERSAS_ANALISE + 3
+    assert corpo["conversas_analisadas"] == TETO_CONVERSAS_ANALISE
+    assert len(corpo["analises"]) == TETO_CONVERSAS_ANALISE
+
+
+def test_analisar_arquivo_grande_demais_e_recusado_antes_de_rodar_o_modelo(
+    cliente_com_sinal,
+):
+    """A oclusao roda uma passada por palavra: sem teto, a requisicao pendura."""
+    from fraus.api.main import TETO_ARQUIVO_ANALISE
+
+    resposta = cliente_com_sinal.post(
+        "/analisar", json={"csv": "x" * (TETO_ARQUIVO_ANALISE + 1)}
+    )
+    assert resposta.status_code == 400
+    assert "limite" in resposta.json()["detail"]

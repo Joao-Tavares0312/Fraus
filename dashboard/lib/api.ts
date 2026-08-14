@@ -100,6 +100,23 @@ export type MensagemAtribuida = {
   prob_insatisfeito: number | null;
   prob_neutro: number | null;
   prob_satisfeito: number | null;
+
+  /**
+   * As duas cabecas de LEITURA. Elas descrevem a fala e NAO entram no score:
+   * o fusor tem dezesseis features e nenhuma vem daqui. A resposta marca isso
+   * em `sinais_fora_do_score`, e a interface tem que manter os dois numeros
+   * visualmente separados da nota -- "ironia 0,99" encostado num score baixo
+   * convida a conclusao de que uma causou a outra.
+   *
+   * `null` quando o servidor subiu sem a cabeca correspondente.
+   *
+   * RESSALVA MEDIDA sobre `prob_ironia`: o modelo acerta o caso de manual
+   * ("que atendimento maravilhoso, so esperei 3 horas") e marca 6 em 10 falas
+   * sinceras de atendimento como ironicas. Exibir como indicio, nunca como
+   * veredito. Ver tests/test_ironia_dominio.py.
+   */
+  emocao: Record<string, number> | null;
+  prob_ironia: number | null;
 };
 
 /** Resposta de `GET /conversas/{id}/atribuicao`. */
@@ -430,6 +447,87 @@ export const importarArquivo = (caminho: string) =>
 
 export const listarImportacoes = () =>
   proteger(buscar<Importacao[]>("/integracoes/importacoes"));
+
+/**
+ * Peso de UMA palavra na leitura que o modelo fez da mensagem.
+ *
+ * Medido por oclusao: apaga-se a palavra e pergunta-se de novo. Positivo
+ * empurrou para satisfeito, negativo para insatisfeito.
+ *
+ * `peso: null` NAO e o mesmo que `0`. Zero e medicao ("apagar esta palavra nao
+ * mudou nada"); nulo e ausencia de medicao -- a mensagem passou do teto de
+ * palavras que o servidor mede. A tela precisa distinguir os dois.
+ *
+ * `inicio`/`fim` sao indices no texto original, para grifar sem re-tokenizar:
+ * uma segunda tokenizacao no cliente acabaria grifando trecho diferente do que
+ * o servidor mediu.
+ */
+export type PesoDePalavra = {
+  palavra: string;
+  inicio: number;
+  fim: number;
+  peso: number | null;
+};
+
+/** Palavra mais usada pelo cliente, comparada ao restante do banco. */
+export type ItemVocabulario = {
+  palavra: string;
+  vezes: number;
+  /**
+   * Quantas vezes a palavra e mais frequente aqui do que na referencia --
+   * `3.0` e "o triplo do normal nesta operacao". `null` quando a palavra nao
+   * aparece na referencia: nao ha com o que comparar, e `1.0` afirmaria
+   * "igual a media" sem ter medido media nenhuma.
+   */
+  destaque: number | null;
+};
+
+export type MensagemAnalisada = MensagemAtribuida & {
+  /** `null` para bot e humano: so a fala do cliente recebe peso de palavra. */
+  palavras: PesoDePalavra[] | null;
+};
+
+export type ConversaAnalisada = {
+  conversa: DetalheConversa;
+  score: number | null;
+  nota: number | null;
+  categoria: Categoria | null;
+  mensagens: MensagemAnalisada[];
+  contribuicoes: Record<string, number> | null;
+  importancias: Record<string, number>;
+  sinais_fora_do_score: string[];
+  vocabulario: ItemVocabulario[];
+  qtd_mensagens: number;
+  qtd_cliente: number;
+  qtd_bot: number;
+  qtd_humano: number;
+  latencia_primeira_resposta_s: number | null;
+  latencia_mediana_s: number | null;
+  latencia_mediana_bot_s: number | null;
+  latencia_mediana_humano_s: number | null;
+  duracao_s: number;
+  desfecho: Desfecho;
+};
+
+export type ResultadoAnalise = {
+  analises: ConversaAnalisada[];
+  conversas_no_arquivo: number;
+  conversas_analisadas: number;
+  rejeitadas: { numero_linha: number; motivo: string }[];
+  total_rejeitadas: number;
+  /** Quantas conversas do banco serviram de referencia para o `destaque`. */
+  referencia_conversas: number;
+};
+
+/**
+ * Analisa um arquivo de conversa SEM gravar nada.
+ *
+ * O conteudo vai no corpo e e interpretado em memoria: nada entra no banco,
+ * nada toca o disco. E o que separa esta chamada da importacao -- aqui se
+ * pergunta "o que o modelo acha disto?", nao "passe a contar isto no NPS".
+ */
+export const analisarArquivo = (csv: string) =>
+  proteger(escrever<ResultadoAnalise>("/analisar", "POST", { csv }));
 
 export type PontoSerieApi = {
   dia: string; // AAAA-MM-DD

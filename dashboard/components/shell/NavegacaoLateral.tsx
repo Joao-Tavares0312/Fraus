@@ -8,6 +8,7 @@ import {
   BarChart3,
   MessagesSquare,
   PlugZap,
+  ScanText,
   SlidersHorizontal,
 } from "lucide-react";
 import {
@@ -38,6 +39,11 @@ import { EstadoSaude } from "./EstadoSaude";
 const SECOES = [
   { href: "/", rotulo: "Visão geral", Icone: BarChart3 },
   { href: "/atendimentos", rotulo: "Atendimentos", Icone: MessagesSquare },
+  // Fica no grupo de OLHAR, e nao no de mexer, porque analisar nao grava nada:
+  // nem conversa, nem nota, nem arquivo. Nenhum indicador se move por causa
+  // dela, e e por isso que ela nao pertence ao lado das telas que alteram
+  // configuracao e fonte de dado.
+  { href: "/analisar", rotulo: "Analisar", Icone: ScanText },
   { href: "/modelo", rotulo: "Modelo", Icone: Activity },
 ] as const;
 

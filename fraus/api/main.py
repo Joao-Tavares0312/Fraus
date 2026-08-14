@@ -35,8 +35,10 @@ from fraus.db import Banco
 from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10, serie_diaria)
-from fraus.ingest.csv_driver import carregar_csv
+from fraus.ingest.csv_driver import carregar_csv, carregar_texto
 from fraus.resumo import resumir
+from fraus.sinais.palavras import (contar_palavras, pesos_das_palavras,
+                                   vocabulario)
 from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
                                  desprezo_derivado)
 from fraus.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
@@ -71,6 +73,13 @@ TETO_TEXTO_SIMULACAO = 2000
 
 # Teto de itens que /modelo/lexicon devolve por pagina, mesmo se pedirem mais.
 TETO_LEXICON = 200
+
+# Tetos de /analisar. A rota roda BERTimbau uma vez por palavra de cliente
+# (oclusao), entao o custo cresce com o tamanho do arquivo -- sem teto, um CSV
+# de lote inteiro penduraria a requisicao em CPU. Os dois limites recusam alto
+# e explicam, em vez de aceitar e demorar minutos sem sinal de vida.
+TETO_ARQUIVO_ANALISE = 200_000
+TETO_CONVERSAS_ANALISE = 10
 
 # Origens que o NAVEGADOR pode usar para falar com a API. A dashboard busca
 # `/saude` e `/modelo/simular` do lado do cliente, e sem isso o navegador
@@ -132,6 +141,10 @@ class PedidoImportacao(BaseModel):
 
 class PedidoSimulacao(BaseModel):
     texto: str  # unico campo aceito: probabilidade e derivada no servidor
+
+
+class PedidoAnalise(BaseModel):
+    csv: str  # conteudo do arquivo; veredito continua sendo derivado aqui
 
 
 class Motor:
@@ -270,6 +283,34 @@ class Motor:
     def importancias(self) -> dict:
         """Peso global de cada feature -- usado pela ficha do modelo em `/modelo`."""
         return self._fusor.importancias()
+
+    def analisar_conversa(self, conversa, referencia=None) -> dict:
+        """Analise completa de UMA conversa, com peso palavra a palavra.
+
+        E a atribuicao de `atribuir_conversa` mais duas coisas que so fazem
+        sentido no exame de um atendimento especifico: o peso de cada palavra
+        (por oclusao, ver `fraus.sinais.palavras`) e o vocabulario do cliente
+        comparado ao restante do banco.
+
+        SO A FALA DO CLIENTE recebe peso de palavra, pela mesma razao de sempre:
+        o classificador foi fine-tunado em texto de cliente. Medir o quanto uma
+        palavra do roteiro do bot "empurra a nota" produziria um numero
+        bonito e sem lastro.
+        """
+        atribuicao = self.atribuir_conversa(conversa)
+        for mensagem in atribuicao["mensagens"]:
+            mensagem["palavras"] = (
+                pesos_das_palavras(mensagem["texto"], self._classificador)
+                if mensagem["autor"] == "cliente"
+                else None
+            )
+
+        score = self.pontuar_conversa(conversa)
+        return {
+            **atribuicao,
+            "score": score,
+            "vocabulario": vocabulario(conversa, referencia),
+        }
 
     def simular_texto(self, texto: str) -> dict:
         """Roda o classificador de texto sobre uma mensagem avulsa, fora do banco.
@@ -795,6 +836,102 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "emojis": resultado["emojis"],
             "emocao": resultado.get("emocao"),
             "prob_ironia": resultado.get("prob_ironia"),
+        }
+
+    @app.post("/analisar")
+    def analisar(pedido: PedidoAnalise) -> dict:
+        """Analisa um arquivo de conversa SEM gravar nada.
+
+        Nada daqui entra no banco: nem a conversa, nem o score, nem o arquivo.
+        E o que separa esta rota da importacao -- aqui se pergunta "o que o
+        modelo acha disto?", nao "passe a considerar isto nos indicadores". Um
+        arquivo analisado nao muda o NPS de ninguem.
+
+        O conteudo chega no corpo e e interpretado em memoria, entao a rota
+        NAO abre a superficie de escrita que fez a tela de Integracoes recusar
+        upload: nenhum byte toca o disco.
+
+        A comparacao de vocabulario usa o banco como referencia -- e o que
+        permite dizer "esta palavra aparece o triplo do normal AQUI". Com o
+        banco vazio nao ha referencia, e o campo `destaque` sai nulo em vez de
+        fingir uma media.
+        """
+        if not pedido.csv.strip():
+            raise HTTPException(status_code=400, detail="arquivo vazio")
+        if len(pedido.csv) > TETO_ARQUIVO_ANALISE:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"arquivo acima do limite de {TETO_ARQUIVO_ANALISE} caracteres. "
+                    "Esta rota examina um atendimento por vez; para um lote, use a importacao."
+                ),
+            )
+
+        try:
+            resultado = carregar_texto(pedido.csv)
+        except KeyError as erro:
+            # Mesma borda da importacao: o driver deixa coluna ausente
+            # propagar (defeito de esquema nao e dado sujo de uma linha) e quem
+            # fala HTTP traduz, nomeando a coluna que falta.
+            raise HTTPException(
+                status_code=400,
+                detail=f"coluna ausente no CSV: {erro.args[0]}",
+            ) from erro
+
+        if not resultado.conversas:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "nenhuma conversa valida no arquivo. Esperado um CSV com as colunas "
+                    "conversa_id, canal, autor, texto, enviada_em, escalou_para_humano."
+                ),
+            )
+
+        # Referencia de frequencia: a fala de cliente de TODO o banco. O custo
+        # e uma varredura por analise, aceitavel na ordem de grandeza deste
+        # projeto e o ponto a trocar por um indice se deixar de ser.
+        referencia = contar_palavras(
+            [
+                mensagem.texto
+                for conversa, _score in banco.todas()
+                for mensagem in conversa.mensagens_cliente
+            ]
+        )
+
+        faixas = faixas_vigentes()
+        analisadas = resultado.conversas[:TETO_CONVERSAS_ANALISE]
+        analises = []
+        for conversa in analisadas:
+            analise = motor.analisar_conversa(conversa, referencia)
+            score = analise["score"]
+            analises.append(
+                {
+                    "conversa": conversa.model_dump(mode="json"),
+                    "score": score,
+                    "nota": nota_0_10(score) if score is not None else None,
+                    "categoria": categoria_de(score, faixas),
+                    "mensagens": analise["mensagens"],
+                    "contribuicoes": analise["contribuicoes"],
+                    "importancias": analise["importancias"],
+                    # Do motor, nao de constante: motor sem as cabecas de
+                    # emocao/ironia devolve lista vazia, e a tela nao promete
+                    # um painel que nao tem dado para preencher.
+                    "sinais_fora_do_score": analise.get("sinais_fora_do_score", []),
+                    "vocabulario": analise["vocabulario"],
+                    **resumir(conversa),
+                }
+            )
+
+        return {
+            "analises": analises,
+            # Relato do que ficou de FORA, na mesma linha do que a importacao
+            # ja faz: silenciar o corte faria o operador achar que analisou o
+            # arquivo inteiro.
+            "conversas_no_arquivo": len(resultado.conversas),
+            "conversas_analisadas": len(analisadas),
+            "rejeitadas": [linha.model_dump() for linha in resultado.rejeitadas[:LIMITE_MOTIVOS]],
+            "total_rejeitadas": len(resultado.rejeitadas),
+            "referencia_conversas": len(banco.listar()),
         }
 
     return app
