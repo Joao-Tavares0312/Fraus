@@ -154,6 +154,10 @@ class PedidoAnalise(BaseModel):
     nome: str | None = None  # so para escolher o leitor pela extensao
 
 
+class PedidoChaveAcesso(BaseModel):
+    nome: str = Field(min_length=1)
+
+
 class PedidoIngestao(BaseModel):
     """Atendimento vindo de um sistema externo.
 
@@ -477,6 +481,24 @@ def criar_app(
         chave_id = acesso.id_da_chave(chave)
         guardado = banco.hash_da_chave_acesso(chave_id) if chave_id is not None else None
         return credencial.confere(chave, guardado)
+
+    def _exigir_mestra(authorization: str | None) -> None:
+        """Gerenciar chaves e privilegio da mestra, nunca de chave de acesso.
+
+        No modo aberto (sem mestra) nao ha o que exigir -- as rotas de
+        gerenciamento seguem abertas como o resto, coerente com a decisao de
+        ativacao condicionada.
+
+        403, nao 401: quem chega aqui com chave de acesso valida ja passou
+        pelo middleware -- a credencial esta certa, o privilegio e que falta.
+        """
+        if chave_mestra is None:
+            return
+        chave = _chave_do_cabecalho(authorization)
+        if not _e_mestra(chave):
+            raise HTTPException(
+                status_code=403, detail="esta rota exige a chave mestra"
+            )
 
     if chave_mestra is not None:
         @app.middleware("http")
@@ -833,6 +855,43 @@ def criar_app(
         if banco.buscar_fonte(fonte_id) is None:
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
         banco.revogar_chave(fonte_id)
+
+    @app.post("/acesso/chaves", status_code=201)
+    def criar_chave_acesso(
+        pedido: PedidoChaveAcesso, authorization: str | None = Header(default=None)
+    ) -> dict:
+        """Gera uma chave de acesso e a devolve EM CLARO uma unica vez."""
+        _exigir_mestra(authorization)
+        registro = banco.criar_chave_acesso(
+            nome=pedido.nome,
+            criada_em=datetime.now(timezone.utc).isoformat(),
+        )
+        chave, chave_hash = acesso.gerar(registro["id"])
+        banco.gravar_chave_acesso(
+            registro["id"], chave_hash=chave_hash, dica=credencial.dica(chave)
+        )
+        return {
+            **registro,
+            "dica": credencial.dica(chave),
+            "chave": chave,
+            "aviso": (
+                "Guarde agora: esta chave não pode ser lida de novo. "
+                "Revogue e gere outra se perdê-la."
+            ),
+        }
+
+    @app.get("/acesso/chaves")
+    def listar_chaves_acesso(authorization: str | None = Header(default=None)) -> list[dict]:
+        _exigir_mestra(authorization)
+        return banco.listar_chaves_acesso()
+
+    @app.delete("/acesso/chaves/{chave_id}", status_code=204)
+    def revogar_chave_acesso(
+        chave_id: int, authorization: str | None = Header(default=None)
+    ) -> None:
+        _exigir_mestra(authorization)
+        if not banco.apagar_chave_acesso(chave_id):
+            raise HTTPException(status_code=404, detail="chave nao encontrada")
 
     @app.post("/ingestao", status_code=201)
     def ingerir(pedido: PedidoIngestao, authorization: str | None = Header(default=None)) -> dict:
