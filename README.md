@@ -26,17 +26,35 @@ Discórdia (*Eneida*, VI)[^4] — lê o que foi dito de verdade.
 
 ## Como funciona
 
-Três sinais independentes, calculados sobre um modelo canônico de conversa e
-fundidos por um classificador leve:
+Sinais independentes, calculados sobre um modelo canônico de conversa e fundidos
+por um classificador leve:
 
 | Sinal | O que mede | Por quê |
 |---|---|---|
 | **Texto** | BERTimbau fine-tunado, probabilidade **por mensagem** | permite apontar *quais trechos* puxaram a nota |
 | **Emoji** | polaridade e **posição relativa** na mensagem | a polaridade do emoji cresce perto do fim da frase |
 | **Tempo** | latência, escalação, abandono | o efeito é não-linear — o peso é aprendido, não arbitrado |
+| **Emoção** ⏳ | as 7 emoções humanas, por mensagem | requisito de banca; a nota diz *quanto*, a emoção diz *o quê* |
+| **Léxico** ⏳ | SentiLex-PT02 com escopo de **negação** | polaridade de procedência independente do BERTimbau |
+| **Ironia** ⏳ | cabeça binária sobre o IDPT 2021 | texto positivo com sentido negativo derruba a leitura dos outros sinais |
+
+⏳ *módulo pronto e testado; entra no vetor de features quando o modelo for
+treinado — ver [contrato de features](docs/treinamento.md#contrato-de-features).*
 
 O resultado é um score de 0 a 100 por atendimento, que vira nota 0–10 e categoria
 de NPS (**0–6 detrator · 7–8 neutro · 9–10 promotor**), agregado numa dashboard.
+
+### As 7 emoções
+
+Requisito de banca. São as **seis básicas de Ekman (1992)** — alegria, tristeza,
+raiva, medo, nojo, surpresa — mais o **desprezo**; o *neutro* é uma sétima
+**classe**, não uma emoção: é a ausência delas.
+
+O desprezo é o único que **não é treinado**, e de propósito: nenhum corpus
+rotulado em português o anota, e treiná-lo isoladamente em corpus de outra
+procedência ensinaria o modelo a reconhecer o *estilo do texto* em vez da
+emoção. Ele é derivado da **díade primária raiva + nojo**, como Plutchik (1980)
+o define — referência citável, não rótulo inventado.
 
 ## Indicadores
 
@@ -59,7 +77,7 @@ vence RAG em acurácia e latência[^3].
 
 - [Spec de design](docs/superpowers/specs/2026-08-13-dolos-design.md) — decisões e referências
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
-- [Treinamento](docs/treinamento.md) — os dois notebooks do Colab (BERTimbau e fusor) e os artefatos que eles produzem
+- [Treinamento](docs/treinamento.md) — os notebooks do Colab, os corpora de cada sinal, os artefatos que eles produzem e o registro do vazamento que matou o primeiro fusor
 
 ## Como rodar
 
@@ -161,6 +179,18 @@ mudar depois exige reiniciar o processo.
 - A tela **Configurações** não reimplementa a validação: quando a faixa de NPS
   não cobre 0–10 de forma contígua, quem escreve a mensagem é a API, que nomeia
   a nota descoberta.
+- **O fusor é treinado em conversas sintéticas.** Nenhum corpus público de
+  resenha PT-BR tem timestamps de diálogo: latência, escalação e abandono saem
+  de distribuições calibradas por literatura de live chat. O texto é real, o
+  tempo não é — e as métricas do notebook 02 são otimistas por isso.
+- **O corpus de emoção é traduzido por máquina** (GoEmotions → PT-BR, sem
+  revisão humana). Por isso a avaliação reporta também o XED-pt, que não passou
+  por tradução automática, como conjunto de teste independente.
+- **O corpus de ironia (IDPT 2021) é de tweets e comentários de notícia**, não
+  de atendimento. A transferência de domínio não está verificada.
+- **O SentiLex-PT é léxico de julgamento social:** anota polaridade dirigida a
+  entidades humanas. `gostar`, `adorar` e `odiar` valem **0** nele — quem lê
+  afeto do próprio falante é o transformer, não o léxico.
 
 ## Pendências
 
@@ -180,26 +210,39 @@ Para destravar: rodar `notebooks/01_treino_bertimbau.ipynb` e depois
 `bertimbau-satisfacao/`, o `fusor.joblib` e o `metricas.json`. Aí
 `uvicorn fraus.api.main:app` sobe com o motor real.
 
-### 2. `GET /serie-temporal` — a dívida de escala
+### 2. Notebooks 03 e 04 — as 7 emoções e a ironia
+
+Requisito de banca ainda não entregue. Os módulos `fraus/sinais/emocao.py`,
+`fraus/sinais/lexico.py` e `fraus/sinais/ironia.py` existem e estão cobertos por
+testes, mas as duas cabeças precisam ser treinadas antes que suas features
+possam entrar no vetor do fusor — expandir `NOMES_FEATURES` antes disso
+quebraria o notebook 02 e a API sem nada em troca.
+
+Sequência: escrever e rodar `03_treino_emocao.ipynb` (corpus `go_emotions_ptbr`,
+validação no XED-pt) e `04_treino_ironia.ipynb` (IDPT 2021), subir o contrato de
+16 para 30 features e **retreinar o fusor**. Detalhes de corpus, rótulo e
+limitação em [docs/treinamento.md](docs/treinamento.md).
+
+### 3. `GET /serie-temporal` — a dívida de escala
 
 A Visão geral monta o gráfico de NPS × latência baixando **todas** as
 transcrições do recorte para ler timestamps. É um N+1 aceitável em dezenas de
 atendimentos e insustentável em milhares. Os primos `GET /conversas?de=&ate=` e
 `GET /indicadores?de=&ate=` tirariam o filtro de período do cliente.
 
-### 3. Atribuição por sentença do classificador
+### 4. Atribuição por sentença do classificador
 
 O endpoint de atribuição existe, mas a transcrição só marca evidência
 **observável** (polaridade de emoji e tempo de espera). A contribuição do sinal
 de texto por sentença depende do modelo treinado — cai junto com a pendência 1.
 
-### 4. Definição da empresa
+### 5. Definição da empresa
 
 A spec ainda não fixa a empresa fictícia do trabalho, e ela atravessa a
 apresentação inteira: define o volume plausível de atendimentos, os canais e o
 que conta como bom tempo de resposta.
 
-### 5. Decisões em aberto
+### 6. Decisões em aberto
 
 - **Tema claro.** A dashboard é dark-only, herdado do chassi. Projetor de banca
   costuma lavar tema escuro, e adicionar depois é retrabalho.

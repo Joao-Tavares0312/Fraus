@@ -35,6 +35,10 @@ CSV / Discord / WhatsApp
 | `fraus/sinais/texto.py` | BERTimbau, probabilidade **por mensagem** |
 | `fraus/sinais/emoji.py` | lexicon + posição relativa |
 | `fraus/sinais/tempo.py` | latência, escalação, abandono |
+| `fraus/sinais/emocao.py` | 7 classes de emoção; desprezo derivado da díade raiva+nojo |
+| `fraus/sinais/lexico.py` | SentiLex-PT02 + escopo de negação |
+| `fraus/sinais/ironia.py` | cabeça binária (IDPT 2021) |
+| `scripts/preparar_sentilex.py` | converte o SentiLex bruto em `fraus/dados/sentilex_pt02.csv` |
 | `fraus/fusor.py` | `NOMES_FEATURES` (16) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
 | `fraus/configuracao.py` | configuração vigente: padrão de fábrica no código, delta no banco |
@@ -82,6 +86,14 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
    sistema pontuar ao contrário em silêncio.
 9. **As 16 chaves de feature** produzidas pelos três sinais batem exatamente com
    `NOMES_FEATURES`. `vetorizar` levanta `KeyError` em falta — nunca zero silencioso.
+   Os sinais de emoção, léxico e ironia existem mas **ainda não entram no vetor**:
+   o contrato só sobe quando os modelos dos notebooks 03 e 04 existirem, senão
+   `montar_features` passa a exigir classificador que ninguém treinou.
+10. **Corpus de treino não pode entregar o rótulo.** Faixa de latência disjunta
+    por classe fez o primeiro fusor marcar 99,3% lendo só o relógio, com o
+    BERTimbau apagado. Distribuição por rótulo se sobrepõe; feature constante no
+    treino nasce com peso zero. Acurácia alta demais é sintoma, não vitória —
+    ver `docs/treinamento.md`.
 
 ## Convenções
 
