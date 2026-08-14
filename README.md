@@ -179,6 +179,17 @@ mudar depois exige reiniciar o processo.
 - A tela **Configurações** não reimplementa a validação: quando a faixa de NPS
   não cobre 0–10 de forma contígua, quem escreve a mensagem é a API, que nomeia
   a nota descoberta.
+- **A classe neutra do modelo conta como detratora, e o NPS sai pessimista.**
+  O score é `100 * (P(satisfeito) + 0.5 * P(neutro))`: uma conversa classificada
+  com certeza como neutra pontua **50**, vira nota **5** e cai em **0–6,
+  detrator**. A faixa neutra do NPS (7–8) exigiria `P(satisfeito)` entre 0,4 e
+  0,8 — um empate entre classes, não uma neutralidade confiante. Medido em 90
+  conversas do simulador (30 por classe, equilibradas por construção): **67%
+  detrator · 29% promotor · 4% neutro**, com **NPS −38** onde o esperado seria
+  ≈ 0. É consequência da composição entre o peso do neutro no score e a faixa
+  padrão do NPS, não erro de treino — o fusor separa as três classes com
+  medianas 0,11 / 50,99 / 99,03. Mantido assim por decisão de projeto; subir o
+  peso do neutro para 0,75 alinharia as três classes às três categorias.
 - **O fusor é treinado em conversas sintéticas.** Nenhum corpus público de
   resenha PT-BR tem timestamps de diálogo: latência, escalação e abandono saem
   de distribuições calibradas por literatura de live chat. O texto é real, o

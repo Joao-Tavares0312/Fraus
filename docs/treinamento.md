@@ -131,7 +131,28 @@ Os 99,3% nao mediam fusao. Mediam que o simulador vazava o gabarito.
 - a latencia passou a ser **log-normal** com caudas que se cruzam. As medianas continuam ordenadas, como manda a literatura de live chat, mas ~11% das conversas satisfeitas sao mais lentas que a mediana das insatisfeitas, e vice-versa. Existe atendimento rapido que termina mal;
 - as falas do cliente passaram a levar **emoji do lexicon**, com cruzamento deliberado — cliente irritado manda 🙏 (+0,418), cliente satisfeito manda 😩 (-0,368) — para o emoji nao virar o proximo gabarito.
 
-**Como saber se voltou.** Se o notebook 02 imprimir acuracia acima de ~95%, desconfie: e sinal de que alguma feature esta entregando o rotulo. Um fusor honesto neste corpus fica bem abaixo disso.
+**Como saber se voltou.** Acuracia alta e sintoma que pede investigacao, nao veredito. Depois da correcao o notebook 02 marcou **0,96**, e desta vez o numero se sustentou: os pesos aprendidos mudaram de lugar.
+
+| feature | fusor vazado | fusor corrigido |
+|---|---|---|
+| `emoji_score_medio` | **0,0000** (morto) | **1,6662** (1º) |
+| `texto_prob_satisfeito_media` | 1,3858 | 1,6026 (2º) |
+| `texto_prob_insatisfeito_media` | 1,1212 | 1,4722 (3º) |
+| `latencia_p90_s` | **2,0575** (1º) | 0,0674 |
+| `latencia_mediana_s` | 2,0329 | 0,1621 |
+| `latencia_primeira_resposta_s` | 1,9068 | 0,0138 |
+
+O mesmo teste de sanidade que expos o vazamento — mesmo texto, so mudando o relogio — passou de 2,5 pontos de separacao para **99,6**: texto otimo pontua 99,98 e texto pessimo 0,35, com a latencia mexendo fracoes de ponto. O sinal de tempo virou o modificador fraco que ele deve ser.
+
+**O criterio, entao, nao e o numero sozinho.** Diante de acuracia alta, olhe os PESOS: se as features que lideram forem as que carregam o conteudo (texto, emoji), o modelo aprendeu; se forem as circunstanciais (tempo, contagem de turnos), procure o vazamento.
+
+### Consequencia no NPS: a classe neutra cai em detrator
+
+Medido em 90 conversas do simulador, 30 por classe, o fusor corrigido separa bem — medianas **0,11 / 50,99 / 99,03** por rotulo verdadeiro. Mas a categoria de NPS derivada sai **67% detrator · 29% promotor · 4% neutro**, com **NPS -38** num lote equilibrado por construcao.
+
+Nao e falha do treino. O score e `100 * (P(satisfeito) + 0.5 * P(neutro))`, entao conversa classificada com certeza como neutra pontua 50, vira nota 5 e cai na faixa 0-6. A faixa neutra do NPS (7-8) so seria alcancada com `P(satisfeito)` entre 0,4 e 0,8 — um empate entre classes, nao uma neutralidade confiante. As tres classes do modelo e as tres categorias do NPS foram decididas em lugares separados e nunca se encontraram.
+
+**Decisao de projeto: manter e declarar.** A alternativa avaliada era subir o peso do neutro de 0,5 para 0,75 (o centro da faixa passiva do NPS), o que faria neutro puro pontuar 75, virar nota 8 e cair em neutro — alinhando as tres classes as tres categorias. Ficou registrada aqui e na docstring de `Fusor.pontuar` para nao ser "corrigida" por engano.
 
 ## Contrato de features
 
