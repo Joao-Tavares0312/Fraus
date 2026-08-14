@@ -102,7 +102,7 @@ export function NavegacaoLateral() {
           className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Image
-            src="/fraus-logo.svg"
+            src="/fraus-logo.png"
             alt=""
             width={28}
             height={28}

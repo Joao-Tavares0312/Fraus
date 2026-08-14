@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/fraus-logo.svg" alt="Fraus" width="140">
+  <img src="docs/assets/fraus-logo.png" alt="Fraus" width="140">
 </p>
 
 <h1 align="center">Fraus</h1>
