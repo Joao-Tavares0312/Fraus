@@ -191,6 +191,14 @@ export type Simulacao = {
   prob_neutro: number;
   prob_satisfeito: number;
   emojis: EmojiDetectado[];
+  /**
+   * As oito emocoes: as sete treinadas (Ekman + neutro) mais o `desprezo`,
+   * DERIVADO da diade raiva+nojo por media geometrica (Plutchik 1980) porque
+   * nenhum corpus PT-BR o anota. `null` se a API subiu sem essa cabeca.
+   */
+  emocao: Record<string, number> | null;
+  /** Ver a ressalva medida em `MensagemAtribuida.prob_ironia`. */
+  prob_ironia: number | null;
 };
 
 /**

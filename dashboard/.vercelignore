@@ -1,0 +1,9 @@
+# O que nunca deve subir para a Vercel.
+# Os pesos dos modelos (1,3 GB) e o banco vivem fora desta pasta, mas isto e
+# uma segunda tranca: subir modelo para um host de front nao serviria para
+# nada e estouraria o limite de deploy.
+node_modules
+.next
+*.db
+../modelos
+../dados_brutos
