@@ -121,6 +121,35 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
 | `FRAUS_CHAVE_MESTRA` | (nenhum) | ausente: API aberta (uso local), com aviso no boot. Presente: toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao`, que segue exigindo chave de fonte |
 
+#### Ligando a autenticação
+
+A chave mestra não é gerada pelo sistema: é um segredo que **você inventa** e
+entrega à API pelo ambiente. Ela nunca é gravada em disco — a API compara o
+header com o valor da variável, em tempo constante.
+
+```bash
+# 1. Invente um segredo forte:
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# 2. Suba a API com ele (PowerShell: $env:FRAUS_CHAVE_MESTRA = "..."):
+FRAUS_CHAVE_MESTRA=<segredo> uv run uvicorn fraus.api.main:app
+
+# 3. Toda rota agora exige chave. Gere uma chave de ACESSO para a dashboard:
+curl -X POST localhost:8000/acesso/chaves \
+  -H "Authorization: Bearer <segredo>" \
+  -H 'content-type: application/json' -d '{"nome": "dashboard"}'
+# → devolve a chave fra_... UMA única vez; o banco guarda só o hash.
+
+# 4. Suba a dashboard com a chave (server-side, nunca vai ao navegador):
+cd dashboard && FRAUS_CHAVE_ACESSO=fra_... npm run dev
+```
+
+`GET /acesso/chaves` lista as chaves emitidas (nome, dica dos 4 últimos
+caracteres, nunca o hash) e `DELETE /acesso/chaves/{id}` revoga na hora — a
+chamada seguinte com a chave revogada leva 401. Se uma chave de acesso vazar,
+revogue-a sem trocar a mestra; se a **mestra** vazar, troque a variável e
+reinicie: as chaves de acesso continuam valendo, quem perde o posto é só ela.
+
 Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
 caminho relativo a ela:
 
