@@ -362,7 +362,16 @@ def montar_app():
     motor = montar_motor()
     total = semear(banco, motor)
     print(f"[api_demo] banco de demonstracao em {caminho} com {total} conversas")
-    return criar_app(banco=banco, motor=motor)
+    # A mesma leitura de `criar_app_padrao`: a doc de hospedagem promete que
+    # definir FRAUS_CHAVE_MESTRA protege a API, e quem sobe o tunel pela demo
+    # tinha essa promessa quebrada em silencio -- a variavel era ignorada aqui.
+    chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
+    if chave_mestra is None:
+        print(
+            "[api_demo] AVISO: API sem autenticacao (uso local). "
+            "Defina FRAUS_CHAVE_MESTRA para exigir chave em todas as rotas."
+        )
+    return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
 
 
 app = montar_app()
