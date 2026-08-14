@@ -99,9 +99,14 @@ export function FaixaIndicadores({
       : undefined;
 
   return (
+    // A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
+    // se rele a cada compasso. Ela mora a ESQUERDA da linha do tempo, entao a
+    // pilha vertical e a forma certa em tela larga -- a fileira de quatro
+    // colunas era o template de metrica-heroi, e ele empurrava a tese da tela
+    // para baixo da dobra.
     <section
       aria-label={`Indicadores de ${rotuloDoPeriodo}`}
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1"
     >
       <CartaoIndicador
         rotulo="NPS inferido"

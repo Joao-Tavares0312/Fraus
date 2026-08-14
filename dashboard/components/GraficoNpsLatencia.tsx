@@ -97,16 +97,25 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
       ) : (
         // Altura FIXA por breakpoint: gráfico que muda de altura ao trocar de
         // dado causa salto de layout.
-        <div className="h-[300px] px-2 pb-2 sm:h-[340px]">
+        <div className="px-2 pb-2">
+          <div className="h-[300px] sm:h-[340px]">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={serie}
               margin={{ top: 8, right: 18, bottom: 22, left: 6 }}
             >
+              {/* As BARRAS DE COMPASSO: um filete por dia, mais fraco que a
+                  regua horizontal. Elas agrupam o tempo sem gastar legenda --
+                  quem varre a linha ve onde um dia termina e o outro comeca. */}
               <CartesianGrid
                 stroke="var(--border)"
                 strokeWidth={1}
                 vertical={false}
+              />
+              <CartesianGrid
+                stroke="var(--compasso)"
+                strokeWidth={1}
+                horizontal={false}
               />
               <XAxis
                 dataKey="rotulo"
@@ -172,8 +181,13 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                 stroke="var(--border)"
                 strokeWidth={1}
               />
+              {/* O CURSOR DE LEITURA. E o unico lugar do sistema onde o lime
+                  da marca toca a area de dado, e ele nao codifica valor
+                  nenhum: marca ONDE VOCE ESTA na linha do tempo, como a barra
+                  de reproducao de um editor de partitura. Nenhuma serie,
+                  categoria ou barra usa esta cor. */}
               <Tooltip
-                cursor={{ stroke: "var(--muted-foreground)", strokeWidth: 1 }}
+                cursor={{ stroke: "var(--primary)", strokeWidth: 1.5 }}
                 content={<Dica />}
               />
               <Line
@@ -203,6 +217,8 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
               />
             </ComposedChart>
           </ResponsiveContainer>
+          </div>
+          <FaixaDePresenca serie={serie} />
         </div>
       )}
     </div>
@@ -320,6 +336,82 @@ function TabelaDaSerie({ id, serie }: { id: string; serie: PontoSerie[] }) {
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+/**
+ * A FAIXA DE PRESENCA: um marcador por dia, sob a linha do tempo.
+ *
+ * Aqui mora a peca central da notacao. Numa partitura, a cabeca de nota VAZADA
+ * ocupa o tempo e nao soa -- e e exatamente isso que um dia com atendimento e
+ * sem nenhuma fala do cliente e. O principio "ausencia de dado nao e
+ * insatisfacao" deixa de ser nota de rodape e vira FORMA:
+ *
+ *   - cheio  = o dia tem atendimento pontuado, e ele esta na linha acima;
+ *   - vazado = o dia teve atendimento, mas nenhum com sinal do cliente;
+ *   - nada   = nao houve atendimento.
+ *
+ * O vazado NAO entra na escala de NPS, e por isso vive fora da area de plotagem
+ * em vez de virar um ponto em zero -- ponto em zero seria dizer "NPS 0", que e
+ * medicao inventada.
+ *
+ * Os recuos laterais espelham as larguras dos dois eixos Y do grafico para que
+ * cada marcador caia sob o seu dia.
+ */
+function FaixaDePresenca({ serie }: { serie: PontoSerie[] }) {
+  if (serie.length === 0) return null;
+
+  const semSinal = serie.filter((p) => p.atendimentos > 0 && p.comScore === 0);
+
+  return (
+    <div className="mt-1 pl-[58px] pr-[76px]">
+      <div className="flex items-center" role="img"
+        aria-label={
+          semSinal.length === 0
+            ? "Todos os dias com atendimento tem pelo menos um atendimento pontuado."
+            : `${semSinal.length} dia(s) com atendimento e nenhum pontuado: ${semSinal.map((p) => p.rotulo).join(", ")}.`
+        }
+      >
+        {serie.map((ponto) => {
+          const pontuado = ponto.comScore > 0;
+          const vazio = ponto.atendimentos === 0;
+          return (
+            <span
+              key={ponto.dia}
+              className="flex flex-1 justify-center"
+              title={
+                vazio
+                  ? `${ponto.rotulo}: nenhum atendimento`
+                  : pontuado
+                    ? `${ponto.rotulo}: ${ponto.comScore} de ${ponto.atendimentos} atendimento(s) pontuado(s)`
+                    : `${ponto.rotulo}: ${ponto.atendimentos} atendimento(s), nenhum com fala do cliente — sem sinal`
+              }
+            >
+              {vazio ? (
+                <span aria-hidden className="block size-[7px]" />
+              ) : (
+                <span
+                  aria-hidden
+                  className={
+                    pontuado
+                      ? "block size-[7px] rounded-full bg-medido"
+                      : "block size-[7px] rounded-full border border-muted-foreground"
+                  }
+                />
+              )}
+            </span>
+          );
+        })}
+      </div>
+      <p className="mt-1.5 text-[0.6875rem] leading-tight text-muted-foreground">
+        Cada marca é um dia:{" "}
+        <span className="inline-block size-[7px] translate-y-px rounded-full bg-medido" />{" "}
+        pontuado ·{" "}
+        <span className="inline-block size-[7px] translate-y-px rounded-full border border-muted-foreground" />{" "}
+        houve atendimento, nenhum com fala do cliente — não entra na escala e
+        nunca como zero.
+      </p>
     </div>
   );
 }

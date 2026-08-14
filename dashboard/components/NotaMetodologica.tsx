@@ -4,7 +4,12 @@
  */
 export function NotaMetodologica({ derivados }: { derivados?: string[] }) {
   return (
-    <footer className="quebra-evitar rounded-xl bg-card px-5 py-4 ring-1 ring-foreground/10">
+    // O APARATO GERAL da tela. Perdeu a caixa: no mundo da pauta quem agrupa e
+    // regua e espaco, e um cartao aqui deixaria a nota parecendo um aviso
+    // avulso em vez do rodape de editor que ela e. Ela permanece INTEIRA e
+    // sempre visivel -- e o unico bloco de prosa que nao recolhe, porque e a
+    // declaracao de metodo do produto, nao a de um painel.
+    <footer className="quebra-evitar border-t border-linha pt-3">
       <h2 className="text-sm font-semibold text-foreground">
         Nota metodológica
       </h2>

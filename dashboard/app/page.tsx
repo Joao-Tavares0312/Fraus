@@ -113,31 +113,41 @@ export default async function Pagina(props: PageProps<"/">) {
         extensao={extensao}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
-        <FaixaIndicadores
-          indicadores={indicadores}
-          tempoMediano={tempoMediano}
-          limiares={limiares}
-          erro={erro}
-          rotuloDoPeriodo={rotulo}
-        />
+      <main className="flex min-w-0 flex-1 flex-col gap-7 px-4 py-5 sm:px-6">
+        {/*
+          O PRIMEIRO SISTEMA. A tese da tela — o trade-off entre satisfação e
+          tempo — abre a página, e os indicadores agregados ficam à esquerda
+          como armadura: lidos de uma vez, não relidos a cada compasso.
 
-        <Painel
-          titulo="NPS inferido × latência mediana, por dia"
-          legenda="As duas séries aparecem sobrepostas de propósito: otimizar um indicador isolado costuma quebrar o outro — empurrar a deflexão para cima derruba a satisfação. Cada eixo tem domínio fixo, a latência é sempre tracejada, e a visão de tabela mostra os números exatos sem geometria entre eles."
-          semPadding
-          rodape="As duas escalas são independentes: a altura de uma curva em relação à outra não significa nada, só o formato de cada uma ao longo do tempo. Dias sem nenhum atendimento pontuado ficam com a linha do NPS interrompida — nunca em zero."
-        >
-          {erro ? (
-            <EstadoVazio
-              className="m-5"
-              titulo="Série indisponível"
-              explicacao={`Não foi possível listar os atendimentos: ${erro}. A série temporal é derivada dessa lista.`}
-            />
-          ) : (
-            <GraficoNpsLatencia serie={serie} />
-          )}
-        </Painel>
+          Antes, quatro cartões de métrica ocupavam a primeira dobra inteira e
+          empurravam este gráfico para 560px abaixo do topo. Quem chega quer
+          ver a forma da semana, não quatro números soltos.
+        */}
+        <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
+          <FaixaIndicadores
+            indicadores={indicadores}
+            tempoMediano={tempoMediano}
+            limiares={limiares}
+            erro={erro}
+            rotuloDoPeriodo={rotulo}
+          />
+
+          <Painel
+            titulo="NPS inferido × latência mediana, por dia"
+            legenda="As duas séries aparecem sobrepostas de propósito: otimizar um indicador isolado costuma quebrar o outro — empurrar a deflexão para cima derruba a satisfação. Cada eixo tem domínio fixo, a latência é sempre tracejada, e a visão de tabela mostra os números exatos sem geometria entre eles."
+            semPadding
+            rodape="As duas escalas são independentes: a altura de uma curva em relação à outra não significa nada, só o formato de cada uma ao longo do tempo. Dias sem nenhum atendimento pontuado ficam com a linha do NPS interrompida — nunca em zero."
+          >
+            {erro ? (
+              <EstadoVazio
+                titulo="Série indisponível"
+                explicacao={`Não foi possível listar os atendimentos: ${erro}. A série temporal é derivada dessa lista.`}
+              />
+            ) : (
+              <GraficoNpsLatencia serie={serie} />
+            )}
+          </Painel>
+        </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           <Painel
