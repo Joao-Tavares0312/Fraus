@@ -58,6 +58,18 @@ CREATE TABLE IF NOT EXISTS importacoes (
     motivos TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_importacoes_ocorrida_em ON importacoes(ocorrida_em);
+
+-- Chave de ACESSO: autoriza a leitura da API inteira quando FRAUS_CHAVE_MESTRA
+-- esta definida. `chave_hash`/`dica` seguem o desenho de fontes_integracao:
+-- hash no banco, nunca a chave; dica de 4 chars para o operador reconhecer.
+-- Revogar e DELETE: chave sem linha e chave que nao autoriza.
+CREATE TABLE IF NOT EXISTS chaves_acesso (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    chave_hash TEXT,
+    dica TEXT,
+    criada_em TEXT NOT NULL
+);
 """
 
 
@@ -306,3 +318,44 @@ class Banco:
         with self._conectar() as conexao:
             linhas = conexao.execute("SELECT payload, score FROM conversas").fetchall()
         return [(Conversa(**json.loads(l["payload"])), l["score"]) for l in linhas]
+
+    def criar_chave_acesso(self, nome: str, criada_em: str) -> dict:
+        """Cria a LINHA da chave. O hash chega depois, por gravar_chave_acesso:
+        a chave embute o id, entao o id precisa existir antes do segredo."""
+        with self._conectar() as conexao:
+            cursor = conexao.execute(
+                "INSERT INTO chaves_acesso (nome, criada_em) VALUES (?, ?)",
+                (nome, criada_em),
+            )
+            identificador = cursor.lastrowid
+        return {"id": identificador, "nome": nome, "dica": None, "criada_em": criada_em}
+
+    def gravar_chave_acesso(self, identificador: int, chave_hash: str, dica: str) -> None:
+        with self._conectar() as conexao:
+            conexao.execute(
+                "UPDATE chaves_acesso SET chave_hash = ?, dica = ? WHERE id = ?",
+                (chave_hash, dica, identificador),
+            )
+
+    def listar_chaves_acesso(self) -> list[dict]:
+        """O HASH NAO SAI POR AQUI -- mesma regra de _fonte: removido na origem."""
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT id, nome, dica, criada_em FROM chaves_acesso ORDER BY criada_em, id"
+            ).fetchall()
+        return [dict(linha) for linha in linhas]
+
+    def hash_da_chave_acesso(self, identificador: int) -> str | None:
+        """O unico caminho para ler o hash -- explicito no nome, uso unico."""
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT chave_hash FROM chaves_acesso WHERE id = ?", (identificador,)
+            ).fetchone()
+        return linha["chave_hash"] if linha is not None else None
+
+    def apagar_chave_acesso(self, identificador: int) -> bool:
+        with self._conectar() as conexao:
+            cursor = conexao.execute(
+                "DELETE FROM chaves_acesso WHERE id = ?", (identificador,)
+            )
+            return cursor.rowcount > 0
