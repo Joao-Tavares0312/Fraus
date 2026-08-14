@@ -22,7 +22,8 @@ export function CabecalhoPagina({
   acoes,
 }: {
   titulo: string;
-  subtitulo: string;
+  /** Opcional: tela cuja tarefa e obvia pelo titulo nao paga um paragrafo. */
+  subtitulo?: string;
   periodo?: Periodo;
   extensao?: Extensao;
   acoes?: ReactNode;
@@ -36,9 +37,11 @@ export function CabecalhoPagina({
             <h1 className="text-lg leading-tight font-semibold tracking-tight text-foreground">
               {titulo}
             </h1>
-            <p className="mt-0.5 max-w-[80ch] text-sm leading-relaxed text-muted-foreground">
-              {subtitulo}
-            </p>
+            {subtitulo ? (
+              <p className="mt-0.5 max-w-[80ch] text-sm leading-relaxed text-muted-foreground">
+                {subtitulo}
+              </p>
+            ) : null}
           </div>
           {acoes ? (
             <div className="sem-impressao flex shrink-0 gap-2">{acoes}</div>

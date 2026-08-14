@@ -144,7 +144,6 @@ export function FaixaIndicadores({
         }
         trilho={TRILHO_CSAT}
         explicacaoVazio="Sem atendimento pontuado no período, não há proporção de satisfeitos a calcular."
-        rodape={`Proporção de atendimentos com nota ≥ 7, a mesma regra do servidor.`}
       />
 
       <CartaoIndicador
@@ -160,7 +159,6 @@ export function FaixaIndicadores({
         }
         trilho={{ minimo: 0, maximo: 100, faixas: [] }}
         explicacaoVazio="Nenhuma transcrição carregada no período — a contenção sai de escalou_para_humano, que vem com a conversa."
-        rodape="Atendimentos resolvidos sem passar para um humano. Não depende de score."
       />
 
       <CartaoIndicador
@@ -173,8 +171,52 @@ export function FaixaIndicadores({
         }
         trilho={trilhoDeLatencia(limiares)}
         explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
-        rodape={`Mediana do intervalo entre a fala do cliente e a resposta seguinte, derivada dos timestamps. As faixas do trilho cortam em ${limiares.pico} s, ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — configuráveis em Configurações.`}
       />
+
+      {/*
+        O METODO dos quatro indicadores vira UM aparato so, no pe da armadura —
+        antes cada cartao carregava o proprio paragrafo e a pilha inteira
+        gastava mais tela em prosa fixa do que em numero (regra ja paga duas
+        vezes: ressalva repetida vira ruido e para de ser lida). O que continua
+        colado ao numero e DADO do recorte — a contagem de "com sinal" do NPS e
+        a legenda de cortes do trilho — porque muda com o filtro.
+      */}
+      <details className="group sm:col-span-2 xl:col-span-1">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          <span
+            aria-hidden
+            className="inline-block transition-transform duration-200 group-open:rotate-90"
+          >
+            ›
+          </span>
+          Método e ressalvas
+        </summary>
+        <dl className="mt-2 flex max-w-[52ch] flex-col gap-1.5 text-[0.6875rem] leading-snug text-muted-foreground">
+          <div>
+            <dt className="inline font-medium">CSAT inferido:</dt>{" "}
+            <dd className="inline">
+              proporção de atendimentos com nota ≥ 7, a mesma regra do servidor.
+            </dd>
+          </div>
+          <div>
+            <dt className="inline font-medium">Taxa de contenção:</dt>{" "}
+            <dd className="inline">
+              atendimentos resolvidos sem passar para um humano. Não depende de
+              score.
+            </dd>
+          </div>
+          <div>
+            <dt className="inline font-medium">Latência mediana:</dt>{" "}
+            <dd className="inline">
+              mediana do intervalo entre a fala do cliente e a resposta
+              seguinte, derivada dos timestamps. Os cortes do trilho (
+              {limiares.pico} s, {limiares.saudavel} s e{" "}
+              {emMinutos(limiares.degradando)} min) são configuráveis em
+              Configurações.
+            </dd>
+          </div>
+        </dl>
+      </details>
     </section>
   );
 }

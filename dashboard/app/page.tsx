@@ -106,12 +106,10 @@ export default async function Pagina(props: PageProps<"/">) {
 
   return (
     <>
-      <CabecalhoPagina
-        titulo="Visão geral"
-        subtitulo="O cliente escreve “ok, obrigado 🙂” e sai insatisfeito. Esta tela lê o que foi dito de verdade — texto, emoji e tempo de resposta — e estima a satisfação sem perguntar nada a ele."
-        periodo={periodo}
-        extensao={extensao}
-      />
+      {/* Sem subtitulo, por decisao do Joao (14/08): o pitch morava aqui e
+          empurrava a tese da tela para baixo. A honestidade metodologica nao
+          saiu -- ela vive na NotaMetodologica e nos rotulos de estimativa. */}
+      <CabecalhoPagina titulo="Visão geral" periodo={periodo} extensao={extensao} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-7 px-4 py-5 sm:px-6">
         {/*
