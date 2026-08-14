@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CartesianGrid,
   ComposedChart,
@@ -49,6 +50,21 @@ import { EstadoVazio } from "./EstadoVazio";
 export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
   const [verTabela, setVerTabela] = useState(false);
   const idTabela = useId();
+  const roteador = useRouter();
+
+  /**
+   * Drill-down: o dia clicado vira o recorte de /atendimentos. Todo estado
+   * apontado no grafico fica a um clique da lista que o explica -- sinalizar
+   * um dia ruim sem caminho ate os atendimentos dele seria decoracao.
+   */
+  const abrirDia = (estado: { activeIndex?: number | string | null }) => {
+    const bruto = estado?.activeIndex;
+    const indice = typeof bruto === "string" ? Number(bruto) : bruto;
+    if (indice == null || Number.isNaN(indice)) return;
+    const ponto = serie[indice];
+    if (!ponto || ponto.atendimentos === 0) return;
+    roteador.push(`/atendimentos?de=${ponto.dia}&ate=${ponto.dia}`);
+  };
 
   if (serie.length === 0) {
     return (
@@ -103,6 +119,8 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
             <ComposedChart
               data={serie}
               margin={{ top: 8, right: 18, bottom: 22, left: 6 }}
+              onClick={abrirDia}
+              className="cursor-pointer"
             >
               {/* As BARRAS DE COMPASSO: um filete por dia, mais fraco que a
                   regua horizontal. Elas agrupam o tempo sem gastar legenda --
@@ -296,6 +314,11 @@ function Dica({ active, payload }: DicaProps) {
             : ""}
         </dd>
       </dl>
+      {ponto.atendimentos > 0 ? (
+        <p className="mt-1.5 text-[0.6875rem] text-muted-foreground">
+          Clique para abrir os atendimentos do dia.
+        </p>
+      ) : null}
     </div>
   );
 }
