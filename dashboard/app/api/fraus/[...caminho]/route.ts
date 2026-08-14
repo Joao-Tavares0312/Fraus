@@ -34,9 +34,17 @@ async function repassar(
     cache: "no-store",
   });
 
+  const cabecalhosResposta = new Headers(resposta.headers);
+  // o fetch do Node ja descomprime o corpo -- repassar content-encoding/
+  // content-length/transfer-encoding faria o navegador tentar decodificar
+  // (ou truncar) um corpo que ja chegou decodificado.
+  cabecalhosResposta.delete("content-encoding");
+  cabecalhosResposta.delete("content-length");
+  cabecalhosResposta.delete("transfer-encoding");
+
   return new Response(resposta.body, {
     status: resposta.status,
-    headers: resposta.headers,
+    headers: cabecalhosResposta,
   });
 }
 
@@ -44,5 +52,6 @@ export {
   repassar as GET,
   repassar as POST,
   repassar as PUT,
+  repassar as PATCH,
   repassar as DELETE,
 };
