@@ -18,6 +18,7 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 `app` nao existe como atributo normal do modulo.
 """
 
+import hmac
 import json
 import os
 from datetime import date, datetime, timezone
@@ -25,8 +26,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
+from fraus import acesso
 from fraus import credencial
 from fraus.configuracao import PADROES as CONFIGURACAO_DE_FABRICA
 from fraus.configuracao import carregar as carregar_configuracao
@@ -449,8 +452,61 @@ def _fonte_publica(fonte: dict) -> dict:
     return {**fonte, "configurada": bool(variavel and os.environ.get(variavel))}
 
 
-def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastAPI:
+def criar_app(
+    banco: Banco,
+    motor,
+    raiz_importacao: Path | None = None,
+    chave_mestra: str | None = None,
+) -> FastAPI:
     app = FastAPI(title="Fraus", version="0.1.0")
+
+    # Vazia e ausente sao a mesma coisa: "Bearer " autorizando seria a pior
+    # combinacao possivel de configuracao errada com acesso liberado.
+    chave_mestra = chave_mestra or None
+
+    def _e_mestra(chave: str) -> bool:
+        if chave_mestra is None:
+            return False
+        return hmac.compare_digest(chave.encode("utf-8"), chave_mestra.encode("utf-8"))
+
+    def _acesso_autorizado(chave: str) -> bool:
+        """Mestra ou chave de acesso valida. Mensagem de recusa e uniforme
+        la fora: daqui so sai sim ou nao."""
+        if _e_mestra(chave):
+            return True
+        chave_id = acesso.id_da_chave(chave)
+        guardado = banco.hash_da_chave_acesso(chave_id) if chave_id is not None else None
+        return credencial.confere(chave, guardado)
+
+    if chave_mestra is not None:
+        @app.middleware("http")
+        async def exigir_chave_de_acesso(request, call_next):
+            # /ingestao tem credencial propria (chave de FONTE): uma credencial
+            # por rota. OPTIONS e o preflight do navegador -- nao carrega
+            # header de autorizacao por definicao.
+            if request.url.path == "/ingestao" or request.method == "OPTIONS":
+                return await call_next(request)
+            cabecalho = request.headers.get("authorization")
+            if not cabecalho or not cabecalho.startswith("Bearer "):
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": (
+                        "informe a chave de acesso em Authorization: Bearer <chave>"
+                    )},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            if not _acesso_autorizado(cabecalho[len("Bearer "):]):
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "chave invalida"},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return await call_next(request)
+
+    # O CORS precisa ficar POR FORA do middleware de chave: em Starlette, o
+    # middleware adicionado por ULTIMO e o mais externo, entao registrar o
+    # CORS depois garante que o preflight (sem header de autorizacao, por
+    # definicao) e respondido pelo CORS antes de chegar no bloco 401 acima.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origens_liberadas(),
@@ -1158,7 +1214,14 @@ def criar_app_padrao() -> FastAPI:
     motor = Motor(classificador, fusor, emocao=emocao, ironia=ironia)
     banco = Banco(CAMINHO_BANCO)
     banco.migrar()
-    return criar_app(banco=banco, motor=motor)
+
+    chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
+    if chave_mestra is None:
+        print(
+            "AVISO: API sem autenticacao (uso local). "
+            "Defina FRAUS_CHAVE_MESTRA para exigir chave em todas as rotas."
+        )
+    return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
 
 
 def __getattr__(nome: str):
