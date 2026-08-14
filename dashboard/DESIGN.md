@@ -1,257 +1,172 @@
 # Fraus — Design System
 
-Contrato visual da interface. Quem escrever UI neste projeto segue este documento.
-Ele não descreve como as telas estão hoje: descreve como elas devem ser.
+Contrato visual da interface. Quem escrever UI neste projeto segue este
+documento. Ele não descreve como as telas estão hoje: descreve como elas devem
+ser.
 
-**Chassi:** shadcn/ui sobre Tailwind v4, tokens em OKLCH, tema escuro único —
-herdado do sistema do `wascer-kronos`. A camada de dado é própria do Fraus.
-
----
-
-## 1. A metáfora, e por que ela governa a cor
-
-Fraus é a divindade romana da fraude. O produto existe porque **o cliente mente**:
-ele escreve "ok, obrigado 🙂" e sai insatisfeito.
-
-Disso sai a regra de encoding que atravessa a interface inteira:
-
-> **Âmbar é o que foi dito. Azul é o que foi medido.**
-
-Âmbar (quente, humano, declarado) marca a superfície: o texto do cliente, o emoji
-que ele escolheu, a fala literal. Azul (frio, instrumental, inferido) marca a
-leitura da máquina: score, probabilidade, tendência.
-
-Quando as duas aparecem juntas — e o produto inteiro é sobre isso — a distância
-entre âmbar e azul **é** a informação. É o gesto do logo: a máscara em degradê
-quente na frente, a verdade em contorno frio atrás.
-
-Nunca use âmbar para medição nem azul para fala. A metáfora quebra e a tela vira
-decoração.
-
-### 1.1 A regra que separa marca de dado
-
-**O lime da marca nunca aparece em dado.** `--primary` é lime; ele vive em botão,
-foco, item ativo da navegação e nada mais. Nenhuma série, categoria ou barra usa
-lime.
-
-Isso não é preferência: sem essa regra, a cor da marca e a cor de "cliente
-satisfeito" ficariam vizinhas e ninguém distinguiria controle de medição. Por isso
-**promotor é teal, não verde** — precisa estar longe do lime.
+**Mundo:** *Pauta* — a conversa notada como partitura.
+**Chassi:** shadcn/ui sobre Tailwind v4, tokens em OKLCH, tema escuro único.
 
 ---
 
-## 2. Tokens
+## 1. A tese, e por que ela governa a composição
 
-Tema escuro único, como o Kronos. Tokens em `app/globals.css`; consumo via classes
-utilitárias do Tailwind. Nada de hex solto em componente.
+Um atendimento é uma **sequência temporal de turnos com duração**. Isso é o que
+a notação musical resolve há quatrocentos anos, e resolve melhor do que a
+fileira de cartões que a categoria entrega.
 
-### 2.1 Chassi (herdado do Kronos, não alterar)
+A notação faz uma coisa que nenhum dashboard genérico faz: ela **separa o que
+está acima e o que está abaixo da linha**. Acima vai o articulado — letra,
+dinâmica, expressão. Abaixo vai o medido — cifra, andamento, baixo contínuo.
 
-| Token | Valor | Uso |
+> **Acima da linha é o que foi DITO. Abaixo da linha é o que foi MEDIDO.**
+
+Essa é a regra mestra da interface, e ela é **estrutural antes de ser cromática**.
+A metáfora de cor (âmbar/azul) permanece e passa a ter uma casa: âmbar mora
+acima, azul mora abaixo. Quando alguém precisa quebrar a regra de posição, a cor
+ainda desambigua — mas quebrar a posição é a exceção que se justifica no código.
+
+### 1.1 O que é notação e o que é decoração
+
+**Nenhum glifo musical é desenhado.** Sem clave, sem semínima, sem pentagrama de
+cinco linhas. A gramática entra como **estrutura e ritmo**, não como fantasia:
+
+| Elemento da notação | O que ele é aqui | Por quê |
 |---|---|---|
-| `--background` | `oklch(0.141 0.005 285.823)` | fundo da aplicação |
-| `--card` / `--popover` | `oklch(0.21 0.006 285.885)` | cartão, painel, sidebar |
-| `--foreground` | `oklch(0.985 0 0)` | texto primário |
-| `--muted` / `--accent` | `oklch(0.274 0.006 286.033)` | superfície secundária, hover |
-| `--muted-foreground` | `oklch(0.705 0.015 286.067)` | texto auxiliar — **piso de contraste** |
-| `--border` | `oklch(1 0 0 / 10%)` | separador, contorno |
-| `--input` | `oklch(1 0 0 / 15%)` | contorno de campo |
-| `--primary` / `--ring` | `oklch(0.843 0.179 134)` | marca, foco, item ativo |
-| `--primary-foreground` | `oklch(0.22 0.05 134)` | texto sobre lime |
-| `--destructive` | `oklch(0.704 0.191 22.216)` | erro |
-| `--success` | `oklch(0.78 0.16 150)` | sucesso |
-| `--warning` | `oklch(0.8 0.14 80)` | alerta |
-| `--radius` | `0.625rem` | base; a escala `sm…4xl` deriva dela |
+| a linha | régua horizontal de referência que divide dito e medido | dá eixo comum a séries de escalas diferentes |
+| a barra de compasso | filete vertical marcando a virada do dia | agrupa o tempo sem legenda |
+| a pausa | intervalo proporcional à latência | silêncio com duração notada é exatamente a espera |
+| a ligadura | marcação do trecho que puxou a nota | atribuição por sentença |
+| a dinâmica | peso e tamanho do tipo, não cor | intensidade sem gastar canal de cor |
+| **a cabeça vazada** | atendimento **sem sinal** | ocupa o tempo e não soa: a regra "ausência não é zero" vira forma |
 
-Superfícies "rich" (`--destructive-rich`, `--success-rich`, `--warning-rich` e as
-variantes `-border` / `-text`) ficam reservadas a ênfase única e crítica, como o
-Kronos as usa. Não decore com elas.
+A cabeça vazada é a peça mais importante desta lista. O princípio de produto
+"ausência de dado não é insatisfação" deixa de ser nota de rodapé e passa a ser
+**notação**: o marcador existe, ocupa a posição temporal, e é oco.
 
-`--muted-foreground` é o **piso de cor de texto**. Nada mais claro que ele carrega
-texto, e é ele que carrega o rótulo **"sem sinal"** — o estado que o produto existe
-para não falsear.
+Se em algum momento ler esta interface exigir saber solfejo, a regra foi
+aplicada errado. O modo é **Operate**: expressão nunca obscurece a tarefa.
 
-### 2.2 Camada de dado (própria do Fraus)
+---
 
-Os `--chart-1..5` do Kronos são uma rampa monocromática de lime, correta para dado
-sequencial e **errada aqui**: o Fraus precisa de séries distintas e de uma escala
-divergente. Substitua-os.
+## 2. Composição
 
-**A metáfora, em séries:**
+### 2.1 O que sai
 
-| Token | Valor | Significa |
+- **A fileira de cartões-KPI no topo.** É o "template de métrica-herói", e ele
+  empurra a tese da tela para baixo da dobra.
+- **O cartão como estrutura de página.** Painel com borda e fundo próprio deixa
+  de ser o agrupador padrão; agrupa-se por **espaço e régua**.
+- **O parágrafo explicativo acima de cada painel.** A prosa metodológica não
+  some — muda de lugar (ver 4).
+
+### 2.2 O que entra
+
+**O sistema é a unidade de composição.** Como numa partitura, um *sistema* é uma
+faixa horizontal de largura total que carrega uma linha de tempo e tudo que a
+anota. A página é uma pilha de sistemas, não uma grade de cartões.
+
+**A armadura.** Os indicadores agregados (NPS, CSAT, contenção, latência) vivem
+à esquerda do primeiro sistema, empilhados e compactos — como a armadura de
+clave, que se lê de uma vez e não se relê a cada compasso. Eles são **rótulo
+mais número tabular**, sem barra de progresso decorativa e sem cartão.
+
+**Ritmo vertical.** Densidade varia entre sistemas: um sistema denso ganha o
+direito de um respiro depois. Mais espaço acima de um título do que abaixo.
+
+---
+
+## 3. Tokens
+
+Tema escuro único. Tokens em `app/globals.css`; consumo via classes utilitárias.
+Nada de hex solto em componente.
+
+### 3.1 O fundo é papel, não vazio
+
+O fundo não é preto: é **papel de ensaio grafite**. Preto puro faz a régua
+flutuar no vácuo e transforma dado em néon. A superfície precisa parecer estoque
+de papel sob luz de escritório — o analista fica horas nela.
+
+| Token | Papel |
+|---|---|
+| `--background` | estoque de papel; grafite neutro, nunca `#000` |
+| `--card` | segunda camada de papel, para o que precisa de leve elevação |
+| `--linha` | a régua do sistema; meio ponto, sempre visível e nunca dominante |
+| `--compasso` | filete de virada de dia; mais fraco que `--linha` |
+| `--foreground` | tinta |
+| `--muted-foreground` | **piso de cor de texto** — nada mais claro que ele carrega texto |
+
+### 3.2 As duas vozes
+
+| Token | Voz | Onde mora |
 |---|---|---|
-| `--dito` | `oklch(0.80 0.15 60)` | fala, texto do cliente, emoji |
-| `--dito-fraco` | `color-mix(in oklch, var(--dito) 18%, transparent)` | preenchimento, realce de trecho |
-| `--medido` | `oklch(0.70 0.15 265)` | score, probabilidade, série de NPS |
-| `--medido-fraco` | `color-mix(in oklch, var(--medido) 18%, transparent)` | faixa de referência, área |
-| `--tempo` | `oklch(0.72 0.13 320)` | latência — **sempre tracejada** |
+| `--dito` | âmbar — fala, texto, emoji, o que o cliente articulou | **acima** da linha |
+| `--medido` | azul — score, probabilidade, latência, tendência | **abaixo** da linha |
 
-**Categorias de NPS — escala divergente.** Faixas fixas: **0–6 detrator · 7–8
-neutro · 9–10 promotor**. Nunca redefina, e leia-as de `GET /modelo`, não do front.
+Cada uma tem variante `-texto` com contraste verificado. Cor de marcação e cor
+de tipo não são a mesma coisa: `npm run contraste` é o juiz, e todo par que
+carrega texto cruza AA (4.5:1).
 
-| Token | Valor | Categoria |
-|---|---|---|
-| `--detrator` | `oklch(0.65 0.20 22)` | 0–6 |
-| `--neutro` | `oklch(0.74 0.10 90)` | 7–8 |
-| `--promotor` | `oklch(0.75 0.13 190)` | 9–10 |
-| `--sem-sinal` | `var(--muted-foreground)` | sem dado — **jamais** na escala |
+### 3.3 O lime é o cursor, e mais nada
 
-`--sem-sinal` é cinza de propósito: ausência de dado não pertence à escala de
-satisfação. Pintá-la de vermelho seria afirmar insatisfação que ninguém mediu.
+`--primary` é lime. No mundo anterior ele já era proibido em dado; agora ele
+ganha função única e nomeada: **o cursor de leitura** — o filete vertical que
+marca onde você está na linha do tempo, como no editor de partitura. Além dele,
+apenas foco de teclado e ação primária.
 
-Quando uma cor de categoria carregar **texto** e não só preenchimento, verifique o
-contraste contra `--card` e clareie o token se não cruzar 4.5:1. Cor de marcação e
-cor de tipo não são a mesma coisa.
+Nenhuma série, categoria ou barra usa lime. Por isso **promotor é teal, não
+verde**: precisa estar longe do cursor.
 
-**Como isso está implementado.** Clarear caso a caso deixaria o mesmo token com
-duas lightness espalhadas pelos componentes, então cada token de dado tem uma
-variante `-texto` fixa — `--dito-texto`, `--medido-texto`, `--tempo-texto`,
-`--detrator-texto`, `--neutro-texto`, `--promotor-texto`. A regra de uso é
-simples: **preenchimento usa o token base, tipografia usa a variante `-texto`**.
-As razões são verificadas por cálculo em `scripts/contraste.mjs`
-(`npm run contraste`), que lê os tokens do próprio `globals.css` e testa cada
-variante contra `--background`, `--card` e `--muted` — nenhuma lista duplicada,
-então um token editado aparece no relatório sem ninguém lembrar. A menor razão
-do conjunto é 5,66:1.
+### 3.4 Categorias
 
-Os tokens de dado também expõem `--dito-fraco`, `--medido-fraco` e
-`--tempo-fraco` (18% sobre transparente) para preenchimento de área e realce de
-trecho, onde contraste de texto não se aplica.
-
-### 2.3 Espaço, raio, tipografia
-
-Espaço em múltiplos de 4. Raio sempre pela escala derivada de `--radius` — sem
-pílulas totalmente arredondadas: o produto é instrumento de medição, não app de
-consumo.
-
-Fonte sem serifa para interface, **monoespaçada para todo número que se compara**
-— score, nota, latência, percentual — com `tabular-nums` em coluna de tabela e em
-cartão de indicador, sempre. Número que dança na vertical entre linhas é erro.
+Detrator, neutro e promotor mantêm cores distintas e **nunca** são comunicadas
+só por cor — sempre acompanham rótulo textual.
 
 ---
 
-## 3. Modo e postura
+## 4. Tipografia
 
-Superfície **Operate**: quem chega vem completar uma tarefa — entender a qualidade
-do atendimento e mexer na configuração da IA. Escaneabilidade, consistência e
-expectativa nativa vencem expressão. A marca vive na precisão dos detalhes.
+Uma família só, sans de sistema. O modo Operate tem permissão para isso, e o
+analista lê em DPI consistente: fonte de display em rótulo e dado é proibida.
 
-- **Densidade alta.** Painel de trabalho, não landing. Sem espaço em branco heroico
-  entre números que precisam ser comparados.
-- **Movimento só onde carrega informação** — transição de estado, entrada de dado,
-  foco. Use a curva `--ease-fluid` do chassi, 120–200 ms. Respeite
-  `prefers-reduced-motion` sem exceção.
-- **Nenhum degradê em superfície de dado.** Degradê existe no logo. Em gráfico e
-  cartão, cor chapada — degradê distorce leitura de área.
-- **Elevação por borda e superfície**, não por sombra difusa.
+- **Escala fixa em rem**, razão apertada (1.125–1.2). Nada fluido.
+- **Numeral tabular e monoespaçado em todo número que se compara** (`.num`).
+  Número que dança ao atualizar é ruído, não dado.
+- **Dinâmica por peso e tamanho.** Ênfase não gasta cor — a cor está reservada
+  para dito/medido.
+- Medida de prosa 65–75ch.
 
----
+### 4.1 A prosa metodológica vira aparato
 
-## 4. Regras de visualização
+Os textos de honestidade **permanecem, todos**. O que muda é a posição: eles
+saem de cima do dado e vão para o **aparato** — o rodapé do sistema, na tipografia
+menor, onde a partitura põe nota de editor.
 
-Vêm da pesquisa que fundamenta o produto. Violar é erro factual, não divergência
-de gosto.
+Regra: o dado aparece primeiro, a explicação fica a um gesto de distância e
+**nunca** empurra o dado para baixo da dobra. Recolher é permitido; remover não.
 
-### 4.1 A regra que não se negocia
-
-**NPS e latência aparecem sobrepostos no mesmo gráfico.** Otimizar um KPI isolado
-quebra outro — empurrar deflexão derruba CSAT. Cartões isolados escondem o
-trade-off que o produto existe para mostrar.
-
-Eixo duplo é antipadrão reconhecido, então vem com três mitigações obrigatórias:
-
-1. Domínio **fixo** em cada eixo (NPS em −100…100, latência a partir de zero), para
-   que o alinhamento entre as curvas não seja escolha arbitrária.
-2. Cada eixo rotulado e colorido com sua série; latência sempre **tracejada**.
-3. Visão de tabela no mesmo painel — quem precisa do número exato não depende da
-   leitura cruzada.
-
-### 4.2 Faixas de referência
-
-Todo indicador com faixa conhecida mostra a faixa, não só o valor:
-
-- **CSAT**: banda saudável 75–85% marcada no trilho.
-- **Latência**: até 10s (pico de CSAT, ~84,7%), até 60s (saudável), até 180s
-  (degradando, −2 a −3 pontos de CSAT por minuto), acima de 180s (abandono — 57%
-  desistem). Cite a literatura corretamente; não invente limiar.
-
-### 4.3 Honestidade
-
-- **`score: null` é "sem sinal", nunca 0** — em célula, gráfico, ordenação, export.
-  Nenhum `?? 0` no caminho de um score.
-- **Agregado sem dado é estado vazio, não zero.** "NPS +0" sem medição é mentira
-  com cara de medição.
-- **O NPS é inferido do texto**, não perguntado ao cliente. Toda exibição carrega a
-  etiqueta "estimativa" e a nota metodológica ao pé.
-- **`importancias` ≠ `contribuicoes`.** A primeira é o peso global do modelo; a
-  segunda é o que pesou naquele atendimento, com sinal. Exibi-las sem distinguir é
-  o erro que derruba numa banca.
-- **Estado vazio nomeia o que falta** — qual endpoint, qual etapa. Nunca preencha
-  com número simulado.
+Os rótulos curtos — `estimativa`, `observado`, `sem sinal` — não são aparato:
+ficam colados ao número, sempre visíveis.
 
 ---
 
-## 5. Componentes
+## 5. Estados
 
-Use os primitivos do shadcn (`components/ui/`) como base. Componente novo se
-explica como variação de uma destas famílias antes de existir.
+Todo componente interativo tem: padrão, hover, foco, ativo, desabilitado,
+carregando, erro e vazio. Não se entrega metade.
 
-**Cartão de indicador.** Rótulo, número (mono, tabular), unidade, trilho com faixa
-de referência quando houver, e etiqueta de qualificação (`estimativa`, `sem dado`)
-quando couber. Falha isolada: um cartão que não carrega mostra o próprio erro sem
-derrubar os vizinhos.
+- **Carregando** é esqueleto com a forma do resultado, nunca roda girando.
+- **Vazio** nomeia o que falta e qual etapa ou endpoint resolveria.
+- **Falha isolada:** um sistema que não carrega mostra o próprio erro no lugar
+  dele, e os vizinhos continuam de pé.
+- **Sem sinal** é cabeça vazada, nunca zero, nunca cinza dentro da escala.
 
-**Tabela.** Cabeçalho fixo, números tabulares à direita, ordenação que manda `null`
-para o fim nos dois sentidos, linha clicável com foco visível, rolagem horizontal
-própria — o `body` nunca rola na horizontal.
+## 6. Movimento
 
-**Painel de gráfico.** Título, subtítulo com a fonte ou o método quando o número
-for derivado, o gráfico, e a alternância para tabela. Altura fixa por breakpoint;
-gráfico que muda de altura ao trocar de dado causa salto de layout.
+150–250 ms, e **um momento autorado** em vez de efeitos espalhados: o cursor de
+leitura deslizando ao percorrer a linha do tempo. Movimento comunica estado,
+não decora. `prefers-reduced-motion` desliga o deslize e mantém o cursor
+estático.
 
-**App shell.** Sidebar (primitivo `sidebar` do chassi) com o logo, as três
-seções — Visão geral, Atendimentos, Modelo — e o estado de saúde da API sempre
-visível no rodapé. A seção ativa se marca por `aria-current="page"` **e** por
-uma barra de 2px em `--primary`: item ativo é o único lugar onde o lime toca a
-navegação, e cor nunca é o único canal.
-
-**Filtro de período.** É global e mora na **URL** (`?de=&ate=`), não em estado
-de cliente: as páginas são de servidor, o recorte fica compartilhável, e existe
-uma fonte só do que "o período" significa — indicador, série, tabela e export
-nunca divergem. Todo link da navegação carrega o recorte adiante. Os atalhos se
-ancoram no **último dia com dado**, não em `hoje`, e mostram o intervalo real que
-aplicam; ancorar em hoje devolveria recorte vazio sem explicar por quê. Uma
-seção que o filtro não afeta — a de Modelo — não exibe o filtro.
-
-**Contribuição × importância.** As duas nunca aparecem com a mesma forma. Peso
-global (`importancias`) é barra que cresce da esquerda, colorida por tipo de
-sinal, e vive na tela Modelo. Contribuição daquele atendimento (`contribuicoes`)
-é barra divergente saindo de um eixo central, na escala detrator/promotor, e
-vive na tela do atendimento. Copy, geometria e cor dizem a mesma coisa três
-vezes.
-
----
-
-## 6. Acessibilidade — piso, não meta
-
-- Contraste **AA (4.5:1)** para todo texto, verificado por cálculo.
-- Cor **nunca** é o único canal: categoria carrega rótulo textual; séries se
-  distinguem também por traço (contínuo vs. tracejado).
-- Foco visível em tudo que recebe teclado, usando `--ring`.
-- Tabela com semântica de tabela. Ícone sozinho sempre com rótulo acessível.
-- Alvo de toque mínimo 44×44 px em telas estreitas.
-
----
-
-## 7. O que este documento proíbe
-
-- Lime em dado. Ele é da marca.
-- Hex solto fora dos tokens.
-- Cor de categoria de NPS usada para outra coisa.
-- Zero no lugar de ausência de dado.
-- Número inventado, simulado ou de exemplo em tela.
-- Degradê ou sombra difusa em superfície que carrega dado.
-- Texto mais claro que `--muted-foreground`.
-- Gráfico sem eixo rotulado.
-- Animação que não carrega informação.
+Sem sequência orquestrada de entrada: o analista chega para trabalhar, não para
+assistir a página carregar.

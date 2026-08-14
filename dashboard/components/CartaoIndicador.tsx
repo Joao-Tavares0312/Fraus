@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -73,12 +72,14 @@ export function CartaoIndicador({
   rodape?: ReactNode;
 }) {
   return (
-    <Card
-      size="sm"
-      className="quebra-evitar gap-2 px-4 py-3.5"
+    // Sem cartao: na armadura os indicadores se separam por REGUA e espaco, nao
+    // por caixa. Cartao aqui produzia quatro caixas de altura igualada pelo
+    // flex, com rodape curto sobrando vazio -- bases irregulares.
+    <div
+      className="quebra-evitar flex flex-col gap-1.5 border-b border-compasso pb-3 last:border-b-0 last:pb-0"
       data-slot="indicador"
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-xs font-medium text-muted-foreground">{rotulo}</h3>
         {qualificacao ? (
           <Badge
@@ -122,10 +123,14 @@ export function CartaoIndicador({
         </>
       )}
 
+      {/* O metodo do indicador e APARATO: fica na tipografia menor, abaixo do
+          numero, e nunca entre o rotulo e o valor. */}
       {rodape ? (
-        <p className="text-xs leading-relaxed text-muted-foreground">{rodape}</p>
+        <p className="text-[0.6875rem] leading-snug text-muted-foreground">
+          {rodape}
+        </p>
       ) : null}
-    </Card>
+    </div>
   );
 }
 

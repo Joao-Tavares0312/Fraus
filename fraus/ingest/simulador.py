@@ -10,6 +10,7 @@ LIMITACAO METODOLOGICA, a declarar no relatorio: o sinal de tempo e treinado
 em dados sinteticos calibrados por literatura, nao observados.
 """
 
+import math
 import random
 from datetime import datetime, timedelta, timezone
 
@@ -17,12 +18,45 @@ from fraus.modelos import Conversa, Mensagem
 
 INICIO = datetime(2026, 8, 1, 9, 0, 0, tzinfo=timezone.utc)
 
-# (latencia_min_s, latencia_max_s, prob_escalacao, prob_abandono)
+# (latencia_mediana_s, dispersao, prob_escalacao, prob_abandono)
+#
+# A latencia e log-normal, nao uniforme entre um minimo e um maximo. A versao
+# anterior sorteava de faixas DISJUNTAS (0: 60-400s, 1: 15-60s, 2: 3-15s) e
+# isso vazava o gabarito: sabendo so a latencia dava para dizer o rotulo sem
+# ler uma letra do texto. O fusor treinado nela chegou a 99,3% de acuracia no
+# sintetico, aprendeu o relogio e ignorou o BERTimbau -- em conversa real
+# pontuava ~50 para tudo.
+#
+# Com log-normal as medianas continuam ordenadas (atendimento ruim demora
+# mais, como manda a literatura de live chat), mas as caudas se cruzam: existe
+# atendimento rapido que termina mal e atendimento lento que termina bem. O
+# tempo volta a ser sinal fraco, que e o que ele e de verdade.
+# Sobreposicao medida: ~11% das satisfeitas ficam acima da mediana das
+# insatisfeitas e vice-versa, com as medias ainda separadas por 4x.
 PERFIL_POR_ROTULO = {
-    0: (60.0, 400.0, 0.55, 0.40),
-    1: (15.0, 60.0, 0.15, 0.15),
-    2: (3.0, 15.0, 0.03, 0.05),
+    0: (70.0, 1.2, 0.45, 0.30),
+    1: (34.0, 1.2, 0.20, 0.15),
+    2: (16.0, 1.2, 0.08, 0.07),
 }
+
+# Emojis por rotulo, com CRUZAMENTO deliberado: a ultima entrada de cada lista
+# tem polaridade OPOSTA a do rotulo no lexicon. Cliente irritado manda 🙏
+# (+0.418) ao implorar ajuda; cliente satisfeito manda 😩 (-0.368) quando o
+# caso demorou mas terminou bem. Sem esse cruzamento o emoji viraria o novo
+# gabarito, trocando um vazamento por outro.
+#
+# Todos os emojis daqui tem polaridade NAO NULA no Emoji Sentiment Ranking --
+# ❤️ e 🥰, por exemplo, ficam de fora porque valem 0.0 no lexicon e nao
+# moveriam a feature.
+EMOJIS_POR_ROTULO = {
+    0: ["😡", "😠", "😤", "👎", "😞", "😒", "🙏"],
+    1: ["😐", "👍", "😕", "😅"],
+    2: ["😍", "😊", "👏", "👍", "😩"],
+}
+
+# Fracao das falas do cliente que levam emoji. Nem toda mensagem tem: se todas
+# tivessem, a ausencia de emoji viraria informacao por si so.
+PROB_EMOJI = 0.45
 
 RESPOSTAS_BOT = [
     "Entendi, vou verificar isso para voce.",
@@ -32,10 +66,28 @@ RESPOSTAS_BOT = [
 ]
 
 
+def _latencia(aleatorio: random.Random, mediana: float, dispersao: float) -> float:
+    """Latencia log-normal em segundos, com piso de 1s e teto de 900s.
+
+    A mediana da log-normal e exp(mu), entao mu vem do log da mediana pedida.
+    O teto evita que a cauda longa gere conversa de horas, que o sinal de
+    tempo trataria como abandono e nao como demora.
+    """
+    bruta = aleatorio.lognormvariate(math.log(mediana), dispersao)
+    return max(1.0, min(900.0, bruta))
+
+
+def _com_emoji(aleatorio: random.Random, texto: str, rotulo: int) -> str:
+    """Anexa um emoji do perfil do rotulo, as vezes. Ver EMOJIS_POR_ROTULO."""
+    if aleatorio.random() >= PROB_EMOJI:
+        return texto
+    return f"{texto} {aleatorio.choice(EMOJIS_POR_ROTULO[rotulo])}"
+
+
 def gerar_conversa(rotulo: int, frases_cliente: list[str], semente: int) -> Conversa:
     """Gera uma conversa deterministica para a semente dada."""
     aleatorio = random.Random(semente)
-    lat_min, lat_max, prob_escalacao, prob_abandono = PERFIL_POR_ROTULO[rotulo]
+    mediana, dispersao, prob_escalacao, prob_abandono = PERFIL_POR_ROTULO[rotulo]
 
     qtd_turnos = aleatorio.randint(1, min(3, len(frases_cliente)))
     escalou = aleatorio.random() < prob_escalacao
@@ -49,11 +101,11 @@ def gerar_conversa(rotulo: int, frases_cliente: list[str], semente: int) -> Conv
         mensagens.append(
             Mensagem(
                 autor="cliente",
-                texto=aleatorio.choice(frases_cliente),
+                texto=_com_emoji(aleatorio, aleatorio.choice(frases_cliente), rotulo),
                 enviada_em=relogio,
             )
         )
-        relogio += timedelta(seconds=aleatorio.uniform(lat_min, lat_max))
+        relogio += timedelta(seconds=_latencia(aleatorio, mediana, dispersao))
         ultimo_turno = turno == qtd_turnos - 1
         mensagens.append(
             Mensagem(
@@ -66,7 +118,11 @@ def gerar_conversa(rotulo: int, frases_cliente: list[str], semente: int) -> Conv
 
     if not abandonou:
         mensagens.append(
-            Mensagem(autor="cliente", texto=aleatorio.choice(frases_cliente), enviada_em=relogio)
+            Mensagem(
+                autor="cliente",
+                texto=_com_emoji(aleatorio, aleatorio.choice(frases_cliente), rotulo),
+                enviada_em=relogio,
+            )
         )
 
     return Conversa(

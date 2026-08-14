@@ -5,10 +5,21 @@ import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
+const DESCRICAO =
+  "Painel de satisfação inferida a partir do texto, dos emojis e do tempo de resposta dos atendimentos.";
+
 export const metadata: Metadata = {
   title: "Fraus — satisfação em atendimentos por chatbot",
-  description:
-    "Painel de satisfação inferida a partir do texto, dos emojis e do tempo de resposta dos atendimentos.",
+  description: DESCRICAO,
+  // `openGraph` existe para quando o link for compartilhado na apresentacao ou
+  // no repositorio: sem ele, o preview sai com o titulo cru e sem imagem.
+  openGraph: {
+    title: "Fraus — satisfação em atendimentos por chatbot",
+    description: DESCRICAO,
+    type: "website",
+    locale: "pt_BR",
+    images: [{ url: "/fraus-logo.png", width: 640, height: 640, alt: "Fraus" }],
+  },
 };
 
 /**
@@ -23,6 +34,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className="dark">
       <body className="min-h-svh antialiased">
+        {/*
+          Atalho para quem navega por teclado: sem ele, chegar ao conteudo
+          exige percorrer a navegacao lateral inteira a cada troca de pagina.
+          Fica invisivel ate receber foco -- e so aparece para quem precisa.
+        */}
+        <a
+          href="#conteudo"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+        >
+          Pular para o conteúdo
+        </a>
         <TooltipProvider>
           <SidebarProvider>
             {/* A navegacao le `useSearchParams` para carregar o periodo entre
@@ -30,7 +52,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Suspense fallback={null}>
               <NavegacaoLateral />
             </Suspense>
-            <SidebarInset className="min-w-0">{children}</SidebarInset>
+            <SidebarInset id="conteudo" className="min-w-0">
+              {children}
+            </SidebarInset>
           </SidebarProvider>
         </TooltipProvider>
       </body>

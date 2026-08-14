@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/fraus-logo.svg" alt="Fraus" width="140">
+  <img src="docs/assets/fraus-logo.png" alt="Fraus" width="140">
 </p>
 
 <h1 align="center">Fraus</h1>
@@ -26,17 +26,35 @@ Discórdia (*Eneida*, VI)[^4] — lê o que foi dito de verdade.
 
 ## Como funciona
 
-Três sinais independentes, calculados sobre um modelo canônico de conversa e
-fundidos por um classificador leve:
+Sinais independentes, calculados sobre um modelo canônico de conversa e fundidos
+por um classificador leve:
 
 | Sinal | O que mede | Por quê |
 |---|---|---|
 | **Texto** | BERTimbau fine-tunado, probabilidade **por mensagem** | permite apontar *quais trechos* puxaram a nota |
 | **Emoji** | polaridade e **posição relativa** na mensagem | a polaridade do emoji cresce perto do fim da frase |
 | **Tempo** | latência, escalação, abandono | o efeito é não-linear — o peso é aprendido, não arbitrado |
+| **Emoção** ⏳ | as 7 emoções humanas, por mensagem | requisito de banca; a nota diz *quanto*, a emoção diz *o quê* |
+| **Léxico** ⏳ | SentiLex-PT02 com escopo de **negação** | polaridade de procedência independente do BERTimbau |
+| **Ironia** ⏳ | cabeça binária sobre o IDPT 2021 | texto positivo com sentido negativo derruba a leitura dos outros sinais |
+
+⏳ *módulo pronto e testado; entra no vetor de features quando o modelo for
+treinado — ver [contrato de features](docs/treinamento.md#contrato-de-features).*
 
 O resultado é um score de 0 a 100 por atendimento, que vira nota 0–10 e categoria
 de NPS (**0–6 detrator · 7–8 neutro · 9–10 promotor**), agregado numa dashboard.
+
+### As 7 emoções
+
+Requisito de banca. São as **seis básicas de Ekman (1992)** — alegria, tristeza,
+raiva, medo, nojo, surpresa — mais o **desprezo**; o *neutro* é uma sétima
+**classe**, não uma emoção: é a ausência delas.
+
+O desprezo é o único que **não é treinado**, e de propósito: nenhum corpus
+rotulado em português o anota, e treiná-lo isoladamente em corpus de outra
+procedência ensinaria o modelo a reconhecer o *estilo do texto* em vez da
+emoção. Ele é derivado da **díade primária raiva + nojo**, como Plutchik (1980)
+o define — referência citável, não rótulo inventado.
 
 ## Indicadores
 
@@ -59,7 +77,7 @@ vence RAG em acurácia e latência[^3].
 
 - [Spec de design](docs/superpowers/specs/2026-08-13-dolos-design.md) — decisões e referências
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
-- [Treinamento](docs/treinamento.md) — os dois notebooks do Colab (BERTimbau e fusor) e os artefatos que eles produzem
+- [Treinamento](docs/treinamento.md) — os notebooks do Colab, os corpora de cada sinal, os artefatos que eles produzem e o registro do vazamento que matou o primeiro fusor
 
 ## Como rodar
 
@@ -137,19 +155,139 @@ mudar depois exige reiniciar o processo.
 
 ## Limitações conhecidas
 
-- **A API não tem autenticação e é destinada a uso local.** Não há login, token
-  nem CORS restrito: quem alcança a porta lê tudo e importa qualquer arquivo
-  dentro da raiz de importação. Não exponha na internet. A raiz configurável
+- **A API não tem autenticação e é destinada a uso local.** Não há login nem
+  token: quem alcança a porta lê tudo e importa qualquer arquivo dentro da raiz
+  de importação. Não exponha na internet. A raiz configurável
   (`FRAUS_RAIZ_IMPORTACAO`) limita o estrago, não substitui autenticação.
+  As origens liberadas para o navegador são uma **lista explícita**
+  (`FRAUS_ORIGENS`, padrão `localhost`/`127.0.0.1` nas portas 3000 e 3001) e
+  nunca `*` — sem autenticação, `*` deixaria qualquer página aberta no mesmo
+  navegador varrer as conversas.
 - O NPS é **inferido do texto**, nunca perguntado ao cliente. A interface
   rotula como estimativa em todo lugar onde o número aparece.
-- Não há endpoint de série temporal nem de latência agregada: a dashboard
-  deriva as duas das transcrições, o que custa um N+1 aceitável no volume do
-  trabalho (dezenas de atendimentos).
+- A série temporal sai de `GET /serie-temporal?de=&ate=`, agregada no servidor.
+  O N+1 sobrevive para o **léxico por classe** e o **tempo mediano de
+  resposta**, que ainda leem o texto e os timestamps de cada transcrição — um
+  custo aceitável no volume do trabalho (dezenas de atendimentos).
 - A atribuição por sentença do classificador de texto não tem endpoint, então a
   transcrição marca só evidência **observável** (polaridade de emoji e tempo de
   espera) — e diz isso em voz alta em vez de fingir atribuição.
 - Latência **não é persistida**: é sempre derivada dos timestamps na leitura.
+- Os cortes de latência da interface (10 s / 60 s / 180 s por padrão) são de
+  **exibição** e saem de `GET /configuracoes`: eles movem onde a leitura chama
+  a espera de imediata, saudável, longa ou crítica, e não mexem em nenhuma
+  feature do modelo.
+- A tela **Configurações** não reimplementa a validação: quando a faixa de NPS
+  não cobre 0–10 de forma contígua, quem escreve a mensagem é a API, que nomeia
+  a nota descoberta.
+- **A classe neutra do modelo conta como detratora, e o NPS sai pessimista.**
+  O score é `100 * (P(satisfeito) + 0.5 * P(neutro))`: uma conversa classificada
+  com certeza como neutra pontua **50**, vira nota **5** e cai em **0–6,
+  detrator**. A faixa neutra do NPS (7–8) exigiria `P(satisfeito)` entre 0,4 e
+  0,8 — um empate entre classes, não uma neutralidade confiante. Medido em 90
+  conversas do simulador (30 por classe, equilibradas por construção): **67%
+  detrator · 29% promotor · 4% neutro**, com **NPS −38** onde o esperado seria
+  ≈ 0. É consequência da composição entre o peso do neutro no score e a faixa
+  padrão do NPS, não erro de treino — o fusor separa as três classes com
+  medianas 0,11 / 50,99 / 99,03. Mantido assim por decisão de projeto; subir o
+  peso do neutro para 0,75 alinharia as três classes às três categorias.
+- **O fusor é treinado em conversas sintéticas.** Nenhum corpus público de
+  resenha PT-BR tem timestamps de diálogo: latência, escalação e abandono saem
+  de distribuições calibradas por literatura de live chat. O texto é real, o
+  tempo não é — e as métricas do notebook 02 são otimistas por isso.
+- **O corpus de emoção é traduzido por máquina** (GoEmotions → PT-BR, sem
+  revisão humana). Por isso a avaliação reporta também o XED-pt, que não passou
+  por tradução automática, como conjunto de teste independente.
+- **O corpus de ironia (IDPT 2021) é de tweets e comentários de notícia**, não
+  de atendimento. A transferência de domínio não está verificada.
+- **O SentiLex-PT é léxico de julgamento social:** anota polaridade dirigida a
+  entidades humanas. `gostar`, `adorar` e `odiar` valem **0** nele — quem lê
+  afeto do próprio falante é o transformer, não o léxico.
+
+## Pendências
+
+O que falta, em ordem de importância. Cada item diz o que existe hoje e o que
+o desbloqueia.
+
+### 1. Treinar o modelo — bloqueia tudo o que é "IA de verdade"
+
+Enquanto os artefatos não existirem, o que roda é o **motor dublê** do servidor
+de demonstração: pontuação determinística derivada do texto, sem modelo nenhum.
+A interface é honesta sobre isso — a tela **Modelo** mostra as métricas de
+treino em estado vazio em vez de inventar número — mas nada do que ela exibe é
+predição.
+
+Para destravar: rodar `notebooks/01_treino_bertimbau.ipynb` e depois
+`notebooks/02_treino_fusor.ipynb` no Colab, e colocar em `modelos/` a pasta
+`bertimbau-satisfacao/`, o `fusor.joblib` e o `metricas.json`. Aí
+`uvicorn fraus.api.main:app` sobe com o motor real.
+
+### 2. Notebooks 03 e 04 — as 7 emoções e a ironia
+
+Requisito de banca ainda não entregue. Os módulos `fraus/sinais/emocao.py`,
+`fraus/sinais/lexico.py` e `fraus/sinais/ironia.py` existem e estão cobertos por
+testes, e os notebooks `03_treino_emocao.ipynb` e `04_treino_ironia.ipynb` estão
+escritos — falta **rodar**. As features só entram no vetor do fusor depois que os
+modelos existirem: expandir `NOMES_FEATURES` antes disso quebraria o notebook 02
+e a API sem nada em troca.
+
+**Os dois rodam hoje.** O 03 usa o `go_emotions_ptbr`, que é público. O 04
+**gera o próprio corpus** (`ORIGEM='sintetico'`), porque não existe corpus de
+ironia PT-BR aberto, com texto e em tamanho treinável — levantamento verificado
+em [docs/treinamento.md](docs/treinamento.md). O corpus mais citado
+(Gonçalves et al., BraSNAM 2015) foi coletado por `#sarcasm`/`#irony` e é **em
+inglês**; traduzir repetiria o vazamento de procedência que já custou o
+primeiro fusor.
+
+O gerador é o mesmo movimento já aceito no sinal de tempo, e vem blindado
+contra vazamento: fatos negativos e palavras elogiosas aparecem nas **duas**
+classes, então só a incongruência separa. Cada propriedade tem teste.
+**A métrica interna é otimista por construção** e precisa ser declarada assim.
+
+Existem dois corpora PT-BR reais, ambos sem download público — a tese de
+[Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),
+com 1.186 exemplos anotados por três humanos, e o
+[projeto IDPT/UFPel](https://institucional.ufpel.edu.br/projetos/id/u3345).
+Qualquer um dos dois serve como **conjunto de teste independente**, o papel que
+o XED-pt cumpre no notebook 03.
+
+Depois dos dois: subir o contrato de 16 para 30 features e **retreinar o fusor**.
+Detalhes de corpus, rótulo e limitação em
+[docs/treinamento.md](docs/treinamento.md).
+
+### 3. O resto da dívida de escala
+
+`GET /serie-temporal?de=&ate=` **existe**: o gráfico de NPS × latência não
+depende mais de baixar transcrição nenhuma, e o recorte de período acontece no
+servidor. As duas pontas são inclusivas, data malformada é **400** nomeando o
+parâmetro, e o cálculo sobre as transcrições ficou como plano B — se o endpoint
+cair, o gráfico continua de pé em vez de sumir.
+
+O que ainda falta para matar o N+1 de vez:
+
+- `GET /conversas?de=&ate=` e `GET /indicadores?de=&ate=` — tirariam do cliente
+  o filtro de período da lista e dos cartões;
+- um agregado de **léxico por classe** e de **tempo mediano de resposta**, os
+  dois últimos consumidores de transcrição na Visão geral.
+
+### 4. Atribuição por sentença do classificador
+
+O endpoint de atribuição existe, mas a transcrição só marca evidência
+**observável** (polaridade de emoji e tempo de espera). A contribuição do sinal
+de texto por sentença depende do modelo treinado — cai junto com a pendência 1.
+
+### 5. Definição da empresa
+
+A spec ainda não fixa a empresa fictícia do trabalho, e ela atravessa a
+apresentação inteira: define o volume plausível de atendimentos, os canais e o
+que conta como bom tempo de resposta.
+
+### 6. Decisões em aberto
+
+- **Tema claro.** A dashboard é dark-only, herdado do chassi. Projetor de banca
+  costuma lavar tema escuro, e adicionar depois é retrabalho.
+- **Merge da branch.** `feat/motor-e-dashboard` está no PR #1, ainda não
+  integrada em `main`.
 
 ## Desenvolvimento
 

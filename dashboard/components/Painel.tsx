@@ -1,20 +1,23 @@
 import type { ReactNode } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
- * Painel de conteudo: titulo, subtitulo com o metodo quando o numero e
- * derivado, corpo e rodape opcional.
+ * O SISTEMA: a unidade de composicao da interface.
  *
- * Elevacao por BORDA e superficie, nunca por sombra difusa -- o `Card` do
- * chassi ja e assim. O subtitulo nao e decoracao: quando o numero do painel foi
- * derivado no cliente e nao lido de um endpoint, e nele que isso esta escrito.
+ * Como numa partitura, um sistema e uma faixa de largura total que carrega uma
+ * linha e tudo que a anota. A pagina e uma PILHA DE SISTEMAS, nao uma grade de
+ * cartoes -- o cartao com borda e fundo proprio deixou de ser o agrupador
+ * padrao, e quem agrupa agora e espaco mais regua. Ver DESIGN.md, secao 2.
+ *
+ * A MUDANCA QUE IMPORTA e a posicao da prosa. Antes, a legenda metodologica
+ * ficava no cabecalho, ACIMA do conteudo: somando os paineis, isso empurrava o
+ * grafico que carrega a tese da tela para 560px abaixo do topo. Nenhuma
+ * explicacao foi removida -- ela virou APARATO, no rodape do sistema e na
+ * tipografia menor, que e onde a partitura poe nota de editor.
+ *
+ * Recolher e permitido; remover nao. O aparato abre com um gesto, e os rotulos
+ * curtos que qualificam o numero (`estimativa`, `observado`, `sem sinal`) NAO
+ * sao aparato: ficam colados ao dado, sempre visiveis.
  */
 export function Painel({
   titulo,
@@ -26,6 +29,7 @@ export function Painel({
   children,
 }: {
   titulo: string;
+  /** Metodo e ressalvas. Vai para o aparato, nunca acima do dado. */
   legenda?: ReactNode;
   acessorio?: ReactNode;
   rodape?: ReactNode;
@@ -34,31 +38,39 @@ export function Painel({
   className?: string;
   children: ReactNode;
 }) {
+  const temAparato = Boolean(legenda || rodape);
+
   return (
-    <Card className={cn("quebra-evitar gap-0 overflow-hidden py-0", className)}>
-      <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-4">
-        <div className="min-w-0 flex-1">
-          <CardTitle className="text-sm font-semibold tracking-tight">
-            {titulo}
-          </CardTitle>
-          {legenda ? (
-            <CardDescription className="mt-1 max-w-[80ch] text-xs leading-relaxed">
-              {legenda}
-            </CardDescription>
-          ) : null}
-        </div>
+    <section className={cn("quebra-evitar min-w-0", className)}>
+      {/* A regua do sistema. Mais espaco acima do titulo do que abaixo. */}
+      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-linha pb-2">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">
+          {titulo}
+        </h2>
         {acessorio ? <div className="shrink-0">{acessorio}</div> : null}
-      </CardHeader>
+      </header>
 
-      <CardContent className={cn("min-w-0", semPadding ? "p-0" : "p-5")}>
+      <div className={cn("min-w-0", semPadding ? "pt-3" : "pt-4")}>
         {children}
-      </CardContent>
+      </div>
 
-      {rodape ? (
-        <div className="border-t border-border px-5 py-3 text-xs leading-relaxed text-muted-foreground">
-          {rodape}
-        </div>
+      {temAparato ? (
+        <details className="group mt-3 border-t border-compasso pt-2">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+            <span
+              aria-hidden
+              className="inline-block transition-transform duration-200 group-open:rotate-90"
+            >
+              ›
+            </span>
+            Método e ressalvas
+          </summary>
+          <div className="mt-2 max-w-[72ch] space-y-2 text-xs leading-relaxed text-muted-foreground">
+            {legenda}
+            {rodape}
+          </div>
+        </details>
       ) : null}
-    </Card>
+    </section>
   );
 }

@@ -1,16 +1,19 @@
 """Servidor de DEMONSTRACAO do Fraus -- APENAS para desenvolver a interface.
 
 =============================================================================
-NUNCA USE ISTO EM PRODUCAO. Este servidor NAO carrega o BERTimbau nem o fusor:
-ele substitui o Motor real por um dublê deterministico que pontua a conversa a
-partir de contagem de palavras e emojis do proprio texto. O numero que sai daqui
-NAO e uma predicao do modelo -- e um valor sintetico, estavel, cuja unica funcao
-e dar a dashboard dados com a forma certa (faixas, nulos, datas) enquanto o
-modelo da Task 6 ainda nao foi treinado no Colab.
+NUNCA USE ISTO EM PRODUCAO -- mas nao pelo motivo antigo. O que este arquivo
+tem de demonstracao e o DADO, nao o modelo: ele semeia um banco temporario com
+conversas do simulador e o joga fora a cada boot. Nao ha aqui atendimento de
+gente nenhuma.
 
-O `app` real vive em `fraus.api.main` e falha alto sem `modelos/` -- e isso e
-por design. Este arquivo existe porque a Task 10 precisa de uma API no ar antes
-disso, nao porque o comportamento real seja opcional.
+O MOTOR, esse, e o real desde que os tres BERTimbau treinaram: `montar_motor`
+carrega satisfacao, emocao e ironia do disco e so cai no dublê deterministico
+se os pesos nao estiverem la (ou com FRAUS_DEMO_DUBLE=1, para iterar na
+interface sem esperar o carregamento). O boot imprime qual dos dois subiu, e a
+distincao importa: o dublê pontua por contagem de palavra e emoji, um numero
+sintetico com forma de predicao.
+
+O `app` de producao vive em `fraus.api.main` e falha alto sem `modelos/`.
 
 Como rodar:
     uv run python scripts/api_demo.py
@@ -20,6 +23,7 @@ Como rodar:
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 from datetime import timedelta
@@ -31,14 +35,19 @@ if str(RAIZ) not in sys.path:
 
 import uvicorn  # noqa: E402
 
-from fraus.api.main import criar_app  # noqa: E402
+from fraus.api.main import (CAMINHO_FUSOR, CAMINHO_MODELO_EMOCAO,  # noqa: E402
+                            CAMINHO_MODELO_IRONIA, CAMINHO_MODELO_TEXTO,
+                            Motor, criar_app)
 from fraus.db import Banco  # noqa: E402
-from fraus.fusor import NOMES_FEATURES  # noqa: E402
+from fraus.fusor import NOMES_FEATURES, Fusor  # noqa: E402
 from fraus.indicadores import categoria_nps  # noqa: E402
 from fraus.ingest.simulador import INICIO, gerar_lote  # noqa: E402
 from fraus.modelos import Conversa, Mensagem  # noqa: E402
+from fraus.sinais.emocao import ClassificadorEmocao  # noqa: E402
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji  # noqa: E402
+from fraus.sinais.ironia import ClassificadorIronia  # noqa: E402
 from fraus.sinais.tempo import features_tempo  # noqa: E402
+from fraus.sinais.texto import ClassificadorTexto  # noqa: E402
 
 # Frases rotuladas: 0 = insatisfeito, 1 = neutro, 2 = satisfeito.
 FRASES_POR_ROTULO: dict[int, list[str]] = {
@@ -229,6 +238,61 @@ def conversa_muda_no_canal_telefone() -> Conversa:
     )
 
 
+def dia_inteiro_sem_sinal() -> list[Conversa]:
+    """Um DIA em que nenhum atendimento teve fala do cliente.
+
+    As duas conversas mudas anteriores caem em dias que TAMBEM tem atendimento
+    pontuado, entao o dia inteiro ainda soa e a interface o desenha cheio. Este
+    dia existe para exercitar o caso que o produto precisa saber mostrar: houve
+    movimento, e nenhum dele virou medicao.
+
+    E o unico jeito de ver a cabeca vazada da faixa de presenca -- o marcador
+    que ocupa o tempo e nao soa. Sem um dia assim, a regra "ausencia de dado
+    nao e insatisfacao" fica escrita no codigo e invisivel na tela.
+    """
+    dia = INICIO + timedelta(days=21, hours=8)
+    return [
+        Conversa(
+            id="demo-dia-mudo-001",
+            canal="instagram",
+            iniciada_em=dia,
+            encerrada_em=dia + timedelta(seconds=60),
+            escalou_para_humano=False,
+            mensagens=[
+                Mensagem(
+                    autor="bot",
+                    texto="Oi! Vi que voce abriu o chat. Posso ajudar em algo?",
+                    enviada_em=dia,
+                ),
+                Mensagem(
+                    autor="bot",
+                    texto="Encerrando por inatividade. Volte quando quiser.",
+                    enviada_em=dia + timedelta(seconds=60),
+                ),
+            ],
+        ),
+        Conversa(
+            id="demo-dia-mudo-002",
+            canal="telegram",
+            iniciada_em=dia + timedelta(hours=6),
+            encerrada_em=dia + timedelta(hours=6, seconds=40),
+            escalou_para_humano=False,
+            mensagens=[
+                Mensagem(
+                    autor="bot",
+                    texto="Bom dia! Este e o atendimento automatico.",
+                    enviada_em=dia + timedelta(hours=6),
+                ),
+                Mensagem(
+                    autor="bot",
+                    texto="Sem resposta por aqui, vou fechar o chamado.",
+                    enviada_em=dia + timedelta(hours=6, seconds=40),
+                ),
+            ],
+        ),
+    ]
+
+
 CANAIS = ("webchat", "whatsapp", "instagram", "telegram")
 
 
@@ -242,11 +306,46 @@ def semear(banco: Banco, motor: MotorDuble, quantidade: int = 60) -> int:
 
     conversas.append(conversa_sem_fala_do_cliente())
     conversas.append(conversa_muda_no_canal_telefone())
+    conversas.extend(dia_inteiro_sem_sinal())
 
     for conversa in conversas:
         score = motor.pontuar_conversa(conversa)
         banco.salvar(conversa, score, categoria_nps(score) if score is not None else None)
     return len(conversas)
+
+
+def montar_motor():
+    """Motor REAL quando os pesos estao no disco; dublê so quando nao estao.
+
+    A precedencia inverteu de proposito no dia em que os tres BERTimbau
+    treinaram. Enquanto o modelo nao existia, o dublê era a unica forma de ter
+    a dashboard de pe -- mas manter ele no comando DEPOIS do treino faria a
+    tela seguir exibindo contagem de palavra com cara de predicao, que e o
+    genero de mentira que ninguem percebe porque os numeros continuam bonitos.
+
+    O que decide e a presenca dos arquivos, nao uma flag: flag desligada por
+    engano voltaria ao dublê em silencio. `FRAUS_DEMO_DUBLE=1` forca o dublê
+    para quem quiser iterar na interface sem esperar o modelo carregar.
+    """
+    if os.environ.get("FRAUS_DEMO_DUBLE") == "1":
+        print("[api_demo] FRAUS_DEMO_DUBLE=1 -- dublê forcado, numeros SINTETICOS.")
+        return MotorDuble()
+
+    if not CAMINHO_MODELO_TEXTO.is_dir() or not CAMINHO_FUSOR.is_file():
+        print(
+            f"[api_demo] ATENCAO: motor dublê, sem modelo em {CAMINHO_MODELO_TEXTO}/. "
+            "Numeros SINTETICOS. Nao use em producao."
+        )
+        return MotorDuble()
+
+    print("[api_demo] carregando os modelos reais (CPU, leva alguns segundos)...")
+    classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)
+    fusor = Fusor.carregar(CAMINHO_FUSOR)
+    emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO) if CAMINHO_MODELO_EMOCAO.is_dir() else None
+    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA) if CAMINHO_MODELO_IRONIA.is_dir() else None
+    carregadas = ["satisfacao"] + [n for n, c in (("emocao", emocao), ("ironia", ironia)) if c]
+    print(f"[api_demo] motor REAL. Cabecas carregadas: {', '.join(carregadas)}.")
+    return Motor(classificador, fusor, emocao=emocao, ironia=ironia)
 
 
 def montar_app():
@@ -260,10 +359,9 @@ def montar_app():
         caminho = Path(tempfile.mkdtemp(prefix="fraus-demo-")) / "fraus-demo.db"
     banco = Banco(caminho)
     banco.migrar()
-    motor = MotorDuble()
+    motor = montar_motor()
     total = semear(banco, motor)
     print(f"[api_demo] banco de demonstracao em {caminho} com {total} conversas")
-    print("[api_demo] ATENCAO: motor dublê, sem modelo. Nao use em producao.")
     return criar_app(banco=banco, motor=motor)
 
 

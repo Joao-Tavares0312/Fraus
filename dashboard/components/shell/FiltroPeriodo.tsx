@@ -78,49 +78,53 @@ export function FiltroPeriodo({
       className="flex flex-wrap items-end gap-x-3 gap-y-2"
       data-pendente={pendente || undefined}
     >
-      <fieldset className="flex flex-wrap items-end gap-3">
+      {/*
+        Rotulo INLINE, nao empilhado. Empilhado, a caixa de data ficava mais
+        alta que os atalhos ao lado e a linha inteira desalinhava -- dois
+        vocabularios de controle no mesmo lugar. Inline, o filtro vira uma
+        banda horizontal so, na altura dos botoes.
+      */}
+      <fieldset className="flex flex-wrap items-center gap-x-2 gap-y-2">
         <legend className="sr-only">Período dos atendimentos</legend>
 
-        <div className="flex flex-col gap-1">
-          <Label
-            htmlFor="periodo-de"
-            className="text-xs font-normal text-muted-foreground"
-          >
-            De
-          </Label>
-          <input
-            id="periodo-de"
-            type="date"
-            value={periodo.de ?? ""}
-            min={extensao?.primeiro}
-            max={extensao?.ultimo}
-            onChange={(evento) =>
-              aplicar({ ...periodo, de: evento.target.value || null })
-            }
-            className="num h-9 min-h-11 rounded-md border border-input bg-card px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9"
-          />
-        </div>
+        <Label
+          htmlFor="periodo-de"
+          className="text-xs font-normal text-muted-foreground"
+        >
+          De
+        </Label>
+        <input
+          id="periodo-de"
+          type="date"
+          value={periodo.de ?? ""}
+          min={extensao?.primeiro}
+          max={extensao?.ultimo}
+          onChange={(evento) =>
+            aplicar({ ...periodo, de: evento.target.value || null })
+          }
+          className="campo-data"
+        />
 
-        <div className="flex flex-col gap-1">
-          <Label
-            htmlFor="periodo-ate"
-            className="text-xs font-normal text-muted-foreground"
-          >
-            Até
-          </Label>
-          <input
-            id="periodo-ate"
-            type="date"
-            value={periodo.ate ?? ""}
-            min={extensao?.primeiro}
-            max={extensao?.ultimo}
-            onChange={(evento) =>
-              aplicar({ ...periodo, ate: evento.target.value || null })
-            }
-            className="num h-9 min-h-11 rounded-md border border-input bg-card px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9"
-          />
-        </div>
+        <Label
+          htmlFor="periodo-ate"
+          className="ml-1 text-xs font-normal text-muted-foreground"
+        >
+          até
+        </Label>
+        <input
+          id="periodo-ate"
+          type="date"
+          value={periodo.ate ?? ""}
+          min={extensao?.primeiro}
+          max={extensao?.ultimo}
+          onChange={(evento) =>
+            aplicar({ ...periodo, ate: evento.target.value || null })
+          }
+          className="campo-data"
+        />
       </fieldset>
+
+      <span aria-hidden className="h-5 w-px bg-compasso" />
 
       <div className="flex flex-wrap items-center gap-1.5">
         {atalhos.map((atalho) => {

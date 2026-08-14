@@ -75,6 +75,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* --- camada de dado (Fraus) --- */
+  --color-linha: var(--linha);
+  --color-compasso: var(--compasso);
   --color-dito: var(--dito);
   --color-dito-fraco: var(--dito-fraco);
   --color-dito-texto: var(--dito-texto);
@@ -114,10 +116,15 @@
 
   --duration-sidebar: 300ms;
 
-  /* --- chassi Kronos (nao alterar) --- */
-  --background: oklch(0.141 0.005 285.823);
+  /* --- chassi --- */
+
+  /* O fundo e PAPEL DE ENSAIO, nao vazio. Preto puro faz a regua flutuar no
+     vacuo e transforma dado em neon; o analista fica horas nesta tela. Grafite
+     levemente quente (croma baixo em hue 75) le como estoque de papel sob luz
+     de escritorio. Ver DESIGN.md 3.1. */
+  --background: oklch(0.166 0.004 75);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
+  --card: oklch(0.213 0.005 75);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
@@ -156,6 +163,15 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.843 0.179 134);
+
+  /* --- a pauta --- */
+
+  /* A REGUA do sistema: o eixo que separa o dito (acima) do medido (abaixo).
+     Precisa estar sempre visivel e nunca dominar -- meio ponto de tinta. */
+  --linha: oklch(1 0 0 / 24%);
+  /* A BARRA DE COMPASSO: virada de dia. Mais fraca que a regua de proposito;
+     ela agrupa o tempo sem pedir atencao. */
+  --compasso: oklch(1 0 0 / 8%);
 
   /* --- camada de dado (Fraus) — substitui --chart-1..5 do Kronos --- */
 
@@ -206,6 +222,45 @@
   .num {
     font-family: var(--fonte-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Campo de data do filtro de periodo.
+     O `input[type=date]` nativo destoa por dois motivos: ele reserva largura
+     para o formato inteiro (dd/mm/aaaa) mesmo vazio, e o icone do seletor vem
+     em branco puro -- mais claro que QUALQUER texto da interface, inclusive o
+     titulo. `--muted-foreground` e o piso de cor de texto, e o icone e
+     decoracao de controle: ele nao pode gritar mais alto que o dado.
+     O `filter` e o unico caminho para tingir esse pseudo-elemento. */
+  .campo-data {
+    height: 2rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--input);
+    background-color: var(--card);
+    padding-inline: 0.5rem;
+    font-family: var(--fonte-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8125rem;
+    color: var(--foreground);
+    outline: none;
+  }
+  .campo-data:focus-visible {
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+  .campo-data::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    cursor: pointer;
+    filter: invert(1) brightness(0.72);
+    transition: opacity 150ms var(--ease-fluid);
+  }
+  .campo-data:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+  }
+  /* Alvo de toque no telefone: 32px e confortavel com mouse e apertado com o
+     dedo, entao a altura sobe onde nao ha ponteiro fino. */
+  @media (pointer: coarse) {
+    .campo-data {
+      height: 2.75rem;
+    }
   }
 }
 

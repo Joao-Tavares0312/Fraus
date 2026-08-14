@@ -67,7 +67,21 @@ class Fusor:
         self._pipeline.fit([vetorizar(e) for e in exemplos], rotulos)
 
     def pontuar(self, features: dict[str, float]) -> float:
-        """Score 0-100: P(satisfeito) + metade de P(neutro)."""
+        """Score 0-100: P(satisfeito) + metade de P(neutro).
+
+        CONSEQUENCIA CONHECIDA E ACEITA, nao mexa achando que e bug: com peso
+        0.5, uma conversa classificada com certeza como NEUTRA pontua 50, que
+        vira nota 5, que cai na faixa 0-6 e portanto em DETRATOR. A classe
+        neutra do modelo nunca alcanca a faixa neutra do NPS (7-8), que exigiria
+        P(satisfeito) entre 0.4 e 0.8 -- um empate, nao uma neutralidade
+        confiante.
+
+        O efeito medido em 90 conversas do simulador, 30 por classe: 67%
+        detrator, 29% promotor, 4% neutro, com NPS -38 num lote equilibrado por
+        construcao. Subir o peso para 0.75 alinharia as tres classes as tres
+        categorias; a decisao foi manter e declarar. Ver README, "Limitacoes
+        conhecidas".
+        """
         probabilidades = self._pipeline.predict_proba([vetorizar(features)])[0]
         classes = list(self._pipeline.named_steps["modelo"].classes_)
         por_classe = dict(zip(classes, probabilidades))

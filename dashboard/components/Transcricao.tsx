@@ -1,8 +1,9 @@
 import type { DetalheConversa } from "@/lib/api";
 import {
   latenciasAnotadas,
-  ROTULO_LATENCIA,
+  rotulosLatencia,
   severidadeLatencia,
+  type LimiaresLatencia,
   type MarcaAtribuicao,
   type SentidoAtribuicao,
   type SeveridadeLatencia,
@@ -70,10 +71,14 @@ function realce(marca: MarcaAtribuicao): string | undefined {
 export function Transcricao({
   conversa,
   marcas,
+  limiares,
 }: {
   conversa: DetalheConversa;
   marcas: Map<number, MarcaAtribuicao>;
+  /** Limiares vigentes de latencia, lidos de `GET /configuracoes`. */
+  limiares: LimiaresLatencia;
 }) {
+  const rotulos = rotulosLatencia(limiares);
   const latencias = new Map(
     latenciasAnotadas(conversa.mensagens).map((l) => [l.indice, l.segundos]),
   );
@@ -85,7 +90,9 @@ export function Transcricao({
         const latencia = latencias.get(indice);
         const marca = marcas.get(indice);
         const severidade =
-          latencia === undefined ? null : severidadeLatencia(latencia);
+          latencia === undefined
+            ? null
+            : severidadeLatencia(latencia, limiares);
 
         return (
           <li
@@ -140,8 +147,8 @@ export function Transcricao({
                   </span>
                   <span className="text-[0.6875rem] text-muted-foreground">
                     de espera do cliente até esta resposta ·{" "}
-                    {ROTULO_LATENCIA[severidade].titulo.toLowerCase()} (
-                    {ROTULO_LATENCIA[severidade].detalhe})
+                    {rotulos[severidade].titulo.toLowerCase()} (
+                    {rotulos[severidade].detalhe})
                   </span>
                 </p>
               ) : null}

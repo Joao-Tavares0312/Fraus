@@ -3,7 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Activity, BarChart3, MessagesSquare } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  MessagesSquare,
+  PlugZap,
+  ScanText,
+  SlidersHorizontal,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -32,7 +39,22 @@ import { EstadoSaude } from "./EstadoSaude";
 const SECOES = [
   { href: "/", rotulo: "Visão geral", Icone: BarChart3 },
   { href: "/atendimentos", rotulo: "Atendimentos", Icone: MessagesSquare },
+  // Fica no grupo de OLHAR, e nao no de mexer, porque analisar nao grava nada:
+  // nem conversa, nem nota, nem arquivo. Nenhum indicador se move por causa
+  // dela, e e por isso que ela nao pertence ao lado das telas que alteram
+  // configuracao e fonte de dado.
+  { href: "/analisar", rotulo: "Analisar", Icone: ScanText },
   { href: "/modelo", rotulo: "Modelo", Icone: Activity },
+] as const;
+
+/**
+ * As telas de MEXER, separadas das de olhar por um grupo proprio: elas mudam o
+ * comportamento do sistema, e misturá-las com as tres de leitura esconderia
+ * essa diferenca no unico lugar onde ela e obvia de graca.
+ */
+const AJUSTES = [
+  { href: "/configuracoes", rotulo: "Configurações", Icone: SlidersHorizontal },
+  { href: "/integracoes", rotulo: "Integrações", Icone: PlugZap },
 ] as const;
 
 function estaAtiva(href: string, caminho: string): boolean {
@@ -50,6 +72,33 @@ export function NavegacaoLateral() {
   }
   const sufixo = consulta.toString() ? `?${consulta}` : "";
 
+  function itemDaSecao({
+    href,
+    rotulo,
+    Icone,
+  }: {
+    href: string;
+    rotulo: string;
+    Icone: typeof BarChart3;
+  }) {
+    const ativa = estaAtiva(href, caminho);
+    return (
+      <SidebarMenuItem key={href}>
+        <SidebarMenuButton
+          isActive={ativa}
+          tooltip={rotulo}
+          className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:font-medium"
+          render={
+            <Link href={`${href}${sufixo}`} aria-current={ativa ? "page" : undefined} />
+          }
+        >
+          <Icone aria-hidden />
+          <span>{rotulo}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
@@ -59,7 +108,7 @@ export function NavegacaoLateral() {
           className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Image
-            src="/fraus-logo.svg"
+            src="/fraus-logo.png"
             alt=""
             width={28}
             height={28}
@@ -81,29 +130,14 @@ export function NavegacaoLateral() {
         <SidebarGroup>
           <SidebarGroupLabel>Seções</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {SECOES.map(({ href, rotulo, Icone }) => {
-                const ativa = estaAtiva(href, caminho);
-                return (
-                  <SidebarMenuItem key={href}>
-                    <SidebarMenuButton
-                      isActive={ativa}
-                      tooltip={rotulo}
-                      className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:font-medium"
-                      render={
-                        <Link
-                          href={`${href}${sufixo}`}
-                          aria-current={ativa ? "page" : undefined}
-                        />
-                      }
-                    >
-                      <Icone aria-hidden />
-                      <span>{rotulo}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <SidebarMenu>{SECOES.map(itemDaSecao)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Ajustes</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>{AJUSTES.map(itemDaSecao)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

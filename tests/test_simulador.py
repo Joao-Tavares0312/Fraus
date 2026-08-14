@@ -1,6 +1,7 @@
 import random
 
 from fraus.ingest.simulador import gerar_conversa, gerar_lote
+from fraus.sinais.emoji import features_emoji
 from fraus.sinais.tempo import features_tempo
 
 FRASES = {
@@ -40,6 +41,61 @@ def test_insatisfeito_tem_latencia_maior_que_satisfeito():
     media_satisfeitas = sum(satisfeitas) / len(satisfeitas)
     media_insatisfeitas = sum(insatisfeitas) / len(insatisfeitas)
     assert media_insatisfeitas > media_satisfeitas * 3
+
+
+def test_faixas_de_latencia_se_sobrepoem_entre_os_rotulos():
+    """Latencia informa, nunca entrega o gabarito.
+
+    Protege a regressao que matou o primeiro fusor: com faixas DISJUNTAS
+    (insatisfeito 60-400s, satisfeito 3-15s) a latencia sozinha determinava o
+    rotulo, a regressao logistica aprendeu so o relogio e ignorou o texto --
+    99,3% de acuracia no sintetico e ~50 para toda conversa real.
+    """
+    satisfeitas = sorted(
+        features_tempo(gerar_conversa(2, FRASES[2], semente=s))["latencia_mediana_s"]
+        for s in range(200)
+    )
+    insatisfeitas = sorted(
+        features_tempo(gerar_conversa(0, FRASES[0], semente=s))["latencia_mediana_s"]
+        for s in range(200)
+    )
+    mediana_satisfeitas = satisfeitas[len(satisfeitas) // 2]
+    mediana_insatisfeitas = insatisfeitas[len(insatisfeitas) // 2]
+
+    # Sobreposicao nos dois sentidos: atendimento rapido que terminou mal e
+    # atendimento lento que terminou bem existem, e o modelo tem que ver os dois.
+    lentas_entre_as_satisfeitas = [v for v in satisfeitas if v > mediana_insatisfeitas]
+    rapidas_entre_as_insatisfeitas = [v for v in insatisfeitas if v < mediana_satisfeitas]
+    assert len(lentas_entre_as_satisfeitas) >= 10, "nenhuma conversa satisfeita e lenta"
+    assert len(rapidas_entre_as_insatisfeitas) >= 10, "nenhuma conversa insatisfeita e rapida"
+
+
+def test_cliente_usa_emoji_e_a_polaridade_acompanha_o_rotulo_sem_entregar():
+    """Sem emoji no corpus sintetico o sinal de emoji nasce com peso zero.
+
+    O primeiro fusor treinado tinha `emoji_score_medio` com coeficiente
+    0.0000: a feature era constante no treino, entao o pilar de emoji da
+    arquitetura nao contribuia nada. Aqui o emoji aparece, acompanha o rotulo
+    na MEDIA e ainda assim cruza -- cliente satisfeito as vezes manda 😅.
+    """
+    def scores(rotulo):
+        return [
+            features_emoji(gerar_conversa(rotulo, FRASES[rotulo], semente=s))["emoji_score_medio"]
+            for s in range(200)
+        ]
+
+    satisfeitas, insatisfeitas = scores(2), scores(0)
+
+    assert any(v != 0.0 for v in satisfeitas), "nenhum emoji nas conversas satisfeitas"
+    assert any(v != 0.0 for v in insatisfeitas), "nenhum emoji nas conversas insatisfeitas"
+
+    media_satisfeitas = sum(satisfeitas) / len(satisfeitas)
+    media_insatisfeitas = sum(insatisfeitas) / len(insatisfeitas)
+    assert media_satisfeitas > media_insatisfeitas
+
+    # Cruzamento: emoji tambem nao pode virar gabarito.
+    assert any(v < 0 for v in satisfeitas), "emoji negativo nunca aparece no satisfeito"
+    assert any(v > 0 for v in insatisfeitas), "emoji positivo nunca aparece no insatisfeito"
 
 
 def test_lote_respeita_a_quantidade_e_devolve_rotulos():

@@ -12,6 +12,15 @@
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/**
+ * A base publicada, para a tela montar o exemplo de `curl` da ingestao.
+ *
+ * Exportada em vez de repetida: um endereco fixo escrito a mao no exemplo
+ * ficaria errado no dia em que a API mudasse de porta, e o integrador copiaria
+ * um comando que nao funciona sem ter como desconfiar.
+ */
+export const BASE_DA_API = BASE;
+
 export type Categoria = "detrator" | "neutro" | "promotor";
 
 export type Indicadores = {
@@ -38,7 +47,40 @@ export type ResumoConversa = {
    * e o servidor -- ele e quem grava a categoria.
    */
   nota: number | null;
+
+  /**
+   * Ficha operacional derivada pelo servidor em `fraus.resumo`.
+   *
+   * Os tempos vem `null` -- nunca `0` -- quando a espera nao existiu. Zero
+   * numa coluna de tempo de resposta se le como "respondeu na hora", e uma
+   * conversa que nunca teve atendente humano apareceria como a mais agil da
+   * operacao. Toda exibicao daqui precisa tratar o nulo como "não houve".
+   */
+  qtd_mensagens: number;
+  qtd_cliente: number;
+  qtd_bot: number;
+  qtd_humano: number;
+  latencia_primeira_resposta_s: number | null;
+  latencia_mediana_s: number | null;
+  latencia_mediana_bot_s: number | null;
+  latencia_mediana_humano_s: number | null;
+  duracao_s: number;
+  escalou_para_humano: boolean;
+  encerrada_em: string | null;
+  desfecho: Desfecho;
 };
+
+/**
+ * Como o atendimento terminou. Conjunto FECHADO e cada um verificavel no dado
+ * -- nao existe "resolvida", porque resolucao e julgamento sobre o problema do
+ * cliente e nada no dado a sustenta. A precedencia esta em `fraus.resumo`.
+ */
+export type Desfecho =
+  | "sem_sinal"
+  | "escalada"
+  | "sem_resposta"
+  | "encerrada"
+  | "em_aberto";
 
 export type Autor = "cliente" | "bot" | "humano";
 
@@ -49,8 +91,6 @@ export type Mensagem = {
 };
 
 export type DetalheConversa = ResumoConversa & {
-  encerrada_em: string | null;
-  escalou_para_humano: boolean;
   mensagens: Mensagem[];
 };
 
@@ -69,6 +109,23 @@ export type MensagemAtribuida = {
   prob_insatisfeito: number | null;
   prob_neutro: number | null;
   prob_satisfeito: number | null;
+
+  /**
+   * As duas cabecas de LEITURA. Elas descrevem a fala e NAO entram no score:
+   * o fusor tem dezesseis features e nenhuma vem daqui. A resposta marca isso
+   * em `sinais_fora_do_score`, e a interface tem que manter os dois numeros
+   * visualmente separados da nota -- "ironia 0,99" encostado num score baixo
+   * convida a conclusao de que uma causou a outra.
+   *
+   * `null` quando o servidor subiu sem a cabeca correspondente.
+   *
+   * RESSALVA MEDIDA sobre `prob_ironia`: o modelo acerta o caso de manual
+   * ("que atendimento maravilhoso, so esperei 3 horas") e marca 6 em 10 falas
+   * sinceras de atendimento como ironicas. Exibir como indicio, nunca como
+   * veredito. Ver tests/test_ironia_dominio.py.
+   */
+  emocao: Record<string, number> | null;
+  prob_ironia: number | null;
 };
 
 /** Resposta de `GET /conversas/{id}/atribuicao`. */
@@ -136,6 +193,67 @@ export type Simulacao = {
   emojis: EmojiDetectado[];
 };
 
+/**
+ * Configuracao vigente e a de FABRICA, como `GET /configuracoes` devolve.
+ *
+ * As duas vem juntas de proposito: sem a de fabrica, "voltar ao padrao" seria
+ * um botao preenchido com numeros digitados de novo na interface -- e faixa
+ * duplicada em dois lugares ja foi defeito deste projeto uma vez.
+ */
+export type ValoresConfiguracao = {
+  /** categoria -> [nota minima, nota maxima], inclusive nas duas pontas. */
+  faixas_nps: Record<string, [number, number]>;
+  /** [pico, saudavel, degradando] em segundos, estritamente crescentes. */
+  limiares_latencia_s: number[];
+};
+
+export type Configuracoes = {
+  vigente: ValoresConfiguracao;
+  fabrica: ValoresConfiguracao;
+};
+
+/** Fonte de integracao. `variavel_segredo` e o NOME de uma variavel de ambiente. */
+export type FonteIntegracao = {
+  id: number;
+  nome: string;
+  canal: string;
+  tipo: string;
+  /** NOME da variavel de ambiente que carrega a credencial -- nunca o valor. */
+  variavel_segredo: string | null;
+  ativa: boolean;
+  criada_em: string;
+  /**
+   * Os quatro ultimos caracteres da chave em uso, ou `null` se a fonte ainda
+   * nao tem chave. Serve para o operador reconhecer QUAL chave esta valendo
+   * ("termina em 3f9a") sem que o pedaco exibido ajude a adivinhar o resto.
+   * O hash da chave nunca sai da API.
+   */
+  chave_dica: string | null;
+  chave_criada_em: string | null;
+  /**
+   * Se a variavel nomeada acima EXISTE no ambiente da API, verificado na
+   * leitura. `false` nao diz que o segredo esta errado: diz que a variavel
+   * nao esta definida onde a API roda.
+   */
+  configurada: boolean;
+};
+
+export type MotivoRejeicao = {
+  numero_linha: number;
+  motivo: string;
+};
+
+/** Uma linha do historico de `GET /integracoes/importacoes`. */
+export type Importacao = {
+  id: number;
+  ocorrida_em: string;
+  arquivo: string;
+  aceitas: number;
+  rejeitadas: number;
+  /** Ate 20 motivos por importacao — a API trunca; o resto fica no CSV. */
+  motivos: MotivoRejeicao[];
+};
+
 export type Resultado<T> =
   | { ok: true; dado: T }
   | { ok: false; erro: string };
@@ -143,6 +261,43 @@ export type Resultado<T> =
 async function buscar<T>(rota: string): Promise<T> {
   const resposta = await fetch(`${BASE}${rota}`, { cache: "no-store" });
   if (!resposta.ok) throw new Error(`${rota} respondeu ${resposta.status}`);
+  return (await resposta.json()) as T;
+}
+
+/**
+ * Escrita na API, preservando a MENSAGEM do servidor.
+ *
+ * O `400` do Fraus nomeia o problema ("buraco entre detrator e neutro: nenhuma
+ * faixa cobre a nota 6"). Trocar isso por "erro ao salvar" jogaria fora a
+ * unica frase da tela que diz o que consertar -- entao o `detail` sobe inteiro.
+ */
+async function escrever<T>(
+  rota: string,
+  metodo: "POST" | "PUT" | "PATCH" | "DELETE",
+  corpo?: unknown,
+): Promise<T> {
+  const resposta = await fetch(`${BASE}${rota}`, {
+    method: metodo,
+    headers: corpo === undefined ? undefined : { "Content-Type": "application/json" },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+    cache: "no-store",
+  });
+
+  if (!resposta.ok) {
+    const dado = (await resposta.json().catch(() => null)) as
+      | { detail?: unknown }
+      | null;
+    const detalhe = dado?.detail;
+    throw new Error(
+      typeof detalhe === "string"
+        ? detalhe
+        : detalhe
+          ? JSON.stringify(detalhe)
+          : `${metodo} ${rota} respondeu ${resposta.status}`,
+    );
+  }
+
+  if (resposta.status === 204) return undefined as T;
   return (await resposta.json()) as T;
 }
 
@@ -228,6 +383,223 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
   );
 }
 
+/**
+ * Configuracao vigente + de fabrica.
+ *
+ * Chamada tambem pelas telas de leitura: os limiares de latencia que qualificam
+ * "rapido/aceitavel/lento" saem daqui, nao de constante no front.
+ */
+export const obterConfiguracoes = () =>
+  proteger(buscar<Configuracoes>("/configuracoes"));
+
+/**
+ * Grava as chaves enviadas. Manda so o que mudou -- o `PUT` valida chave a
+ * chave, entao enviar o bloco inteiro faria um erro de latencia recusar
+ * tambem uma faixa de NPS correta.
+ */
+export const salvarConfiguracoes = (valores: Partial<ValoresConfiguracao>) =>
+  proteger(escrever<Configuracoes>("/configuracoes", "PUT", valores));
+
+export const listarFontes = () =>
+  proteger(buscar<FonteIntegracao[]>("/integracoes/fontes"));
+
+export const criarFonte = (fonte: {
+  nome: string;
+  canal: string;
+  tipo: string;
+  /** NOME da variavel de ambiente. A credencial nunca passa por aqui. */
+  variavel_segredo?: string | null;
+}) => proteger(escrever<FonteIntegracao>("/integracoes/fontes", "POST", fonte));
+
+export const ajustarFonte = (
+  id: number,
+  mudanca: { nome?: string; ativa?: boolean },
+) =>
+  proteger(
+    escrever<FonteIntegracao>(`/integracoes/fontes/${id}`, "PATCH", mudanca),
+  );
+
+/** Remove o CADASTRO da fonte. Nenhum atendimento e apagado junto. */
+export const apagarFonte = (id: number) =>
+  proteger(escrever<void>(`/integracoes/fontes/${id}`, "DELETE"));
+
+export type ChaveGerada = {
+  fonte: FonteIntegracao;
+  /**
+   * A chave EM CLARO. Este e o unico lugar em toda a API onde ela existe, e
+   * so nesta resposta: o servidor guarda apenas o hash e nao ha rota para
+   * reler. A tela precisa mostra-la agora ou ela se perde.
+   *
+   * NUNCA guardar isto em localStorage, sessionStorage ou URL -- ela morre
+   * junto com o estado do componente, de proposito.
+   */
+  chave: string;
+  aviso: string;
+};
+
+/**
+ * Gera a chave de API da fonte, SUBSTITUINDO a anterior.
+ *
+ * Duas chaves validas ao mesmo tempo pareceriam rotacao sem risco, mas a
+ * antiga seguiria aceita sem ninguem saber quem ainda a usa.
+ */
+export const gerarChave = (id: number) =>
+  proteger(escrever<ChaveGerada>(`/integracoes/fontes/${id}/chave`, "POST"));
+
+/** Invalida a chave. A fonte e os atendimentos dela continuam. */
+export const revogarChave = (id: number) =>
+  proteger(escrever<void>(`/integracoes/fontes/${id}/chave`, "DELETE"));
+
+export type TipoDeFonte = { valor: string; rotulo: string; ajuda: string };
+
+/**
+ * Os tipos que a ingestao sabe tratar.
+ *
+ * Lidos da API de proposito: a tela mantinha a propria copia da lista, e copia
+ * so fica errada no dia em que um tipo novo entra no servidor -- o formulario
+ * seguiria oferecendo os antigos, sem erro nenhum, so sumindo da vista.
+ */
+export const listarTiposDeFonte = () =>
+  proteger(buscar<TipoDeFonte[]>("/integracoes/tipos"));
+
+export type ArquivoImportavel = { caminho: string; bytes: number };
+
+/** Os CSV disponiveis na raiz de importacao, com caminho relativo a ela. */
+export const listarArquivosImportaveis = () =>
+  proteger(
+    buscar<{ raiz: string; arquivos: ArquivoImportavel[] }>(
+      "/integracoes/arquivos",
+    ),
+  );
+
+export type ResultadoImportacao = {
+  importadas: number;
+  rejeitadas: number;
+  motivos: { linha: number; motivo: string }[];
+};
+
+/**
+ * Importa um CSV da raiz. O `caminho` e o que a listagem devolveu, sem ajuste.
+ *
+ * O servidor recusa qualquer caminho que escape da raiz; a interface nunca
+ * monta caminho a mao nem oferece campo livre para isso.
+ */
+export const importarArquivo = (caminho: string) =>
+  proteger(
+    escrever<ResultadoImportacao>("/conversas/importar", "POST", { caminho }),
+  );
+
+export const listarImportacoes = () =>
+  proteger(buscar<Importacao[]>("/integracoes/importacoes"));
+
+/**
+ * Peso de UMA palavra na leitura que o modelo fez da mensagem.
+ *
+ * Medido por oclusao: apaga-se a palavra e pergunta-se de novo. Positivo
+ * empurrou para satisfeito, negativo para insatisfeito.
+ *
+ * `peso: null` NAO e o mesmo que `0`. Zero e medicao ("apagar esta palavra nao
+ * mudou nada"); nulo e ausencia de medicao -- a mensagem passou do teto de
+ * palavras que o servidor mede. A tela precisa distinguir os dois.
+ *
+ * `inicio`/`fim` sao indices no texto original, para grifar sem re-tokenizar:
+ * uma segunda tokenizacao no cliente acabaria grifando trecho diferente do que
+ * o servidor mediu.
+ */
+export type PesoDePalavra = {
+  palavra: string;
+  inicio: number;
+  fim: number;
+  peso: number | null;
+};
+
+/** Palavra mais usada pelo cliente, comparada ao restante do banco. */
+export type ItemVocabulario = {
+  palavra: string;
+  vezes: number;
+  /**
+   * Quantas vezes a palavra e mais frequente aqui do que na referencia --
+   * `3.0` e "o triplo do normal nesta operacao". `null` quando a palavra nao
+   * aparece na referencia: nao ha com o que comparar, e `1.0` afirmaria
+   * "igual a media" sem ter medido media nenhuma.
+   */
+  destaque: number | null;
+};
+
+export type MensagemAnalisada = MensagemAtribuida & {
+  /** `null` para bot e humano: so a fala do cliente recebe peso de palavra. */
+  palavras: PesoDePalavra[] | null;
+};
+
+export type ConversaAnalisada = {
+  conversa: DetalheConversa;
+  score: number | null;
+  nota: number | null;
+  categoria: Categoria | null;
+  mensagens: MensagemAnalisada[];
+  contribuicoes: Record<string, number> | null;
+  importancias: Record<string, number>;
+  sinais_fora_do_score: string[];
+  vocabulario: ItemVocabulario[];
+  qtd_mensagens: number;
+  qtd_cliente: number;
+  qtd_bot: number;
+  qtd_humano: number;
+  latencia_primeira_resposta_s: number | null;
+  latencia_mediana_s: number | null;
+  latencia_mediana_bot_s: number | null;
+  latencia_mediana_humano_s: number | null;
+  duracao_s: number;
+  desfecho: Desfecho;
+};
+
+export type ResultadoAnalise = {
+  analises: ConversaAnalisada[];
+  conversas_no_arquivo: number;
+  conversas_analisadas: number;
+  rejeitadas: { numero_linha: number; motivo: string }[];
+  total_rejeitadas: number;
+  /** Quantas conversas do banco serviram de referencia para o `destaque`. */
+  referencia_conversas: number;
+};
+
+/**
+ * Analisa um arquivo de conversa SEM gravar nada.
+ *
+ * O conteudo vai no corpo e e interpretado em memoria: nada entra no banco,
+ * nada toca o disco. E o que separa esta chamada da importacao -- aqui se
+ * pergunta "o que o modelo acha disto?", nao "passe a contar isto no NPS".
+ */
+export const analisarArquivo = (csv: string) =>
+  proteger(escrever<ResultadoAnalise>("/analisar", "POST", { csv }));
+
+export type PontoSerieApi = {
+  dia: string; // AAAA-MM-DD
+  nps: number | null;
+  latencia_mediana_s: number | null;
+  atendimentos: number;
+  com_score: number;
+};
+
+/**
+ * Serie diaria de NPS x latencia, ja agregada pelo servidor.
+ *
+ * O recorte vai como `?de=&ate=` e as duas pontas sao INCLUSIVAS. Data
+ * malformada devolve 400 em vez de ser ignorada -- filtro descartado em
+ * silencio faria o grafico mostrar a serie inteira parecendo o recorte.
+ */
+export const obterSerieTemporal = (de?: string | null, ate?: string | null) => {
+  const query = new URLSearchParams();
+  if (de) query.set("de", de);
+  if (ate) query.set("ate", ate);
+  const sufixo = query.toString();
+  return proteger(
+    buscar<{ de: string | null; ate: string | null; pontos: PontoSerieApi[] }>(
+      `/serie-temporal${sufixo ? `?${sufixo}` : ""}`,
+    ),
+  );
+};
+
 /** Estado de saude da API -- alimenta o indicador do app shell. */
 export const obterSaude = () =>
   proteger(buscar<{ status: string }>("/saude"));
@@ -237,12 +609,14 @@ const LOTE_DETALHES = 8;
 /**
  * Busca as transcricoes de varias conversas.
  *
- * A API nao expoe serie temporal nem latencia agregada, entao a pagina
- * principal deriva as duas dos timestamps das mensagens -- o que obriga a
- * baixar as transcricoes. E um N+1 assumido, aceitavel no volume do trabalho
- * (dezenas de atendimentos) e resolvido por um `GET /serie-temporal` no
- * servidor. Conversas que falharem individualmente sao descartadas em vez de
- * derrubar a pagina inteira.
+ * A serie temporal SAIU daqui: ela vem agregada de `GET /serie-temporal`. O
+ * N+1 sobrevive para o que ainda nao tem agregado no servidor -- o lexico por
+ * classe e o tempo mediano de resposta da faixa de indicadores, que continuam
+ * precisando do texto e dos timestamps de cada transcricao. Eliminar o resto
+ * exige `GET /indicadores?de=&ate=` e um agregado de lexico.
+ *
+ * Conversas que falharem individualmente sao descartadas em vez de derrubar a
+ * pagina inteira.
  */
 export async function obterDetalhes(
   ids: string[],

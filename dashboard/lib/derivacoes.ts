@@ -2,8 +2,9 @@
  * Derivacoes feitas no cliente da API a partir do que os endpoints DAO.
  *
  * A API do Fraus expoe indicadores agregados, a lista de conversas, a
- * transcricao e a atribuicao por sentenca. Ela NAO expoe serie temporal,
- * latencia agregada nem lexico por classe. Tudo que este arquivo calcula sai
+ * transcricao, a atribuicao por sentenca e a SERIE TEMPORAL diaria. Ela nao
+ * expoe lexico por classe nem latencia agregada fora da serie. O que este
+ * arquivo ainda calcula sai
  * dos timestamps e do texto que a transcricao ja entrega -- nada aqui inventa
  * numero. O que nao da para derivar honestamente nao esta aqui: esta como
  * estado vazio na interface, nomeando o endpoint que resolveria.
@@ -22,6 +23,7 @@ import type {
   DetalheConversa,
   Mensagem,
   MensagemAtribuida,
+  PontoSerieApi,
   ResumoConversa,
 } from "./api";
 
@@ -37,6 +39,14 @@ export const FAIXAS_NPS = [
   { categoria: "neutro" as Categoria, de: 7, ate: 8, rotulo: "7–8 neutro" },
   { categoria: "promotor" as Categoria, de: 9, ate: 10, rotulo: "9–10 promotor" },
 ];
+
+/**
+ * Nota a partir da qual o atendimento conta como satisfeito no CSAT. E a mesma
+ * constante do servidor (`fraus.indicadores.NOTA_MINIMA_SATISFEITO`) e NAO
+ * depende da faixa de NPS configurada -- `calcular_csat` conta nota >= 7
+ * qualquer que seja o corte de detrator.
+ */
+export const NOTA_MINIMA_SATISFEITO = 7;
 
 /** Faixa saudavel de referencia do CSAT, em pontos percentuais. */
 export const CSAT_SAUDAVEL = { de: 75, ate: 85 };
@@ -109,17 +119,49 @@ export function latenciaMediana(mensagens: Mensagem[]): number | null {
 
 /**
  * Limiares de latencia, em segundos, calibrados pela literatura de live chat
- * que a propria tela cita. Sao a UNICA fonte dos numeros que aparecem nos
- * rotulos -- texto e limiar nao podem divergir.
+ * que a propria tela cita.
+ *
+ * ELES VEM DA API (`GET /configuracoes` -> `limiares_latencia_s`), nao de
+ * constante do front: a tela de Configuracoes deixa mexer neles, e um controle
+ * que nao chega a lugar nenhum e exatamente o que este projeto nao aceita. O
+ * objeto abaixo e so o PADRAO DE FABRICA, o mesmo de
+ * `fraus/configuracao.py::LIMIARES_LATENCIA_PADRAO`, usado quando a leitura da
+ * configuracao falha -- caso em que a propria tela ja mostra a API fora do ar.
  */
-export const LIMIARES_LATENCIA = {
+export type LimiaresLatencia = {
   /** Ate aqui a satisfacao esta no pico observado (~84,7% de CSAT). */
-  pico: 10,
+  pico: number;
   /** Ate aqui a espera ainda e saudavel. */
-  saudavel: 60,
+  saudavel: number;
   /** Ate aqui a satisfacao degrada: -2 a -3 pontos de CSAT por minuto extra. */
+  degradando: number;
+};
+
+export const LIMIARES_LATENCIA_PADRAO: LimiaresLatencia = {
+  pico: 10,
+  saudavel: 60,
   degradando: 180,
-} as const;
+};
+
+/**
+ * Converte `limiares_latencia_s` (a lista de tres da API) nos tres nomes que a
+ * interface usa. Lista de tamanho errado nao existe -- o servidor recusa antes
+ * de gravar -- mas a leitura cai no padrao em vez de estourar em runtime.
+ */
+export function limiaresDe(
+  limiares: number[] | undefined | null,
+): LimiaresLatencia {
+  if (!limiares || limiares.length !== 3) return LIMIARES_LATENCIA_PADRAO;
+  const [pico, saudavel, degradando] = limiares;
+  return { pico, saudavel, degradando };
+}
+
+/** Minutos com no maximo uma casa: 180 s vira "3", 90 s vira "1,5". */
+export function emMinutos(segundos: number): string {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(
+    segundos / 60,
+  );
+}
 
 /**
  * Faixa de severidade da espera.
@@ -131,35 +173,58 @@ export const LIMIARES_LATENCIA = {
  */
 export type SeveridadeLatencia = "pico" | "saudavel" | "degradando" | "abandono";
 
-export function severidadeLatencia(segundos: number): SeveridadeLatencia {
-  if (segundos <= LIMIARES_LATENCIA.pico) return "pico";
-  if (segundos <= LIMIARES_LATENCIA.saudavel) return "saudavel";
-  if (segundos <= LIMIARES_LATENCIA.degradando) return "degradando";
+export function severidadeLatencia(
+  segundos: number,
+  limiares: LimiaresLatencia,
+): SeveridadeLatencia {
+  if (segundos <= limiares.pico) return "pico";
+  if (segundos <= limiares.saudavel) return "saudavel";
+  if (segundos <= limiares.degradando) return "degradando";
   return "abandono";
 }
 
-/** Rotulo e justificativa de cada faixa. Um texto so, citado igual em toda a tela. */
-export const ROTULO_LATENCIA: Record<
-  SeveridadeLatencia,
-  { titulo: string; detalhe: string }
-> = {
-  pico: {
-    titulo: "Resposta imediata",
-    detalhe: `até ${LIMIARES_LATENCIA.pico} s — pico de satisfação na literatura de live chat (CSAT ~84,7%)`,
-  },
-  saudavel: {
-    titulo: "Espera saudável",
-    detalhe: `entre ${LIMIARES_LATENCIA.pico} s e ${LIMIARES_LATENCIA.saudavel} s — fora do pico, ainda dentro do saudável`,
-  },
-  degradando: {
-    titulo: "Espera longa",
-    detalhe: `entre ${LIMIARES_LATENCIA.saudavel} s e ${LIMIARES_LATENCIA.degradando / 60} min — a satisfação degrada de 2 a 3 pontos de CSAT por minuto extra`,
-  },
-  abandono: {
-    titulo: "Espera crítica",
-    detalhe: `acima de ${LIMIARES_LATENCIA.degradando / 60} min — faixa de abandono: 57% dos clientes desistem`,
-  },
-};
+/**
+ * Rotulo e justificativa de cada faixa, montados a partir dos limiares
+ * VIGENTES. Uma fonte so: se o operador mudar o corte, o texto que cita o
+ * numero muda junto -- rotulo e limiar nao podem divergir.
+ *
+ * As porcentagens citadas (84,7% de CSAT no pico, 57% de abandono) sao da
+ * literatura e ficam ancoradas ao limiar DE FABRICA. Quando os cortes saem do
+ * padrao, a tela para de atribuir a medida da literatura ao corte novo.
+ */
+export function rotulosLatencia(
+  limiares: LimiaresLatencia,
+): Record<SeveridadeLatencia, { titulo: string; detalhe: string }> {
+  const padrao =
+    limiares.pico === LIMIARES_LATENCIA_PADRAO.pico &&
+    limiares.saudavel === LIMIARES_LATENCIA_PADRAO.saudavel &&
+    limiares.degradando === LIMIARES_LATENCIA_PADRAO.degradando;
+
+  return {
+    pico: {
+      titulo: "Resposta imediata",
+      detalhe: padrao
+        ? `até ${limiares.pico} s — pico de satisfação na literatura de live chat (CSAT ~84,7%)`
+        : `até ${limiares.pico} s — corte configurado em Configurações`,
+    },
+    saudavel: {
+      titulo: "Espera saudável",
+      detalhe: `entre ${limiares.pico} s e ${limiares.saudavel} s — fora do pico, ainda dentro do saudável`,
+    },
+    degradando: {
+      titulo: "Espera longa",
+      detalhe: padrao
+        ? `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — a satisfação degrada de 2 a 3 pontos de CSAT por minuto extra`
+        : `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — corte configurado em Configurações`,
+    },
+    abandono: {
+      titulo: "Espera crítica",
+      detalhe: padrao
+        ? `acima de ${emMinutos(limiares.degradando)} min — faixa de abandono: 57% dos clientes desistem`
+        : `acima de ${emMinutos(limiares.degradando)} min — corte configurado em Configurações`,
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Serie temporal diaria (NPS inferido x latencia mediana)
@@ -181,6 +246,33 @@ function chaveDoDia(iso: string): string {
   return `${data.getFullYear()}-${mes}-${dia}`;
 }
 
+/**
+ * Da forma de grafico ao que `GET /serie-temporal` ja agregou.
+ *
+ * NAO recalcula nada: o NPS e a latencia vem do servidor, pelas mesmas
+ * funcoes Python que gravam a categoria. Aqui so entra o rotulo DD/MM, que e
+ * apresentacao e nao pertence a API.
+ */
+export function serieDoServidor(pontos: PontoSerieApi[]): PontoSerie[] {
+  return pontos.map((ponto) => {
+    const [, mes, numero] = ponto.dia.split("-");
+    return {
+      dia: ponto.dia,
+      rotulo: `${numero}/${mes}`,
+      nps: ponto.nps,
+      latenciaMediana: ponto.latencia_mediana_s,
+      atendimentos: ponto.atendimentos,
+      comScore: ponto.com_score,
+    };
+  });
+}
+
+/**
+ * Mesma serie, derivada das transcricoes.
+ *
+ * Sobrevive como PLANO B de `serieDoServidor`: se `/serie-temporal` falhar, o
+ * grafico continua de pe com o que a pagina ja baixou, em vez de sumir.
+ */
 export function serieDiaria(detalhes: DetalheConversa[]): PontoSerie[] {
   const porDia = new Map<
     string,
@@ -573,7 +665,12 @@ export function tempoMedianoDeResposta(detalhes: DetalheConversa[]): number | nu
  * NADA aqui recalcula score, nota ou categoria -- invariante 3. O que se
  * agrega e a CATEGORIA que o servidor ja gravou:
  *   NPS  = %promotores - %detratores            (identico a calcular_nps)
- *   CSAT = %(neutro ou promotor), ou seja nota >= 7 (identico a calcular_csat)
+ *   CSAT = %(nota >= 7)                          (identico a calcular_csat)
+ *
+ * O CSAT sai da NOTA, nao da categoria, e isso passou a importar quando as
+ * faixas viraram configuraveis: `calcular_csat` no servidor conta nota >= 7 e
+ * ignora a faixa vigente, entao contar "quem nao e detrator" divergiria do
+ * numero do servidor no instante em que alguem movesse o corte de detrator.
  * A contencao sai de `escalou_para_humano`, que tambem vem do servidor.
  *
  * Sem nenhuma conversa no recorte, TODOS os campos vem null: agregado sem dado
@@ -604,11 +701,15 @@ export function indicadoresDoPeriodo(
   const total = resumos.length;
   const semSinal = total - categorias.length;
 
+  const notas = resumos
+    .map((resumo) => resumo.nota)
+    .filter((nota): nota is number => nota !== null);
+
   const csat =
-    categorias.length === 0
+    notas.length === 0
       ? null
-      : (100 * categorias.filter((c) => c !== "detrator").length) /
-        categorias.length;
+      : (100 * notas.filter((nota) => nota >= NOTA_MINIMA_SATISFEITO).length) /
+        notas.length;
 
   const containment =
     detalhes.length === 0

@@ -1,13 +1,17 @@
 # Treinamento dos modelos do Fraus
 
-O Fraus tem DOIS artefatos treinados, produzidos por dois notebooks que rodam **nesta ordem**:
-
-| # | Notebook | O que produz | Precisa de GPU? |
-|---|---|---|---|
-| 1 | `notebooks/01_treino_bertimbau.ipynb` | `modelos/bertimbau-satisfacao/` — o classificador de texto (3 classes), fine-tune do `neuralmind/bert-base-portuguese-cased` sobre o B2W-Reviews01 | **sim** |
-| 2 | `notebooks/02_treino_fusor.ipynb` | `modelos/fusor.joblib` — a regressao logistica que funde os tres sinais; e `modelos/importancias.json`, o peso de cada feature | nao |
+| # | Notebook | O que produz | GPU? | Estado |
+|---|---|---|---|---|
+| 1 | `notebooks/01_treino_bertimbau.ipynb` | `modelos/bertimbau-satisfacao/` — classificador de texto (3 classes), fine-tune do `neuralmind/bert-base-portuguese-cased` sobre o B2W-Reviews01 | **sim** | pronto |
+| 2 | `notebooks/02_treino_fusor.ipynb` | `modelos/fusor.joblib` e `modelos/importancias.json` — a regressao logistica que funde os sinais | nao | pronto |
+| 3 | `notebooks/03_treino_emocao.ipynb` | `modelos/bertimbau-emocao/` e `modelos/metricas_emocao.json` — classificador das sete classes de emocao | **sim** | pronto |
+| 4 | `notebooks/04_treino_ironia.ipynb` | `modelos/bertimbau-ironia/` e `modelos/metricas_ironia.json` — classificador binario de ironia | **sim** | pronto, **mas o corpus precisa ser solicitado** |
 
 O notebook 02 **depende do artefato do 01**: ele carrega o BERTimbau treinado para extrair o sinal de texto de cada conversa. A primeira celula do 02 falha com erro explicito se `modelos/bertimbau-satisfacao` nao estiver no Drive.
+
+Os notebooks 03 e 04 sao **independentes entre si e do 01** — treinam cabecas separadas, em corpora proprios. O 02 e que passa a depender dos tres, porque e ele que monta o vetor de features completo. Ordem de execucao: 01, 03 e 04 em qualquer ordem, e o 02 por ultimo.
+
+O sinal lexico (`fraus/sinais/lexico.py`) **nao tem notebook**: o SentiLex-PT nao e treinado, e recurso pronto, versionado em `fraus/dados/sentilex_pt02.csv`. Ver [Sinal lexico](#sinal-lexico--sentilex-pt02) no fim.
 
 **Os dois artefatos sao obrigatorios para o app real subir.** `fraus/api/main.py` carrega o classificador e o fusor no boot e propaga o erro sem fallback — servir predicao sem modelo carregado e pior do que estar fora do ar. Com so um dos dois, o unico servidor que sobe e `scripts/api_demo.py`, que usa motor duble e nao serve para producao.
 
@@ -75,8 +79,8 @@ Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 1. monta o Drive e confere `modelos/bertimbau-satisfacao` (falha alto apontando o notebook 01 se faltar);
 2. clona este repositorio e instala o pacote `fraus` — a extracao de features usa o MESMO codigo da API (`fraus.fusor.montar_features`), nunca uma reimplementacao;
 3. carrega o B2W-Reviews01 e rotula por `recommend_to_a_friend` (ver abaixo);
-4. costura as frases em conversas sinteticas com `fraus.ingest.simulador.gerar_lote`, deterministico por semente, com latencia calibrada por rotulo;
-5. extrai as 16 features de cada conversa com o BERTimbau do notebook 01 carregado;
+4. costura as frases em conversas sinteticas com `fraus.ingest.simulador.gerar_lote`, deterministico por semente, com latencia log-normal e emoji calibrados por rotulo;
+5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **16**, e sobem quando os notebooks 03 e 04 existirem (ver [Contrato de features](#contrato-de-features));
 6. treina o `Fusor` (`treinar(exemplos, rotulos)`);
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).
@@ -101,4 +105,217 @@ As tres classes sao subamostradas ao tamanho da menor (a nota 3 e minoria no cor
 
 O fusor e treinado sobre conversas SINTETICAS: nenhum corpus publico de resenha PT-BR tem timestamps de dialogo, entao a latencia, a escalacao e o abandono saem de distribuicoes calibradas pela literatura de live chat, nao de atendimento observado. O texto e real (B2W), o tempo nao e.
 
-A consequencia pratica aparece na avaliacao: como o simulador amostra latencia de faixas distintas por rotulo, o sinal de tempo separa as classes com facilidade artificial e as metricas do notebook 02 saem otimistas. Elas medem que o fusor aprendeu a combinar os sinais, nao que ele acertaria essa taxa em atendimento real.
+As metricas do notebook 02 continuam OTIMISTAS mesmo depois da correcao descrita abaixo: elas medem que o fusor aprendeu a combinar os sinais no dominio sintetico, nao que ele acertaria essa taxa em atendimento real.
+
+### O vazamento do primeiro fusor — 13/08/2026
+
+O primeiro fusor treinado marcou **99,3% de acuracia e F1-macro 0,993**, e era inutil. Vale registrar porque o modo de falha e silencioso e pode voltar.
+
+**O sintoma.** Carregado no repositorio local e alimentado com conversas escritas a mao, o fusor devolvia praticamente a mesma nota para tudo:
+
+| | latencia 5s | 30s | 200s |
+|---|---|---|---|
+| texto otimo (BERTimbau: 0,96 satisfeito) | 52,48 | 51,32 | 50,02 |
+| texto pessimo (BERTimbau: 0,98 insatisfeito) | 49,94 | 49,92 | 49,84 |
+
+Dois textos que o classificador de texto separa com mais de 95% de confianca saiam com **2,5 pontos** de diferenca, ambos colados em 50 e ambos classificados como neutro.
+
+**A causa.** O `PERFIL_POR_ROTULO` do simulador amostrava latencia de faixas **disjuntas** — insatisfeito 60-400s, neutro 15-60s, satisfeito 3-15s. Sem sobreposicao nenhuma, a latencia *era* o rotulo: dava para acertar a classe olhando so o relogio, sem ler uma letra do texto. A regressao logistica fez exatamente isso. Os quatro maiores pesos aprendidos eram todos de tempo (`latencia_p90_s` 2,06 · `latencia_mediana_s` 2,03 · `latencia_primeira_resposta_s` 1,91 · `duracao_total_s` 1,52), contra 1,39 e 1,12 das features de texto. Fora da variedade que ele decorou, o modelo respondia "neutro" para tudo.
+
+Os 99,3% nao mediam fusao. Mediam que o simulador vazava o gabarito.
+
+**Um segundo achado, do mesmo diagnostico.** As features `emoji_score_medio`, `emoji_frac_positivos` e `emoji_frac_negativos` tinham coeficiente **0,0000**: o simulador nunca emitia emoji, entao elas eram constantes no treino e um dos tres sinais da arquitetura nao contribuia nada.
+
+**A correcao** (`fraus/ingest/simulador.py`, coberta por `tests/test_simulador.py`):
+
+- a latencia passou a ser **log-normal** com caudas que se cruzam. As medianas continuam ordenadas, como manda a literatura de live chat, mas ~11% das conversas satisfeitas sao mais lentas que a mediana das insatisfeitas, e vice-versa. Existe atendimento rapido que termina mal;
+- as falas do cliente passaram a levar **emoji do lexicon**, com cruzamento deliberado — cliente irritado manda 🙏 (+0,418), cliente satisfeito manda 😩 (-0,368) — para o emoji nao virar o proximo gabarito.
+
+**Como saber se voltou.** Acuracia alta e sintoma que pede investigacao, nao veredito. Depois da correcao o notebook 02 marcou **0,96**, e desta vez o numero se sustentou: os pesos aprendidos mudaram de lugar.
+
+| feature | fusor vazado | fusor corrigido |
+|---|---|---|
+| `emoji_score_medio` | **0,0000** (morto) | **1,6662** (1º) |
+| `texto_prob_satisfeito_media` | 1,3858 | 1,6026 (2º) |
+| `texto_prob_insatisfeito_media` | 1,1212 | 1,4722 (3º) |
+| `latencia_p90_s` | **2,0575** (1º) | 0,0674 |
+| `latencia_mediana_s` | 2,0329 | 0,1621 |
+| `latencia_primeira_resposta_s` | 1,9068 | 0,0138 |
+
+O mesmo teste de sanidade que expos o vazamento — mesmo texto, so mudando o relogio — passou de 2,5 pontos de separacao para **99,6**: texto otimo pontua 99,98 e texto pessimo 0,35, com a latencia mexendo fracoes de ponto. O sinal de tempo virou o modificador fraco que ele deve ser.
+
+**O criterio, entao, nao e o numero sozinho.** Diante de acuracia alta, olhe os PESOS: se as features que lideram forem as que carregam o conteudo (texto, emoji), o modelo aprendeu; se forem as circunstanciais (tempo, contagem de turnos), procure o vazamento.
+
+### Consequencia no NPS: a classe neutra cai em detrator
+
+Medido em 90 conversas do simulador, 30 por classe, o fusor corrigido separa bem — medianas **0,11 / 50,99 / 99,03** por rotulo verdadeiro. Mas a categoria de NPS derivada sai **67% detrator · 29% promotor · 4% neutro**, com **NPS -38** num lote equilibrado por construcao.
+
+Nao e falha do treino. O score e `100 * (P(satisfeito) + 0.5 * P(neutro))`, entao conversa classificada com certeza como neutra pontua 50, vira nota 5 e cai na faixa 0-6. A faixa neutra do NPS (7-8) so seria alcancada com `P(satisfeito)` entre 0,4 e 0,8 — um empate entre classes, nao uma neutralidade confiante. As tres classes do modelo e as tres categorias do NPS foram decididas em lugares separados e nunca se encontraram.
+
+**Decisao de projeto: manter e declarar.** A alternativa avaliada era subir o peso do neutro de 0,5 para 0,75 (o centro da faixa passiva do NPS), o que faria neutro puro pontuar 75, virar nota 8 e cair em neutro — alinhando as tres classes as tres categorias. Ficou registrada aqui e na docstring de `Fusor.pontuar` para nao ser "corrigida" por engano.
+
+## Contrato de features
+
+`NOMES_FEATURES`, em `fraus/fusor.py`, e a lista canonica. `vetorizar` levanta `KeyError` se faltar chave — nunca zero silencioso (invariante 9).
+
+Hoje sao **16 features**, dos tres sinais originais. Os modulos dos sinais novos ja existem e estao testados, mas **ainda nao entram no vetor**:
+
+| sinal | modulo | features | no vetor? |
+|---|---|---|---|
+| texto | `fraus/sinais/texto.py` | 4 | sim |
+| emoji | `fraus/sinais/emoji.py` | 5 | sim |
+| tempo | `fraus/sinais/tempo.py` | 7 | sim |
+| emocao | `fraus/sinais/emocao.py` | 8 | **nao — falta o modelo** |
+| lexico | `fraus/sinais/lexico.py` | 3 | **nao — falta a expansao** |
+| ironia | `fraus/sinais/ironia.py` | 2 | **nao — falta o modelo** |
+
+**Por que a espera e deliberada.** Expandir `NOMES_FEATURES` faria `montar_features` exigir tres classificadores, e dois deles ainda nao foram treinados. O notebook 02 e a API parariam de funcionar sem nada em troca. A ordem certa e: notebooks 03 e 04 produzem os modelos, dai o contrato sobe e o fusor e retreinado sobre o vetor completo.
+
+## Notebook 03 — classificador de emocao
+
+Requisito de banca: distinguir as **sete emocoes humanas**. A cabeca treinada tem sete classes, e a setima emocao e derivada — ver abaixo.
+
+A ordem das classes **nao e redigitada no notebook**: ele importa `NOMES_EMOCOES` de `fraus.sinais.emocao`, a mesma lista que o sinal usa para ler as probabilidades. Redigitar seria o jeito mais facil de treinar `raiva` no indice 2 e le-la no indice 3.
+
+### Ordem canonica das classes
+
+`fraus/sinais/emocao.py` fixa a ordem, e ela vale no notebook, no sinal e no fusor. Inverter nao gera erro: atribui a emocao errada em silencio, a mesma armadilha da invariante 8.
+
+| indice | classe |
+|---|---|
+| 0 | alegria |
+| 1 | tristeza |
+| 2 | raiva |
+| 3 | medo |
+| 4 | nojo |
+| 5 | surpresa |
+| 6 | neutro |
+
+### Corpus: `go_emotions_ptbr`
+
+Traducao PT-BR do GoEmotions (Demszky et al., 2020 — 58k comentarios do Reddit, 27 emocoes + neutro), com 43.410 exemplos de treino, 5.426 de validacao e 5.427 de teste. Licenca Apache 2.0. As 27 categorias sao reduzidas as seis de Ekman pelo **mapeamento oficial que o proprio GoEmotions publica** — nao por agrupamento inventado aqui.
+
+O arquivo vem no formato CRU do GoEmotions — **uma linha por anotador**, nao por exemplo. Um rotulo conta quando **pelo menos 2 anotadores** o marcaram (a maioria dos exemplos tem 3 anotadores, entao 2 e maioria simples), e exemplos que caem em mais de uma classe de Ekman sao descartados: a tarefa e multiclasse de rotulo unico, e forcar vencedor entre duas emocoes empatadas inventaria rotulo.
+
+O limiar mais alto rende MAIS exemplos, o que so parece contra-intuitivo ate ver o motivo — com 1 anotador quase todo exemplo recebe varios rotulos Ekman e cai fora do filtro de rotulo unico:
+
+| limiar | exemplos com rotulo unico |
+|---|---|
+| 1 anotador | 17.367 |
+| **2 anotadores** | **46.014** |
+
+### O desequilibrio, e por que NAO subamostrar
+
+Distribuicao medida com limiar 2:
+
+| classe | exemplos |
+|---|---|
+| alegria | 19.284 |
+| neutro | 13.603 |
+| raiva | 5.155 |
+| surpresa | 4.339 |
+| tristeza | 2.601 |
+| medo | 588 |
+| **nojo** | **444** |
+
+Sao **43:1** entre a maior e a menor. Os notebooks 01 e 02 balanceiam por subamostragem, mas aqui isso seria destrutivo: cortar tudo ao tamanho de `nojo` deixaria **3.108 exemplos** para sete classes, jogando fora 93% do corpus.
+
+**Escolha: pesos de classe na perda**, pela formula `n / (k * n_c)` — a mesma do `class_weight='balanced'` do scikit-learn. Os 46 mil exemplos ficam. Por isso a metrica de selecao do melhor checkpoint e o **F1-macro, nunca a acuracia**: com 43:1, um modelo que chutasse `alegria` sempre marcaria 42% sem ter aprendido nada.
+
+### O teto do desprezo — a declarar no relatorio
+
+`nojo` e a classe mais rara do corpus, e o **desprezo e derivado de raiva x nojo**. A qualidade do desprezo fica limitada de cima pela qualidade da pior classe do modelo: se o F1 de `nojo` sair baixo, o desprezo herda isso. O notebook imprime esse teto explicitamente e grava o F1 por classe em `metricas_emocao.json`, para o numero aparecer no relatorio em vez de ser descoberto pela banca.
+
+**Limitacao a declarar:** a traducao foi feita por maquina (Google Tradutor), sem revisao humana. Por isso a avaliacao reporta tambem o **XED-pt** (7.220 linhas, CC-BY, Plutchik 8 + neutro) como conjunto de teste independente, que nao passou por traducao automatica. O mapeamento Plutchik -> Ekman descarta *anticipation* e *trust*; o resto casa 1:1.
+
+Duas ressalvas sobre o XED-pt: ele e **portugues europeu** ("pa", "artola"), enquanto o treino e PT-BR — diferenca de variedade, nao so de dominio; e o numero dele vai sair **mais baixo** que o interno, o que e esperado e e justamente o ponto, porque e ele que responde "mas nao e so traducao automatica?".
+
+### Por que o desprezo NAO e treinado
+
+A setima emocao e o **desprezo**, e nenhum corpus rotulado em portugues o anota. Havia um corpus multilingue sintetico com `contempt` entre os rotulos, e ele foi **recusado de proposito**: treinar seis classes com dado humano e so o desprezo com dado de outra procedencia ensinaria o modelo a reconhecer o *estilo do texto sintetico* em vez do desprezo. E o mesmo vazamento da latencia disjunta, com outra roupa.
+
+O desprezo e derivado da **diade primaria raiva + nojo**, que e como Plutchik (1980) o define — referencia citavel, nao rotulo inventado. A composicao usa media **geometrica**, nao aritmetica: desprezo exige as duas emocoes juntas, e a aritmetica devolveria 0,5 para raiva pura sem nojo nenhum, o que e raiva e nao desprezo.
+
+## Notebook 04 — classificador de ironia
+
+Classificacao binaria: 0 nao-ironico, 1 ironico.
+
+**Corpus:** IDPT 2021, a tarefa de *Irony Detection in Portuguese* do IberLEF — 15,2k tweets e 18,4k noticias anotados.
+
+### O corpus NAO tem download aberto
+
+Diferente dos outros notebooks, o 04 **nao baixa o corpus sozinho**: o IDPT 2021 nao esta publicado para download livre — nao ha copia no GitHub nem no Hugging Face, e a pagina da tarefa nao expoe link direto. E preciso **solicitar aos organizadores** em <https://sites.google.com/inf.ufpel.edu.br/idpt2021/>.
+
+O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM` da celula 3. Todas alimentam a mesma pasta e a mesma deteccao de esquema, entao trocar de fonte nao muda o resto do notebook:
+
+| `ORIGEM` | Quando usar |
+|---|---|
+| `sintetico` (**padrao**) | gera o corpus com `fraus.ingest.gerador_ironia` — nao depende de liberacao de ninguem |
+| `drive` | os arquivos ja estao em `DIR_CORPUS` — foi assim que o IDPT entrou, se liberado |
+| `kaggle` | baixa da conta Kaggle; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
+| `upload` | seletor de arquivos do navegador, para corpus que chegou por e-mail |
+
+### Alternativas ao IDPT — levantamento de 14/08/2026
+
+Registrado para ninguem repetir a busca. O que **nao serve**, e por que:
+
+| Fonte | Veredito |
+|---|---|
+| `arbml/multilingual_irony` (HF) | so `tweet_id` + `label`, **sem texto**; reidratar exige API paga do Twitter |
+| `ramondomiingos/ptbr-irony-idioms-regionalism` (HF) | < 1.000 linhas, e e *benchmark de LLM* com gabarito em prosa — nao e corpus de classificacao |
+| `rafaelanchieta/PiLN` (GitHub) | sao os **modelos** treinados do IDPT, nao o corpus; embeddings dependem de servidor antigo do NILC |
+| IroSvA / SemEval-2018 traduzidos | **desaconselhado**: traducao automatica reintroduz o vazamento de procedencia que ja custou o primeiro fusor |
+
+O candidato mais citado e o corpus de **Goncalves et al., BraSNAM 2015** ("Bazinga! Caracterizando e Detectando Sarcasmo e Ironia no Twitter", UFMG), que circula no Kaggle. Lendo o artigo: sao ~2.628 tweets por classe coletados pelas hashtags **`#sarcasm` e `#irony`** e caracterizados com LIWC — ou seja, e um trabalho brasileiro sobre o Twitter **anglofono**. Corpus em ingles. Usa-lo aqui seria o vazamento de procedencia com selo academico.
+
+Verificado tambem e descartado: `OpenNeuro ds004533` ("Ironia VEV") e **neuroimagem** — ressonancia de 40 sujeitos ouvindo frases ironicas, sem nenhuma frase rotulada para treino.
+
+### Onde existe corpus PT-BR de ironia (e como pedir)
+
+Dois, os dois **sem download publico**:
+
+1. **Vieira e Silva, A. (2025)** — *Deteccao automatica de ironia por meio de representacoes contextuais*, tese de doutorado em Linguistica, USP, orientacao de Marcos Lopes. Produziu um corpus de ironia em portugues com conversas da rede X: **1.186 exemplos** finais (de 1.200), anotados por **tres voluntarios humanos**, com o contexto da conversa. Achado relevante para o relatorio: os anotadores precisaram do **contexto de producao em ~30% dos casos** — evidencia direta de que ironia em mensagem isolada tem teto baixo, e ela vale citada mesmo sem o corpus em maos.
+2. **Projeto IDPT / UFPel** — <https://institucional.ufpel.edu.br/projetos/id/u3345>, coordenacao de **Larissa Astrogildo de Freitas**. E o grupo por tras do IDPT 2021. Enderece o pedido a coordenacao.
+
+**Tamanho importa aqui:** 1.186 exemplos anotados a mao nao treinam um BERT do zero, mas sao excelentes como **conjunto de teste independente** — exatamente o papel que o XED-pt cumpre no notebook 03. E a arquitetura de honestidade que o projeto ja usa: treinar no que ha em volume, medir no que ha em qualidade.
+
+### O padrao: corpus sintetico
+
+Enquanto nenhum dos dois chega, o notebook gera o proprio corpus com `fraus.ingest.gerador_ironia`. E o mesmo impasse do sinal de tempo e a mesma saida ja aceita: o fusor treina em conversas sinteticas porque nenhum corpus de review tem timestamps.
+
+O gerador foi escrito **contra** o vazamento que matou o primeiro fusor. A armadilha obvia seria "ironico = elogio + fato ruim", que ensinaria o modelo a procurar fato ruim em vez da incongruencia. Tres cruzamentos impedem isso, cada um travado por teste em `tests/test_gerador_ironia.py`:
+
+- os mesmos **fatos ruins** aparecem nas reclamacoes diretas (nao-ironicas);
+- as mesmas **palavras elogiosas** aparecem em elogios sinceros e em reclamacoes que comecam agradecendo;
+- **numeros e unidades de tempo** aparecem nas duas classes;
+- ha uma familia de ironia **por atenuacao**, sem palavra elogiosa nenhuma, para que "tem elogio" nao seja condicao necessaria.
+
+**A metrica interna sera otimista por construcao** — ela mede o quanto o modelo aprendeu estes padroes, nao o quanto le ironia humana. Isso precisa estar no relatorio.
+
+Por isso o `metricas_ironia.json` grava a **procedencia derivada de `ORIGEM`**, nunca `IDPT 2021` fixo: artefato que mente sobre a propria fonte e pior que artefato ausente.
+
+Como o notebook **nunca viu os arquivos**, a celula de carga tem esquema **configuravel**: ela le todo `.csv`/`.tsv` da pasta, imprime as colunas encontradas, tenta achar a de texto e a de rotulo pelos nomes mais provaveis e **para nomeando as colunas disponiveis** se nao achar. Rotulo fora do mapeamento tambem para com erro, em vez de virar 0 silenciosamente.
+
+**Se o corpus nao for liberado a tempo**, a saida honesta e declarar a ironia como trabalho futuro no relatorio. Trocar por um corpus de sarcasmo em ingles traduzido repetiria, com outro nome, o vazamento de procedencia que ja custou o primeiro fusor.
+
+A metrica de selecao do melhor checkpoint e o **F1 da classe ironica isolada**, nao a macro nem a acuracia: e essa classe que o sinal consome, e corpus de ironia costuma ser desequilibrado o bastante para um modelo que responde "nao e ironia" sempre marcar boa acuracia. O treino tambem usa pesos de classe, pelo mesmo motivo.
+
+**Por que uma cabeca separada** e nao mais uma classe do sinal de texto: ironia nao e um sentimento, e uma relacao entre o que o texto DIZ e o que ele SIGNIFICA. "Que atendimento maravilhoso, so esperei 3 horas" e lexicamente positivo e pragmaticamente negativo ao mesmo tempo. Como quarta classe de satisfacao, o modelo seria obrigado a escolher uma das duas leituras — e a informacao de que ha conflito, que e justamente o sinal de ironia, se perderia.
+
+**Limitacao a declarar:** o IDPT e anotado em tweets e comentarios de noticia, nao em atendimento de chatbot. A transferencia de dominio nao esta verificada — ironia em reclamacao de suporte pode ter forma diferente de ironia em comentario de politica.
+
+## Sinal lexico — SentiLex-PT02
+
+Nao tem notebook: e recurso pronto, nao treinado.
+
+**Fonte:** SentiLex-PT02 — Silva, Carvalho e Sarmento, *"Building a Sentiment Lexicon for Social Judgement Mining"* (PROPOR 2012), CC-BY. 82.347 formas flexionadas na origem, **79.189** depois da conversao.
+
+**Preparo:** `scripts/preparar_sentilex.py` converte o arquivo original em `fraus/dados/sentilex_pt02.csv` e imprime o relatorio do que mexeu — 315 entradas cuja polaridade veio do complemento (`POL:N1`), 9 com sinal normalizado (marcadas `REV:POL` na fonte, com o contador vazado no campo de polaridade) e 2.032 formas homografas com polaridades conflitantes, que foram **zeradas** em vez de decididas pela ordem do arquivo.
+
+**Por que um lexicon se o BERTimbau ja le o texto:** porque ele nao foi treinado nos mesmos dados nem carrega os mesmos vieses. Dois sinais de procedencia independente que concordam sustentam a nota melhor que um sozinho — e a **discordancia** entre eles e o formato tipico da ironia.
+
+**Negacao por escopo:** "nao foi otimo" inverte a polaridade de "otimo", com alcance de tres tokens, e o escopo **morre na pontuacao forte** — em "nao chegou. otimo atendimento" o *otimo* continua positivo.
+
+**Acento:** o SentiLex e acentuado e cliente de chat nem sempre. Ha indice de reserva sem acento; das 74.443 chaves resultantes, apenas **24** colidem (`incomodo`/`incomodo`, `ingenua`/`ingenua`) e essas ficam zeradas — chute de polaridade errado e pior que termo ausente.
+
+**Limitacao do recurso, a declarar:** o SentiLex e lexicon de **julgamento social** — anota polaridade dirigida a entidades humanas. E forte no adjetivo que julga (`pessimo`, `otimo`, `incompetente`) e **neutro em verbo de afeto do proprio falante**: `gostar`, `adorar` e `odiar` valem 0 nele. Por isso o sinal lexico complementa o BERTimbau e nao o substitui — quem le "adorei o produto" e o transformer.
