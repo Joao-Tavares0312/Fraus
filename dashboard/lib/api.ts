@@ -10,16 +10,20 @@
  * de produto 5 (se um indicador falha, so o card dele mostra falha).
  */
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+/**
+ * Toda chamada sai por /api/fraus: o proxy no servidor Next anexa a chave de
+ * acesso (FRAUS_CHAVE_ACESSO, env server-side) e repassa para FRAUS_API_URL.
+ * A chave nunca chega ao navegador.
+ */
+const BASE = "/api/fraus";
 
 /**
- * A base publicada, para a tela montar o exemplo de `curl` da ingestao.
- *
- * Exportada em vez de repetida: um endereco fixo escrito a mao no exemplo
- * ficaria errado no dia em que a API mudasse de porta, e o integrador copiaria
- * um comando que nao funciona sem ter como desconfiar.
+ * SO o endereco exibido no exemplo de `curl` da tela de integracoes/ingestao
+ * -- nunca destino de fetch. Quem le esse exemplo e um integrador externo,
+ * que fala com a API direto (nao com o proxy, que so existe para o navegador
+ * desta dashboard).
  */
-export const BASE_DA_API = BASE;
+export const BASE_DA_API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type Categoria = "detrator" | "neutro" | "promotor";
 
