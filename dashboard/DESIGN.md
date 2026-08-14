@@ -107,15 +107,54 @@ Cada uma tem variante `-texto` com contraste verificado. Cor de marcação e cor
 de tipo não são a mesma coisa: `npm run contraste` é o juiz, e todo par que
 carrega texto cruza AA (4.5:1).
 
-### 3.3 O lime é o cursor, e mais nada
+### 3.3 A cor da marca: o dourado do monograma
 
-`--primary` é lime. No mundo anterior ele já era proibido em dado; agora ele
-ganha função única e nomeada: **o cursor de leitura** — o filete vertical que
-marca onde você está na linha do tempo, como no editor de partitura. Além dele,
-apenas foco de teclado e ação primária.
+`--primary` é o **dourado do R da logo**, medido do próprio arquivo
+(`public/fraus-logo.png`): a letra vai de `oklch(0.514 0.066 84)` no pé a
+`oklch(0.824 0.079 76)` no topo, e o token é o meio dessa rampa —
+`oklch(0.78 0.085 80)`.
 
-Nenhuma série, categoria ou barra usa lime. Por isso **promotor é teal, não
-verde**: precisa estar longe do cursor.
+**Por que deixou de ser lime.** O `--primary` era `oklch(0.843 0.179 134)`,
+herdado do chassi. Nenhum pixel da logo é verde: a identidade é um monograma
+**F branco + R dourado sobre quase-preto**, e uma dashboard cuja cor de ação
+não existe na marca é uma identidade aplicada pela metade. O fundo grafite já
+concordava com o `#070707` do arquivo; faltava a cor de ação.
+
+**Por que isso não colide com o âmbar do “dito”**, que é semântico e
+intocável: o que separa os dois **não é o matiz, é o croma**. O dourado da
+marca é fosco (`0.085`) e o âmbar do dito é saturado (`0.15`) — metálico
+contra pigmento. Some-se a isso que eles nunca dividem superfície:
+`--primary` preenche **controle**, `--dito` marca **dado**.
+
+**A regra que sustenta essa convivência, e que não pode ser afrouxada:**
+nenhuma série, categoria ou barra usa `--primary`. A única exceção nomeada é
+**o cursor de leitura** — o filete vertical que marca onde você está na linha
+do tempo, como no editor de partitura —, e mesmo ele não codifica valor
+nenhum. Fora disso, `--primary` só aparece em ação primária e foco de teclado.
+Por isso **promotor é teal, não verde**: precisa estar longe do cursor.
+
+`--warning` (`oklch(0.8 0.14 80)`) compartilha o matiz do dourado. Ele
+sobrevive porque é **texto** (`--warning-rich-text`, o rótulo “suspeito” das
+métricas) e nunca preenchimento — e porque o croma o separa, pelo mesmo
+argumento acima. Se um dia surgir um botão de alerta preenchido, este é o par
+que precisa ser repensado primeiro.
+
+### 3.3.1 O raio acompanha os cortes do monograma
+
+`--radius` é `0.375rem`, e era `0.625rem`. O F e o R são chanfrados a 45° e
+não têm uma curva de canto sequer; o raio antigo arredondava o controle a
+ponto de ele não ter parentesco nenhum com a marca. Não vai a zero porque
+botão e campo totalmente quadrados brigariam com o chassi inteiro — cartão,
+popover, sheet — por causa de um detalhe.
+
+### 3.3.2 O rótulo dentro do botão é verificado
+
+`scripts/contraste.mjs` checava texto sobre fundo e **não checava texto sobre
+superfície preenchida** — ou seja, não checava o par mais clicado da
+interface. A lacuna apareceu justamente ao trocar o lime pelo dourado, que é
+o tipo de mudança capaz de derrubar a legibilidade do botão sem nenhum aviso.
+O script passou a cobrir `--primary-foreground` sobre `--primary` (hoje
+**9,64:1**) e o par equivalente da sidebar.
 
 ### 3.4 Categorias
 

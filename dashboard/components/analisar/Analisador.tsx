@@ -5,8 +5,13 @@ import { FileText, RefreshCw, Upload } from "lucide-react";
 import {
   analisarUpload,
   type ConversaAnalisada,
+  type MensagemAnalisada,
   type ResultadoAnalise,
 } from "@/lib/api";
+import {
+  BarraDeClasses,
+  CabecasDeLeitura,
+} from "@/components/CabecasDeLeitura";
 import {
   EXPLICACAO_DESFECHO,
   ROTULO_AUTOR,
@@ -279,6 +284,7 @@ function Analise({
   // distinguir: "o cliente não falou" é um fato sobre o atendimento; "o
   // arquivo não tem horário" é um limite do que foi enviado. Dizer a mesma
   // frase nos dois casos mandaria procurar problema no lugar errado.
+  const [tudoAberto, setTudoAberto] = useState(false);
   const semNota = analise.score === null;
   const motivoSemNota = !temTempo
     ? "o arquivo não traz horário"
@@ -343,9 +349,25 @@ function Analise({
 
       <Painel
         titulo="A conversa, palavra a palavra"
-        legenda="O grifo é medido por oclusão: apaga-se a palavra e pergunta-se de novo ao modelo. Verde empurrou a leitura para satisfeito, vermelho puxou para insatisfeito, e a força da cor é o tamanho do efeito. Ressalva do método: apagar uma palavra de dentro de uma expressão fixa deixa um fragmento que ninguém escreveria — o peso é verdadeiro sobre o que o modelo faz, e não deve ser lido como “esta palavra significa insatisfação”. Só a fala do cliente recebe peso: o classificador foi treinado em texto de cliente, e pontuar o roteiro do bot seria número sem lastro."
+        legenda="O grifo é medido por oclusão: apaga-se a palavra e pergunta-se de novo ao modelo. Verde empurrou a leitura para satisfeito, vermelho puxou para insatisfeito, e a força da cor é o tamanho do efeito. Ressalva do método: apagar uma palavra de dentro de uma expressão fixa deixa um fragmento que ninguém escreveria — o peso é verdadeiro sobre o que o modelo faz, e não deve ser lido como “esta palavra significa insatisfação”. Só a fala do cliente recebe peso: o classificador foi treinado em texto de cliente, e pontuar o roteiro do bot seria número sem lastro. Abrindo os sinais de uma fala aparecem as três probabilidades de satisfação e as oito emoções. Duas ressalvas valem para todas elas: o “desprezo” não é classe treinada — nenhum corpus em português a anota, e ele é derivado da díade raiva + nojo (Plutchik, 1980) pela média geométrica, que exige as duas emoções juntas; e a “ironia” acerta o caso de manual mas marca 6 em 10 falas sinceras de atendimento como irônicas, com 0,999 de confiança, então leia como indício e nunca como veredito. Nenhuma das duas entra na nota."
         semPadding
       >
+        {/* Abre as oito emoções de TODAS as falas de uma vez. Existe porque a
+            escolha entre "resumo em uma linha" e "detalhe completo" é do
+            leitor, não minha: numa conversa de quarenta mensagens o detalhe
+            aberto por padrão é ilegível, e fechado sem este botão daria
+            quarenta cliques para ver o que a API já mandou. */}
+        <div className="flex justify-end border-b border-linha px-5 py-2">
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            onClick={() => setTudoAberto((atual) => !atual)}
+          >
+            {tudoAberto ? "Recolher os sinais" : "Abrir todos os sinais"}
+          </Button>
+        </div>
+
         <ol className="flex flex-col">
           {analise.mensagens.map((mensagem) => {
             const doCliente = mensagem.autor === "cliente";
@@ -380,8 +402,8 @@ function Analise({
                   />
                 </p>
 
-                {doCliente && mensagem.prob_ironia !== null ? (
-                  <SinaisDeLeitura mensagem={mensagem} />
+                {doCliente && (mensagem.emocao || mensagem.prob_ironia !== null) ? (
+                  <SinaisDeLeitura mensagem={mensagem} aberto={tudoAberto} />
                 ) : null}
               </li>
             );
@@ -437,39 +459,76 @@ function Analise({
 }
 
 /**
- * Emocao e ironia da mensagem.
+ * Tudo que o modelo leu nesta mensagem, atras de um expansor.
  *
- * Vem visualmente separado da probabilidade de satisfacao de proposito: os
- * dois numeros daqui NAO entram no score. Encostar "ironia 0,99" num painel de
- * nota sem essa separacao convida a conclusao de que a ironia derrubou a nota
- * -- e o fusor nunca viu ironia nenhuma.
+ * A API manda as OITO emocoes por mensagem, e esta tela mostrava so a
+ * vencedora -- jogava sete fora, e junto com elas as ressalvas do desprezo
+ * derivado e da ironia, que o simulador ja exibia.
+ *
+ * POR QUE FECHADO POR PADRAO, e nao aberto como no simulador: o simulador
+ * analisa UMA frase; aqui uma conversa tem quarenta mensagens, e oito barras
+ * em cada uma dariam trezentas barras numa pagina so. A linha de resumo
+ * continua mostrando o essencial sem clique -- emocao vencedora e ironia --,
+ * e o detalhe fica a um clique de distancia em vez de existir so na API.
+ *
+ * O painel em si e o MESMO componente do simulador: duas copias de um painel
+ * que explica um modelo envelhecem separadas, e a que envelhece e sempre a que
+ * ninguem olha.
  */
 function SinaisDeLeitura({
   mensagem,
+  aberto,
 }: {
-  mensagem: { emocao: Record<string, number> | null; prob_ironia: number | null };
+  mensagem: MensagemAnalisada;
+  aberto: boolean;
 }) {
   const emocaoTop = mensagem.emocao
     ? Object.entries(mensagem.emocao).sort((a, b) => b[1] - a[1])[0]
     : null;
 
   return (
-    <p className="flex flex-wrap items-baseline gap-x-3 text-xs text-muted-foreground">
-      <span className="text-[11px] uppercase tracking-wide opacity-70">
-        fora do score
-      </span>
-      {emocaoTop ? (
-        <span>
-          emoção {emocaoTop[0]}{" "}
-          <span className="num">{emocaoTop[1].toFixed(2)}</span>
+    // `key` no estado do botao: sem ela, alternar "abrir todas" nao mexeria
+    // num `<details>` que o leitor ja abriu ou fechou na mao -- o atributo
+    // `open` so vale na montagem. Remontar e o que faz o controle global de
+    // fato valer para a transcricao inteira.
+    <details key={String(aberto)} open={aberto} className="group">
+      <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 text-xs text-muted-foreground marker:text-muted-foreground">
+        <span className="text-[11px] uppercase tracking-wide opacity-70">
+          fora do score
         </span>
-      ) : null}
-      {mensagem.prob_ironia !== null ? (
-        <span title="A cabeça de ironia acerta o caso de manual mas marca 6 em 10 falas sinceras de atendimento como irônicas. Leia como indício, nunca como veredito.">
-          ironia <span className="num">{mensagem.prob_ironia.toFixed(2)}</span>{" "}
-          <span className="opacity-70">(pouco confiável)</span>
-        </span>
-      ) : null}
-    </p>
+        {emocaoTop ? (
+          <span>
+            emoção {emocaoTop[0]}{" "}
+            <span className="num">{emocaoTop[1].toFixed(2)}</span>
+          </span>
+        ) : null}
+        {mensagem.prob_ironia !== null ? (
+          <span>
+            ironia <span className="num">{mensagem.prob_ironia.toFixed(2)}</span>{" "}
+            <span className="opacity-70">(pouco confiável)</span>
+          </span>
+        ) : null}
+        <span className="opacity-60 group-open:hidden">— ver tudo</span>
+      </summary>
+
+      <div className="mt-3 flex flex-col gap-3 border-l border-linha pl-3">
+        {mensagem.prob_satisfeito !== null ? (
+          <BarraDeClasses
+            insatisfeito={mensagem.prob_insatisfeito ?? 0}
+            neutro={mensagem.prob_neutro ?? 0}
+            satisfeito={mensagem.prob_satisfeito}
+          />
+        ) : null}
+        {/* Sem a prosa: ela vale UMA vez, na legenda do painel. Repetida em
+            cada uma das dezenas de falas, viraria ruído e pararia de ser lida
+            -- o oposto do que uma ressalva existe para fazer. */}
+        <CabecasDeLeitura
+          emocao={mensagem.emocao}
+          ironia={mensagem.prob_ironia}
+          compacto
+          ressalvas={false}
+        />
+      </div>
+    </details>
   );
 }

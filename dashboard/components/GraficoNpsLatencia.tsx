@@ -44,7 +44,7 @@ import { EstadoVazio } from "./EstadoVazio";
  *
  * Cor: azul (`--medido`) e o que foi medido/inferido pela maquina; magenta
  * (`--tempo`) e latencia. O ambar (`--dito`) nao aparece aqui -- nao ha fala
- * neste painel -- e o lime da marca nunca entra em dado.
+ * neste painel -- e o dourado da marca nunca entra em dado.
  */
 export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
   const [verTabela, setVerTabela] = useState(false);
@@ -181,8 +181,8 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                 stroke="var(--border)"
                 strokeWidth={1}
               />
-              {/* O CURSOR DE LEITURA. E o unico lugar do sistema onde o lime
-                  da marca toca a area de dado, e ele nao codifica valor
+              {/* O CURSOR DE LEITURA. E o unico lugar do sistema onde o
+                  dourado da marca toca a area de dado, e ele nao codifica valor
                   nenhum: marca ONDE VOCE ESTA na linha do tempo, como a barra
                   de reproducao de um editor de partitura. Nenhuma serie,
                   categoria ou barra usa esta cor. */}

@@ -32,7 +32,7 @@ import { EstadoSaude } from "./EstadoSaude";
  * nao seria global: bastaria trocar de secao para o recorte sumir, e as tres
  * telas passariam a falar de conjuntos diferentes sem avisar ninguem.
  *
- * A secao ativa nao e indicada so por cor (o lime da marca): o item ativo
+ * A secao ativa nao e indicada so por cor (o dourado da marca): o item ativo
  * tambem carrega `aria-current="page"` e uma barra de 2px a esquerda -- cor
  * nunca e o unico canal.
  */

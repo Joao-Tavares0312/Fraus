@@ -101,6 +101,37 @@ for (const nomeTexto of textos) {
   }
 }
 
+// Texto sobre SUPERFICIE PREENCHIDA -- o rotulo dentro do botao.
+//
+// Faltava, e era um buraco de verdade: a lista acima cobre texto sobre fundo,
+// e o botao primario e o contrario disso (texto escuro sobre a cor da marca).
+// Ninguem checava o par mais clicado da interface. Apareceu ao trocar o lime
+// pelo dourado da logo -- exatamente o tipo de mudanca que poderia ter
+// derrubado a legibilidade do botao sem nenhum aviso.
+const preenchidos = [
+  ["--primary-foreground", "--primary"],
+  ["--sidebar-primary-foreground", "--sidebar-primary"],
+];
+
+for (const [nomeTexto, nomeFundo] of preenchidos) {
+  const cor = tokens.get(nomeTexto);
+  const fundo = tokens.get(nomeFundo);
+  if (!cor || !fundo) {
+    console.error(`token ausente no globals.css: ${nomeTexto} ou ${nomeFundo}`);
+    falhou = true;
+    continue;
+  }
+  const r = razao(cor, fundo);
+  const ok = r >= 4.5;
+  if (!ok) falhou = true;
+  linhas.push({
+    texto: nomeTexto,
+    sobre: nomeFundo,
+    razao: r.toFixed(2),
+    AA: ok ? "PASS" : "FAIL",
+  });
+}
+
 console.table(linhas);
 if (falhou) {
   console.error("\nFALHOU: ha par abaixo de 4.5:1.");
