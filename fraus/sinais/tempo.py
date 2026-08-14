@@ -24,8 +24,14 @@ def _percentil(valores: list[float], fracao: float) -> float:
     return ordenados[indice]
 
 
-def _latencias(conversa: Conversa) -> list[float]:
-    """Intervalo de cada mensagem do cliente ate a proxima resposta."""
+def latencias_da_conversa(conversa: Conversa) -> list[float]:
+    """Intervalo de cada mensagem do cliente ate a proxima resposta.
+
+    PUBLICA de proposito: a serie temporal (`fraus.indicadores.serie_diaria`) e
+    a transcricao da dashboard precisam da MESMA regra que vira feature do
+    modelo. Duas definicoes de latencia -- uma para treinar, outra para exibir
+    -- fariam o grafico contar uma historia que o fusor nunca viu.
+    """
     latencias = []
     mensagens = conversa.mensagens
     for indice, mensagem in enumerate(mensagens):
@@ -39,7 +45,7 @@ def _latencias(conversa: Conversa) -> list[float]:
 
 
 def features_tempo(conversa: Conversa) -> dict[str, float]:
-    latencias = _latencias(conversa)
+    latencias = latencias_da_conversa(conversa)
     fim = conversa.encerrada_em or conversa.mensagens[-1].enviada_em
     ultima = conversa.mensagens[-1]
 

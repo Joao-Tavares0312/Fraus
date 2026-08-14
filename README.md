@@ -165,9 +165,10 @@ mudar depois exige reiniciar o processo.
   navegador varrer as conversas.
 - O NPS é **inferido do texto**, nunca perguntado ao cliente. A interface
   rotula como estimativa em todo lugar onde o número aparece.
-- Não há endpoint de série temporal nem de latência agregada: a dashboard
-  deriva as duas das transcrições, o que custa um N+1 aceitável no volume do
-  trabalho (dezenas de atendimentos).
+- A série temporal sai de `GET /serie-temporal?de=&ate=`, agregada no servidor.
+  O N+1 sobrevive para o **léxico por classe** e o **tempo mediano de
+  resposta**, que ainda leem o texto e os timestamps de cada transcrição — um
+  custo aceitável no volume do trabalho (dezenas de atendimentos).
 - A atribuição por sentença do classificador de texto não tem endpoint, então a
   transcrição marca só evidência **observável** (polaridade de emoji e tempo de
   espera) — e diz isso em voz alta em vez de fingir atribuição.
@@ -241,12 +242,20 @@ Depois dos dois: subir o contrato de 16 para 30 features e **retreinar o fusor**
 Detalhes de corpus, rótulo e limitação em
 [docs/treinamento.md](docs/treinamento.md).
 
-### 3. `GET /serie-temporal` — a dívida de escala
+### 3. O resto da dívida de escala
 
-A Visão geral monta o gráfico de NPS × latência baixando **todas** as
-transcrições do recorte para ler timestamps. É um N+1 aceitável em dezenas de
-atendimentos e insustentável em milhares. Os primos `GET /conversas?de=&ate=` e
-`GET /indicadores?de=&ate=` tirariam o filtro de período do cliente.
+`GET /serie-temporal?de=&ate=` **existe**: o gráfico de NPS × latência não
+depende mais de baixar transcrição nenhuma, e o recorte de período acontece no
+servidor. As duas pontas são inclusivas, data malformada é **400** nomeando o
+parâmetro, e o cálculo sobre as transcrições ficou como plano B — se o endpoint
+cair, o gráfico continua de pé em vez de sumir.
+
+O que ainda falta para matar o N+1 de vez:
+
+- `GET /conversas?de=&ate=` e `GET /indicadores?de=&ate=` — tirariam do cliente
+  o filtro de período da lista e dos cartões;
+- um agregado de **léxico por classe** e de **tempo mediano de resposta**, os
+  dois últimos consumidores de transcrição na Visão geral.
 
 ### 4. Atribuição por sentença do classificador
 

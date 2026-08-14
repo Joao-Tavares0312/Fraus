@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
                                categoria_nps, containment_rate, nota_0_10,
-                               validar_faixas_nps)
+                               serie_diaria, validar_faixas_nps)
 from fraus.modelos import Conversa, Mensagem
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
@@ -115,3 +115,79 @@ def test_nps_agregado_usa_as_faixas_recebidas():
     assert calcular_nps(scores) == pytest.approx(0.0)
     faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
     assert calcular_nps(scores, faixas) == pytest.approx(100.0)
+
+
+# --- serie temporal diaria --------------------------------------------------
+
+
+def _conversa(identificador: str, inicio: datetime, esperas_s: list[int]):
+    """Conversa com uma espera por par cliente->bot, para fixar a latencia."""
+    mensagens = []
+    instante = inicio
+    for espera in esperas_s:
+        mensagens.append(Mensagem(autor="cliente", texto="oi", enviada_em=instante))
+        instante = instante + timedelta(seconds=espera)
+        mensagens.append(Mensagem(autor="bot", texto="ola", enviada_em=instante))
+        instante = instante + timedelta(seconds=1)
+    return Conversa(
+        id=identificador, canal="csv", iniciada_em=inicio, mensagens=mensagens
+    )
+
+
+def test_serie_agrupa_por_dia_e_ordena_do_mais_antigo():
+    dia2 = BASE + timedelta(days=1)
+    registros = [
+        (_conversa("b", dia2, [10]), 95.0),
+        (_conversa("a", BASE, [10]), 95.0),
+    ]
+    pontos = serie_diaria(registros)
+    assert [p["dia"] for p in pontos] == ["2026-08-13", "2026-08-14"]
+
+
+def test_nps_do_dia_usa_a_faixa_recebida():
+    registros = [
+        (_conversa("a", BASE, [10]), 95.0),   # nota 10 -> promotor
+        (_conversa("b", BASE, [10]), 10.0),   # nota 1  -> detrator
+        (_conversa("c", BASE, [10]), 75.0),   # nota 8  -> neutro
+    ]
+    (ponto,) = serie_diaria(registros)
+    assert ponto["nps"] == pytest.approx(0.0)  # 1 promotor - 1 detrator em 3
+
+    # Faixa que joga o neutro para promotor: o MESMO dado vira NPS +33.33.
+    outras = {"detrator": (0, 6), "neutro": (7, 7), "promotor": (8, 10)}
+    (ponto,) = serie_diaria(registros, outras)
+    assert ponto["nps"] == pytest.approx(33.33)
+
+
+def test_latencia_do_dia_e_mediana_das_medianas_nao_de_todas_as_esperas():
+    """Um atendimento tagarela nao pode dominar o dia inteiro.
+
+    `a` tem uma espera de 100s; `b` tem cinco de 10s. No balde unico a mediana
+    seria 10s (as cinco de `b` afogam `a`). Por atendimento, as medianas sao
+    100 e 10, e a mediana delas e 55.
+    """
+    registros = [
+        (_conversa("a", BASE, [100]), 50.0),
+        (_conversa("b", BASE, [10, 10, 10, 10, 10]), 50.0),
+    ]
+    (ponto,) = serie_diaria(registros)
+    assert ponto["latencia_mediana_s"] == pytest.approx(55.0)
+
+
+def test_dia_sem_score_devolve_nps_none_e_nao_zero():
+    """Ausencia de medicao nao e NPS 0 -- isso seria inventar numero."""
+    registros = [(_conversa("mudo", BASE, [10]), None)]
+    (ponto,) = serie_diaria(registros)
+    assert ponto["nps"] is None
+    assert ponto["atendimentos"] == 1
+    assert ponto["com_score"] == 0
+
+
+def test_conversa_sem_resposta_nao_falsifica_latencia_zero():
+    """Sem par cliente->resposta a latencia e None, nunca 0.0 (=instantaneo)."""
+    muda = Conversa(
+        id="so-bot", canal="csv", iniciada_em=BASE,
+        mensagens=[Mensagem(autor="bot", texto="ola", enviada_em=BASE)],
+    )
+    (ponto,) = serie_diaria([(muda, None)])
+    assert ponto["latencia_mediana_s"] is None

@@ -744,3 +744,77 @@ def test_importacao_recusada_por_esquema_nao_entra_no_historico(cliente, tmp_pat
     caminho.write_text("conversa_id,canal\nc1,csv\n", encoding="utf-8")
     assert cliente.post("/conversas/importar", json={"caminho": str(caminho)}).status_code == 400
     assert cliente.get("/integracoes/importacoes").json() == []
+
+
+# --- GET /serie-temporal ----------------------------------------------------
+
+CSV_TRES_DIAS = (
+    "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
+    "d1,csv,cliente,otimo,2026-08-13T10:00:00+00:00,false\n"
+    "d1,csv,bot,de nada,2026-08-13T10:00:10+00:00,false\n"
+    "d2,csv,cliente,otimo,2026-08-14T10:00:00+00:00,false\n"
+    "d2,csv,bot,de nada,2026-08-14T10:00:20+00:00,false\n"
+    "d3,csv,cliente,otimo,2026-08-15T10:00:00+00:00,false\n"
+    "d3,csv,bot,de nada,2026-08-15T10:00:30+00:00,false\n"
+)
+
+
+def _semear_tres_dias(cliente, tmp_path):
+    caminho = tmp_path / "tres_dias.csv"
+    caminho.write_text(CSV_TRES_DIAS, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": "tres_dias.csv"})
+
+
+def test_serie_temporal_sem_recorte_traz_todos_os_dias(cliente, tmp_path):
+    _semear_tres_dias(cliente, tmp_path)
+    corpo = cliente.get("/serie-temporal").json()
+    assert [p["dia"] for p in corpo["pontos"]] == [
+        "2026-08-13", "2026-08-14", "2026-08-15"
+    ]
+    assert corpo["de"] is None and corpo["ate"] is None
+
+
+def test_recorte_e_inclusivo_nas_duas_pontas(cliente, tmp_path):
+    """`de` e `ate` entram na resposta -- e assim que quem opera le o periodo."""
+    _semear_tres_dias(cliente, tmp_path)
+    corpo = cliente.get("/serie-temporal?de=2026-08-13&ate=2026-08-14").json()
+    assert [p["dia"] for p in corpo["pontos"]] == ["2026-08-13", "2026-08-14"]
+
+
+def test_latencia_por_dia_sai_dos_timestamps(cliente, tmp_path):
+    _semear_tres_dias(cliente, tmp_path)
+    pontos = cliente.get("/serie-temporal").json()["pontos"]
+    assert [p["latencia_mediana_s"] for p in pontos] == [10.0, 20.0, 30.0]
+
+
+def test_data_malformada_e_400_nomeando_o_parametro(cliente):
+    """Filtro invalido nao pode ser ignorado: devolveria a serie inteira
+    parecendo o recorte pedido."""
+    resposta = cliente.get("/serie-temporal?de=13/08/2026")
+    assert resposta.status_code == 400
+    assert "de" in resposta.json()["detail"]
+
+
+def test_periodo_invertido_e_400(cliente):
+    resposta = cliente.get("/serie-temporal?de=2026-08-15&ate=2026-08-13")
+    assert resposta.status_code == 400
+    assert "invertido" in resposta.json()["detail"]
+
+
+def test_serie_respeita_a_faixa_configurada(cliente, tmp_path):
+    """Mesma regra do resto da API: a categoria e derivada na LEITURA.
+
+    A faixa e montada em volta da nota que o duble deu -- fixar numeros aqui
+    testaria o duble, nao a derivacao.
+    """
+    _semear_tres_dias(cliente, tmp_path)
+    # O duble da nota 9 -- promotor na faixa de fabrica (9-10).
+    assert cliente.get("/serie-temporal").json()["pontos"][0]["nps"] == 100.0
+
+    # Estreitar promotor para 10 joga essa nota em neutro: o NPS do MESMO dado
+    # cai para 0 sem nenhum score ter sido recalculado.
+    resposta = cliente.put("/configuracoes", json={
+        "faixas_nps": {"detrator": [0, 8], "neutro": [9, 9], "promotor": [10, 10]}
+    })
+    assert resposta.status_code == 200
+    assert cliente.get("/serie-temporal").json()["pontos"][0]["nps"] == 0.0

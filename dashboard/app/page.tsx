@@ -14,6 +14,7 @@
 import {
   obterConfiguracoes,
   obterIndicadores,
+  obterSerieTemporal,
   type ResumoConversa,
 } from "@/lib/api";
 import { carregarRecorte } from "@/lib/carregar";
@@ -24,10 +25,11 @@ import {
   lexicoPorClasse,
   pioresAtendimentos,
   serieDiaria,
+  serieDoServidor,
   tempoMedianoDeResposta,
 } from "@/lib/derivacoes";
 import { formatarDataHora } from "@/lib/formato";
-import { periodoEstaAtivo } from "@/lib/periodo";
+import { lerPeriodo, periodoEstaAtivo } from "@/lib/periodo";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { DistribuicaoScores } from "@/components/DistribuicaoScores";
 import { EstadoVazio } from "@/components/EstadoVazio";
@@ -45,13 +47,16 @@ const PIORES_NA_TELA = 6;
 export default async function Pagina(props: PageProps<"/">) {
   const parametros = await props.searchParams;
 
-  // As duas leituras sao independentes de proposito: se `/indicadores` cair, a
+  // As leituras sao independentes de proposito: se `/indicadores` cair, a
   // serie, a distribuicao e o lexico continuam de pe, e vice-versa.
-  const [recorte, indicadoresDoServidor, configuracoes] = await Promise.all([
-    carregarRecorte(parametros),
-    obterIndicadores(),
-    obterConfiguracoes(),
-  ]);
+  const periodoPedido = lerPeriodo(parametros);
+  const [recorte, indicadoresDoServidor, configuracoes, serieDaApi] =
+    await Promise.all([
+      carregarRecorte(parametros),
+      obterIndicadores(),
+      obterConfiguracoes(),
+      obterSerieTemporal(periodoPedido.de, periodoPedido.ate),
+    ]);
 
   // As faixas de referencia da latencia sao as VIGENTES, nao constantes do
   // front -- e a tela de Configuracoes que as move.
@@ -88,7 +93,12 @@ export default async function Pagina(props: PageProps<"/">) {
           semSinal: indicadoresDoServidor.dado.sem_sinal,
         };
 
-  const serie = serieDiaria(detalhes);
+  // A serie vem AGREGADA do servidor. O calculo sobre as transcricoes fica
+  // como plano B: se `/serie-temporal` falhar, o grafico continua de pe com o
+  // que a pagina ja baixou, em vez de sumir junto com o endpoint.
+  const serie = serieDaApi.ok
+    ? serieDoServidor(serieDaApi.dado.pontos)
+    : serieDiaria(detalhes);
   const distribuicao = distribuicaoDeNotas(resumos);
   const classes = lexicoPorClasse(detalhes);
   const tempoMediano = tempoMedianoDeResposta(detalhes);

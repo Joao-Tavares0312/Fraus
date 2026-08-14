@@ -7,9 +7,11 @@ Faixas canonicas: 0-6 detrator, 7-8 neutro, 9-10 promotor.
 Categoria SEMPRE derivada no servidor.
 """
 
+from statistics import median
 from typing import Literal
 
 from fraus.modelos import Conversa
+from fraus.sinais.tempo import latencias_da_conversa
 
 Categoria = Literal["detrator", "neutro", "promotor"]
 NOTA_MINIMA_SATISFEITO = 7
@@ -121,6 +123,59 @@ def calcular_csat(scores: list[float]) -> float | None:
         return None
     satisfeitos = sum(1 for s in scores if nota_0_10(s) >= NOTA_MINIMA_SATISFEITO)
     return round(100.0 * satisfeitos / len(scores), 2)
+
+
+def mediana(valores: list[float]) -> float | None:
+    """Mediana, ou None na lista vazia -- nunca 0.0.
+
+    Zero seria "respondeu instantaneamente", que e o oposto de "nao da para
+    saber". A serie temporal precisa poder dizer que nao mediu.
+    """
+    if not valores:
+        return None
+    return median(valores)
+
+
+def serie_diaria(
+    registros: list[tuple[Conversa, float | None]],
+    faixas: dict[Categoria, tuple[int, int]] | None = None,
+) -> list[dict]:
+    """NPS inferido e latencia mediana por dia, ordenados do mais antigo.
+
+    O dia sai de `iniciada_em` da conversa. A latencia do dia e a mediana das
+    MEDIANAS de cada atendimento, nao a mediana de todas as esperas juntas: um
+    unico atendimento com trinta idas e vindas dominaria o dia inteiro se as
+    esperas fossem jogadas num balde so.
+
+    `nps` e `latencia_mediana_s` sao None no dia sem dado, e os dois motivos
+    sao diferentes -- por isso `atendimentos` e `com_score` vem separados.
+    Um dia pode ter atendimento e nenhum score (conversa sem fala do cliente),
+    e apresentar isso como NPS 0 seria inventar medicao.
+    """
+    por_dia: dict[str, dict] = {}
+
+    for conversa, score in registros:
+        dia = conversa.iniciada_em.date().isoformat()
+        balde = por_dia.setdefault(
+            dia, {"scores": [], "latencias": [], "atendimentos": 0}
+        )
+        balde["atendimentos"] += 1
+        if score is not None:
+            balde["scores"].append(score)
+        latencia = mediana(latencias_da_conversa(conversa))
+        if latencia is not None:
+            balde["latencias"].append(latencia)
+
+    return [
+        {
+            "dia": dia,
+            "nps": calcular_nps(balde["scores"], faixas),
+            "latencia_mediana_s": mediana(balde["latencias"]),
+            "atendimentos": balde["atendimentos"],
+            "com_score": len(balde["scores"]),
+        }
+        for dia, balde in sorted(por_dia.items())
+    ]
 
 
 def containment_rate(conversas: list[Conversa]) -> float:

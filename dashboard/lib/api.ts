@@ -361,6 +361,33 @@ export const apagarFonte = (id: number) =>
 export const listarImportacoes = () =>
   proteger(buscar<Importacao[]>("/integracoes/importacoes"));
 
+export type PontoSerieApi = {
+  dia: string; // AAAA-MM-DD
+  nps: number | null;
+  latencia_mediana_s: number | null;
+  atendimentos: number;
+  com_score: number;
+};
+
+/**
+ * Serie diaria de NPS x latencia, ja agregada pelo servidor.
+ *
+ * O recorte vai como `?de=&ate=` e as duas pontas sao INCLUSIVAS. Data
+ * malformada devolve 400 em vez de ser ignorada -- filtro descartado em
+ * silencio faria o grafico mostrar a serie inteira parecendo o recorte.
+ */
+export const obterSerieTemporal = (de?: string | null, ate?: string | null) => {
+  const query = new URLSearchParams();
+  if (de) query.set("de", de);
+  if (ate) query.set("ate", ate);
+  const sufixo = query.toString();
+  return proteger(
+    buscar<{ de: string | null; ate: string | null; pontos: PontoSerieApi[] }>(
+      `/serie-temporal${sufixo ? `?${sufixo}` : ""}`,
+    ),
+  );
+};
+
 /** Estado de saude da API -- alimenta o indicador do app shell. */
 export const obterSaude = () =>
   proteger(buscar<{ status: string }>("/saude"));
@@ -370,12 +397,14 @@ const LOTE_DETALHES = 8;
 /**
  * Busca as transcricoes de varias conversas.
  *
- * A API nao expoe serie temporal nem latencia agregada, entao a pagina
- * principal deriva as duas dos timestamps das mensagens -- o que obriga a
- * baixar as transcricoes. E um N+1 assumido, aceitavel no volume do trabalho
- * (dezenas de atendimentos) e resolvido por um `GET /serie-temporal` no
- * servidor. Conversas que falharem individualmente sao descartadas em vez de
- * derrubar a pagina inteira.
+ * A serie temporal SAIU daqui: ela vem agregada de `GET /serie-temporal`. O
+ * N+1 sobrevive para o que ainda nao tem agregado no servidor -- o lexico por
+ * classe e o tempo mediano de resposta da faixa de indicadores, que continuam
+ * precisando do texto e dos timestamps de cada transcricao. Eliminar o resto
+ * exige `GET /indicadores?de=&ate=` e um agregado de lexico.
+ *
+ * Conversas que falharem individualmente sao descartadas em vez de derrubar a
+ * pagina inteira.
  */
 export async function obterDetalhes(
   ids: string[],

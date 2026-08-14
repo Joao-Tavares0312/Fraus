@@ -20,7 +20,7 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -34,7 +34,7 @@ from fraus.configuracao import salvar as salvar_configuracao
 from fraus.db import Banco
 from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
-                               containment_rate, nota_0_10)
+                               containment_rate, nota_0_10, serie_diaria)
 from fraus.ingest.csv_driver import carregar_csv
 from fraus.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
                                 score_do_emoji)
@@ -387,6 +387,50 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "containment_rate": containment_rate(conversas),
             "total_conversas": len(conversas),
             "sem_sinal": len(conversas) - len(scores),
+        }
+
+    def _dia_ou_400(valor: str | None, nome: str) -> date | None:
+        """AAAA-MM-DD, ou 400 nomeando o parametro -- nunca ignorado em silencio.
+
+        Filtro de periodo malformado que e descartado sem aviso devolveria a
+        serie INTEIRA parecendo o recorte pedido, e o grafico mentiria sem
+        nenhum sinal de erro.
+        """
+        if valor is None:
+            return None
+        try:
+            return date.fromisoformat(valor)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{nome} invalido: esperava AAAA-MM-DD, veio {valor!r}",
+            )
+
+    @app.get("/serie-temporal")
+    def serie_temporal(de: str | None = None, ate: str | None = None) -> dict:
+        """NPS inferido x latencia mediana por dia, com recorte de periodo.
+
+        Existe para tirar da dashboard o N+1 que ela fazia: sem este endpoint,
+        montar o grafico exigia baixar a TRANSCRICAO de toda conversa do
+        recorte so para ler timestamps. As duas pontas do recorte sao
+        INCLUSIVAS, que e como quem opera le "de 01/03 ate 07/03".
+        """
+        inicio, fim = _dia_ou_400(de, "de"), _dia_ou_400(ate, "ate")
+        if inicio and fim and inicio > fim:
+            raise HTTPException(
+                status_code=400, detail=f"periodo invertido: de {inicio} vem depois de ate {fim}"
+            )
+
+        registros = [
+            (conversa, score)
+            for conversa, score in banco.todas()
+            if (inicio is None or conversa.iniciada_em.date() >= inicio)
+            and (fim is None or conversa.iniciada_em.date() <= fim)
+        ]
+        return {
+            "de": inicio.isoformat() if inicio else None,
+            "ate": fim.isoformat() if fim else None,
+            "pontos": serie_diaria(registros, faixas_vigentes()),
         }
 
     @app.get("/configuracoes")

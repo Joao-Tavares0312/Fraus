@@ -2,8 +2,9 @@
  * Derivacoes feitas no cliente da API a partir do que os endpoints DAO.
  *
  * A API do Fraus expoe indicadores agregados, a lista de conversas, a
- * transcricao e a atribuicao por sentenca. Ela NAO expoe serie temporal,
- * latencia agregada nem lexico por classe. Tudo que este arquivo calcula sai
+ * transcricao, a atribuicao por sentenca e a SERIE TEMPORAL diaria. Ela nao
+ * expoe lexico por classe nem latencia agregada fora da serie. O que este
+ * arquivo ainda calcula sai
  * dos timestamps e do texto que a transcricao ja entrega -- nada aqui inventa
  * numero. O que nao da para derivar honestamente nao esta aqui: esta como
  * estado vazio na interface, nomeando o endpoint que resolveria.
@@ -22,6 +23,7 @@ import type {
   DetalheConversa,
   Mensagem,
   MensagemAtribuida,
+  PontoSerieApi,
   ResumoConversa,
 } from "./api";
 
@@ -244,6 +246,33 @@ function chaveDoDia(iso: string): string {
   return `${data.getFullYear()}-${mes}-${dia}`;
 }
 
+/**
+ * Da forma de grafico ao que `GET /serie-temporal` ja agregou.
+ *
+ * NAO recalcula nada: o NPS e a latencia vem do servidor, pelas mesmas
+ * funcoes Python que gravam a categoria. Aqui so entra o rotulo DD/MM, que e
+ * apresentacao e nao pertence a API.
+ */
+export function serieDoServidor(pontos: PontoSerieApi[]): PontoSerie[] {
+  return pontos.map((ponto) => {
+    const [, mes, numero] = ponto.dia.split("-");
+    return {
+      dia: ponto.dia,
+      rotulo: `${numero}/${mes}`,
+      nps: ponto.nps,
+      latenciaMediana: ponto.latencia_mediana_s,
+      atendimentos: ponto.atendimentos,
+      comScore: ponto.com_score,
+    };
+  });
+}
+
+/**
+ * Mesma serie, derivada das transcricoes.
+ *
+ * Sobrevive como PLANO B de `serieDoServidor`: se `/serie-temporal` falhar, o
+ * grafico continua de pe com o que a pagina ja baixou, em vez de sumir.
+ */
 export function serieDiaria(detalhes: DetalheConversa[]): PontoSerie[] {
   const porDia = new Map<
     string,
