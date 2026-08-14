@@ -97,6 +97,7 @@ export function FiltroPeriodo({
           id="periodo-de"
           type="date"
           value={periodo.de ?? ""}
+          data-vazio={periodo.de ? undefined : ""}
           min={extensao?.primeiro}
           max={extensao?.ultimo}
           onChange={(evento) =>
@@ -115,6 +116,7 @@ export function FiltroPeriodo({
           id="periodo-ate"
           type="date"
           value={periodo.ate ?? ""}
+          data-vazio={periodo.ate ? undefined : ""}
           min={extensao?.primeiro}
           max={extensao?.ultimo}
           onChange={(evento) =>

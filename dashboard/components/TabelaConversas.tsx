@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from "lucide-react";
 import { flexRender } from "@tanstack/react-table";
@@ -151,6 +152,8 @@ export function TabelaConversas({
   nomeCsv: string;
   rotuloDoPeriodo: string;
 }) {
+  const roteador = useRouter();
+  const navegar = roteador.push;
   const [filtro, setFiltro] = useState("");
   const [categoria, setCategoria] = useState<string>("todas");
   const [desfecho, setDesfecho] = useState<string>("todos");
@@ -526,7 +529,20 @@ export function TabelaConversas({
               visiveis.map((linha) => (
                 <TableRow
                   key={linha.id}
-                  className="transition-colors duration-150 ease-fluid hover:bg-muted"
+                  // A LINHA INTEIRA e o alvo, nao so o id sublinhado: a acao
+                  // fica a um clique da causa. O clique programatico convive
+                  // com o <Link> (que segue sendo o caminho de teclado e de
+                  // leitor de tela) e cede a vez para selecao de texto e para
+                  // cliques que ja acertaram um controle.
+                  onClick={(evento) => {
+                    if (window.getSelection()?.toString()) return;
+                    const alvo = evento.target as HTMLElement;
+                    if (alvo.closest("a, button")) return;
+                    navegar(
+                      `/atendimentos/${encodeURIComponent(linha.original.id)}${sufixoDeQuery}`,
+                    );
+                  }}
+                  className="cursor-pointer transition-colors duration-150 ease-fluid hover:bg-muted/50"
                 >
                   {linha.getVisibleCells().map((celula) => (
                     <TableCell key={celula.id} className="align-top">
