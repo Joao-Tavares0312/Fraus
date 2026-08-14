@@ -29,6 +29,11 @@ então `colab` responde em qualquer `wsl -d AzureLinux-4 -- bash -lc "..."`.
 
 ### Autenticação
 
+> Os comandos abaixo aparecem com o prefixo `wsl -d AzureLinux-4 -- bash -lc`
+> porque são escritos para quem chama **do PowerShell**, de fora. Se você já
+> estiver dentro do WSL (prompt `dell08@...:~$`), use só a parte entre aspas —
+> `wsl` é comando do Windows e não existe lá dentro.
+
 Passo manual e único, porque exige uma conta Google e um navegador:
 
 ```bash
