@@ -1029,3 +1029,39 @@ def test_analisar_arquivo_grande_demais_e_recusado_antes_de_rodar_o_modelo(
     )
     assert resposta.status_code == 400
     assert "limite" in resposta.json()["detail"]
+
+
+def test_modelo_publica_as_tres_cabecas_marcando_quem_pontua(cliente):
+    """`pontua` e o que separa quem decide a nota de quem so descreve.
+
+    Sem esse campo a tela mostraria tres cartoes iguais e o leitor concluiria
+    que as tres cabecas pesam na nota -- e o fusor tem dezesseis features, sem
+    nenhuma de emocao ou ironia.
+    """
+    corpo = cliente.get("/modelo").json()
+    por_nome = {cabeca["nome"]: cabeca for cabeca in corpo["cabecas"]}
+
+    assert set(por_nome) == {"satisfacao", "emocao", "ironia"}
+    assert por_nome["satisfacao"]["pontua"] is True
+    assert por_nome["emocao"]["pontua"] is False
+    assert por_nome["ironia"]["pontua"] is False
+
+
+def test_cabeca_sem_metricas_exportadas_vem_null_e_nao_zerada(cliente, tmp_path, monkeypatch):
+    """Antes do treino, `null`. Zero seria dizer que a cabeca erra tudo."""
+    from fraus.api import main as main_module
+
+    monkeypatch.setattr(main_module, "CAMINHO_METRICAS_IRONIA", tmp_path / "nao-existe.json")
+    corpo = cliente.get("/modelo").json()
+    ironia = next(c for c in corpo["cabecas"] if c["nome"] == "ironia")
+
+    assert ironia["metricas"] is None
+
+
+def test_cabeca_de_emocao_declara_o_desprezo_como_derivado(cliente):
+    """Sao oito classes: as sete treinadas mais a diade raiva+nojo."""
+    corpo = cliente.get("/modelo").json()
+    emocao = next(c for c in corpo["cabecas"] if c["nome"] == "emocao")
+
+    assert emocao["classes"][-1] == "desprezo"
+    assert len(emocao["classes"]) == 8

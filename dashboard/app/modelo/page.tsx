@@ -99,10 +99,13 @@ export default async function PaginaModelo() {
           <div className="flex min-w-0 flex-col gap-4">
             <Painel
               titulo="Métricas do treino"
-              legenda="Medidas no conjunto de teste pelos notebooks, não recalculadas aqui."
+              legenda="Medidas no conjunto de teste pelos notebooks, não recalculadas aqui. As três cabeças aparecem juntas porque só comparando dá para ver o que cada número vale: a satisfação é a única que entra no fusor, a emoção reporta também o F1 num corpus independente que ela nunca viu, e a ironia reporta 100% — que é verdade no corpus dela e não sobrevive a fala de atendimento. Cada procedência e cada limitação vêm do arquivo que o próprio notebook exportou, inteiras."
               semPadding
             >
-              <MetricasTreino metricas={modelo.metricas} />
+              <MetricasTreino
+                metricas={modelo.metricas}
+                cabecas={modelo.cabecas}
+              />
             </Painel>
 
             <Painel

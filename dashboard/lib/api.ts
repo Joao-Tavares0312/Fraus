@@ -152,6 +152,24 @@ export type MetricasTreino = {
   [chave: string]: unknown;
 };
 
+/**
+ * Uma das tres cabecas BERTimbau, com o que o treino dela mediu.
+ *
+ * As metricas tem FORMATOS DIFERENTES de proposito -- cada notebook exporta o
+ * que faz sentido para a sua tarefa, e uniformizar apagaria justamente os
+ * campos que carregam a ressalva (o F1 em corpus independente da emocao, a
+ * limitacao declarada da ironia). A tela le os campos conhecidos e mostra o
+ * resto como veio.
+ */
+export type CabecaDeModelo = {
+  nome: string;
+  classes: string[];
+  /** `null` antes do notebook exportar. Nunca zero. */
+  metricas: MetricasTreino | null;
+  /** Se ela entra no fusor. Hoje so a satisfacao. */
+  pontua: boolean;
+};
+
 /** Resposta de `GET /modelo` -- a ficha do modelo. */
 export type FichaModelo = {
   /** Peso GLOBAL de cada uma das 16 features. Nao e especifico de conversa. */
@@ -159,6 +177,14 @@ export type FichaModelo = {
   /** `null` enquanto o notebook 01 nao exportou metricas.json. NUNCA zero. */
   metricas: MetricasTreino | null;
   classes: string[];
+  /**
+   * As tres cabecas fine-tunadas, cada uma com a metrica que ELA mediu.
+   *
+   * `pontua` separa quem decide a nota de quem so descreve: hoje so a
+   * satisfacao entra no fusor. Sem esse campo a tela mostraria tres cartoes
+   * iguais e o leitor concluiria que os tres pesam na nota.
+   */
+  cabecas: CabecaDeModelo[];
   /** Faixas de NPS lidas do SERVIDOR (fonte unica), nao digitadas no front. */
   faixas_nps: Record<string, [number, number]>;
   total_emojis_lexicon: number;
