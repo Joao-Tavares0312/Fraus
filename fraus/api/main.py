@@ -39,7 +39,8 @@ from fraus.db import Banco
 from fraus.modelos import Conversa, Mensagem
 from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
-                               containment_rate, nota_0_10, serie_diaria)
+                               containment_rate, lexico_por_classe, nota_0_10,
+                               serie_diaria, tempo_mediano_resposta)
 from fraus.ingest.arquivos import ArquivoIlegivelError, extrair
 from fraus.ingest.csv_driver import carregar_csv
 from fraus.resumo import resumir
@@ -630,8 +631,22 @@ def criar_app(
             "motivos": motivos,
         }
 
+    def _recorte_ou_400(de: str | None, ate: str | None) -> tuple[date | None, date | None]:
+        """As duas pontas do recorte, validadas juntas -- inclusive a ordem."""
+        inicio, fim = _dia_ou_400(de, "de"), _dia_ou_400(ate, "ate")
+        if inicio and fim and inicio > fim:
+            raise HTTPException(
+                status_code=400,
+                detail=f"periodo invertido: de {inicio} vem depois de ate {fim}",
+            )
+        return inicio, fim
+
+    def _no_recorte(iniciada_em: datetime, inicio: date | None, fim: date | None) -> bool:
+        dia = iniciada_em.date()
+        return (inicio is None or dia >= inicio) and (fim is None or dia <= fim)
+
     @app.get("/conversas")
-    def listar() -> list[dict]:
+    def listar(de: str | None = None, ate: str | None = None) -> list[dict]:
         """Lista de atendimentos com a ficha operacional de cada um.
 
         Alem de nota e categoria, cada linha carrega o que `fraus.resumo`
@@ -639,7 +654,11 @@ def criar_app(
         do bot e do humano SEPARADOS, duracao e desfecho. Vem tudo junto de
         proposito -- a tela precisa disso por linha, e busca-los um a um era um
         N+1 contra a API.
+
+        `de`/`ate` recortam por dia de inicio, pontas INCLUSIVAS -- o mesmo
+        contrato do /serie-temporal. Sem filtro, a lista inteira, como sempre.
         """
+        inicio, fim = _recorte_ou_400(de, ate)
         # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
         # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
         faixas = faixas_vigentes()
@@ -651,6 +670,7 @@ def criar_app(
                 **resumir(conversa),
             }
             for linha, conversa in banco.listar_com_conversa()
+            if _no_recorte(conversa.iniciada_em, inicio, fim)
         ]
 
     @app.get("/conversas/{conversa_id}")
@@ -700,9 +720,26 @@ def criar_app(
             "sinais_fora_do_score": atribuicao.get("sinais_fora_do_score", []),
         }
 
+    def _registros_do_recorte(de: str | None, ate: str | None) -> list:
+        """Conversas do periodo, com validacao de recorte compartilhada."""
+        inicio, fim = _recorte_ou_400(de, ate)
+        return [
+            (conversa, score)
+            for conversa, score in banco.todas()
+            if _no_recorte(conversa.iniciada_em, inicio, fim)
+        ]
+
     @app.get("/indicadores")
-    def indicadores() -> dict:
-        registros = banco.todas()
+    def indicadores(de: str | None = None, ate: str | None = None) -> dict:
+        """Indicadores agregados, com recorte opcional de periodo.
+
+        Com `de`/`ate`, os numeros respondem SO pelo recorte -- e o que tira
+        da dashboard a agregacao no cliente que ela fazia com filtro ativo.
+        `tempo_mediano_resposta_s` e derivado dos timestamps na leitura
+        (latencia nunca e persistida) e vem `null` sem nenhum par
+        cliente -> resposta, nunca zero.
+        """
+        registros = _registros_do_recorte(de, ate)
         conversas = [conversa for conversa, _ in registros]
         scores = [score for _, score in registros if score is not None]
         return {
@@ -711,7 +748,19 @@ def criar_app(
             "containment_rate": containment_rate(conversas),
             "total_conversas": len(conversas),
             "sem_sinal": len(conversas) - len(scores),
+            "tempo_mediano_resposta_s": tempo_mediano_resposta(registros),
         }
+
+    @app.get("/lexico")
+    def lexico(de: str | None = None, ate: str | None = None) -> dict:
+        """Palavras e emojis caracteristicos por categoria, no recorte pedido.
+
+        Existia so no cliente, que baixava toda transcricao para contar -- o
+        ultimo N+1 da visao geral. A ordenacao e por DISTINCAO: o termo que
+        aparece em toda parte nao explica classe nenhuma.
+        """
+        registros = _registros_do_recorte(de, ate)
+        return {"classes": lexico_por_classe(registros, faixas_vigentes())}
 
     def _dia_ou_400(valor: str | None, nome: str) -> date | None:
         """AAAA-MM-DD, ou 400 nomeando o parametro -- nunca ignorado em silencio.
@@ -739,17 +788,11 @@ def criar_app(
         recorte so para ler timestamps. As duas pontas do recorte sao
         INCLUSIVAS, que e como quem opera le "de 01/03 ate 07/03".
         """
-        inicio, fim = _dia_ou_400(de, "de"), _dia_ou_400(ate, "ate")
-        if inicio and fim and inicio > fim:
-            raise HTTPException(
-                status_code=400, detail=f"periodo invertido: de {inicio} vem depois de ate {fim}"
-            )
-
+        inicio, fim = _recorte_ou_400(de, ate)
         registros = [
             (conversa, score)
             for conversa, score in banco.todas()
-            if (inicio is None or conversa.iniciada_em.date() >= inicio)
-            and (fim is None or conversa.iniciada_em.date() <= fim)
+            if _no_recorte(conversa.iniciada_em, inicio, fim)
         ]
         return {
             "de": inicio.isoformat() if inicio else None,
