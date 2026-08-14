@@ -229,6 +229,61 @@ def conversa_muda_no_canal_telefone() -> Conversa:
     )
 
 
+def dia_inteiro_sem_sinal() -> list[Conversa]:
+    """Um DIA em que nenhum atendimento teve fala do cliente.
+
+    As duas conversas mudas anteriores caem em dias que TAMBEM tem atendimento
+    pontuado, entao o dia inteiro ainda soa e a interface o desenha cheio. Este
+    dia existe para exercitar o caso que o produto precisa saber mostrar: houve
+    movimento, e nenhum dele virou medicao.
+
+    E o unico jeito de ver a cabeca vazada da faixa de presenca -- o marcador
+    que ocupa o tempo e nao soa. Sem um dia assim, a regra "ausencia de dado
+    nao e insatisfacao" fica escrita no codigo e invisivel na tela.
+    """
+    dia = INICIO + timedelta(days=21, hours=8)
+    return [
+        Conversa(
+            id="demo-dia-mudo-001",
+            canal="instagram",
+            iniciada_em=dia,
+            encerrada_em=dia + timedelta(seconds=60),
+            escalou_para_humano=False,
+            mensagens=[
+                Mensagem(
+                    autor="bot",
+                    texto="Oi! Vi que voce abriu o chat. Posso ajudar em algo?",
+                    enviada_em=dia,
+                ),
+                Mensagem(
+                    autor="bot",
+                    texto="Encerrando por inatividade. Volte quando quiser.",
+                    enviada_em=dia + timedelta(seconds=60),
+                ),
+            ],
+        ),
+        Conversa(
+            id="demo-dia-mudo-002",
+            canal="telegram",
+            iniciada_em=dia + timedelta(hours=6),
+            encerrada_em=dia + timedelta(hours=6, seconds=40),
+            escalou_para_humano=False,
+            mensagens=[
+                Mensagem(
+                    autor="bot",
+                    texto="Bom dia! Este e o atendimento automatico.",
+                    enviada_em=dia + timedelta(hours=6),
+                ),
+                Mensagem(
+                    autor="bot",
+                    texto="Sem resposta por aqui, vou fechar o chamado.",
+                    enviada_em=dia + timedelta(hours=6, seconds=40),
+                ),
+            ],
+        ),
+    ]
+
+
 CANAIS = ("webchat", "whatsapp", "instagram", "telegram")
 
 
@@ -242,6 +297,7 @@ def semear(banco: Banco, motor: MotorDuble, quantidade: int = 60) -> int:
 
     conversas.append(conversa_sem_fala_do_cliente())
     conversas.append(conversa_muda_no_canal_telefone())
+    conversas.extend(dia_inteiro_sem_sinal())
 
     for conversa in conversas:
         score = motor.pontuar_conversa(conversa)
