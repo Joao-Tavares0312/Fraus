@@ -36,18 +36,33 @@ from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10, serie_diaria)
 from fraus.ingest.csv_driver import carregar_csv
+from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
+                                 desprezo_derivado)
 from fraus.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
                                 score_do_emoji)
+from fraus.sinais.ironia import IRONICO, ClassificadorIronia
 from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
                                 ClassificadorTexto)
 
 CAMINHO_MODELO_TEXTO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
+CAMINHO_MODELO_EMOCAO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_EMOCAO", "modelos/bertimbau-emocao"))
+CAMINHO_MODELO_IRONIA = Path(os.environ.get("FRAUS_CAMINHO_MODELO_IRONIA", "modelos/bertimbau-ironia"))
 CAMINHO_FUSOR = Path(os.environ.get("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
 CAMINHO_BANCO = Path(os.environ.get("FRAUS_CAMINHO_BANCO", "fraus.db"))
 
 # Exportado pelo notebook 01 (acuracia, F1-macro do BERTimbau). Ausente e
 # esperado antes do treino: `/modelo` devolve `metricas: null`, nunca inventa.
-CAMINHO_METRICAS = Path(os.environ.get("FRAUS_CAMINHO_METRICAS", "modelos/metricas.json"))
+# O padrao aponta para dentro da pasta do modelo porque e onde o notebook 01
+# de fato grava -- metrica ao lado do peso que ela mediu, nao solta na raiz.
+CAMINHO_METRICAS = Path(
+    os.environ.get("FRAUS_CAMINHO_METRICAS", "modelos/bertimbau-satisfacao/metricas.json")
+)
+CAMINHO_METRICAS_EMOCAO = Path(
+    os.environ.get("FRAUS_CAMINHO_METRICAS_EMOCAO", "modelos/metricas_emocao.json")
+)
+CAMINHO_METRICAS_IRONIA = Path(
+    os.environ.get("FRAUS_CAMINHO_METRICAS_IRONIA", "modelos/metricas_ironia.json")
+)
 
 # Teto de tamanho do texto aceito por /modelo/simular -- nao e limite de
 # modelo (BERTimbau trunca em TAMANHO_MAXIMO tokens), e limite de payload.
@@ -119,11 +134,58 @@ class PedidoSimulacao(BaseModel):
 
 
 class Motor:
-    """Amarra classificador de texto e fusor num unico ponto de pontuacao."""
+    """Amarra classificador de texto e fusor num unico ponto de pontuacao.
 
-    def __init__(self, classificador: ClassificadorTexto, fusor: Fusor) -> None:
+    Emocao e ironia entram como LEITURA, nunca como julgamento. O fusor foi
+    treinado com dezesseis features -- texto, emoji e tempo -- e nenhuma delas
+    vem dessas duas cabecas (confira em `fraus.fusor.NOMES_FEATURES`). Elas
+    descrevem a fala do cliente sem mover a nota um centesimo.
+
+    Isso PRECISA aparecer em toda resposta que carrega os dois numeros lado a
+    lado. Uma tela que mostra "ironia 0,99" encostada num score baixo convida a
+    conclusao de que a ironia derrubou a nota, e nao derrubou: o que derrubou
+    esta em `contribuicoes`, que so fala das dezesseis. Ligar emocao e ironia ao
+    score exigiria retreinar o fusor com elas dentro.
+
+    Os dois classificadores sao OPCIONAIS. Sem eles a API continua pontuando
+    igual, porque nada do score depende deles -- os campos saem `None`, que e a
+    diferenca honesta entre "o modelo nao rodou" e "o modelo rodou e deu zero".
+    """
+
+    def __init__(
+        self,
+        classificador: ClassificadorTexto,
+        fusor: Fusor,
+        emocao: ClassificadorEmocao | None = None,
+        ironia: ClassificadorIronia | None = None,
+    ) -> None:
         self._classificador = classificador
         self._fusor = fusor
+        self._emocao = emocao
+        self._ironia = ironia
+
+    def _emocao_de(self, textos: list[str]) -> list[dict] | None:
+        """Sete probabilidades mais o desprezo da diade, por texto. None sem modelo."""
+        if self._emocao is None or not textos:
+            return None
+        previsoes = self._emocao.prever_mensagens(textos)
+        return [
+            {
+                **{nome: float(p[i]) for i, nome in enumerate(NOMES_EMOCOES)},
+                # Oitava emocao de Ekman, derivada da diade raiva+nojo
+                # (Plutchik 1980) porque nenhum corpus PT-BR a anota.
+                "desprezo": desprezo_derivado(
+                    p[NOMES_EMOCOES.index("raiva")], p[NOMES_EMOCOES.index("nojo")]
+                ),
+            }
+            for p in previsoes
+        ]
+
+    def _ironia_de(self, textos: list[str]) -> list[float] | None:
+        """Probabilidade de ironia por texto. None sem modelo carregado."""
+        if self._ironia is None or not textos:
+            return None
+        return [float(p[IRONICO]) for p in self._ironia.prever_mensagens(textos)]
 
     def pontuar_conversa(self, conversa) -> float | None:
         if not conversa.tem_sinal_cliente:
@@ -155,10 +217,19 @@ class Motor:
             for indice, mensagem in enumerate(conversa.mensagens)
             if mensagem.autor == "cliente"
         ]
-        probabilidades = self._classificador.prever_mensagens(
-            [conversa.mensagens[indice].texto for indice in indices_do_cliente]
-        )
+        textos_do_cliente = [
+            conversa.mensagens[indice].texto for indice in indices_do_cliente
+        ]
+        probabilidades = self._classificador.prever_mensagens(textos_do_cliente)
         por_indice = dict(zip(indices_do_cliente, probabilidades))
+
+        # Mesma regra das probabilidades de satisfacao: so a fala do CLIENTE.
+        # As tres cabecas foram fine-tunadas em texto de cliente, e rodar
+        # qualquer uma na fala do bot devolveria numero sem lastro.
+        emocoes = self._emocao_de(textos_do_cliente)
+        ironias = self._ironia_de(textos_do_cliente)
+        emocao_por_indice = dict(zip(indices_do_cliente, emocoes or []))
+        ironia_por_indice = dict(zip(indices_do_cliente, ironias or []))
 
         mensagens = []
         for indice, mensagem in enumerate(conversa.mensagens):
@@ -175,6 +246,8 @@ class Motor:
                     "prob_satisfeito": (
                         float(previsao[SATISFEITO]) if previsao else None
                     ),
+                    "emocao": emocao_por_indice.get(indice),
+                    "prob_ironia": ironia_por_indice.get(indice),
                 }
             )
 
@@ -187,6 +260,10 @@ class Motor:
             "mensagens": mensagens,
             "importancias": self._fusor.importancias(),
             "contribuicoes": contribuicoes,
+            # Bandeira explicita para a interface: emocao e ironia vieram, mas
+            # NAO estao em `contribuicoes` nem no score. Sem isso a tela nao tem
+            # como saber que precisa separar o que descreve do que pontua.
+            "sinais_fora_do_score": ["emocao", "prob_ironia"],
         }
 
     def importancias(self) -> dict:
@@ -206,11 +283,20 @@ class Motor:
             {"emoji": emoji, "score": score_do_emoji(emoji), "posicao_relativa": posicao}
             for emoji, posicao in emojis_com_posicao(texto)
         ]
+        emocoes = self._emocao_de([texto])
+        ironias = self._ironia_de([texto])
         return {
             "prob_insatisfeito": float(probabilidades[INSATISFEITO]),
             "prob_neutro": float(probabilidades[NEUTRO]),
             "prob_satisfeito": float(probabilidades[SATISFEITO]),
             "emojis": emojis,
+            # As duas cabecas de leitura. E aqui que a frase irônica se
+            # denuncia: "que atendimento maravilhoso, so esperei 3 horas" sai
+            # com prob_satisfeito alta E prob_ironia alta ao mesmo tempo -- as
+            # duas coisas juntas sao a informacao, e por isso ironia e cabeca
+            # separada em vez de mais uma classe de satisfacao.
+            "emocao": emocoes[0] if emocoes else None,
+            "prob_ironia": ironias[0] if ironias else None,
         }
 
 
@@ -230,6 +316,17 @@ def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
             detail=f"caminho fora da raiz de importacao ({raiz_resolvida}): {caminho_pedido}",
         )
     return alvo
+
+
+def _metricas_de(caminho: Path) -> dict | None:
+    """Metricas de treino de uma cabeca, ou None se o notebook ainda nao exportou.
+
+    None, nunca um dicionario vazio ou zerado: "nao medimos" e "medimos zero"
+    sao respostas diferentes, e a interface precisa poder dizer a primeira.
+    """
+    if not caminho.is_file():
+        return None
+    return json.loads(caminho.read_text(encoding="utf-8"))
 
 
 def _fonte_publica(fonte: dict) -> dict:
@@ -374,6 +471,11 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "mensagens": atribuicao["mensagens"],
             "importancias": atribuicao["importancias"],
             "contribuicoes": atribuicao["contribuicoes"],
+            # Quais campos das mensagens sao LEITURA e nao entram no score.
+            # Vem do motor, nao de uma constante daqui: um motor sem as cabecas
+            # de emocao/ironia devolve lista vazia, e a tela nao promete um
+            # painel que ela nao tem dado para preencher.
+            "sinais_fora_do_score": atribuicao.get("sinais_fora_do_score", []),
         }
 
     @app.get("/indicadores")
@@ -589,13 +691,34 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         vigente, a MESMA fonte que alimenta a categoria de cada atendimento --
         faixa duplicada em dois lugares ja foi defeito deste projeto uma vez.
         """
-        metricas = None
-        if CAMINHO_METRICAS.is_file():
-            metricas = json.loads(CAMINHO_METRICAS.read_text(encoding="utf-8"))
+        metricas = _metricas_de(CAMINHO_METRICAS)
         return {
             "importancias": motor.importancias(),
             "metricas": metricas,
             "classes": ["insatisfeito", "neutro", "satisfeito"],
+            # As tres cabecas, cada uma com a metrica que ela de fato mediu e a
+            # limitacao que essa metrica esconde. `pontua` separa quem decide a
+            # nota de quem so descreve: hoje so a satisfacao entra no fusor.
+            "cabecas": [
+                {
+                    "nome": "satisfacao",
+                    "classes": ["insatisfeito", "neutro", "satisfeito"],
+                    "metricas": metricas,
+                    "pontua": True,
+                },
+                {
+                    "nome": "emocao",
+                    "classes": [*NOMES_EMOCOES, "desprezo"],
+                    "metricas": _metricas_de(CAMINHO_METRICAS_EMOCAO),
+                    "pontua": False,
+                },
+                {
+                    "nome": "ironia",
+                    "classes": ["nao-ironico", "ironico"],
+                    "metricas": _metricas_de(CAMINHO_METRICAS_IRONIA),
+                    "pontua": False,
+                },
+            ],
             "faixas_nps": {
                 categoria: list(faixa) for categoria, faixa in faixas_vigentes().items()
             },
@@ -655,6 +778,8 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "prob_neutro": resultado["prob_neutro"],
             "prob_satisfeito": resultado["prob_satisfeito"],
             "emojis": resultado["emojis"],
+            "emocao": resultado.get("emocao"),
+            "prob_ironia": resultado.get("prob_ironia"),
         }
 
     return app
@@ -669,7 +794,16 @@ def criar_app_padrao() -> FastAPI:
     """
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)  # propaga ModeloAusenteError
     fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
-    motor = Motor(classificador, fusor)
+
+    # Emocao e ironia sobem se estiverem no disco, e a ausencia NAO derruba a
+    # API -- ao contrario da satisfacao, que e obrigatoria. A assimetria e
+    # deliberada: sem satisfacao nao ha nota, e servir predicao sem modelo e
+    # pior que estar fora do ar; sem emocao/ironia o score sai identico, porque
+    # nenhuma das duas entra no fusor. Elas somem da tela, e so.
+    emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO) if CAMINHO_MODELO_EMOCAO.is_dir() else None
+    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA) if CAMINHO_MODELO_IRONIA.is_dir() else None
+
+    motor = Motor(classificador, fusor, emocao=emocao, ironia=ironia)
     banco = Banco(CAMINHO_BANCO)
     banco.migrar()
     return criar_app(banco=banco, motor=motor)

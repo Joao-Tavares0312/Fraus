@@ -8,8 +8,8 @@ primeiro fusor (99,3% no sintetico, ~50 para tudo em conversa real).
 
 import pytest
 
-from fraus.ingest.gerador_ironia import (ELOGIOS, FATOS_RUINS, NEUTRAS,
-                                         gerar_exemplos)
+from fraus.ingest.gerador_ironia import (ELOGIOS, FATOS_RUINS, MARCADORES,
+                                         NEUTRAS, gerar_exemplos)
 from fraus.sinais.ironia import IRONICO, NAO_IRONICO
 
 
@@ -79,6 +79,40 @@ def test_lexico_positivo_sozinho_nao_separa_as_classes():
     assert _proporcao(exemplos, NAO_IRONICO, tem_elogio) > 0.2
 
 
+def test_marcador_de_discurso_nao_separa_as_classes():
+    """O vazamento que os outros testes deixaram passar, e que custou um treino.
+
+    Marcador conversacional ("olha", "entao", "poxa", "bom") abria as dezoito
+    ATENUACOES e nao aparecia em nenhuma familia sincera. Nenhum teste olhava
+    para isso -- os outros caçam lexico de elogio, numero e comprimento -- e o
+    corpus passou limpo com o atalho intacto. O modelo treinado nele leu
+    "marcador = ironia" e marcou "ta bom entao" como ironico com 0,999 de
+    confianca, o que esta medido em tests/test_ironia_dominio.py.
+
+    A trava e por PROPORCAO nas duas classes, nao por presenca: exigir apenas
+    "existe marcador na classe sincera" passaria com um unico exemplo entre
+    tres mil, e um marcador raro de um lado e frequente do outro continua
+    prevendo o rotulo. A diferenca entre as duas taxas e o que precisa ser
+    pequena.
+    """
+    exemplos = gerar_exemplos(1200, semente=17)
+
+    def tem_marcador(texto: str) -> bool:
+        return any(texto.lower().startswith(m.lower() + ",") for m in MARCADORES)
+
+    taxa_ironica = _proporcao(exemplos, IRONICO, tem_marcador)
+    taxa_sincera = _proporcao(exemplos, NAO_IRONICO, tem_marcador)
+
+    assert taxa_sincera > 0.15, (
+        f"marcador de discurso quase nao aparece na classe sincera "
+        f"({taxa_sincera:.1%}) -- ele voltou a ser gabarito de ironia."
+    )
+    assert abs(taxa_ironica - taxa_sincera) < 0.12, (
+        f"marcador aparece em {taxa_ironica:.1%} da ironia contra "
+        f"{taxa_sincera:.1%} da fala sincera: a diferenca prevê o rotulo."
+    )
+
+
 def test_ironia_nao_exige_palavra_elogiosa():
     """A familia por atenuacao ("imagina, ... nao incomoda nada") existe para
     que "tem elogio" nao seja condicao NECESSARIA de ironia."""
@@ -128,10 +162,37 @@ def test_quantidade_pedida_e_respeitada():
     assert len(gerar_exemplos(150, semente=4)) == 150
 
 
-def test_pedido_grande_demais_devolve_o_que_da_sem_travar():
-    """O espaco de combinacoes e finito: melhor devolver menos que repetir ou
-    entrar em laco infinito."""
+def test_pedido_grande_nao_repete_nem_trava():
+    """Cem mil exemplos saem unicos e em tempo de teste.
+
+    Este numero ja foi maior que o espaco inteiro de combinacoes. Deixou de
+    ser quando os marcadores de discurso entraram: o espaco pulou de menos de
+    100 mil para 512.910 textos distintos. A garantia de ESGOTAMENTO mudou de
+    endereco -- foi para o teste marcado como `lento` logo abaixo, que e o
+    unico que consegue prova-la de fato.
+    """
     exemplos = gerar_exemplos(100_000, semente=5)
     textos = [t.lower().strip() for t, _ in exemplos]
     assert len(textos) == len(set(textos))
-    assert len(exemplos) < 100_000
+    assert len(exemplos) == 100_000
+
+
+@pytest.mark.lento
+def test_pedido_alem_do_espaco_devolve_o_que_da_sem_travar():
+    """Pedido impossivel para por ESGOTAMENTO, sem repetir e sem laco infinito.
+
+    Fica fora da suite padrao (`-m "not lento"`) porque exaurir as 512.910
+    combinacoes leva pouco mais de tres minutos -- custo que nao cabe em cada
+    rodada, mas que tambem nao pode simplesmente deixar de existir: e o unico
+    teste que exercita a condicao de parada por PACIENCIA. Rode com
+    `uv run pytest -m lento` ao mexer no gerador.
+
+    O limite inferior de 400 mil e frouxo de proposito. Ele existe para pegar
+    um gerador que passou a esgotar cedo demais (sinal de familia de frase
+    perdida no caminho), nao para fixar o tamanho exato do espaco, que muda de
+    forma legitima toda vez que um molde novo entra.
+    """
+    exemplos = gerar_exemplos(5_000_000, semente=5)
+    textos = [t.lower().strip() for t, _ in exemplos]
+    assert len(textos) == len(set(textos))
+    assert 400_000 < len(exemplos) < 5_000_000

@@ -14,3 +14,10 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# `lento` sai da rodada padrao: sao testes de minutos, nao de segundos. Eles
+# continuam existindo e sao obrigatorios ao mexer no gerador de corpus --
+# `uv run pytest -m lento`. Desmarcar por padrao e diferente de apagar.
+addopts = "-m 'not lento'"
+markers = [
+    "lento: leva minutos (esgota espaco de combinacoes). Rode com -m lento.",
+]

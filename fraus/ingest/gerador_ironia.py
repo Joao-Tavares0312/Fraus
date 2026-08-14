@@ -169,12 +169,41 @@ LIGACOES_QUEIXA = [
 EMOJIS = ["🙂", "😊", "👏", "👍", "😡", "😒", "😅", "🙏", ""]
 PROB_EMOJI = 0.35
 
+# Marcadores de discurso -- o vazamento que derrubou o primeiro modelo de
+# ironia (medido em tests/test_ironia_dominio.py: 60% de falso positivo em fala
+# sincera de atendimento).
+#
+# As dezoito ATENUACOES abrem, todas, com um marcador conversacional
+# ("imagina,", "tranquilo,", "claro,", "relaxa,", "olha so,"). As familias
+# sinceras -- LIGACOES_ELOGIO e LIGACOES_QUEIXA -- comecam direto no elogio ou
+# na queixa, sem marcador nenhum. O resultado e que a presenca de um marcador
+# previa o rotulo quase sozinha, e o modelo aprendeu ISSO em vez de pragmatica:
+# na hora de ler atendimento de verdade, marcou "ta bom entao" e "so isso
+# mesmo, valeu" como ironicos com 0,999 de confianca.
+#
+# A defesa e a mesma dos emojis e da caixa: o marcador entra por sorteio
+# INDEPENDENTE do rotulo, entao ele aparece nas duas classes na mesma
+# proporcao e para de carregar informacao sobre a resposta. `test_gerador_
+# ironia.py` cobria lexico, numero e comprimento; passou a cobrir isto tambem.
+MARCADORES = [
+    "olha", "entao", "poxa", "cara", "bom", "ah", "hmm", "enfim",
+    "so pra constar", "vou ser sincero", "no fim das contas", "ta",
+]
+PROB_MARCADOR = 0.30
+
 
 def _talvez_emoji(aleatorio: random.Random, texto: str) -> str:
     if aleatorio.random() >= PROB_EMOJI:
         return texto
     emoji = aleatorio.choice(EMOJIS)
     return f"{texto} {emoji}".strip()
+
+
+def _talvez_marcador(aleatorio: random.Random, texto: str) -> str:
+    """Prefixa um marcador de discurso, com probabilidade igual nas duas classes."""
+    if aleatorio.random() >= PROB_MARCADOR:
+        return texto
+    return f"{aleatorio.choice(MARCADORES)}, {texto}"
 
 
 def _talvez_maiuscula(aleatorio: random.Random, texto: str) -> str:
@@ -203,7 +232,13 @@ def gerar_exemplos(quantidade: int, semente: int = 42) -> list[tuple[str, int]]:
     exemplos: list[tuple[str, int]] = []
 
     def acrescentar(texto: str, rotulo: int) -> None:
-        texto = _talvez_maiuscula(aleatorio, _talvez_emoji(aleatorio, texto))
+        # Gargalo unico das duas classes: e por passar TODO exemplo pelos
+        # mesmos tres sorteios -- marcador, emoji, caixa -- que nenhum dos tres
+        # consegue prever o rotulo. Aplicar qualquer um deles dentro de um ramo
+        # especifico (so na ironia, so no elogio) recria o vazamento.
+        texto = _talvez_maiuscula(
+            aleatorio, _talvez_emoji(aleatorio, _talvez_marcador(aleatorio, texto))
+        )
         chave = texto.lower().strip()
         if chave in vistos:
             return
