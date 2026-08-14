@@ -11,11 +11,51 @@
  */
 
 /**
- * Toda chamada sai por /api/fraus: o proxy no servidor Next anexa a chave de
- * acesso (FRAUS_CHAVE_ACESSO, env server-side) e repassa para FRAUS_API_URL.
- * A chave nunca chega ao navegador.
+ * O caminho do proxy no servidor Next. E o destino das chamadas feitas PELO
+ * NAVEGADOR: o proxy anexa a chave de acesso (FRAUS_CHAVE_ACESSO, env
+ * server-side) e repassa para FRAUS_API_URL, de modo que a chave nunca chega
+ * ao bundle.
  */
-const BASE = "/api/fraus";
+const PROXY = "/api/fraus";
+
+/**
+ * Destino de UMA chamada, escolhido pelo lado em que este codigo roda.
+ *
+ * No SERVIDOR (Server Components, que sao a maioria das telas) a URL precisa
+ * ser absoluta: o `fetch` do Node recusa caminho relativo -- nao existe
+ * "origem da pagina" ali. Passar `/api/fraus` derrubava TODA tela renderizada
+ * no servidor com um TypeError que `proteger` engolia e virava estado de erro.
+ * E dar a volta pelo proxy seria absurdo de qualquer modo: o processo falaria
+ * consigo mesmo para chegar na API que ele ja alcanca direto.
+ *
+ * No NAVEGADOR o destino e o proxy, justamente para a chave nao sair do
+ * servidor.
+ */
+function noServidor(): boolean {
+  return typeof window === "undefined";
+}
+
+export function urlDaApi(rota: string): string {
+  if (!noServidor()) return `${PROXY}${rota}`;
+  return `${process.env.FRAUS_API_URL ?? "http://localhost:8000"}${rota}`;
+}
+
+/**
+ * Cabecalhos da chamada, incluindo a autorizacao quando falamos direto com a
+ * API (server-side). No navegador nao ha o que anexar: quem autentica e o
+ * proxy.
+ *
+ * `FRAUS_CHAVE_ACESSO` nao tem o prefixo NEXT_PUBLIC_, entao o Next NAO a
+ * inlina no bundle do cliente -- do lado do navegador ela vale `undefined`, e
+ * o ramo acima nem a consulta. A chave nao vaza por este arquivo.
+ */
+export function cabecalhosDaApi(extras?: Record<string, string>): Record<string, string> {
+  const cabecalhos: Record<string, string> = { ...(extras ?? {}) };
+  if (noServidor() && process.env.FRAUS_CHAVE_ACESSO) {
+    cabecalhos["Authorization"] = `Bearer ${process.env.FRAUS_CHAVE_ACESSO}`;
+  }
+  return cabecalhos;
+}
 
 /**
  * SO o endereco exibido no exemplo de `curl` da tela de integracoes/ingestao
@@ -297,7 +337,10 @@ export type Resultado<T> =
   | { ok: false; erro: string };
 
 async function buscar<T>(rota: string): Promise<T> {
-  const resposta = await fetch(`${BASE}${rota}`, { cache: "no-store" });
+  const resposta = await fetch(urlDaApi(rota), {
+    cache: "no-store",
+    headers: cabecalhosDaApi(),
+  });
   if (!resposta.ok) throw new Error(`${rota} respondeu ${resposta.status}`);
   return (await resposta.json()) as T;
 }
@@ -314,9 +357,11 @@ async function escrever<T>(
   metodo: "POST" | "PUT" | "PATCH" | "DELETE",
   corpo?: unknown,
 ): Promise<T> {
-  const resposta = await fetch(`${BASE}${rota}`, {
+  const resposta = await fetch(urlDaApi(rota), {
     method: metodo,
-    headers: corpo === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: cabecalhosDaApi(
+      corpo === undefined ? undefined : { "Content-Type": "application/json" },
+    ),
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
     cache: "no-store",
   });
@@ -343,7 +388,7 @@ function mensagemDeErro(erro: unknown): string {
   if (erro instanceof Error) {
     // `fetch` recusado dá "fetch failed" — inútil para quem está na banca.
     if (/fetch failed|ECONNREFUSED/i.test(erro.message)) {
-      return `API não respondeu em ${BASE}`;
+      return `API não respondeu em ${urlDaApi("")}`;
     }
     return erro.message;
   }
@@ -394,15 +439,14 @@ export const obterLexicon = (
  * Roda o classificador numa frase avulsa. Nao persiste nada.
  *
  * Ao contrario das leituras, esta e uma chamada do NAVEGADOR (o simulador e
- * interativo), entao `BASE` precisa ser alcancavel do cliente -- por isso a
- * variavel de ambiente e `NEXT_PUBLIC_API_URL`.
+ * interativo): `urlDaApi` a manda para o proxy, que anexa a chave no servidor.
  */
 export async function simularTexto(texto: string): Promise<Resultado<Simulacao>> {
   return proteger(
     (async () => {
-      const resposta = await fetch(`${BASE}/modelo/simular`, {
+      const resposta = await fetch(urlDaApi("/modelo/simular"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: cabecalhosDaApi({ "Content-Type": "application/json" }),
         body: JSON.stringify({ texto }),
         cache: "no-store",
       });
@@ -638,8 +682,11 @@ export async function analisarUpload(
     (async () => {
       const corpo = new FormData();
       corpo.append("arquivo", arquivo);
-      const resposta = await fetch(`${BASE}/analisar/arquivo`, {
+      // Sem Content-Type a mao: o `fetch` precisa gerar o boundary do
+      // multipart, e fixa-lo aqui quebraria o parse do lado da API.
+      const resposta = await fetch(urlDaApi("/analisar/arquivo"), {
         method: "POST",
+        headers: cabecalhosDaApi(),
         body: corpo,
       });
       if (!resposta.ok) {
@@ -717,4 +764,9 @@ export async function obterDetalhes(
   return { detalhes, falhas };
 }
 
-export { BASE as ENDERECO_API };
+/**
+ * O endereco que a interface EXIBE como destino das chamadas do navegador
+ * (tooltip do indicador de saude). E o proxy, porque e para la que o navegador
+ * fala -- mostrar a URL interna da API confundiria e ainda a divulgaria.
+ */
+export const ENDERECO_API = PROXY;
