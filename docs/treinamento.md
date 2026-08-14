@@ -4,8 +4,8 @@
 |---|---|---|---|---|
 | 1 | `notebooks/01_treino_bertimbau.ipynb` | `modelos/bertimbau-satisfacao/` — classificador de texto (3 classes), fine-tune do `neuralmind/bert-base-portuguese-cased` sobre o B2W-Reviews01 | **sim** | pronto |
 | 2 | `notebooks/02_treino_fusor.ipynb` | `modelos/fusor.joblib` e `modelos/importancias.json` — a regressao logistica que funde os sinais | nao | pronto |
-| 3 | `notebooks/03_treino_emocao.ipynb` | `modelos/bertimbau-emocao/` — classificador das sete classes de emocao | **sim** | **a escrever** |
-| 4 | `notebooks/04_treino_ironia.ipynb` | `modelos/bertimbau-ironia/` — classificador binario de ironia | **sim** | **a escrever** |
+| 3 | `notebooks/03_treino_emocao.ipynb` | `modelos/bertimbau-emocao/` e `modelos/metricas_emocao.json` — classificador das sete classes de emocao | **sim** | pronto |
+| 4 | `notebooks/04_treino_ironia.ipynb` | `modelos/bertimbau-ironia/` e `modelos/metricas_ironia.json` — classificador binario de ironia | **sim** | pronto, **mas o corpus precisa ser solicitado** |
 
 O notebook 02 **depende do artefato do 01**: ele carrega o BERTimbau treinado para extrair o sinal de texto de cada conversa. A primeira celula do 02 falha com erro explicito se `modelos/bertimbau-satisfacao` nao estiver no Drive.
 
@@ -173,7 +173,9 @@ Hoje sao **16 features**, dos tres sinais originais. Os modulos dos sinais novos
 
 ## Notebook 03 — classificador de emocao
 
-**A escrever.** Requisito de banca: distinguir as **sete emocoes humanas**. A cabeca treinada tem sete classes, e a setima emocao e derivada — ver abaixo.
+Requisito de banca: distinguir as **sete emocoes humanas**. A cabeca treinada tem sete classes, e a setima emocao e derivada — ver abaixo.
+
+A ordem das classes **nao e redigitada no notebook**: ele importa `NOMES_EMOCOES` de `fraus.sinais.emocao`, a mesma lista que o sinal usa para ler as probabilidades. Redigitar seria o jeito mais facil de treinar `raiva` no indice 2 e le-la no indice 3.
 
 ### Ordem canonica das classes
 
@@ -193,7 +195,40 @@ Hoje sao **16 features**, dos tres sinais originais. Os modulos dos sinais novos
 
 Traducao PT-BR do GoEmotions (Demszky et al., 2020 — 58k comentarios do Reddit, 27 emocoes + neutro), com 43.410 exemplos de treino, 5.426 de validacao e 5.427 de teste. Licenca Apache 2.0. As 27 categorias sao reduzidas as seis de Ekman pelo **mapeamento oficial que o proprio GoEmotions publica** — nao por agrupamento inventado aqui.
 
+O arquivo vem no formato CRU do GoEmotions — **uma linha por anotador**, nao por exemplo. Um rotulo conta quando **pelo menos 2 anotadores** o marcaram (a maioria dos exemplos tem 3 anotadores, entao 2 e maioria simples), e exemplos que caem em mais de uma classe de Ekman sao descartados: a tarefa e multiclasse de rotulo unico, e forcar vencedor entre duas emocoes empatadas inventaria rotulo.
+
+O limiar mais alto rende MAIS exemplos, o que so parece contra-intuitivo ate ver o motivo — com 1 anotador quase todo exemplo recebe varios rotulos Ekman e cai fora do filtro de rotulo unico:
+
+| limiar | exemplos com rotulo unico |
+|---|---|
+| 1 anotador | 17.367 |
+| **2 anotadores** | **46.014** |
+
+### O desequilibrio, e por que NAO subamostrar
+
+Distribuicao medida com limiar 2:
+
+| classe | exemplos |
+|---|---|
+| alegria | 19.284 |
+| neutro | 13.603 |
+| raiva | 5.155 |
+| surpresa | 4.339 |
+| tristeza | 2.601 |
+| medo | 588 |
+| **nojo** | **444** |
+
+Sao **43:1** entre a maior e a menor. Os notebooks 01 e 02 balanceiam por subamostragem, mas aqui isso seria destrutivo: cortar tudo ao tamanho de `nojo` deixaria **3.108 exemplos** para sete classes, jogando fora 93% do corpus.
+
+**Escolha: pesos de classe na perda**, pela formula `n / (k * n_c)` — a mesma do `class_weight='balanced'` do scikit-learn. Os 46 mil exemplos ficam. Por isso a metrica de selecao do melhor checkpoint e o **F1-macro, nunca a acuracia**: com 43:1, um modelo que chutasse `alegria` sempre marcaria 42% sem ter aprendido nada.
+
+### O teto do desprezo — a declarar no relatorio
+
+`nojo` e a classe mais rara do corpus, e o **desprezo e derivado de raiva x nojo**. A qualidade do desprezo fica limitada de cima pela qualidade da pior classe do modelo: se o F1 de `nojo` sair baixo, o desprezo herda isso. O notebook imprime esse teto explicitamente e grava o F1 por classe em `metricas_emocao.json`, para o numero aparecer no relatorio em vez de ser descoberto pela banca.
+
 **Limitacao a declarar:** a traducao foi feita por maquina (Google Tradutor), sem revisao humana. Por isso a avaliacao reporta tambem o **XED-pt** (7.220 linhas, CC-BY, Plutchik 8 + neutro) como conjunto de teste independente, que nao passou por traducao automatica. O mapeamento Plutchik -> Ekman descarta *anticipation* e *trust*; o resto casa 1:1.
+
+Duas ressalvas sobre o XED-pt: ele e **portugues europeu** ("pa", "artola"), enquanto o treino e PT-BR — diferenca de variedade, nao so de dominio; e o numero dele vai sair **mais baixo** que o interno, o que e esperado e e justamente o ponto, porque e ele que responde "mas nao e so traducao automatica?".
 
 ### Por que o desprezo NAO e treinado
 
@@ -203,9 +238,19 @@ O desprezo e derivado da **diade primaria raiva + nojo**, que e como Plutchik (1
 
 ## Notebook 04 — classificador de ironia
 
-**A escrever.** Classificacao binaria: 0 nao-ironico, 1 ironico.
+Classificacao binaria: 0 nao-ironico, 1 ironico.
 
 **Corpus:** IDPT 2021, a tarefa de *Irony Detection in Portuguese* do IberLEF — 15,2k tweets e 18,4k noticias anotados.
+
+### O corpus NAO tem download aberto
+
+Diferente dos outros notebooks, o 04 **nao baixa o corpus sozinho**: o IDPT 2021 nao esta publicado para download livre — nao ha copia no GitHub nem no Hugging Face, e a pagina da tarefa nao expoe link direto. E preciso **solicitar aos organizadores** em <https://sites.google.com/inf.ufpel.edu.br/idpt2021/> e subir os arquivos para `/content/drive/MyDrive/fraus/dados/idpt2021/` no Drive. A primeira celula falha com erro explicito se a pasta nao existir.
+
+Como o notebook **nunca viu os arquivos**, a celula de carga tem esquema **configuravel**: ela le todo `.csv`/`.tsv` da pasta, imprime as colunas encontradas, tenta achar a de texto e a de rotulo pelos nomes mais provaveis e **para nomeando as colunas disponiveis** se nao achar. Rotulo fora do mapeamento tambem para com erro, em vez de virar 0 silenciosamente.
+
+**Se o corpus nao for liberado a tempo**, a saida honesta e declarar a ironia como trabalho futuro no relatorio. Trocar por um corpus de sarcasmo em ingles traduzido repetiria, com outro nome, o vazamento de procedencia que ja custou o primeiro fusor.
+
+A metrica de selecao do melhor checkpoint e o **F1 da classe ironica isolada**, nao a macro nem a acuracia: e essa classe que o sinal consome, e corpus de ironia costuma ser desequilibrado o bastante para um modelo que responde "nao e ironia" sempre marcar boa acuracia. O treino tambem usa pesos de classe, pelo mesmo motivo.
 
 **Por que uma cabeca separada** e nao mais uma classe do sinal de texto: ironia nao e um sentimento, e uma relacao entre o que o texto DIZ e o que ele SIGNIFICA. "Que atendimento maravilhoso, so esperei 3 horas" e lexicamente positivo e pragmaticamente negativo ao mesmo tempo. Como quarta classe de satisfacao, o modelo seria obrigado a escolher uma das duas leituras — e a informacao de que ha conflito, que e justamente o sinal de ironia, se perderia.
 

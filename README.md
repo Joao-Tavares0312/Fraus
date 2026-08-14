@@ -225,14 +225,21 @@ Para destravar: rodar `notebooks/01_treino_bertimbau.ipynb` e depois
 
 Requisito de banca ainda não entregue. Os módulos `fraus/sinais/emocao.py`,
 `fraus/sinais/lexico.py` e `fraus/sinais/ironia.py` existem e estão cobertos por
-testes, mas as duas cabeças precisam ser treinadas antes que suas features
-possam entrar no vetor do fusor — expandir `NOMES_FEATURES` antes disso
-quebraria o notebook 02 e a API sem nada em troca.
+testes, e os notebooks `03_treino_emocao.ipynb` e `04_treino_ironia.ipynb` estão
+escritos — falta **rodar**. As features só entram no vetor do fusor depois que os
+modelos existirem: expandir `NOMES_FEATURES` antes disso quebraria o notebook 02
+e a API sem nada em troca.
 
-Sequência: escrever e rodar `03_treino_emocao.ipynb` (corpus `go_emotions_ptbr`,
-validação no XED-pt) e `04_treino_ironia.ipynb` (IDPT 2021), subir o contrato de
-16 para 30 features e **retreinar o fusor**. Detalhes de corpus, rótulo e
-limitação em [docs/treinamento.md](docs/treinamento.md).
+**O notebook 03 roda hoje** — o `go_emotions_ptbr` é público. **O 04 depende de
+liberação:** o corpus IDPT 2021 não tem download aberto e precisa ser solicitado
+aos [organizadores](https://sites.google.com/inf.ufpel.edu.br/idpt2021/). Se não
+sair a tempo, a saída honesta é declarar a ironia como trabalho futuro — trocar
+por sarcasmo em inglês traduzido repetiria o vazamento de procedência que já
+custou o primeiro fusor.
+
+Depois dos dois: subir o contrato de 16 para 30 features e **retreinar o fusor**.
+Detalhes de corpus, rótulo e limitação em
+[docs/treinamento.md](docs/treinamento.md).
 
 ### 3. `GET /serie-temporal` — a dívida de escala
 
