@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS configuracoes (
 -- Fonte de onde conversa entra. `variavel_segredo` guarda o NOME da variavel
 -- de ambiente que carrega a credencial -- NUNCA o valor. Segredo em texto puro
 -- num SQLite de arquivo vaza junto com o backup.
+-- `chave_hash` guarda o SHA-256 da chave de API, nunca a chave. `chave_dica`
+-- sao os quatro ultimos caracteres, so para o operador reconhecer qual chave
+-- esta em uso. Ver fraus/credencial.py para o porque de cada escolha.
 CREATE TABLE IF NOT EXISTS fontes_integracao (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT NOT NULL,
@@ -38,7 +41,10 @@ CREATE TABLE IF NOT EXISTS fontes_integracao (
     tipo TEXT NOT NULL,
     variavel_segredo TEXT,
     ativa INTEGER NOT NULL DEFAULT 1,
-    criada_em TEXT NOT NULL
+    criada_em TEXT NOT NULL,
+    chave_hash TEXT,
+    chave_dica TEXT,
+    chave_criada_em TEXT
 );
 
 -- Historico de importacao: sem ele, "importado com sucesso" e alegacao sem
@@ -64,9 +70,25 @@ class Banco:
         conexao.row_factory = sqlite3.Row
         return conexao
 
+    # Colunas acrescentadas depois que a tabela ja existia em disco.
+    # `CREATE TABLE IF NOT EXISTS` cria o banco novo com elas e nao faz nada
+    # num banco antigo -- que continuaria sem as colunas e quebraria na leitura.
+    COLUNAS_ACRESCENTADAS = (
+        ("fontes_integracao", "chave_hash", "TEXT"),
+        ("fontes_integracao", "chave_dica", "TEXT"),
+        ("fontes_integracao", "chave_criada_em", "TEXT"),
+    )
+
     def migrar(self) -> None:
         with self._conectar() as conexao:
             conexao.executescript(ESQUEMA)
+            for tabela, coluna, tipo in self.COLUNAS_ACRESCENTADAS:
+                existentes = {
+                    linha["name"]
+                    for linha in conexao.execute(f"PRAGMA table_info({tabela})")
+                }
+                if coluna not in existentes:
+                    conexao.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
 
     def salvar(self, conversa: Conversa, score: float | None, categoria: str | None) -> None:
         with self._conectar() as conexao:
@@ -190,6 +212,48 @@ class Banco:
                 )
         return self.buscar_fonte(identificador)
 
+    def hash_da_chave_da_fonte(self, identificador: int) -> str | None:
+        """O unico caminho para ler o hash. Explicito no nome e de uso unico.
+
+        Existe separado de `buscar_fonte` para que o hash nunca viaje dentro do
+        dicionario que a API serializa -- ver `_fonte`.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT chave_hash FROM fontes_integracao WHERE id = ?", (identificador,)
+            ).fetchone()
+        return linha["chave_hash"] if linha is not None else None
+
+    def gravar_chave(
+        self, identificador: int, chave_hash: str, dica: str, criada_em: str
+    ) -> dict | None:
+        """Grava a chave nova SUBSTITUINDO a anterior.
+
+        Uma chave ativa por fonte, sempre. Duas chaves validas ao mesmo tempo
+        dariam a impressao de rotacao sem risco, mas a antiga continuaria
+        aceita e ninguem saberia quem ainda a usa -- gerar uma chave tem que
+        invalidar a de antes, para "gerei outra" significar de fato que a
+        anterior parou de funcionar.
+        """
+        with self._conectar() as conexao:
+            conexao.execute(
+                "UPDATE fontes_integracao "
+                "SET chave_hash = ?, chave_dica = ?, chave_criada_em = ? WHERE id = ?",
+                (chave_hash, dica, criada_em, identificador),
+            )
+        return self.buscar_fonte(identificador)
+
+    def revogar_chave(self, identificador: int) -> dict | None:
+        """Apaga a chave da fonte. A fonte e o historico dela continuam."""
+        with self._conectar() as conexao:
+            conexao.execute(
+                "UPDATE fontes_integracao "
+                "SET chave_hash = NULL, chave_dica = NULL, chave_criada_em = NULL "
+                "WHERE id = ?",
+                (identificador,),
+            )
+        return self.buscar_fonte(identificador)
+
     def apagar_fonte(self, identificador: int) -> bool:
         """Remove SO o cadastro da fonte. Nenhuma conversa e tocada aqui.
 
@@ -204,8 +268,21 @@ class Banco:
 
     @staticmethod
     def _fonte(linha: sqlite3.Row) -> dict:
+        """Fonte como ela pode circular. O HASH DA CHAVE NAO SAI POR AQUI.
+
+        O `chave_hash` e removido neste unico ponto, e nao na borda HTTP, de
+        proposito: `_fonte_publica` monta a resposta com `{**fonte}`, entao
+        qualquer coluna nova da tabela apareceria sozinha na API sem ninguem
+        decidir isso. Tirando o campo na origem, esquecer de esconder deixa de
+        ser possivel -- quem precisa dele chama `hash_da_chave_da_fonte`, que e
+        explicito no nome e no uso.
+
+        O hash nao e senha e nem por isso pode circular: ele e o suficiente
+        para confirmar um palpite de chave offline, sem nenhuma requisicao.
+        """
         registro = dict(linha)
         registro["ativa"] = bool(registro["ativa"])
+        registro.pop("chave_hash", None)
         return registro
 
     def registrar_importacao(

@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import {
+  BASE_DA_API,
   ajustarFonte,
   apagarFonte,
   criarFonte,
@@ -11,6 +12,7 @@ import {
   type FonteIntegracao,
   type TipoDeFonte,
 } from "@/lib/api";
+import { ChaveDaFonte } from "./ChaveDaFonte";
 import { formatarData } from "@/lib/formato";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -286,7 +288,7 @@ export function Fontes({
                 const emEdicao = renomeando === fonte.id;
                 const confirmando = confirmandoRemocao === fonte.id;
 
-                return (
+                return [
                   <TableRow key={fonte.id}>
                     <TableCell className="min-w-56 align-top">
                       {emEdicao ? (
@@ -461,8 +463,17 @@ export function Fontes({
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                );
+                  </TableRow>,
+                  /* A chave ocupa a largura inteira numa linha propria: ela
+                     carrega um segredo longo e um exemplo de `curl`, e
+                     espremer isso numa celula de tabela deixaria a coisa mais
+                     importante da tela ilegivel. */
+                  <TableRow key={`${fonte.id}-chave`} className="border-b-0">
+                    <TableCell colSpan={6} className="pt-0">
+                      <ChaveDaFonte fonte={fonte} base={BASE_DA_API} />
+                    </TableCell>
+                  </TableRow>,
+                ];
               })}
             </TableBody>
           </Table>

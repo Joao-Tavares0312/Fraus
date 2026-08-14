@@ -12,6 +12,15 @@
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/**
+ * A base publicada, para a tela montar o exemplo de `curl` da ingestao.
+ *
+ * Exportada em vez de repetida: um endereco fixo escrito a mao no exemplo
+ * ficaria errado no dia em que a API mudasse de porta, e o integrador copiaria
+ * um comando que nao funciona sem ter como desconfiar.
+ */
+export const BASE_DA_API = BASE;
+
 export type Categoria = "detrator" | "neutro" | "promotor";
 
 export type Indicadores = {
@@ -214,6 +223,14 @@ export type FonteIntegracao = {
   ativa: boolean;
   criada_em: string;
   /**
+   * Os quatro ultimos caracteres da chave em uso, ou `null` se a fonte ainda
+   * nao tem chave. Serve para o operador reconhecer QUAL chave esta valendo
+   * ("termina em 3f9a") sem que o pedaco exibido ajude a adivinhar o resto.
+   * O hash da chave nunca sai da API.
+   */
+  chave_dica: string | null;
+  chave_criada_em: string | null;
+  /**
    * Se a variavel nomeada acima EXISTE no ambiente da API, verificado na
    * leitura. `false` nao diz que o segredo esta errado: diz que a variavel
    * nao esta definida onde a API roda.
@@ -405,6 +422,33 @@ export const ajustarFonte = (
 /** Remove o CADASTRO da fonte. Nenhum atendimento e apagado junto. */
 export const apagarFonte = (id: number) =>
   proteger(escrever<void>(`/integracoes/fontes/${id}`, "DELETE"));
+
+export type ChaveGerada = {
+  fonte: FonteIntegracao;
+  /**
+   * A chave EM CLARO. Este e o unico lugar em toda a API onde ela existe, e
+   * so nesta resposta: o servidor guarda apenas o hash e nao ha rota para
+   * reler. A tela precisa mostra-la agora ou ela se perde.
+   *
+   * NUNCA guardar isto em localStorage, sessionStorage ou URL -- ela morre
+   * junto com o estado do componente, de proposito.
+   */
+  chave: string;
+  aviso: string;
+};
+
+/**
+ * Gera a chave de API da fonte, SUBSTITUINDO a anterior.
+ *
+ * Duas chaves validas ao mesmo tempo pareceriam rotacao sem risco, mas a
+ * antiga seguiria aceita sem ninguem saber quem ainda a usa.
+ */
+export const gerarChave = (id: number) =>
+  proteger(escrever<ChaveGerada>(`/integracoes/fontes/${id}/chave`, "POST"));
+
+/** Invalida a chave. A fonte e os atendimentos dela continuam. */
+export const revogarChave = (id: number) =>
+  proteger(escrever<void>(`/integracoes/fontes/${id}/chave`, "DELETE"));
 
 export type TipoDeFonte = { valor: string; rotulo: string; ajuda: string };
 

@@ -23,15 +23,17 @@ import os
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
+from fraus import credencial
 from fraus.configuracao import PADROES as CONFIGURACAO_DE_FABRICA
 from fraus.configuracao import carregar as carregar_configuracao
 from fraus.configuracao import faixas_de
 from fraus.configuracao import salvar as salvar_configuracao
 from fraus.db import Banco
+from fraus.modelos import Conversa, Mensagem
 from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, nota_0_10, serie_diaria)
@@ -145,6 +147,20 @@ class PedidoSimulacao(BaseModel):
 
 class PedidoAnalise(BaseModel):
     csv: str  # conteudo do arquivo; veredito continua sendo derivado aqui
+
+
+class PedidoIngestao(BaseModel):
+    """Atendimento vindo de um sistema externo.
+
+    NAO ha campo de canal, score, nota nem categoria. O canal vem da FONTE
+    cadastrada e o veredito e derivado no servidor -- quem manda o dado nunca
+    escolhe como ele e contabilizado.
+    """
+
+    id: str
+    mensagens: list[Mensagem] = Field(min_length=1)
+    encerrada_em: datetime | None = None
+    escalou_para_humano: bool = False
 
 
 class Motor:
@@ -369,6 +385,54 @@ def _metricas_de(caminho: Path) -> dict | None:
     if not caminho.is_file():
         return None
     return json.loads(caminho.read_text(encoding="utf-8"))
+
+
+def _chave_do_cabecalho(authorization: str | None) -> str:
+    """Extrai a chave do `Authorization: Bearer ...`, recusando o resto.
+
+    401 sem `WWW-Authenticate` seria resposta incompleta: o cabecalho e o que
+    diz ao cliente COMO se autenticar, e sem ele o integrador so sabe que
+    falhou.
+    """
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="informe a chave da fonte em Authorization: Bearer <chave>",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return authorization[len("bearer "):].strip()
+
+
+def _fonte_autorizada(banco: Banco, chave: str) -> dict:
+    """Fonte a que a chave pertence, ou 401/403.
+
+    A MENSAGEM E A MESMA para chave malformada, fonte inexistente e hash que
+    nao bate. Distinguir os tres contaria a quem tenta se aquele id de fonte
+    existe -- e a conferencia do hash roda mesmo quando a fonte nao foi achada,
+    para o tempo de resposta tambem nao contar.
+
+    Fonte desativada e caso separado (403, nao 401): a chave esta certa, o que
+    esta desligado e a fonte. Recusar como "chave invalida" mandaria o
+    integrador procurar problema onde nao ha.
+    """
+    negada = HTTPException(
+        status_code=401,
+        detail="chave invalida",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    fonte_id = credencial.fonte_da_chave(chave)
+    fonte = banco.buscar_fonte(fonte_id) if fonte_id is not None else None
+    guardado = banco.hash_da_chave_da_fonte(fonte_id) if fonte_id is not None else None
+
+    if not credencial.confere(chave, guardado) or fonte is None:
+        raise negada
+    if not fonte["ativa"]:
+        raise HTTPException(
+            status_code=403,
+            detail=f"a fonte '{fonte['nome']}' esta desativada",
+        )
+    return fonte
 
 
 def _fonte_publica(fonte: dict) -> dict:
@@ -672,6 +736,86 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         """
         if not banco.apagar_fonte(fonte_id):
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
+
+    @app.post("/integracoes/fontes/{fonte_id}/chave", status_code=201)
+    def gerar_chave(fonte_id: int) -> dict:
+        """Gera a chave de API da fonte e a devolve EM CLARO uma unica vez.
+
+        Nao ha rota para reler a chave depois, e isso e a feature: o banco
+        guarda so o hash, entao um `fraus.db` vazado num backup nao leva
+        credencial junto. Perder a chave custa gerar outra.
+
+        Gerar substitui a anterior. Duas chaves validas ao mesmo tempo pareceria
+        rotacao sem risco, mas a antiga seguiria aceita sem ninguem saber quem
+        ainda a usa.
+        """
+        if banco.buscar_fonte(fonte_id) is None:
+            raise HTTPException(status_code=404, detail="fonte nao encontrada")
+
+        chave, chave_hash = credencial.gerar(fonte_id)
+        fonte = banco.gravar_chave(
+            fonte_id,
+            chave_hash=chave_hash,
+            dica=credencial.dica(chave),
+            criada_em=datetime.now(timezone.utc).isoformat(),
+        )
+        return {
+            "fonte": _fonte_publica(fonte),
+            # Unica vez que este campo existe em qualquer resposta da API.
+            "chave": chave,
+            "aviso": (
+                "Guarde agora: esta chave nao pode ser lida de novo. "
+                "O servidor guarda apenas o hash dela."
+            ),
+        }
+
+    @app.delete("/integracoes/fontes/{fonte_id}/chave", status_code=204)
+    def revogar_chave(fonte_id: int) -> None:
+        """Invalida a chave da fonte. A fonte e as conversas dela continuam."""
+        if banco.buscar_fonte(fonte_id) is None:
+            raise HTTPException(status_code=404, detail="fonte nao encontrada")
+        banco.revogar_chave(fonte_id)
+
+    @app.post("/ingestao", status_code=201)
+    def ingerir(pedido: PedidoIngestao, authorization: str | None = Header(default=None)) -> dict:
+        """Recebe atendimento de um sistema EXTERNO, autenticado por chave.
+
+        E o unico caminho de escrita que nao exige acesso ao disco da maquina:
+        a importacao le arquivo de uma pasta local, e isto aqui aceita a
+        conversa pela rede.
+
+        O CANAL e o da FONTE cadastrada, nao o que veio no corpo: quem manda o
+        dado nao escolhe em que canal ele e contabilizado, do mesmo jeito que
+        nao escolhe o proprio score. Fonte desativada recusa -- o interruptor
+        da tela de Integracoes precisa de fato desligar alguma coisa.
+
+        Score e categoria sao derivados aqui, como em toda entrada.
+        """
+        chave = _chave_do_cabecalho(authorization)
+        fonte = _fonte_autorizada(banco, chave)
+
+        try:
+            conversa = Conversa(
+                id=pedido.id,
+                canal=fonte["canal"],
+                iniciada_em=pedido.mensagens[0].enviada_em,
+                encerrada_em=pedido.encerrada_em,
+                escalou_para_humano=pedido.escalou_para_humano,
+                mensagens=sorted(pedido.mensagens, key=lambda m: m.enviada_em),
+            )
+        except ValidationError as erro:
+            raise HTTPException(status_code=400, detail=str(erro)) from erro
+
+        score = motor.pontuar_conversa(conversa)
+        banco.salvar(conversa, score, categoria_de(score, faixas_vigentes()))
+        return {
+            "id": conversa.id,
+            "canal": conversa.canal,
+            "score": score,
+            "nota": nota_0_10(score) if score is not None else None,
+            "categoria": categoria_de(score, faixas_vigentes()),
+            "fonte": fonte["nome"],
+        }
 
     @app.get("/integracoes/tipos")
     def tipos_de_fonte() -> list[dict]:
