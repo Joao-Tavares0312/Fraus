@@ -231,12 +231,20 @@ escritos — falta **rodar**. As features só entram no vetor do fusor depois qu
 modelos existirem: expandir `NOMES_FEATURES` antes disso quebraria o notebook 02
 e a API sem nada em troca.
 
-**O notebook 03 roda hoje** — o `go_emotions_ptbr` é público. **O 04 depende de
-liberação:** o corpus IDPT 2021 não tem download aberto e precisa ser solicitado
-aos [organizadores](https://sites.google.com/inf.ufpel.edu.br/idpt2021/). Se não
-sair a tempo, a saída honesta é declarar a ironia como trabalho futuro — trocar
-por sarcasmo em inglês traduzido repetiria o vazamento de procedência que já
-custou o primeiro fusor.
+**O notebook 03 roda hoje** — o `go_emotions_ptbr` é público. **O 04 depende do
+corpus:** o IDPT 2021 não tem download aberto e precisa ser solicitado aos
+[organizadores](https://sites.google.com/inf.ufpel.edu.br/idpt2021/).
+
+O notebook aceita três origens (`ORIGEM` = `drive` | `kaggle` | `upload`), todas
+alimentando a mesma detecção de esquema. O levantamento de alternativas está em
+[docs/treinamento.md](docs/treinamento.md#alternativas-ao-idpt--levantamento-de-14082026):
+não existe corpus de ironia PT-BR aberto, com texto e em tamanho treinável que
+tenha sido verificado — o único candidato é rotulado por **hashtag**, com rótulo
+auto-atribuído pelo autor, e isso precisa ser declarado.
+
+Se nada fechar, a saída honesta é declarar a ironia como trabalho futuro —
+trocar por sarcasmo em inglês traduzido repetiria o vazamento de procedência que
+já custou o primeiro fusor.
 
 Depois dos dois: subir o contrato de 16 para 30 features e **retreinar o fusor**.
 Detalhes de corpus, rótulo e limitação em

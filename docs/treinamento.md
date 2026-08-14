@@ -244,7 +244,30 @@ Classificacao binaria: 0 nao-ironico, 1 ironico.
 
 ### O corpus NAO tem download aberto
 
-Diferente dos outros notebooks, o 04 **nao baixa o corpus sozinho**: o IDPT 2021 nao esta publicado para download livre — nao ha copia no GitHub nem no Hugging Face, e a pagina da tarefa nao expoe link direto. E preciso **solicitar aos organizadores** em <https://sites.google.com/inf.ufpel.edu.br/idpt2021/> e subir os arquivos para `/content/drive/MyDrive/fraus/dados/idpt2021/` no Drive. A primeira celula falha com erro explicito se a pasta nao existir.
+Diferente dos outros notebooks, o 04 **nao baixa o corpus sozinho**: o IDPT 2021 nao esta publicado para download livre — nao ha copia no GitHub nem no Hugging Face, e a pagina da tarefa nao expoe link direto. E preciso **solicitar aos organizadores** em <https://sites.google.com/inf.ufpel.edu.br/idpt2021/>.
+
+O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM` da celula 3. Todas alimentam a mesma pasta e a mesma deteccao de esquema, entao trocar de fonte nao muda o resto do notebook:
+
+| `ORIGEM` | Quando usar |
+|---|---|
+| `drive` | os arquivos ja estao em `DIR_CORPUS` — foi assim que o IDPT entrou, se liberado |
+| `kaggle` | baixa um corpus de tweets rotulados por hashtag; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
+| `upload` | seletor de arquivos do navegador, para corpus que chegou por e-mail |
+
+### Alternativas ao IDPT — levantamento de 14/08/2026
+
+Registrado para ninguem repetir a busca. O que **nao serve**, e por que:
+
+| Fonte | Veredito |
+|---|---|
+| `arbml/multilingual_irony` (HF) | so `tweet_id` + `label`, **sem texto**; reidratar exige API paga do Twitter |
+| `ramondomiingos/ptbr-irony-idioms-regionalism` (HF) | < 1.000 linhas, e e *benchmark de LLM* com gabarito em prosa — nao e corpus de classificacao |
+| `rafaelanchieta/PiLN` (GitHub) | sao os **modelos** treinados do IDPT, nao o corpus; embeddings dependem de servidor antigo do NILC |
+| IroSvA / SemEval-2018 traduzidos | **desaconselhado**: traducao automatica reintroduz o vazamento de procedencia que ja custou o primeiro fusor |
+
+O unico candidato aberto e um corpus de tweets rotulados por **hashtag** (`#ironia`/`#sarcasmo`) no Kaggle. **Esquema e licenca nao foram verificados** — a pagina exige login, e a verificacao so e possivel de dentro do Colab. Confira os dois antes de citar no relatorio.
+
+O preco dessa fonte e metodologico e **precisa ser declarado**: o rotulo e auto-atribuido pelo autor do tweet, nao anotado por terceiro. Ha ironia sem hashtag e hashtag sem ironia. E limitacao citavel, na mesma prateleira da traducao automatica do corpus de emocao — nao um defeito escondido. Por isso o `metricas_ironia.json` grava a **procedencia derivada de `ORIGEM`**, nunca `IDPT 2021` fixo: artefato que mente sobre a propria fonte e pior que artefato ausente.
 
 Como o notebook **nunca viu os arquivos**, a celula de carga tem esquema **configuravel**: ela le todo `.csv`/`.tsv` da pasta, imprime as colunas encontradas, tenta achar a de texto e a de rotulo pelos nomes mais provaveis e **para nomeando as colunas disponiveis** se nao achar. Rotulo fora do mapeamento tambem para com erro, em vez de virar 0 silenciosamente.
 
