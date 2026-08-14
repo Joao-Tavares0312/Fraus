@@ -515,6 +515,60 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         if not banco.apagar_fonte(fonte_id):
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
+    @app.get("/integracoes/tipos")
+    def tipos_de_fonte() -> list[dict]:
+        """Os tipos que a ingestao sabe tratar HOJE.
+
+        Existe para a interface parar de manter a propria copia da lista. Ela
+        mantinha, e a copia so ficaria errada no dia em que um tipo novo
+        entrasse aqui: o formulario seguiria oferecendo dois, e o terceiro
+        existiria na API sem existir na tela -- divergencia que nao levanta
+        erro nenhum, so some da vista.
+        """
+        return [
+            {
+                "valor": "csv",
+                "rotulo": "CSV",
+                "ajuda": "arquivo importado por POST /conversas/importar",
+            },
+            {
+                "valor": "webhook",
+                "rotulo": "Webhook",
+                "ajuda": "recebe eventos da plataforma",
+            },
+        ]
+
+    @app.get("/integracoes/arquivos")
+    def arquivos_importaveis() -> dict:
+        """Os CSV disponiveis na raiz de importacao.
+
+        A rota de importacao aceita um caminho RELATIVO a raiz e recusa
+        qualquer escape. Sem esta listagem, quem opera precisava adivinhar o
+        nome do arquivo ou sair da interface para olhar a pasta -- e digitar
+        nome de arquivo de memoria e como um caminho errado vira "arquivo nao
+        encontrado" sem ninguem entender por que.
+
+        Devolve NOME e tamanho, nunca caminho absoluto: o cliente nao precisa
+        saber onde a pasta fica no disco, e a resposta nao vaza a arvore da
+        maquina. A busca desce em subpastas porque a raiz pode ser organizada
+        por mes ou canal.
+        """
+        raiz_resolvida = raiz.resolve()
+        if not raiz_resolvida.is_dir():
+            return {"raiz": raiz_resolvida.name, "arquivos": []}
+
+        arquivos = []
+        for caminho in sorted(raiz_resolvida.rglob("*.csv")):
+            if not caminho.is_file():
+                continue
+            arquivos.append(
+                {
+                    "caminho": caminho.relative_to(raiz_resolvida).as_posix(),
+                    "bytes": caminho.stat().st_size,
+                }
+            )
+        return {"raiz": raiz_resolvida.name, "arquivos": arquivos}
+
     @app.get("/integracoes/importacoes")
     def listar_importacoes() -> list[dict]:
         """Historico de importacao, mais recente primeiro.

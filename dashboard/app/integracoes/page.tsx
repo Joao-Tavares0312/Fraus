@@ -13,11 +13,17 @@
  * =============================================================================
  */
 
-import { listarFontes, listarImportacoes } from "@/lib/api";
+import {
+  listarArquivosImportaveis,
+  listarFontes,
+  listarTiposDeFonte,
+  listarImportacoes,
+} from "@/lib/api";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
 import { Fontes } from "@/components/integracoes/Fontes";
+import { Importar } from "@/components/integracoes/Importar";
 import { HistoricoImportacoes } from "@/components/integracoes/HistoricoImportacoes";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +31,11 @@ export const dynamic = "force-dynamic";
 export default async function PaginaIntegracoes() {
   // As duas leituras são independentes de propósito: se o histórico cair, o
   // cadastro de fontes continua de pé, e vice-versa.
-  const [fontes, importacoes] = await Promise.all([
+  const [fontes, importacoes, importaveis, tipos] = await Promise.all([
     listarFontes(),
     listarImportacoes(),
+    listarArquivosImportaveis(),
+    listarTiposDeFonte(),
   ]);
 
   return (
@@ -38,6 +46,30 @@ export default async function PaginaIntegracoes() {
       />
 
       <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+        {/* A IMPORTACAO vem primeiro: e a acao da tela. Cadastro de fonte e
+            historico descrevem e comprovam; so este bloco traz atendimento
+            para dentro do produto. */}
+        <Painel
+          titulo="Importar atendimentos"
+          legenda="A rota aceita apenas caminho relativo à raiz de importação, e recusa com 400 qualquer caminho que escape dela — inclusive caminho absoluto e `../..`. Por isso a escolha é por lista: a interface devolve ao servidor exatamente a string que ele publicou, sem montar caminho a mão."
+          semPadding
+          rodape="Não há upload por aqui de propósito. Subir arquivo abriria uma superfície de escrita numa API sem autenticação; colocar o CSV na pasta é trabalho de quem opera a máquina."
+        >
+          {importaveis.ok ? (
+            <Importar
+              raiz={importaveis.dado.raiz}
+              iniciais={importaveis.dado.arquivos}
+            />
+          ) : (
+            <EstadoVazio
+              className="m-5"
+              titulo="Não foi possível ler a pasta de importação"
+              explicacao={importaveis.erro}
+              endpoint="GET /integracoes/arquivos"
+            />
+          )}
+        </Painel>
+
         <Painel
           titulo="Fontes"
           legenda="Cada fonte registra por onde a conversa entra. O segredo não mora aqui: o que se guarda é o nome da variável de ambiente que a API lê na máquina onde ela roda."
@@ -45,7 +77,10 @@ export default async function PaginaIntegracoes() {
           rodape="“Variável definida” responde apenas se a variável existe no ambiente da API, verificado a cada leitura — não se o valor dela está correto. O valor nunca sai da API, nem mascarado: máscara vaza tamanho e prefixo por um caminho mais lento."
         >
           {fontes.ok ? (
-            <Fontes iniciais={fontes.dado} />
+            <Fontes
+              iniciais={fontes.dado}
+              tipos={tipos.ok ? tipos.dado : []}
+            />
           ) : (
             <EstadoVazio
               className="m-5"

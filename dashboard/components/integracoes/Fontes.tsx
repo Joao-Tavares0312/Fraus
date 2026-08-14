@@ -9,6 +9,7 @@ import {
   criarFonte,
   listarFontes,
   type FonteIntegracao,
+  type TipoDeFonte,
 } from "@/lib/api";
 import { formatarData } from "@/lib/formato";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -33,19 +34,25 @@ import {
 } from "@/components/ui/table";
 import { EstadoVazio } from "@/components/EstadoVazio";
 
-/**
- * Os tipos que a ingestao de fato sabe tratar hoje, iguais a `TIPOS_DE_FONTE`
- * do servidor. Cadastrar um tipo que nenhum adapter le seria cadastrar uma
- * promessa -- a fonte apareceria na tela sem nunca trazer conversa nenhuma.
+/*
+ * A lista de tipos VEM DO SERVIDOR (`GET /integracoes/tipos`), passada como
+ * prop. Ela morava aqui, duplicada de `TIPOS_DE_FONTE`, e duplicata assim so
+ * fica errada no dia em que um tipo novo entrar na API: o formulario seguiria
+ * oferecendo os dois antigos, sem erro nenhum -- o terceiro existiria no
+ * servidor e nao existiria na tela. Cadastrar um tipo que nenhum adapter le
+ * seria cadastrar uma promessa.
  */
-const TIPOS = [
-  { valor: "csv", rotulo: "CSV", ajuda: "arquivo importado por /conversas/importar" },
-  { valor: "webhook", rotulo: "Webhook", ajuda: "recebe eventos da plataforma" },
-] as const;
 
 const NOVA_VAZIA = { nome: "", canal: "", tipo: "csv", variavel_segredo: "" };
 
-export function Fontes({ iniciais }: { iniciais: FonteIntegracao[] }) {
+export function Fontes({
+  iniciais,
+  tipos: TIPOS,
+}: {
+  iniciais: FonteIntegracao[];
+  /** Publicados por `GET /integracoes/tipos` — nunca digitados aqui. */
+  tipos: TipoDeFonte[];
+}) {
   const router = useRouter();
   const identificador = useId();
   const [fontes, setFontes] = useState(iniciais);

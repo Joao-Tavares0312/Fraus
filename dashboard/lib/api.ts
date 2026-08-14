@@ -358,6 +358,45 @@ export const ajustarFonte = (
 export const apagarFonte = (id: number) =>
   proteger(escrever<void>(`/integracoes/fontes/${id}`, "DELETE"));
 
+export type TipoDeFonte = { valor: string; rotulo: string; ajuda: string };
+
+/**
+ * Os tipos que a ingestao sabe tratar.
+ *
+ * Lidos da API de proposito: a tela mantinha a propria copia da lista, e copia
+ * so fica errada no dia em que um tipo novo entra no servidor -- o formulario
+ * seguiria oferecendo os antigos, sem erro nenhum, so sumindo da vista.
+ */
+export const listarTiposDeFonte = () =>
+  proteger(buscar<TipoDeFonte[]>("/integracoes/tipos"));
+
+export type ArquivoImportavel = { caminho: string; bytes: number };
+
+/** Os CSV disponiveis na raiz de importacao, com caminho relativo a ela. */
+export const listarArquivosImportaveis = () =>
+  proteger(
+    buscar<{ raiz: string; arquivos: ArquivoImportavel[] }>(
+      "/integracoes/arquivos",
+    ),
+  );
+
+export type ResultadoImportacao = {
+  importadas: number;
+  rejeitadas: number;
+  motivos: { linha: number; motivo: string }[];
+};
+
+/**
+ * Importa um CSV da raiz. O `caminho` e o que a listagem devolveu, sem ajuste.
+ *
+ * O servidor recusa qualquer caminho que escape da raiz; a interface nunca
+ * monta caminho a mao nem oferece campo livre para isso.
+ */
+export const importarArquivo = (caminho: string) =>
+  proteger(
+    escrever<ResultadoImportacao>("/conversas/importar", "POST", { caminho }),
+  );
+
 export const listarImportacoes = () =>
   proteger(buscar<Importacao[]>("/integracoes/importacoes"));
 

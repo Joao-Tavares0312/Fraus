@@ -818,3 +818,64 @@ def test_serie_respeita_a_faixa_configurada(cliente, tmp_path):
     })
     assert resposta.status_code == 200
     assert cliente.get("/serie-temporal").json()["pontos"][0]["nps"] == 0.0
+
+
+# --- GET /integracoes/tipos e /integracoes/arquivos -------------------------
+
+
+def test_tipos_de_fonte_sao_os_mesmos_que_o_post_aceita(cliente):
+    """A lista publicada e a lista validada: se divergirem, o formulario
+    oferece um tipo que a criacao recusa."""
+    from fraus.api.main import TIPOS_DE_FONTE
+
+    publicados = {t["valor"] for t in cliente.get("/integracoes/tipos").json()}
+    assert publicados == set(TIPOS_DE_FONTE)
+
+
+def test_cada_tipo_publicado_e_de_fato_aceito_na_criacao(cliente):
+    for tipo in cliente.get("/integracoes/tipos").json():
+        resposta = cliente.post(
+            "/integracoes/fontes",
+            json={"nome": f"fonte {tipo['valor']}", "canal": "webchat", "tipo": tipo["valor"]},
+        )
+        assert resposta.status_code == 201, resposta.json()
+
+
+def test_arquivos_lista_csv_da_raiz_com_caminho_relativo(cliente, tmp_path):
+    (tmp_path / "agosto").mkdir()
+    (tmp_path / "raiz.csv").write_text(CSV, encoding="utf-8")
+    (tmp_path / "agosto" / "semana1.csv").write_text(CSV, encoding="utf-8")
+
+    corpo = cliente.get("/integracoes/arquivos").json()
+    caminhos = {a["caminho"] for a in corpo["arquivos"]}
+    assert caminhos == {"raiz.csv", "agosto/semana1.csv"}
+
+
+def test_arquivos_nao_vaza_caminho_absoluto(cliente, tmp_path):
+    """Quem opera nao precisa saber onde a pasta fica no disco, e a resposta
+    nao deve descrever a arvore da maquina."""
+    (tmp_path / "entrada.csv").write_text(CSV, encoding="utf-8")
+    corpo = cliente.get("/integracoes/arquivos").json()
+    for arquivo in corpo["arquivos"]:
+        assert not arquivo["caminho"].startswith("/")
+        assert ":" not in arquivo["caminho"]  # C:\ do Windows
+        assert str(tmp_path) not in arquivo["caminho"]
+
+
+def test_arquivo_listado_pode_ser_importado_direto(cliente, tmp_path):
+    """O contrato entre as duas rotas: o que a listagem devolve serve, sem
+    ajuste, como `caminho` da importacao."""
+    (tmp_path / "agosto").mkdir()
+    (tmp_path / "agosto" / "lote.csv").write_text(CSV, encoding="utf-8")
+
+    (arquivo,) = cliente.get("/integracoes/arquivos").json()["arquivos"]
+    resposta = cliente.post(
+        "/conversas/importar", json={"caminho": arquivo["caminho"]}
+    )
+    assert resposta.status_code == 200
+    assert resposta.json()["importadas"] == 1
+
+
+def test_raiz_sem_csv_devolve_lista_vazia_e_nao_erro(cliente):
+    corpo = cliente.get("/integracoes/arquivos").json()
+    assert corpo["arquivos"] == []
