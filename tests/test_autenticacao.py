@@ -167,3 +167,51 @@ def test_listagem_nunca_expoe_hash(tmp_path):
     for item in resposta.json():
         assert "chave_hash" not in item
         assert "chave" not in item
+
+
+def test_esquema_bearer_e_case_insensitive(tmp_path):
+    """RFC 7235: o esquema de autenticacao nao distingue caixa.
+
+    O middleware ja aceitava so `Bearer ` exato, enquanto a ingestao (que usa
+    `_chave_do_cabecalho`) normalizava -- cliente HTTP que escreve `bearer`
+    passava numa rota e levava 401 na outra.
+    """
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    for esquema in ("Bearer", "bearer", "BEARER", "BeArEr"):
+        resposta = cliente.get(
+            "/conversas", headers={"Authorization": f"{esquema} {MESTRA}"}
+        )
+        assert resposta.status_code == 200, esquema
+
+
+def test_ingestao_com_barra_final_segue_isenta_do_middleware(tmp_path):
+    """`/ingestao/` e a mesma rota: a isencao compara o path sem a barra.
+
+    Integrador que configurou a URL com barra final caia no 401 do middleware
+    (que compara path exato) em vez de ser regido pela chave de FONTE.
+    """
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    mestra = {"Authorization": f"Bearer {MESTRA}"}
+    fonte = _criar_fonte(cliente, mestra)
+    chave_da_fonte = cliente.post(
+        f"/integracoes/fontes/{fonte['id']}/chave", headers=mestra
+    ).json()["chave"]
+
+    pedido = {
+        "id": "abc-barra",
+        "mensagens": [
+            {
+                "autor": "cliente",
+                "texto": "obrigado",
+                "enviada_em": "2026-08-14T12:00:00+00:00",
+            }
+        ],
+    }
+    resposta = cliente.post(
+        "/ingestao/", json=pedido,
+        headers={"Authorization": f"Bearer {chave_da_fonte}"},
+        follow_redirects=False,
+    )
+    # 307 e o redirect do proprio Starlette para /ingestao -- o que importa e
+    # nao ter sido barrado pelo middleware com 401.
+    assert resposta.status_code in (201, 307)

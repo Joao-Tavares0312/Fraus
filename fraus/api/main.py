@@ -396,6 +396,22 @@ def _metricas_de(caminho: Path) -> dict | None:
     return json.loads(caminho.read_text(encoding="utf-8"))
 
 
+def _chave_bearer(authorization: str | None) -> str | None:
+    """A chave de um `Authorization: Bearer ...`, ou None se nao for um.
+
+    O esquema e comparado SEM caixa porque a RFC 7235 o define assim -- cliente
+    que manda `bearer` esta correto. Esta e a UNICA normalizacao do cabecalho
+    no modulo: o middleware de chave de acesso e as rotas de fonte chamam daqui
+    para nao divergirem (ja divergiram: um exigia `Bearer ` exato).
+    """
+    if not authorization:
+        return None
+    esquema, _, resto = authorization.partition(" ")
+    if esquema.lower() != "bearer":
+        return None
+    return resto.strip()
+
+
 def _chave_do_cabecalho(authorization: str | None) -> str:
     """Extrai a chave do `Authorization: Bearer ...`, recusando o resto.
 
@@ -403,13 +419,14 @@ def _chave_do_cabecalho(authorization: str | None) -> str:
     diz ao cliente COMO se autenticar, e sem ele o integrador so sabe que
     falhou.
     """
-    if not authorization or not authorization.lower().startswith("bearer "):
+    chave = _chave_bearer(authorization)
+    if chave is None:
         raise HTTPException(
             status_code=401,
             detail="informe a chave da fonte em Authorization: Bearer <chave>",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return authorization[len("bearer "):].strip()
+    return chave
 
 
 def _fonte_autorizada(banco: Banco, chave: str) -> dict:
@@ -506,10 +523,15 @@ def criar_app(
             # /ingestao tem credencial propria (chave de FONTE): uma credencial
             # por rota. OPTIONS e o preflight do navegador -- nao carrega
             # header de autorizacao por definicao.
-            if request.url.path == "/ingestao" or request.method == "OPTIONS":
+            # `rstrip("/")`: `/ingestao/` e a MESMA rota (o Starlette redireciona
+            # para ela), e comparar o path exato mandava o integrador que
+            # configurou a URL com barra final para o 401 daqui em vez da
+            # credencial de fonte.
+            if request.url.path.rstrip("/") == "/ingestao" or request.method == "OPTIONS":
                 return await call_next(request)
             cabecalho = request.headers.get("authorization")
-            if not cabecalho or not cabecalho.startswith("Bearer "):
+            chave_recebida = _chave_bearer(cabecalho)
+            if chave_recebida is None:
                 return JSONResponse(
                     status_code=401,
                     content={"detail": (
@@ -517,7 +539,7 @@ def criar_app(
                     )},
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            if not _acesso_autorizado(cabecalho[len("Bearer "):]):
+            if not _acesso_autorizado(chave_recebida):
                 return JSONResponse(
                     status_code=401,
                     content={"detail": "chave invalida"},
