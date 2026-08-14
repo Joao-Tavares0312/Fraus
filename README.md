@@ -119,6 +119,7 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
+| `FRAUS_CHAVE_MESTRA` | (nenhum) | ausente: API aberta (uso local), com aviso no boot. Presente: toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao`, que segue exigindo chave de fonte |
 
 Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
 caminho relativo a ela:
@@ -143,26 +144,42 @@ npm run dev      # http://localhost:3000
 npm run build    # build de produção
 ```
 
-A dashboard fala com a API pelo endereço de `NEXT_PUBLIC_API_URL`
-(padrão `http://localhost:8000`):
+A dashboard não fala com a API direto: toda chamada de `lib/api.ts` sai por um
+proxy no servidor Next (`app/api/fraus/[...caminho]/route.ts`), que repassa
+método, corpo, query string e status para `FRAUS_API_URL` (padrão
+`http://localhost:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
+quando essa variável existe. A chave de acesso nunca toca o navegador.
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+FRAUS_API_URL=http://localhost:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
 ```
 
-Como é uma variável `NEXT_PUBLIC_*`, ela é lida **em tempo de build/boot** —
-mudar depois exige reiniciar o processo.
+Sem `FRAUS_CHAVE_ACESSO`, o proxy repassa sem header — desenvolvimento local
+contra uma API aberta continua funcionando com zero configuração. Como são
+variáveis **server-side**, mudar depois exige reiniciar o processo — mas,
+diferente de `NEXT_PUBLIC_*`, elas nunca são embutidas no bundle do navegador.
+`NEXT_PUBLIC_API_URL` não é mais lida pelo app: sobrevive só como texto do
+exemplo de `curl` na tela de integrações.
 
 ## Limitações conhecidas
 
-- **A API não tem autenticação e é destinada a uso local.** Não há login nem
-  token: quem alcança a porta lê tudo e importa qualquer arquivo dentro da raiz
-  de importação. Não exponha na internet. A raiz configurável
-  (`FRAUS_RAIZ_IMPORTACAO`) limita o estrago, não substitui autenticação.
-  As origens liberadas para o navegador são uma **lista explícita**
+- **A API é aberta por padrão, e passa a exigir chave quando `FRAUS_CHAVE_MESTRA`
+  é definida.** Sem a variável, o comportamento é o de sempre — sem login, sem
+  token — pensado para uso local, e o boot avisa disso. Com ela, toda rota
+  exige `Authorization: Bearer <chave>`: a mestra, ou uma **chave de acesso**
+  (`fra_...`) gerada por ela via `POST /acesso/chaves`. A **chave de fonte**
+  (`frs_...`) existente continua sendo a única credencial aceita em
+  `POST /ingestao` — as duas não se substituem, porque a rota só escreve e uma
+  segunda credencial não compraria segurança a mais. Gerenciar chaves (criar,
+  listar, revogar — tanto de acesso quanto de fonte) é privilégio exclusivo da
+  mestra; uma chave de acesso que tenta recebe **403**. Sem a mestra definida,
+  não exponha a API na internet: a raiz configurável (`FRAUS_RAIZ_IMPORTACAO`)
+  limita o estrago da importação, não substitui autenticação. As origens
+  liberadas para o navegador continuam sendo uma **lista explícita**
   (`FRAUS_ORIGENS`, padrão `localhost`/`127.0.0.1` nas portas 3000 e 3001) e
-  nunca `*` — sem autenticação, `*` deixaria qualquer página aberta no mesmo
-  navegador varrer as conversas.
+  nunca `*`, como defesa em profundidade — o caminho normal da dashboard virou
+  servidor→servidor pelo proxy do Next, mas CORS continua valendo para quem
+  chamar a API direto do navegador.
 - O NPS é **inferido do texto**, nunca perguntado ao cliente. A interface
   rotula como estimativa em todo lugar onde o número aparece.
 - A série temporal sai de `GET /serie-temporal?de=&ate=`, agregada no servidor.
@@ -266,26 +283,13 @@ O que ainda falta para matar o N+1 de vez:
 - um agregado de **léxico por classe** e de **tempo mediano de resposta**, os
   dois últimos consumidores de transcrição na Visão geral.
 
-### 4. Autenticação, antes de qualquer hospedagem
-
-A **chave de API** protege só a ingestão (`POST /ingestao`). Todo o resto —
-inclusive `POST /integracoes/fontes/{id}/chave`, que gera a chave — continua
-sem autenticação, porque o Fraus foi feito para rodar local. Quem alcança a URL
-lê todas as conversas e gera uma chave para si.
-
-Isso é aceitável no banco do simulador e **não é** com atendimento real: o
-adaptador da Totalk já traz conversa de cliente de verdade para dentro, e o
-texto das mensagens carrega nome, documento e endereço mesmo com as colunas de
-contato descartadas. Publicar com dado real exige autenticação na API inteira
-antes. Ver [docs/hospedagem.md](docs/hospedagem.md).
-
-### 5. Definição da empresa
+### 4. Definição da empresa
 
 A spec ainda não fixa a empresa fictícia do trabalho, e ela atravessa a
 apresentação inteira: define o volume plausível de atendimentos, os canais e o
 que conta como bom tempo de resposta.
 
-### 6. Decisões em aberto
+### 5. Decisões em aberto
 
 - **Tema claro.** A dashboard é dark-only, herdado do chassi. Projetor de banca
   costuma lavar tema escuro, e adicionar depois é retrabalho.

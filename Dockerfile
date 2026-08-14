@@ -54,6 +54,18 @@ ENV FRAUS_CAMINHO_MODELO_TEXTO=/modelos/bertimbau-satisfacao \
 # convite a liberar demais. Sem ele, a API so aceita as origens locais e a
 # dashboard hospedada recebe erro de CORS -- falha visivel, que se conserta,
 # em vez de uma porta aberta que ninguem nota.
+#
+# `FRAUS_CHAVE_MESTRA` TAMBEM nao tem valor padrao aqui, pelo mesmo motivo:
+# sem ela a API sobe aberta (uso local, com aviso no boot); com ela, toda rota
+# exige `Authorization: Bearer`, exceto POST /ingestao (que segue exigindo
+# chave de fonte). Defina antes de expor a URL na internet:
+#
+#   docker run -p 8000:8000 \
+#     -v "$PWD/modelos:/modelos:ro" \
+#     -v "$PWD/dados:/dados" \
+#     -e FRAUS_ORIGENS=https://SUA-DASHBOARD.vercel.app \
+#     -e FRAUS_CHAVE_MESTRA=$(openssl rand -hex 32) \
+#     fraus-api
 
 EXPOSE 8000
 

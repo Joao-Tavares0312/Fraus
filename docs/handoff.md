@@ -1,4 +1,4 @@
-# Handoff — Fraus, 14/08/2026
+# Handoff — Fraus, 14/08/2026 (atualizado — autenticação implementada)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -28,11 +28,16 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 | | |
 |---|---|
-| Branch | `main` (limpa, tudo pushado, `556fb4f`) |
-| Testes | **282 passando**, 1 deselecionado (marcado `lento`) |
+| Branch | `feat/autenticacao` (autenticação implementada e verificada por fumaça HTTP, ainda não mesclada em `main`) |
+| Testes | **300 passando**, 1 deselecionado (marcado `lento`) |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git** |
 | API | `uv run python scripts/api_demo.py` → :8000 |
 | Dashboard | `cd dashboard && npm run build && npx next start -p 3000` |
+
+Sem `FRAUS_CHAVE_MESTRA` no ambiente, a API sobe **aberta**, como sempre — é o
+modo de desenvolvimento local e o que os comandos acima assumem. Definir a
+variável liga a exigência de `Authorization: Bearer` em toda rota, exceto
+`POST /ingestao` (chave de fonte). Ver `README.md` e `docs/hospedagem.md`.
 
 ### Como subir
 
@@ -138,7 +143,8 @@ lista, ela para de ser lida.
 | `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 16 |
 | `resumo.py` | ficha operacional: contagem por autor, latências **separadas** bot/humano, `desfecho` |
 | `indicadores.py` | NPS, CSAT, contenção, série diária |
-| `credencial.py` | chave de API: gerar, hash, conferir em tempo constante |
+| `credencial.py` | chave de fonte (`frs_`): gerar, hash, conferir em tempo constante |
+| `acesso.py` | chave de acesso (`fra_`) e a mestra — mesmo desenho do `credencial.py` |
 | `db.py` | SQLite. `_fonte()` remove `chave_hash` **na origem** |
 | `sinais/texto.py` | BERTimbau de satisfação — **o único que pontua** |
 | `sinais/emocao.py` | 7 de Ekman + desprezo derivado (Plutchik, média geométrica) |
@@ -231,11 +237,18 @@ mede nada. E se `test_acuracia_perfeita_do_relatorio_vale_so_no_corpus_gerado`
 passar a falhar, a limitação foi superada e os textos de ressalva na interface
 precisam ser reescritos, não mantidos por inércia.
 
-### P0 — Autenticação, antes de hospedar
+### Feita — Autenticação, antes de hospedar
 
-A chave protege só `POST /ingestao`. As rotas de leitura são abertas, e o
-adaptador da Totalk já traz conversa de cliente real. **Não publique com dado
-real antes disso.** Ver `docs/hospedagem.md`.
+Resolvida em `feat/autenticacao` (300 testes, `tests/test_autenticacao.py`).
+`FRAUS_CHAVE_MESTRA` ausente mantém a API aberta, como antes; presente, exige
+`Authorization: Bearer` (mestra ou chave de acesso `fra_`) em toda rota, exceto
+`POST /ingestao`, que segue só com chave de fonte `frs_`. Gerenciar chaves
+(`POST`/`GET`/`DELETE /acesso/chaves`, e a chave de fonte) é privilégio
+exclusivo da mestra — chave de acesso tentando recebe 403. A dashboard não fala
+mais com a API direto: passa pelo proxy `app/api/fraus/[...caminho]/route.ts`,
+que anexa a chave de acesso no servidor Next e nunca a deixa chegar ao
+navegador. Ver `README.md` e `docs/hospedagem.md`. Falta só mesclar a branch em
+`main`.
 
 ### P1 — Emoção e ironia no fusor
 
