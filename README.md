@@ -231,20 +231,25 @@ escritos — falta **rodar**. As features só entram no vetor do fusor depois qu
 modelos existirem: expandir `NOMES_FEATURES` antes disso quebraria o notebook 02
 e a API sem nada em troca.
 
-**O notebook 03 roda hoje** — o `go_emotions_ptbr` é público. **O 04 depende do
-corpus:** o IDPT 2021 não tem download aberto e precisa ser solicitado aos
-[organizadores](https://sites.google.com/inf.ufpel.edu.br/idpt2021/).
+**Os dois rodam hoje.** O 03 usa o `go_emotions_ptbr`, que é público. O 04
+**gera o próprio corpus** (`ORIGEM='sintetico'`), porque não existe corpus de
+ironia PT-BR aberto, com texto e em tamanho treinável — levantamento verificado
+em [docs/treinamento.md](docs/treinamento.md). O corpus mais citado
+(Gonçalves et al., BraSNAM 2015) foi coletado por `#sarcasm`/`#irony` e é **em
+inglês**; traduzir repetiria o vazamento de procedência que já custou o
+primeiro fusor.
 
-O notebook aceita três origens (`ORIGEM` = `drive` | `kaggle` | `upload`), todas
-alimentando a mesma detecção de esquema. O levantamento de alternativas está em
-[docs/treinamento.md](docs/treinamento.md#alternativas-ao-idpt--levantamento-de-14082026):
-não existe corpus de ironia PT-BR aberto, com texto e em tamanho treinável que
-tenha sido verificado — o único candidato é rotulado por **hashtag**, com rótulo
-auto-atribuído pelo autor, e isso precisa ser declarado.
+O gerador é o mesmo movimento já aceito no sinal de tempo, e vem blindado
+contra vazamento: fatos negativos e palavras elogiosas aparecem nas **duas**
+classes, então só a incongruência separa. Cada propriedade tem teste.
+**A métrica interna é otimista por construção** e precisa ser declarada assim.
 
-Se nada fechar, a saída honesta é declarar a ironia como trabalho futuro —
-trocar por sarcasmo em inglês traduzido repetiria o vazamento de procedência que
-já custou o primeiro fusor.
+Existem dois corpora PT-BR reais, ambos sem download público — a tese de
+[Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),
+com 1.186 exemplos anotados por três humanos, e o
+[projeto IDPT/UFPel](https://institucional.ufpel.edu.br/projetos/id/u3345).
+Qualquer um dos dois serve como **conjunto de teste independente**, o papel que
+o XED-pt cumpre no notebook 03.
 
 Depois dos dois: subir o contrato de 16 para 30 features e **retreinar o fusor**.
 Detalhes de corpus, rótulo e limitação em

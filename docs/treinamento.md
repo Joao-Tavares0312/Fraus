@@ -250,8 +250,9 @@ O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM
 
 | `ORIGEM` | Quando usar |
 |---|---|
+| `sintetico` (**padrao**) | gera o corpus com `fraus.ingest.gerador_ironia` — nao depende de liberacao de ninguem |
 | `drive` | os arquivos ja estao em `DIR_CORPUS` — foi assim que o IDPT entrou, se liberado |
-| `kaggle` | baixa um corpus de tweets rotulados por hashtag; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
+| `kaggle` | baixa da conta Kaggle; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
 | `upload` | seletor de arquivos do navegador, para corpus que chegou por e-mail |
 
 ### Alternativas ao IDPT — levantamento de 14/08/2026
@@ -265,9 +266,33 @@ Registrado para ninguem repetir a busca. O que **nao serve**, e por que:
 | `rafaelanchieta/PiLN` (GitHub) | sao os **modelos** treinados do IDPT, nao o corpus; embeddings dependem de servidor antigo do NILC |
 | IroSvA / SemEval-2018 traduzidos | **desaconselhado**: traducao automatica reintroduz o vazamento de procedencia que ja custou o primeiro fusor |
 
-O unico candidato aberto e um corpus de tweets rotulados por **hashtag** (`#ironia`/`#sarcasmo`) no Kaggle. **Esquema e licenca nao foram verificados** — a pagina exige login, e a verificacao so e possivel de dentro do Colab. Confira os dois antes de citar no relatorio.
+O candidato mais citado e o corpus de **Goncalves et al., BraSNAM 2015** ("Bazinga! Caracterizando e Detectando Sarcasmo e Ironia no Twitter", UFMG), que circula no Kaggle. Lendo o artigo: sao ~2.628 tweets por classe coletados pelas hashtags **`#sarcasm` e `#irony`** e caracterizados com LIWC — ou seja, e um trabalho brasileiro sobre o Twitter **anglofono**. Corpus em ingles. Usa-lo aqui seria o vazamento de procedencia com selo academico.
 
-O preco dessa fonte e metodologico e **precisa ser declarado**: o rotulo e auto-atribuido pelo autor do tweet, nao anotado por terceiro. Ha ironia sem hashtag e hashtag sem ironia. E limitacao citavel, na mesma prateleira da traducao automatica do corpus de emocao — nao um defeito escondido. Por isso o `metricas_ironia.json` grava a **procedencia derivada de `ORIGEM`**, nunca `IDPT 2021` fixo: artefato que mente sobre a propria fonte e pior que artefato ausente.
+Verificado tambem e descartado: `OpenNeuro ds004533` ("Ironia VEV") e **neuroimagem** — ressonancia de 40 sujeitos ouvindo frases ironicas, sem nenhuma frase rotulada para treino.
+
+### Onde existe corpus PT-BR de ironia (e como pedir)
+
+Dois, os dois **sem download publico**:
+
+1. **Vieira e Silva, A. (2025)** — *Deteccao automatica de ironia por meio de representacoes contextuais*, tese de doutorado em Linguistica, USP, orientacao de Marcos Lopes. Produziu um corpus de ironia em portugues com conversas da rede X: **1.186 exemplos** finais (de 1.200), anotados por **tres voluntarios humanos**, com o contexto da conversa. Achado relevante para o relatorio: os anotadores precisaram do **contexto de producao em ~30% dos casos** — evidencia direta de que ironia em mensagem isolada tem teto baixo, e ela vale citada mesmo sem o corpus em maos.
+2. **Projeto IDPT / UFPel** — <https://institucional.ufpel.edu.br/projetos/id/u3345>, coordenacao de **Larissa Astrogildo de Freitas**. E o grupo por tras do IDPT 2021. Enderece o pedido a coordenacao.
+
+**Tamanho importa aqui:** 1.186 exemplos anotados a mao nao treinam um BERT do zero, mas sao excelentes como **conjunto de teste independente** — exatamente o papel que o XED-pt cumpre no notebook 03. E a arquitetura de honestidade que o projeto ja usa: treinar no que ha em volume, medir no que ha em qualidade.
+
+### O padrao: corpus sintetico
+
+Enquanto nenhum dos dois chega, o notebook gera o proprio corpus com `fraus.ingest.gerador_ironia`. E o mesmo impasse do sinal de tempo e a mesma saida ja aceita: o fusor treina em conversas sinteticas porque nenhum corpus de review tem timestamps.
+
+O gerador foi escrito **contra** o vazamento que matou o primeiro fusor. A armadilha obvia seria "ironico = elogio + fato ruim", que ensinaria o modelo a procurar fato ruim em vez da incongruencia. Tres cruzamentos impedem isso, cada um travado por teste em `tests/test_gerador_ironia.py`:
+
+- os mesmos **fatos ruins** aparecem nas reclamacoes diretas (nao-ironicas);
+- as mesmas **palavras elogiosas** aparecem em elogios sinceros e em reclamacoes que comecam agradecendo;
+- **numeros e unidades de tempo** aparecem nas duas classes;
+- ha uma familia de ironia **por atenuacao**, sem palavra elogiosa nenhuma, para que "tem elogio" nao seja condicao necessaria.
+
+**A metrica interna sera otimista por construcao** — ela mede o quanto o modelo aprendeu estes padroes, nao o quanto le ironia humana. Isso precisa estar no relatorio.
+
+Por isso o `metricas_ironia.json` grava a **procedencia derivada de `ORIGEM`**, nunca `IDPT 2021` fixo: artefato que mente sobre a propria fonte e pior que artefato ausente.
 
 Como o notebook **nunca viu os arquivos**, a celula de carga tem esquema **configuravel**: ela le todo `.csv`/`.tsv` da pasta, imprime as colunas encontradas, tenta achar a de texto e a de rotulo pelos nomes mais provaveis e **para nomeando as colunas disponiveis** se nao achar. Rotulo fora do mapeamento tambem para com erro, em vez de virar 0 silenciosamente.
 
