@@ -262,9 +262,23 @@
     font-size: 0.8125rem;
     color: var(--foreground);
     outline: none;
+    transition:
+      border-color 150ms var(--ease-fluid),
+      background-color 150ms var(--ease-fluid);
+  }
+  /* O mesmo vocabulario de hover dos botoes outline ao lado: o filtro e UMA
+     banda de controles, e controle que nao reage ao mouse parece desligado. */
+  .campo-data:hover {
+    border-color: color-mix(in oklch, var(--input) 40%, var(--foreground));
   }
   .campo-data:focus-visible {
     box-shadow: 0 0 0 2px var(--ring);
+  }
+  /* Campo vazio mostra dd/mm/yyyy: e placeholder, nao valor, e na cor de
+     valor ele se passa por dado preenchido. CSS nao enxerga vazio em input
+     de data, entao quem marca e o React (data-vazio). */
+  .campo-data[data-vazio]:not(:focus) {
+    color: var(--muted-foreground);
   }
   .campo-data::-webkit-calendar-picker-indicator {
     opacity: 0.55;

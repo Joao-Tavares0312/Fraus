@@ -20,11 +20,20 @@ nativo. O contrato visual está em [`DESIGN.md`](DESIGN.md).
 ## Rodar
 
 ```bash
-cp .env.local.example .env.local   # NEXT_PUBLIC_API_URL=http://localhost:8000
+cp .env.local.example .env.local   # FRAUS_API_URL=http://localhost:8000
 npm install
 npm run dev
 npm run contraste                  # verifica AA dos tokens por cálculo
 ```
+
+As variáveis que o app lê são **server-side**: `FRAUS_API_URL` (destino das
+chamadas, tanto dos Server Components quanto do proxy `/api/fraus`) e
+`FRAUS_CHAVE_ACESSO` (a chave `fra_...`, anexada como `Authorization: Bearer`
+e necessária só quando a API sobe com `FRAUS_CHAVE_MESTRA`). Sem o prefixo
+`NEXT_PUBLIC_`, elas não são embutidas no bundle do navegador — que é a razão
+de a chave morar aqui e não em `NEXT_PUBLIC_*`. Mudá-las exige reiniciar o
+processo. `NEXT_PUBLIC_API_URL` não é destino de chamada nenhuma: sobrevive só
+como o endereço exibido no exemplo de `curl` da tela de integrações.
 
 A API precisa estar no ar. Enquanto o modelo do Colab não existe, use o servidor
 de demonstração da raiz do repositório — **só para desenvolvimento**:

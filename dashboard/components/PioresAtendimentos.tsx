@@ -43,7 +43,7 @@ export function PioresAtendimentos({
         <li key={conversa.id}>
           <Link
             href={`/atendimentos/${encodeURIComponent(conversa.id)}${sufixoDeQuery}`}
-            className="flex items-center gap-3 px-5 py-2.5 outline-none transition-colors duration-150 ease-fluid hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+            className="flex items-center gap-3 px-5 py-2.5 outline-none transition-colors duration-150 ease-fluid hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           >
             <span className="num w-8 shrink-0 text-lg font-semibold text-foreground">
               {conversa.nota}

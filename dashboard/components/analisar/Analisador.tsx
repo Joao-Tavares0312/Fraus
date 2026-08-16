@@ -40,6 +40,12 @@ export function Analisador() {
   /** O último arquivo escolhido, para "tentar de novo" sem reabrir o seletor. */
   const [ultimo, setUltimo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<ResultadoAnalise | null>(null);
+  /**
+   * Contador, não booleano: dragenter/dragleave disparam para CADA filho que
+   * o cursor cruza, e um booleano apagaria o realce ao passar sobre o ícone
+   * dentro da própria área.
+   */
+  const [arrastando, setArrastando] = useState(0);
 
   async function analisar(escolhido: File) {
     setErro(null);
@@ -106,7 +112,28 @@ export function Analisador() {
             </ul>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/*
+            A área inteira recebe o arquivo — arrastar por cima realça com a
+            cor de ação, que aqui é legítima: soltar É a ação primária da
+            tela. O clique continua passando pelo <input>, então teclado e
+            leitor de tela usam o mesmo caminho de sempre (o botão).
+          */}
+          <div
+            data-arrastando={arrastando > 0 || undefined}
+            onDragEnter={(evento) => {
+              evento.preventDefault();
+              if (!ocupado) setArrastando((n) => n + 1);
+            }}
+            onDragLeave={() => setArrastando((n) => Math.max(0, n - 1))}
+            onDragOver={(evento) => evento.preventDefault()}
+            onDrop={async (evento) => {
+              evento.preventDefault();
+              setArrastando(0);
+              const solto = evento.dataTransfer.files?.[0];
+              if (solto && !ocupado) await analisar(solto);
+            }}
+            className="group flex flex-col items-center gap-2 rounded-md border border-dashed border-input px-6 py-8 text-center transition-colors duration-200 ease-fluid data-[arrastando]:border-primary data-[arrastando]:bg-primary/5"
+          >
             <input
               ref={entrada}
               type="file"
@@ -114,17 +141,23 @@ export function Analisador() {
               className="sr-only"
               onChange={aoEscolher}
             />
+            <Upload
+              aria-hidden
+              className="size-5 text-muted-foreground transition-colors duration-200 group-data-[arrastando]:text-primary"
+            />
+            <p className="text-sm text-muted-foreground">
+              Arraste o arquivo para cá, ou
+            </p>
             <Button
               type="button"
               size="sm"
               onClick={() => entrada.current?.click()}
               disabled={ocupado}
             >
-              <Upload aria-hidden />
               {ocupado ? "Analisando…" : "Escolher arquivo"}
             </Button>
             {arquivo ? (
-              <span className="num flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="num mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <FileText aria-hidden className="size-3.5" />
                 {arquivo}
               </span>

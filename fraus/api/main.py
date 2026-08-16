@@ -18,6 +18,7 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 `app` nao existe como atributo normal do modulo.
 """
 
+import hmac
 import json
 import os
 from datetime import date, datetime, timezone
@@ -25,8 +26,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
+from fraus import acesso
 from fraus import credencial
 from fraus.configuracao import PADROES as CONFIGURACAO_DE_FABRICA
 from fraus.configuracao import carregar as carregar_configuracao
@@ -36,7 +39,8 @@ from fraus.db import Banco
 from fraus.modelos import Conversa, Mensagem
 from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
-                               containment_rate, nota_0_10, serie_diaria)
+                               containment_rate, lexico_por_classe, nota_0_10,
+                               serie_diaria, tempo_mediano_resposta)
 from fraus.ingest.arquivos import ArquivoIlegivelError, extrair
 from fraus.ingest.csv_driver import carregar_csv
 from fraus.resumo import resumir
@@ -149,6 +153,10 @@ class PedidoSimulacao(BaseModel):
 class PedidoAnalise(BaseModel):
     csv: str  # conteudo do arquivo; veredito continua sendo derivado aqui
     nome: str | None = None  # so para escolher o leitor pela extensao
+
+
+class PedidoChaveAcesso(BaseModel):
+    nome: str = Field(min_length=1)
 
 
 class PedidoIngestao(BaseModel):
@@ -389,6 +397,22 @@ def _metricas_de(caminho: Path) -> dict | None:
     return json.loads(caminho.read_text(encoding="utf-8"))
 
 
+def _chave_bearer(authorization: str | None) -> str | None:
+    """A chave de um `Authorization: Bearer ...`, ou None se nao for um.
+
+    O esquema e comparado SEM caixa porque a RFC 7235 o define assim -- cliente
+    que manda `bearer` esta correto. Esta e a UNICA normalizacao do cabecalho
+    no modulo: o middleware de chave de acesso e as rotas de fonte chamam daqui
+    para nao divergirem (ja divergiram: um exigia `Bearer ` exato).
+    """
+    if not authorization:
+        return None
+    esquema, _, resto = authorization.partition(" ")
+    if esquema.lower() != "bearer":
+        return None
+    return resto.strip()
+
+
 def _chave_do_cabecalho(authorization: str | None) -> str:
     """Extrai a chave do `Authorization: Bearer ...`, recusando o resto.
 
@@ -396,13 +420,14 @@ def _chave_do_cabecalho(authorization: str | None) -> str:
     diz ao cliente COMO se autenticar, e sem ele o integrador so sabe que
     falhou.
     """
-    if not authorization or not authorization.lower().startswith("bearer "):
+    chave = _chave_bearer(authorization)
+    if chave is None:
         raise HTTPException(
             status_code=401,
             detail="informe a chave da fonte em Authorization: Bearer <chave>",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return authorization[len("bearer "):].strip()
+    return chave
 
 
 def _fonte_autorizada(banco: Banco, chave: str) -> dict:
@@ -449,8 +474,84 @@ def _fonte_publica(fonte: dict) -> dict:
     return {**fonte, "configurada": bool(variavel and os.environ.get(variavel))}
 
 
-def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastAPI:
+def criar_app(
+    banco: Banco,
+    motor,
+    raiz_importacao: Path | None = None,
+    chave_mestra: str | None = None,
+) -> FastAPI:
     app = FastAPI(title="Fraus", version="0.1.0")
+
+    # Vazia e ausente sao a mesma coisa: "Bearer " autorizando seria a pior
+    # combinacao possivel de configuracao errada com acesso liberado.
+    chave_mestra = chave_mestra or None
+
+    def _e_mestra(chave: str) -> bool:
+        if chave_mestra is None:
+            return False
+        return hmac.compare_digest(chave.encode("utf-8"), chave_mestra.encode("utf-8"))
+
+    def _acesso_autorizado(chave: str) -> bool:
+        """Mestra ou chave de acesso valida. Mensagem de recusa e uniforme
+        la fora: daqui so sai sim ou nao."""
+        if _e_mestra(chave):
+            return True
+        chave_id = acesso.id_da_chave(chave)
+        guardado = banco.hash_da_chave_acesso(chave_id) if chave_id is not None else None
+        return credencial.confere(chave, guardado)
+
+    def _exigir_mestra(authorization: str | None) -> None:
+        """Gerenciar chaves e privilegio da mestra, nunca de chave de acesso.
+
+        No modo aberto (sem mestra) nao ha o que exigir -- as rotas de
+        gerenciamento seguem abertas como o resto, coerente com a decisao de
+        ativacao condicionada.
+
+        403, nao 401: quem chega aqui com chave de acesso valida ja passou
+        pelo middleware -- a credencial esta certa, o privilegio e que falta.
+        """
+        if chave_mestra is None:
+            return
+        chave = _chave_do_cabecalho(authorization)
+        if not _e_mestra(chave):
+            raise HTTPException(
+                status_code=403, detail="esta rota exige a chave mestra"
+            )
+
+    if chave_mestra is not None:
+        @app.middleware("http")
+        async def exigir_chave_de_acesso(request, call_next):
+            # /ingestao tem credencial propria (chave de FONTE): uma credencial
+            # por rota. OPTIONS e o preflight do navegador -- nao carrega
+            # header de autorizacao por definicao.
+            # `rstrip("/")`: `/ingestao/` e a MESMA rota (o Starlette redireciona
+            # para ela), e comparar o path exato mandava o integrador que
+            # configurou a URL com barra final para o 401 daqui em vez da
+            # credencial de fonte.
+            if request.url.path.rstrip("/") == "/ingestao" or request.method == "OPTIONS":
+                return await call_next(request)
+            cabecalho = request.headers.get("authorization")
+            chave_recebida = _chave_bearer(cabecalho)
+            if chave_recebida is None:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": (
+                        "informe a chave de acesso em Authorization: Bearer <chave>"
+                    )},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            if not _acesso_autorizado(chave_recebida):
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "chave invalida"},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return await call_next(request)
+
+    # O CORS precisa ficar POR FORA do middleware de chave: em Starlette, o
+    # middleware adicionado por ULTIMO e o mais externo, entao registrar o
+    # CORS depois garante que o preflight (sem header de autorizacao, por
+    # definicao) e respondido pelo CORS antes de chegar no bloco 401 acima.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origens_liberadas(),
@@ -530,8 +631,22 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "motivos": motivos,
         }
 
+    def _recorte_ou_400(de: str | None, ate: str | None) -> tuple[date | None, date | None]:
+        """As duas pontas do recorte, validadas juntas -- inclusive a ordem."""
+        inicio, fim = _dia_ou_400(de, "de"), _dia_ou_400(ate, "ate")
+        if inicio and fim and inicio > fim:
+            raise HTTPException(
+                status_code=400,
+                detail=f"periodo invertido: de {inicio} vem depois de ate {fim}",
+            )
+        return inicio, fim
+
+    def _no_recorte(iniciada_em: datetime, inicio: date | None, fim: date | None) -> bool:
+        dia = iniciada_em.date()
+        return (inicio is None or dia >= inicio) and (fim is None or dia <= fim)
+
     @app.get("/conversas")
-    def listar() -> list[dict]:
+    def listar(de: str | None = None, ate: str | None = None) -> list[dict]:
         """Lista de atendimentos com a ficha operacional de cada um.
 
         Alem de nota e categoria, cada linha carrega o que `fraus.resumo`
@@ -539,7 +654,11 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         do bot e do humano SEPARADOS, duracao e desfecho. Vem tudo junto de
         proposito -- a tela precisa disso por linha, e busca-los um a um era um
         N+1 contra a API.
+
+        `de`/`ate` recortam por dia de inicio, pontas INCLUSIVAS -- o mesmo
+        contrato do /serie-temporal. Sem filtro, a lista inteira, como sempre.
         """
+        inicio, fim = _recorte_ou_400(de, ate)
         # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
         # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
         faixas = faixas_vigentes()
@@ -551,6 +670,7 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
                 **resumir(conversa),
             }
             for linha, conversa in banco.listar_com_conversa()
+            if _no_recorte(conversa.iniciada_em, inicio, fim)
         ]
 
     @app.get("/conversas/{conversa_id}")
@@ -600,9 +720,26 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "sinais_fora_do_score": atribuicao.get("sinais_fora_do_score", []),
         }
 
+    def _registros_do_recorte(de: str | None, ate: str | None) -> list:
+        """Conversas do periodo, com validacao de recorte compartilhada."""
+        inicio, fim = _recorte_ou_400(de, ate)
+        return [
+            (conversa, score)
+            for conversa, score in banco.todas()
+            if _no_recorte(conversa.iniciada_em, inicio, fim)
+        ]
+
     @app.get("/indicadores")
-    def indicadores() -> dict:
-        registros = banco.todas()
+    def indicadores(de: str | None = None, ate: str | None = None) -> dict:
+        """Indicadores agregados, com recorte opcional de periodo.
+
+        Com `de`/`ate`, os numeros respondem SO pelo recorte -- e o que tira
+        da dashboard a agregacao no cliente que ela fazia com filtro ativo.
+        `tempo_mediano_resposta_s` e derivado dos timestamps na leitura
+        (latencia nunca e persistida) e vem `null` sem nenhum par
+        cliente -> resposta, nunca zero.
+        """
+        registros = _registros_do_recorte(de, ate)
         conversas = [conversa for conversa, _ in registros]
         scores = [score for _, score in registros if score is not None]
         return {
@@ -611,7 +748,19 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             "containment_rate": containment_rate(conversas),
             "total_conversas": len(conversas),
             "sem_sinal": len(conversas) - len(scores),
+            "tempo_mediano_resposta_s": tempo_mediano_resposta(registros),
         }
+
+    @app.get("/lexico")
+    def lexico(de: str | None = None, ate: str | None = None) -> dict:
+        """Palavras e emojis caracteristicos por categoria, no recorte pedido.
+
+        Existia so no cliente, que baixava toda transcricao para contar -- o
+        ultimo N+1 da visao geral. A ordenacao e por DISTINCAO: o termo que
+        aparece em toda parte nao explica classe nenhuma.
+        """
+        registros = _registros_do_recorte(de, ate)
+        return {"classes": lexico_por_classe(registros, faixas_vigentes())}
 
     def _dia_ou_400(valor: str | None, nome: str) -> date | None:
         """AAAA-MM-DD, ou 400 nomeando o parametro -- nunca ignorado em silencio.
@@ -639,17 +788,11 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         recorte so para ler timestamps. As duas pontas do recorte sao
         INCLUSIVAS, que e como quem opera le "de 01/03 ate 07/03".
         """
-        inicio, fim = _dia_ou_400(de, "de"), _dia_ou_400(ate, "ate")
-        if inicio and fim and inicio > fim:
-            raise HTTPException(
-                status_code=400, detail=f"periodo invertido: de {inicio} vem depois de ate {fim}"
-            )
-
+        inicio, fim = _recorte_ou_400(de, ate)
         registros = [
             (conversa, score)
             for conversa, score in banco.todas()
-            if (inicio is None or conversa.iniciada_em.date() >= inicio)
-            and (fim is None or conversa.iniciada_em.date() <= fim)
+            if _no_recorte(conversa.iniciada_em, inicio, fim)
         ]
         return {
             "de": inicio.isoformat() if inicio else None,
@@ -740,7 +883,9 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
     @app.post("/integracoes/fontes/{fonte_id}/chave", status_code=201)
-    def gerar_chave(fonte_id: int) -> dict:
+    def gerar_chave(
+        fonte_id: int, authorization: str | None = Header(default=None)
+    ) -> dict:
         """Gera a chave de API da fonte e a devolve EM CLARO uma unica vez.
 
         Nao ha rota para reler a chave depois, e isso e a feature: o banco
@@ -751,6 +896,7 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         rotacao sem risco, mas a antiga seguiria aceita sem ninguem saber quem
         ainda a usa.
         """
+        _exigir_mestra(authorization)
         if banco.buscar_fonte(fonte_id) is None:
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
@@ -772,11 +918,51 @@ def criar_app(banco: Banco, motor, raiz_importacao: Path | None = None) -> FastA
         }
 
     @app.delete("/integracoes/fontes/{fonte_id}/chave", status_code=204)
-    def revogar_chave(fonte_id: int) -> None:
+    def revogar_chave(
+        fonte_id: int, authorization: str | None = Header(default=None)
+    ) -> None:
         """Invalida a chave da fonte. A fonte e as conversas dela continuam."""
+        _exigir_mestra(authorization)
         if banco.buscar_fonte(fonte_id) is None:
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
         banco.revogar_chave(fonte_id)
+
+    @app.post("/acesso/chaves", status_code=201)
+    def criar_chave_acesso(
+        pedido: PedidoChaveAcesso, authorization: str | None = Header(default=None)
+    ) -> dict:
+        """Gera uma chave de acesso e a devolve EM CLARO uma unica vez."""
+        _exigir_mestra(authorization)
+        registro = banco.criar_chave_acesso(
+            nome=pedido.nome,
+            criada_em=datetime.now(timezone.utc).isoformat(),
+        )
+        chave, chave_hash = acesso.gerar(registro["id"])
+        banco.gravar_chave_acesso(
+            registro["id"], chave_hash=chave_hash, dica=credencial.dica(chave)
+        )
+        return {
+            **registro,
+            "dica": credencial.dica(chave),
+            "chave": chave,
+            "aviso": (
+                "Guarde agora: esta chave não pode ser lida de novo. "
+                "Revogue e gere outra se perdê-la."
+            ),
+        }
+
+    @app.get("/acesso/chaves")
+    def listar_chaves_acesso(authorization: str | None = Header(default=None)) -> list[dict]:
+        _exigir_mestra(authorization)
+        return banco.listar_chaves_acesso()
+
+    @app.delete("/acesso/chaves/{chave_id}", status_code=204)
+    def revogar_chave_acesso(
+        chave_id: int, authorization: str | None = Header(default=None)
+    ) -> None:
+        _exigir_mestra(authorization)
+        if not banco.apagar_chave_acesso(chave_id):
+            raise HTTPException(status_code=404, detail="chave nao encontrada")
 
     @app.post("/ingestao", status_code=201)
     def ingerir(pedido: PedidoIngestao, authorization: str | None = Header(default=None)) -> dict:
@@ -1158,7 +1344,14 @@ def criar_app_padrao() -> FastAPI:
     motor = Motor(classificador, fusor, emocao=emocao, ironia=ironia)
     banco = Banco(CAMINHO_BANCO)
     banco.migrar()
-    return criar_app(banco=banco, motor=motor)
+
+    chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
+    if chave_mestra is None:
+        print(
+            "AVISO: API sem autenticacao (uso local). "
+            "Defina FRAUS_CHAVE_MESTRA para exigir chave em todas as rotas."
+        )
+    return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
 
 
 def __getattr__(nome: str):

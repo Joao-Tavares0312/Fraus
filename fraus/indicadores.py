@@ -7,6 +7,7 @@ Faixas canonicas: 0-6 detrator, 7-8 neutro, 9-10 promotor.
 Categoria SEMPRE derivada no servidor.
 """
 
+from collections import Counter
 from statistics import median
 from typing import Literal
 
@@ -184,3 +185,95 @@ def containment_rate(conversas: list[Conversa]) -> float:
         return 0.0
     contidas = sum(1 for c in conversas if not c.escalou_para_humano)
     return round(100.0 * contidas / len(conversas), 2)
+
+
+def tempo_mediano_resposta(registros: list[tuple[Conversa, float | None]]) -> float | None:
+    """Mediana de TODAS as esperas cliente -> resposta do conjunto.
+
+    `None` quando nao ha nenhum par -- nunca zero: zero numa medida de tempo
+    de resposta se le como "respondeu na hora", e conjunto sem par nao mediu
+    espera nenhuma.
+    """
+    esperas = [
+        espera
+        for conversa, _ in registros
+        for espera in latencias_da_conversa(conversa)
+    ]
+    return mediana(esperas)
+
+
+def lexico_por_classe(
+    registros: list[tuple[Conversa, float | None]],
+    faixas: dict[Categoria, tuple[int, int]] | None = None,
+    limite: int = 6,
+) -> list[dict]:
+    """Palavras e emojis caracteristicos de cada categoria do conjunto.
+
+    Ordenado por DISTINCAO, nao por frequencia: `distincao` e a diferenca
+    entre a fracao do termo nesta classe e a fracao dele nas outras, em
+    [-1, 1]. O termo que aparece em toda parte nao explica classe nenhuma.
+
+    Mesma regra da derivacao que a dashboard fazia no cliente (e mantem como
+    plano B): so a fala do CLIENTE conta -- o texto do bot e roteiro --, e
+    conversa sem score fica fora, porque sem categoria nao ha classe onde
+    contar. Emoji e recortado por cluster de grafema, pela mesma extracao do
+    sinal de emoji, para a contagem nao divergir do motor.
+    """
+    from fraus.sinais.emoji import emojis_com_posicao
+    from fraus.sinais.palavras import contar_palavras
+
+    if faixas is None:
+        faixas = FAIXAS_NPS
+
+    categorias = tuple(faixas)
+    palavras_por = {categoria: Counter() for categoria in categorias}
+    emojis_por = {categoria: Counter() for categoria in categorias}
+    atendimentos = {categoria: 0 for categoria in categorias}
+
+    for conversa, score in registros:
+        if score is None:
+            continue
+        categoria = categoria_nps(score, faixas)
+        atendimentos[categoria] += 1
+        textos = [m.texto for m in conversa.mensagens_cliente]
+        palavras_por[categoria].update(contar_palavras(textos))
+        for texto in textos:
+            for emoji, _posicao in emojis_com_posicao(texto):
+                emojis_por[categoria][emoji] += 1
+
+    return [
+        {
+            "categoria": categoria,
+            "atendimentos": atendimentos[categoria],
+            "palavras": _ranquear_por_distincao(palavras_por, categoria, limite),
+            "emojis": _ranquear_por_distincao(emojis_por, categoria, limite),
+        }
+        for categoria in categorias
+    ]
+
+
+def _ranquear_por_distincao(
+    por_classe: dict[Categoria, Counter], categoria: Categoria, limite: int
+) -> list[dict]:
+    da_classe = por_classe[categoria]
+    total = sum(da_classe.values())
+    if total == 0:
+        return []
+
+    outras: Counter = Counter()
+    for outra, tabela in por_classe.items():
+        if outra != categoria:
+            outras.update(tabela)
+    total_outras = sum(outras.values())
+
+    itens = [
+        {
+            "termo": termo,
+            "ocorrencias": ocorrencias,
+            "distincao": ocorrencias / total
+            - (outras.get(termo, 0) / total_outras if total_outras else 0.0),
+        }
+        for termo, ocorrencias in da_classe.items()
+    ]
+    itens.sort(key=lambda item: (-item["distincao"], -item["ocorrencias"]))
+    return itens[:limite]

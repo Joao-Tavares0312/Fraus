@@ -63,41 +63,75 @@ cd dashboard
 vercel deploy --prod
 ```
 
-Uma variável importa:
+A dashboard não fala com a API direto: toda chamada sai por um proxy no
+servidor Next (`app/api/fraus/[...caminho]/route.ts`). Duas variáveis
+**server-side** — nunca `NEXT_PUBLIC_*`, então nenhuma delas vai para o bundle
+do navegador — importam na Vercel:
 
 ```
-NEXT_PUBLIC_API_URL=https://sua-api.onrender.com
+FRAUS_API_URL=https://sua-api.onrender.com
+FRAUS_CHAVE_ACESSO=fra_...
 ```
 
-Sem ela, a dashboard aponta para `http://localhost:8000` e **toda tela mostra
-"API não respondeu"** — o que é honesto, e é exatamente o que se vê enquanto a
-API não tem endereço público.
+Sem `FRAUS_API_URL`, o proxy aponta para `http://localhost:8000` e **toda tela
+mostra "API não respondeu"** — o que é honesto, e é exatamente o que se vê
+enquanto a API não tem endereço público. Sem `FRAUS_CHAVE_ACESSO`, o proxy
+repassa sem `Authorization` — só serve se a API do outro lado estiver aberta
+(sem `FRAUS_CHAVE_MESTRA`).
 
-## O laço de CORS
+## Passo a passo com as chaves
 
-Os dois lados precisam se nomear, e a ordem importa:
+A ordem importa, porque cada peça depende da anterior:
 
-1. publique a API, anote a URL;
-2. publique a dashboard com `NEXT_PUBLIC_API_URL` apontando para ela;
-3. anote a URL da dashboard e coloque em `FRAUS_ORIGENS` na API;
-4. **reinicie a API** — a lista de origens é lida no boot.
+1. defina `FRAUS_CHAVE_MESTRA` no host da API e suba (ou reinicie) o container
+   — é ela que liga a exigência de autenticação em toda rota, exceto
+   `POST /ingestao`;
+2. gere uma chave de acesso para a dashboard, com a mestra:
+   ```bash
+   curl -X POST https://sua-api.onrender.com/acesso/chaves \
+     -H "Authorization: Bearer $FRAUS_CHAVE_MESTRA" \
+     -H "content-type: application/json" \
+     -d '{"nome": "dashboard Vercel"}'
+   ```
+   a resposta traz a chave **em claro uma única vez** — copie antes de fechar
+   o terminal; o banco guarda só o hash e uma dica de 4 caracteres;
+3. publique a dashboard com `FRAUS_API_URL` apontando para a API e
+   `FRAUS_CHAVE_ACESSO` com a chave do passo 2;
+4. anote a URL da dashboard e coloque em `FRAUS_ORIGENS` na API;
+5. **reinicie a API** — a lista de origens é lida no boot.
 
-`FRAUS_ORIGENS` aceita lista separada por vírgula e nunca deve ser `*`: esta API
-lê atendimentos e não tem autenticação nas rotas de leitura, então qualquer
-página aberta no mesmo navegador poderia varrer as conversas.
+`FRAUS_ORIGENS` aceita lista separada por vírgula e nunca deve ser `*`. Com a
+mestra definida, isso já não é a única linha de defesa das rotas de leitura —
+mas continua valendo como defesa em profundidade, porque o caminho normal virou
+servidor→servidor pelo proxy do Next, e CORS é quem barra uma chamada feita
+direto do navegador.
 
 ## Antes de expor para a internet
 
-A chave de API protege **só a ingestão**. Todo o resto — inclusive a rota que
-gera a chave — continua sem autenticação, porque o Fraus foi feito para rodar
-local. Quem alcança a API pode ler todas as conversas e gerar uma chave para si.
+Sem `FRAUS_CHAVE_MESTRA`, a API roda **aberta**: quem alcança a URL lê todas as
+conversas e gera uma chave para si — aceitável no banco do simulador, e **não**
+com atendimento real. Definir a mestra fecha a API inteira, inclusive a rota
+que gera chave (`POST /acesso/chaves` e `POST /integracoes/fontes/{id}/chave`
+exigem a mestra; nenhuma chave de acesso gerencia outras chaves).
 
-Publicar com dado real de cliente exige autenticação na API inteira antes.
-Para demonstração com o banco do simulador, o risco é o que está escrito aqui.
+**A mestra protege a API, não a dashboard.** O proxy do Next é um relay: ele
+anexa a chave do deploy em toda chamada que chega nele, e a dashboard publicada
+continua **sem login** — quem alcança a URL da Vercel lê os dados pelo proxy,
+usando a chave do deploy, sem apresentar credencial nenhuma. Para publicar com
+dado real, proteja também o deploy (por exemplo, Vercel Deployment Protection)
+— ou não publique com dado real.
+
+Publicar com dado real de cliente exige a mestra definida **antes** de expor a
+URL — o adaptador da Totalk já traz conversa real, com nome, documento e
+endereço no texto das mensagens mesmo com as colunas de contato descartadas.
+Para demonstração com o banco do simulador, rodar aberto é uma escolha
+consciente, não a única opção: o passo a passo acima leva minutos.
 
 ### Alternativa para demonstrar sem hospedar a API
 
 Um túnel (`cloudflared tunnel --url http://localhost:8000`) dá um endereço
 público temporário para a API rodando na sua máquina. Serve para mostrar a
-dashboard funcionando de verdade — e vale lembrar que ele expõe a API sem
-autenticação enquanto estiver aberto, então feche depois.
+dashboard funcionando de verdade. Com `FRAUS_CHAVE_MESTRA` definida antes de
+subir a API, o túnel deixa de ser porta aberta — quem chega no endereço ainda
+esbarra em 401 sem chave. Sem a mestra, vale o aviso de sempre: feche o túnel
+depois de demonstrar.

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { FiltroPeriodo } from "./FiltroPeriodo";
 import { rotuloPeriodo, type Extensao, type Periodo } from "@/lib/periodo";
@@ -23,7 +22,8 @@ export function CabecalhoPagina({
   acoes,
 }: {
   titulo: string;
-  subtitulo: string;
+  /** Opcional: tela cuja tarefa e obvia pelo titulo nao paga um paragrafo. */
+  subtitulo?: string;
   periodo?: Periodo;
   extensao?: Extensao;
   acoes?: ReactNode;
@@ -37,9 +37,11 @@ export function CabecalhoPagina({
             <h1 className="text-lg leading-tight font-semibold tracking-tight text-foreground">
               {titulo}
             </h1>
-            <p className="mt-0.5 max-w-[80ch] text-sm leading-relaxed text-muted-foreground">
-              {subtitulo}
-            </p>
+            {subtitulo ? (
+              <p className="mt-0.5 max-w-[80ch] text-sm leading-relaxed text-muted-foreground">
+                {subtitulo}
+              </p>
+            ) : null}
           </div>
           {acoes ? (
             <div className="sem-impressao flex shrink-0 gap-2">{acoes}</div>
@@ -48,7 +50,10 @@ export function CabecalhoPagina({
 
         {periodo ? (
           <>
-            <Separator />
+            {/* A regua fraca do sistema (--compasso), nao o separador cheio:
+                titulo e filtro sao o MESMO bloco de contexto, e a divisoria
+                forte os apresentava como secoes independentes. */}
+            <div aria-hidden className="h-px bg-compasso" />
             <div className="sem-impressao flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <FiltroPeriodo periodo={periodo} extensao={extensao ?? null} />
               <p className="text-xs text-muted-foreground">
