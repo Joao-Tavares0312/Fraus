@@ -28,6 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_FUSOR,
                                 CAMINHO_METRICAS, CAMINHO_METRICAS_EMOCAO,
                                 CAMINHO_METRICAS_IRONIA, CAMINHO_MODELO_EMOCAO,
@@ -191,9 +192,17 @@ def criar_app(
 ) -> FastAPI:
     app = FastAPI(title="Fraus", version="0.1.0")
 
-    # Vazia e ausente sao a mesma coisa: "Bearer " autorizando seria a pior
-    # combinacao possivel de configuracao errada com acesso liberado.
-    chave_mestra = chave_mestra or None
+    ctx = Contexto(
+        banco=banco,
+        motor=motor,
+        raiz=Path(raiz_importacao) if raiz_importacao is not None else RAIZ_IMPORTACAO,
+        # Vazia e ausente sao a mesma coisa: "Bearer " autorizando seria a pior
+        # combinacao possivel de configuracao errada com acesso liberado.
+        chave_mestra=chave_mestra or None,
+    )
+    app.state.contexto = ctx
+    chave_mestra = ctx.chave_mestra
+    raiz = ctx.raiz
 
     def _e_mestra(chave: str) -> bool:
         if chave_mestra is None:
@@ -267,28 +276,6 @@ def criar_app(
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
-    raiz = Path(raiz_importacao) if raiz_importacao is not None else RAIZ_IMPORTACAO
-
-    def faixas_vigentes() -> dict:
-        """Faixa de NPS da configuracao vigente, lida a cada requisicao.
-
-        Ler por requisicao (em vez de guardar num atributo do app) e o que
-        garante que `/indicadores` e `/conversas` NUNCA discordem: nao existe
-        copia da faixa envelhecendo em memoria depois de um PUT.
-        """
-        return faixas_de(carregar_configuracao(banco))
-
-    def categoria_de(score: float | None, faixas: dict) -> str | None:
-        """Categoria DERIVADA NA LEITURA do score gravado e da faixa vigente.
-
-        A coluna `categoria` do banco e o retrato do instante da importacao e
-        NAO e lida aqui: mudar a faixa muda a fatia de atendimento ja pontuado,
-        e derivar na leitura e o que faz toda rota responder pela mesma faixa
-        no mesmo instante -- sem janela de recalculo em massa pela metade. O
-        `score`, esse sim resultado do modelo, nunca e recalculado.
-        """
-        return categoria_nps(score, faixas) if score is not None else None
-
     @app.get("/saude")
     def saude() -> dict:
         return {"status": "ok"}
@@ -311,13 +298,13 @@ def criar_app(
                 detail=f"coluna ausente no CSV: {erro.args[0]}",
             ) from erro
 
-        faixas = faixas_vigentes()
+        faixas = ctx.faixas_vigentes()
         for conversa in resultado.conversas:
             score = motor.pontuar_conversa(conversa)
             # A coluna `categoria` e o retrato do instante da importacao; quem
             # le nao a consome (ver `categoria_de`), mas gravar com a faixa
             # vigente evita que o banco inspecionado a mao conte outra historia.
-            banco.salvar(conversa, score, categoria_de(score, faixas))
+            banco.salvar(conversa, score, ctx.categoria_de(score, faixas))
 
         # "Motivo registrado" (spec 9) tem que CHEGAR a alguem: a contagem
         # sozinha nao diz o que ficou de fora.
@@ -356,11 +343,11 @@ def criar_app(
         inicio, fim = recorte_ou_400(de, ate)
         # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
         # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
-        faixas = faixas_vigentes()
+        faixas = ctx.faixas_vigentes()
         return [
             {
                 **linha,
-                "categoria": categoria_de(linha["score"], faixas),
+                "categoria": ctx.categoria_de(linha["score"], faixas),
                 "nota": nota_0_10(linha["score"]) if linha["score"] is not None else None,
                 **resumir(conversa),
             }
@@ -377,7 +364,7 @@ def criar_app(
         return {
             **conversa.model_dump(mode="json"),
             "score": score,
-            "categoria": categoria_de(score, faixas_vigentes()),
+            "categoria": ctx.categoria_de(score, ctx.faixas_vigentes()),
             "nota": nota_0_10(score) if score is not None else None,
             # A MESMA ficha operacional de `/conversas`, pela mesma funcao. A
             # lista e o detalhe nao podem calcular tempo de resposta por
@@ -404,7 +391,7 @@ def criar_app(
             "conversa_id": conversa.id,
             "score": score,
             "nota": nota_0_10(score) if score is not None else None,
-            "categoria": categoria_de(score, faixas_vigentes()),
+            "categoria": ctx.categoria_de(score, ctx.faixas_vigentes()),
             "mensagens": atribuicao["mensagens"],
             "importancias": atribuicao["importancias"],
             "contribuicoes": atribuicao["contribuicoes"],
@@ -414,15 +401,6 @@ def criar_app(
             # painel que ela nao tem dado para preencher.
             "sinais_fora_do_score": atribuicao.get("sinais_fora_do_score", []),
         }
-
-    def _registros_do_recorte(de: str | None, ate: str | None) -> list:
-        """Conversas do periodo, com validacao de recorte compartilhada."""
-        inicio, fim = recorte_ou_400(de, ate)
-        return [
-            (conversa, score)
-            for conversa, score in banco.todas()
-            if no_recorte(conversa.iniciada_em, inicio, fim)
-        ]
 
     @app.get("/indicadores")
     def indicadores(de: str | None = None, ate: str | None = None) -> dict:
@@ -434,11 +412,11 @@ def criar_app(
         (latencia nunca e persistida) e vem `null` sem nenhum par
         cliente -> resposta, nunca zero.
         """
-        registros = _registros_do_recorte(de, ate)
+        registros = ctx.registros_do_recorte(de, ate)
         conversas = [conversa for conversa, _ in registros]
         scores = [score for _, score in registros if score is not None]
         return {
-            "nps": calcular_nps(scores, faixas_vigentes()),
+            "nps": calcular_nps(scores, ctx.faixas_vigentes()),
             "csat": calcular_csat(scores),
             "containment_rate": containment_rate(conversas),
             "total_conversas": len(conversas),
@@ -454,8 +432,8 @@ def criar_app(
         ultimo N+1 da visao geral. A ordenacao e por DISTINCAO: o termo que
         aparece em toda parte nao explica classe nenhuma.
         """
-        registros = _registros_do_recorte(de, ate)
-        return {"classes": lexico_por_classe(registros, faixas_vigentes())}
+        registros = ctx.registros_do_recorte(de, ate)
+        return {"classes": lexico_por_classe(registros, ctx.faixas_vigentes())}
 
     @app.get("/serie-temporal")
     def serie_temporal(de: str | None = None, ate: str | None = None) -> dict:
@@ -475,7 +453,7 @@ def criar_app(
         return {
             "de": inicio.isoformat() if inicio else None,
             "ate": fim.isoformat() if fim else None,
-            "pontos": serie_diaria(registros, faixas_vigentes()),
+            "pontos": serie_diaria(registros, ctx.faixas_vigentes()),
         }
 
     @app.get("/configuracoes")
@@ -673,13 +651,13 @@ def criar_app(
             raise HTTPException(status_code=400, detail=str(erro)) from erro
 
         score = motor.pontuar_conversa(conversa)
-        banco.salvar(conversa, score, categoria_de(score, faixas_vigentes()))
+        banco.salvar(conversa, score, ctx.categoria_de(score, ctx.faixas_vigentes()))
         return {
             "id": conversa.id,
             "canal": conversa.canal,
             "score": score,
             "nota": nota_0_10(score) if score is not None else None,
-            "categoria": categoria_de(score, faixas_vigentes()),
+            "categoria": ctx.categoria_de(score, ctx.faixas_vigentes()),
             "fonte": fonte["nome"],
         }
 
@@ -786,7 +764,7 @@ def criar_app(
                 },
             ],
             "faixas_nps": {
-                categoria: list(faixa) for categoria, faixa in faixas_vigentes().items()
+                categoria: list(faixa) for categoria, faixa in ctx.faixas_vigentes().items()
             },
             "total_emojis_lexicon": len(linhas_lexicon()),
         }
@@ -946,7 +924,7 @@ def criar_app(
             ]
         )
 
-        faixas = faixas_vigentes()
+        faixas = ctx.faixas_vigentes()
         analisadas = resultado.conversas[:TETO_CONVERSAS_ANALISE]
         analises = []
         for conversa in analisadas:
@@ -967,7 +945,7 @@ def criar_app(
                     "conversa": conversa.model_dump(mode="json"),
                     "score": score,
                     "nota": nota_0_10(score) if score is not None else None,
-                    "categoria": categoria_de(score, faixas),
+                    "categoria": ctx.categoria_de(score, faixas),
                     "mensagens": analise["mensagens"],
                     "contribuicoes": analise["contribuicoes"],
                     "importancias": analise["importancias"],
