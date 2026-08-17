@@ -27,8 +27,12 @@ from pathlib import Path
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 
+from fraus.api.esquemas import (TIPOS_DE_FONTE, PedidoAjusteFonte,
+                                PedidoAnalise, PedidoChaveAcesso,
+                                PedidoFonte, PedidoImportacao,
+                                PedidoIngestao, PedidoSimulacao)
 from fraus import acesso
 from fraus import credencial
 from fraus.configuracao import PADROES as CONFIGURACAO_DE_FABRICA
@@ -36,7 +40,7 @@ from fraus.configuracao import carregar as carregar_configuracao
 from fraus.configuracao import faixas_de
 from fraus.configuracao import salvar as salvar_configuracao
 from fraus.db import Banco
-from fraus.modelos import Conversa, Mensagem
+from fraus.modelos import Conversa
 from fraus.fusor import Fusor, montar_features
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, lexico_por_classe, nota_0_10,
@@ -122,55 +126,6 @@ RAIZ_IMPORTACAO = Path(os.environ.get("FRAUS_RAIZ_IMPORTACAO", "dados_brutos"))
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o CSV inteiro.
 LIMITE_MOTIVOS = 20
-
-
-# Tipos de fonte que a ingestao de fato sabe tratar hoje. Aceitar um tipo que
-# nenhum adapter le seria cadastrar uma promessa: a tela mostraria uma fonte
-# que nunca traz conversa nenhuma.
-TIPOS_DE_FONTE = ("csv", "webhook")
-
-
-class PedidoFonte(BaseModel):
-    nome: str
-    canal: str
-    tipo: str
-    variavel_segredo: str | None = None  # NOME da variavel, nunca o segredo
-
-
-class PedidoAjusteFonte(BaseModel):
-    nome: str | None = None
-    ativa: bool | None = None
-
-
-class PedidoImportacao(BaseModel):
-    caminho: str  # unico campo aceito: veredito nunca vem do cliente
-
-
-class PedidoSimulacao(BaseModel):
-    texto: str  # unico campo aceito: probabilidade e derivada no servidor
-
-
-class PedidoAnalise(BaseModel):
-    csv: str  # conteudo do arquivo; veredito continua sendo derivado aqui
-    nome: str | None = None  # so para escolher o leitor pela extensao
-
-
-class PedidoChaveAcesso(BaseModel):
-    nome: str = Field(min_length=1)
-
-
-class PedidoIngestao(BaseModel):
-    """Atendimento vindo de um sistema externo.
-
-    NAO ha campo de canal, score, nota nem categoria. O canal vem da FONTE
-    cadastrada e o veredito e derivado no servidor -- quem manda o dado nunca
-    escolhe como ele e contabilizado.
-    """
-
-    id: str
-    mensagens: list[Mensagem] = Field(min_length=1)
-    encerrada_em: datetime | None = None
-    escalou_para_humano: bool = False
 
 
 class Motor:
