@@ -18,7 +18,6 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 `app` nao existe como atributo normal do modulo.
 """
 
-import hmac
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +27,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from fraus.api.seguranca import (chave_do_cabecalho, exigir_mestra,
+                                 fonte_autorizada,
+                                 registrar_middleware_de_acesso)
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_FUSOR,
                                 CAMINHO_METRICAS, CAMINHO_METRICAS_EMOCAO,
@@ -107,71 +109,6 @@ LIMITE_LEXICON_PADRAO = 50
 LIMITE_MOTIVOS = 20
 
 
-def _chave_bearer(authorization: str | None) -> str | None:
-    """A chave de um `Authorization: Bearer ...`, ou None se nao for um.
-
-    O esquema e comparado SEM caixa porque a RFC 7235 o define assim -- cliente
-    que manda `bearer` esta correto. Esta e a UNICA normalizacao do cabecalho
-    no modulo: o middleware de chave de acesso e as rotas de fonte chamam daqui
-    para nao divergirem (ja divergiram: um exigia `Bearer ` exato).
-    """
-    if not authorization:
-        return None
-    esquema, _, resto = authorization.partition(" ")
-    if esquema.lower() != "bearer":
-        return None
-    return resto.strip()
-
-
-def _chave_do_cabecalho(authorization: str | None) -> str:
-    """Extrai a chave do `Authorization: Bearer ...`, recusando o resto.
-
-    401 sem `WWW-Authenticate` seria resposta incompleta: o cabecalho e o que
-    diz ao cliente COMO se autenticar, e sem ele o integrador so sabe que
-    falhou.
-    """
-    chave = _chave_bearer(authorization)
-    if chave is None:
-        raise HTTPException(
-            status_code=401,
-            detail="informe a chave da fonte em Authorization: Bearer <chave>",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return chave
-
-
-def _fonte_autorizada(banco: Banco, chave: str) -> dict:
-    """Fonte a que a chave pertence, ou 401/403.
-
-    A MENSAGEM E A MESMA para chave malformada, fonte inexistente e hash que
-    nao bate. Distinguir os tres contaria a quem tenta se aquele id de fonte
-    existe -- e a conferencia do hash roda mesmo quando a fonte nao foi achada,
-    para o tempo de resposta tambem nao contar.
-
-    Fonte desativada e caso separado (403, nao 401): a chave esta certa, o que
-    esta desligado e a fonte. Recusar como "chave invalida" mandaria o
-    integrador procurar problema onde nao ha.
-    """
-    negada = HTTPException(
-        status_code=401,
-        detail="chave invalida",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    fonte_id = credencial.fonte_da_chave(chave)
-    fonte = banco.buscar_fonte(fonte_id) if fonte_id is not None else None
-    guardado = banco.hash_da_chave_da_fonte(fonte_id) if fonte_id is not None else None
-
-    if not credencial.confere(chave, guardado) or fonte is None:
-        raise negada
-    if not fonte["ativa"]:
-        raise HTTPException(
-            status_code=403,
-            detail=f"a fonte '{fonte['nome']}' esta desativada",
-        )
-    return fonte
-
-
 def _fonte_publica(fonte: dict) -> dict:
     """Fonte como ela pode sair pela rede: o segredo nao acompanha.
 
@@ -204,67 +141,7 @@ def criar_app(
     chave_mestra = ctx.chave_mestra
     raiz = ctx.raiz
 
-    def _e_mestra(chave: str) -> bool:
-        if chave_mestra is None:
-            return False
-        return hmac.compare_digest(chave.encode("utf-8"), chave_mestra.encode("utf-8"))
-
-    def _acesso_autorizado(chave: str) -> bool:
-        """Mestra ou chave de acesso valida. Mensagem de recusa e uniforme
-        la fora: daqui so sai sim ou nao."""
-        if _e_mestra(chave):
-            return True
-        chave_id = acesso.id_da_chave(chave)
-        guardado = banco.hash_da_chave_acesso(chave_id) if chave_id is not None else None
-        return credencial.confere(chave, guardado)
-
-    def _exigir_mestra(authorization: str | None) -> None:
-        """Gerenciar chaves e privilegio da mestra, nunca de chave de acesso.
-
-        No modo aberto (sem mestra) nao ha o que exigir -- as rotas de
-        gerenciamento seguem abertas como o resto, coerente com a decisao de
-        ativacao condicionada.
-
-        403, nao 401: quem chega aqui com chave de acesso valida ja passou
-        pelo middleware -- a credencial esta certa, o privilegio e que falta.
-        """
-        if chave_mestra is None:
-            return
-        chave = _chave_do_cabecalho(authorization)
-        if not _e_mestra(chave):
-            raise HTTPException(
-                status_code=403, detail="esta rota exige a chave mestra"
-            )
-
-    if chave_mestra is not None:
-        @app.middleware("http")
-        async def exigir_chave_de_acesso(request, call_next):
-            # /ingestao tem credencial propria (chave de FONTE): uma credencial
-            # por rota. OPTIONS e o preflight do navegador -- nao carrega
-            # header de autorizacao por definicao.
-            # `rstrip("/")`: `/ingestao/` e a MESMA rota (o Starlette redireciona
-            # para ela), e comparar o path exato mandava o integrador que
-            # configurou a URL com barra final para o 401 daqui em vez da
-            # credencial de fonte.
-            if request.url.path.rstrip("/") == "/ingestao" or request.method == "OPTIONS":
-                return await call_next(request)
-            cabecalho = request.headers.get("authorization")
-            chave_recebida = _chave_bearer(cabecalho)
-            if chave_recebida is None:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": (
-                        "informe a chave de acesso em Authorization: Bearer <chave>"
-                    )},
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            if not _acesso_autorizado(chave_recebida):
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "chave invalida"},
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            return await call_next(request)
+    registrar_middleware_de_acesso(app, ctx)
 
     # O CORS precisa ficar POR FORA do middleware de chave: em Starlette, o
     # middleware adicionado por ULTIMO e o mais externo, entao registrar o
@@ -552,7 +429,7 @@ def criar_app(
         rotacao sem risco, mas a antiga seguiria aceita sem ninguem saber quem
         ainda a usa.
         """
-        _exigir_mestra(authorization)
+        exigir_mestra(ctx, authorization)
         if banco.buscar_fonte(fonte_id) is None:
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
@@ -578,7 +455,7 @@ def criar_app(
         fonte_id: int, authorization: str | None = Header(default=None)
     ) -> None:
         """Invalida a chave da fonte. A fonte e as conversas dela continuam."""
-        _exigir_mestra(authorization)
+        exigir_mestra(ctx, authorization)
         if banco.buscar_fonte(fonte_id) is None:
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
         banco.revogar_chave(fonte_id)
@@ -588,7 +465,7 @@ def criar_app(
         pedido: PedidoChaveAcesso, authorization: str | None = Header(default=None)
     ) -> dict:
         """Gera uma chave de acesso e a devolve EM CLARO uma unica vez."""
-        _exigir_mestra(authorization)
+        exigir_mestra(ctx, authorization)
         registro = banco.criar_chave_acesso(
             nome=pedido.nome,
             criada_em=datetime.now(timezone.utc).isoformat(),
@@ -609,14 +486,14 @@ def criar_app(
 
     @app.get("/acesso/chaves")
     def listar_chaves_acesso(authorization: str | None = Header(default=None)) -> list[dict]:
-        _exigir_mestra(authorization)
+        exigir_mestra(ctx, authorization)
         return banco.listar_chaves_acesso()
 
     @app.delete("/acesso/chaves/{chave_id}", status_code=204)
     def revogar_chave_acesso(
         chave_id: int, authorization: str | None = Header(default=None)
     ) -> None:
-        _exigir_mestra(authorization)
+        exigir_mestra(ctx, authorization)
         if not banco.apagar_chave_acesso(chave_id):
             raise HTTPException(status_code=404, detail="chave nao encontrada")
 
@@ -635,8 +512,8 @@ def criar_app(
 
         Score e categoria sao derivados aqui, como em toda entrada.
         """
-        chave = _chave_do_cabecalho(authorization)
-        fonte = _fonte_autorizada(banco, chave)
+        chave = chave_do_cabecalho(authorization)
+        fonte = fonte_autorizada(ctx.banco, chave)
 
         try:
             conversa = Conversa(
