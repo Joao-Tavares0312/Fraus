@@ -128,7 +128,7 @@ def lexicon(
 def simular(
     pedido: PedidoSimulacao, ctx: Contexto = Depends(obter_contexto)
 ) -> dict:
-    """Roda o classificador numa frase avulsa -- nao persiste nada no ctx.banco."""
+    """Roda o classificador numa frase avulsa -- nao persiste nada no banco."""
     texto = pedido.texto
     if not texto.strip():
         raise HTTPException(status_code=400, detail="texto vazio")
@@ -244,7 +244,7 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
             ),
         )
 
-    # Referencia de frequencia: a fala de cliente de TODO o ctx.banco. O custo
+    # Referencia de frequencia: a fala de cliente de TODO o banco. O custo
     # e uma varredura por analise, aceitavel na ordem de grandeza deste
     # projeto e o ponto a trocar por um indice se deixar de ser.
     referencia = contar_palavras(

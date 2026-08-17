@@ -23,6 +23,7 @@ def configuracoes(ctx: Contexto = Depends(obter_contexto)) -> dict:
         "fabrica": CONFIGURACAO_DE_FABRICA,
     }
 
+
 @router.put("/configuracoes")
 def configurar(pedido: dict, ctx: Contexto = Depends(obter_contexto)) -> dict:
     """Grava as chaves enviadas. Chave desconhecida ou valor invalido e 400.

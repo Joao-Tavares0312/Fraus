@@ -339,6 +339,25 @@ que conta como bom tempo de resposta.
 
 ## Desenvolvimento
 
+### Onde mora a API
+
+Nenhuma rota é definida em `fraus/api/main.py`: ele só monta o app — o
+`Contexto`, os middlewares na ordem certa e os oito routers. Cada domínio tem
+o seu arquivo, e é nele que se mexe:
+
+| Arquivo | O que tem |
+|---|---|
+| `api/main.py` | montagem do app e `criar_app` — nada mais |
+| `api/contexto.py` | `Contexto` (banco, motor, raiz, chave mestra) + os derivados compartilhados; as rotas o recebem por `Depends(obter_contexto)` |
+| `api/esquemas.py` | os contratos de **entrada** (nenhum aceita veredito) |
+| `api/seguranca.py` | as duas credenciais — chave de acesso/mestra e chave de fonte — e o middleware |
+| `api/periodo.py` | validação do recorte `de`/`ate`, pontas inclusivas |
+| `api/caminhos.py` | caminhos configuráveis por ambiente + contenção da importação |
+| `api/rotas/` | um módulo por domínio: `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso`, `ingestao`, `modelo` |
+
+As dependências chegam por injeção, não por fechamento léxico — é o que
+permite a rota morar fora do arquivo que constrói o app.
+
 ### Servidor de demonstração da interface
 
 O `app` real carrega o BERTimbau do disco e **falha alto** se `modelos/` não

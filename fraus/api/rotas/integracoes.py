@@ -34,7 +34,6 @@ def fonte_publica(fonte: dict) -> dict:
     return {**fonte, "configurada": bool(variavel and os.environ.get(variavel))}
 
 
-
 @router.get("/integracoes/fontes")
 def listar_fontes(ctx: Contexto = Depends(obter_contexto)) -> list[dict]:
     """Fontes cadastradas, cada uma com `configurada` derivado do ambiente.

@@ -1,8 +1,13 @@
-"""API do Fraus.
+"""API do Fraus -- a MONTAGEM do app. As rotas moram em `fraus/api/rotas/`.
+
+Aqui so acontecem quatro coisas: montar o `Contexto` com as dependencias
+reais, registrar os middlewares NA ORDEM certa, incluir os routers de cada
+dominio e expor o `app`. Rota nenhuma e definida neste arquivo -- ele cresceu
+para 1367 linhas quando eram todas closures daqui, e a fronteira do que cada
+dominio faz vive no modulo dele.
 
 Score e categoria SAO SEMPRE derivados no servidor: campos vindos do corpo da
-requisicao que se pareçam com veredito sao ignorados por construcao -- o modelo
-de entrada so aceita `caminho`.
+requisicao que se parecam com veredito sao ignorados por construcao.
 
 O objeto `app` de nivel de modulo (consumido por `uvicorn fraus.api.main:app`)
 e construido com dependencias REAIS -- Banco em disco e Motor com
@@ -19,57 +24,31 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 """
 
 import os
-from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 
-from fraus.api.rotas.modelo import (TETO_ARQUIVO_ANALISE,  # reexportados: os testes os importam daqui
-                                    TETO_CONVERSAS_ANALISE,
-                                    TETO_LEXICON,
-                                    TETO_TEXTO_SIMULACAO)
-from fraus.api.rotas import conversas, indicadores, modelo, ingestao, integracoes, acesso, configuracoes, saude
-from fraus.api.seguranca import (chave_do_cabecalho, exigir_mestra,
-                                 fonte_autorizada,
-                                 registrar_middleware_de_acesso)
-from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_FUSOR,
-                                CAMINHO_METRICAS, CAMINHO_METRICAS_EMOCAO,
-                                CAMINHO_METRICAS_IRONIA, CAMINHO_MODELO_EMOCAO,
-                                CAMINHO_MODELO_IRONIA, CAMINHO_MODELO_TEXTO,
-                                RAIZ_IMPORTACAO, metricas_de,
-                                resolver_dentro_da_raiz)
-from fraus.api.periodo import dia_ou_400, no_recorte, recorte_ou_400
-from fraus.api.esquemas import (TIPOS_DE_FONTE, PedidoAjusteFonte,
-                                PedidoAnalise, PedidoChaveAcesso,
-                                PedidoFonte, PedidoImportacao,
-                                PedidoIngestao, PedidoSimulacao)
-from fraus import credencial
-from fraus.configuracao import PADROES as CONFIGURACAO_DE_FABRICA
-from fraus.configuracao import carregar as carregar_configuracao
-from fraus.configuracao import faixas_de
-from fraus.configuracao import salvar as salvar_configuracao
+                                CAMINHO_MODELO_EMOCAO, CAMINHO_MODELO_IRONIA,
+                                CAMINHO_MODELO_TEXTO, RAIZ_IMPORTACAO)
+from fraus.api.contexto import Contexto
+from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
+from fraus.api.rotas import (acesso, configuracoes, conversas, indicadores,
+                             ingestao, integracoes, modelo, saude)
+# Reexportados: os testes os importam daqui desde antes da quebra em modulos,
+# e mudar de onde se importa um teto seria mexer no contrato de quem consome
+# sem nenhum ganho.
+from fraus.api.rotas.modelo import (TETO_ARQUIVO_ANALISE,
+                                    TETO_CONVERSAS_ANALISE, TETO_LEXICON,
+                                    TETO_TEXTO_SIMULACAO)
+from fraus.api.seguranca import registrar_middleware_de_acesso
 from fraus.db import Banco
-from fraus.modelos import Conversa
 from fraus.fusor import Fusor
-from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
-                               containment_rate, lexico_por_classe, nota_0_10,
-                               serie_diaria, tempo_mediano_resposta)
-from fraus.ingest.arquivos import ArquivoIlegivelError, extrair
-from fraus.ingest.csv_driver import carregar_csv
-from fraus.resumo import resumir
 from fraus.motor import Motor  # reexportado: `from fraus.api.main import Motor` segue valendo
-from fraus.sinais.palavras import contar_palavras
-from fraus.sinais.emocao import NOMES_EMOCOES, ClassificadorEmocao
-from fraus.sinais.emoji import linhas_lexicon, score_do_emoji
+from fraus.sinais.emocao import ClassificadorEmocao
 from fraus.sinais.ironia import ClassificadorIronia
 from fraus.sinais.texto import ClassificadorTexto
-
-
-
 
 # Origens que o NAVEGADOR pode usar para falar com a API. A dashboard busca
 # `/saude` e `/modelo/simular` do lado do cliente, e sem isso o navegador
@@ -95,12 +74,6 @@ def origens_liberadas() -> list[str]:
     return [pedaco.strip() for pedaco in bruto.split(",") if pedaco.strip()]
 
 
-
-# Quantos motivos de rejeicao a resposta carrega. O relato existe para o
-# operador entender o que ficou de fora, nao para devolver o CSV inteiro.
-LIMITE_MOTIVOS = 20
-
-
 def criar_app(
     banco: Banco,
     motor,
@@ -117,32 +90,30 @@ def criar_app(
         # combinacao possivel de configuracao errada com acesso liberado.
         chave_mestra=chave_mestra or None,
     )
+    # Como as rotas alcancam o contexto: `Depends(obter_contexto)` le daqui.
     app.state.contexto = ctx
-    chave_mestra = ctx.chave_mestra
-    raiz = ctx.raiz
 
     registrar_middleware_de_acesso(app, ctx)
 
     # O CORS precisa ficar POR FORA do middleware de chave: em Starlette, o
     # middleware adicionado por ULTIMO e o mais externo, entao registrar o
     # CORS depois garante que o preflight (sem header de autorizacao, por
-    # definicao) e respondido pelo CORS antes de chegar no bloco 401 acima.
+    # definicao) e respondido pelo CORS antes de chegar no 401 do middleware.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origens_liberadas(),
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
-    app.include_router(acesso.router)
+
+    app.include_router(saude.router)
     app.include_router(conversas.router)
     app.include_router(indicadores.router)
     app.include_router(configuracoes.router)
-    app.include_router(ingestao.router)
     app.include_router(integracoes.router)
+    app.include_router(acesso.router)
+    app.include_router(ingestao.router)
     app.include_router(modelo.router)
-    app.include_router(indicadores.router)
-    app.include_router(conversas.router)
-    app.include_router(saude.router)
 
     return app
 

@@ -23,61 +23,16 @@
 
 ### Task 1: Fechar as lacunas de cobertura
 
-Rede de segurança antes de mover qualquer linha. Auditoria das ~30 rotas contra a suíte atual apontou duas descobertas: `POST /analisar/arquivo` (zero testes) e `POST /ingestao` (só o par 401/201 — o canal derivado da fonte e a recusa de fonte desativada não são exercidos, apesar de documentados na docstring da rota).
+Rede de segurança antes de mover qualquer linha. Auditoria das ~30 rotas contra a suíte atual: linha de base **315 passed, 1 deselected**. A única descoberta é `POST /ingestao` — a suíte exercita só o par 401/201; o canal derivado da fonte e a recusa de fonte desativada não são exercidos, apesar de documentados na docstring da rota. (`/analisar/arquivo` tem 7 testes em `tests/test_api.py:1071-1176`; a primeira leitura da auditoria os contou junto com os de `/analisar` e reportou lacuna onde não há.)
 
 **Files:**
-- Modify: `tests/test_api.py` (acrescentar ao fim)
 - Modify: `tests/test_autenticacao.py` (acrescentar ao fim)
 
 **Interfaces:**
 - Consumes: fixture `cliente` de `tests/test_api.py` (`criar_app` com `MotorFalso` e `raiz_importacao=tmp_path`); helpers `_cliente`, `_criar_fonte`, `MESTRA` de `tests/test_autenticacao.py`
 - Produces: nada de código de produção — só a rede que as tasks 2-14 usam
 
-- [ ] **Step 1: Escrever os testes de `/analisar/arquivo`**
-
-Acrescentar ao fim de `tests/test_api.py`:
-
-```python
-def test_analisar_arquivo_aceita_csv_e_nao_grava_nada(cliente):
-    """Upload multipart analisa e descarta: nada entra no banco."""
-    resposta = cliente.post(
-        "/analisar/arquivo",
-        files={"arquivo": ("conversa.csv", CSV.encode("utf-8"), "text/csv")},
-    )
-    assert resposta.status_code == 200
-    corpo = resposta.json()
-    assert corpo["conversas_no_arquivo"] == 1
-    assert corpo["conversas_analisadas"] == 1
-    assert len(corpo["analises"]) == 1
-    # A rota nao persiste: a listagem segue vazia depois da analise.
-    assert cliente.get("/conversas").json() == []
-
-
-def test_analisar_arquivo_vazio_e_400(cliente):
-    resposta = cliente.post(
-        "/analisar/arquivo",
-        files={"arquivo": ("vazio.csv", b"", "text/csv")},
-    )
-    assert resposta.status_code == 400
-    assert "vazio" in resposta.json()["detail"]
-
-
-def test_analisar_arquivo_ilegivel_e_400_que_explica(cliente):
-    """Formato que a extracao nao le vira 400 nomeando o esperado, nunca 500."""
-    resposta = cliente.post(
-        "/analisar/arquivo",
-        files={"arquivo": ("foto.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 64, "image/png")},
-    )
-    assert resposta.status_code == 400
-    assert resposta.json()["detail"]
-```
-
-- [ ] **Step 2: Rodar e ver passar (são testes de caracterização do código atual)**
-
-Run: `uv run pytest tests/test_api.py -q -k analisar_arquivo`
-Expected: 3 passed. Se algum falhar, o comportamento atual difere do descrito — **corrija o teste para descrever o que a API faz hoje**, não a API. O objetivo é fotografar o comportamento, não julgá-lo.
-
-- [ ] **Step 3: Escrever os testes de `/ingestao`**
+- [ ] **Step 1: Escrever os testes de `/ingestao`**
 
 Acrescentar ao fim de `tests/test_autenticacao.py`:
 
@@ -141,21 +96,21 @@ def test_ingestao_de_fonte_desativada_e_403(tmp_path):
     assert resposta.status_code == 403
 ```
 
-- [ ] **Step 4: Rodar e ver passar**
+- [ ] **Step 2: Rodar e ver passar (são testes de caracterização do código atual)**
 
 Run: `uv run pytest tests/test_autenticacao.py -q -k ingestao`
-Expected: todos passam. Mesma regra do Step 2 — divergência corrige o teste, não a API.
+Expected: todos passam. Se algum falhar, o comportamento atual difere do descrito — **corrija o teste para descrever o que a API faz hoje**, não a API. O objetivo é fotografar o comportamento, não julgá-lo.
 
-- [ ] **Step 5: Rodar a suíte inteira e registrar a linha de base**
+- [ ] **Step 3: Rodar a suíte inteira**
 
 Run: `uv run pytest -q`
-Expected: verde. **Anote o número total de testes** — ele não pode cair em nenhuma task seguinte.
+Expected: **317 passed, 1 deselected** (315 da linha de base + 2). Esse total não pode cair em nenhuma task seguinte.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add tests/test_api.py tests/test_autenticacao.py
-git commit -m "test(api): cobrir /analisar/arquivo e o contrato de fonte da ingestao"
+git add tests/test_autenticacao.py
+git commit -m "test(api): cobrir o contrato de fonte da ingestao"
 ```
 
 ---
