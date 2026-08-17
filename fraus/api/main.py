@@ -34,14 +34,15 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_FUSOR,
                                 CAMINHO_MODELO_TEXTO, RAIZ_IMPORTACAO)
 from fraus.api.contexto import Contexto
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
-from fraus.api.rotas import (acesso, configuracoes, conversas, indicadores,
-                             ingestao, integracoes, modelo, saude)
+from fraus.api.rotas import (acesso, analise, configuracoes, conversas,
+                             indicadores, ingestao, integracoes, modelo,
+                             saude)
 # Reexportados: os testes os importam daqui desde antes da quebra em modulos,
 # e mudar de onde se importa um teto seria mexer no contrato de quem consome
 # sem nenhum ganho.
-from fraus.api.rotas.modelo import (TETO_ARQUIVO_ANALISE,
-                                    TETO_CONVERSAS_ANALISE, TETO_LEXICON,
-                                    TETO_TEXTO_SIMULACAO)
+from fraus.api.rotas.analise import (TETO_ARQUIVO_ANALISE,
+                                     TETO_CONVERSAS_ANALISE)
+from fraus.api.rotas.modelo import TETO_LEXICON, TETO_TEXTO_SIMULACAO
 from fraus.api.seguranca import registrar_middleware_de_acesso
 from fraus.db import Banco
 from fraus.fusor import Fusor
@@ -114,6 +115,7 @@ def criar_app(
     app.include_router(acesso.router)
     app.include_router(ingestao.router)
     app.include_router(modelo.router)
+    app.include_router(analise.router)
 
     return app
 

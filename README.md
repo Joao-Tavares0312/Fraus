@@ -353,7 +353,7 @@ o seu arquivo, e é nele que se mexe:
 | `api/seguranca.py` | as duas credenciais — chave de acesso/mestra e chave de fonte — e o middleware |
 | `api/periodo.py` | validação do recorte `de`/`ate`, pontas inclusivas |
 | `api/caminhos.py` | caminhos configuráveis por ambiente + contenção da importação |
-| `api/rotas/` | um módulo por domínio: `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso`, `ingestao`, `modelo` |
+| `api/rotas/` | um módulo por domínio: `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso`, `ingestao`, `modelo`, `analise` |
 
 As dependências chegam por injeção, não por fechamento léxico — é o que
 permite a rota morar fora do arquivo que constrói o app.
