@@ -41,22 +41,19 @@ from fraus.configuracao import faixas_de
 from fraus.configuracao import salvar as salvar_configuracao
 from fraus.db import Banco
 from fraus.modelos import Conversa
-from fraus.fusor import Fusor, montar_features
+from fraus.fusor import Fusor
 from fraus.indicadores import (calcular_csat, calcular_nps, categoria_nps,
                                containment_rate, lexico_por_classe, nota_0_10,
                                serie_diaria, tempo_mediano_resposta)
 from fraus.ingest.arquivos import ArquivoIlegivelError, extrair
 from fraus.ingest.csv_driver import carregar_csv
 from fraus.resumo import resumir
-from fraus.sinais.palavras import (contar_palavras, pesos_das_palavras,
-                                   vocabulario)
-from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
-                                 desprezo_derivado)
-from fraus.sinais.emoji import (emojis_com_posicao, linhas_lexicon,
-                                score_do_emoji)
-from fraus.sinais.ironia import IRONICO, ClassificadorIronia
-from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
-                                ClassificadorTexto)
+from fraus.motor import Motor  # reexportado: `from fraus.api.main import Motor` segue valendo
+from fraus.sinais.palavras import contar_palavras
+from fraus.sinais.emocao import NOMES_EMOCOES, ClassificadorEmocao
+from fraus.sinais.emoji import linhas_lexicon, score_do_emoji
+from fraus.sinais.ironia import ClassificadorIronia
+from fraus.sinais.texto import ClassificadorTexto
 
 CAMINHO_MODELO_TEXTO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
 CAMINHO_MODELO_EMOCAO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_EMOCAO", "modelos/bertimbau-emocao"))
@@ -126,201 +123,6 @@ RAIZ_IMPORTACAO = Path(os.environ.get("FRAUS_RAIZ_IMPORTACAO", "dados_brutos"))
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o CSV inteiro.
 LIMITE_MOTIVOS = 20
-
-
-class Motor:
-    """Amarra classificador de texto e fusor num unico ponto de pontuacao.
-
-    Emocao e ironia entram como LEITURA, nunca como julgamento. O fusor foi
-    treinado com dezesseis features -- texto, emoji e tempo -- e nenhuma delas
-    vem dessas duas cabecas (confira em `fraus.fusor.NOMES_FEATURES`). Elas
-    descrevem a fala do cliente sem mover a nota um centesimo.
-
-    Isso PRECISA aparecer em toda resposta que carrega os dois numeros lado a
-    lado. Uma tela que mostra "ironia 0,99" encostada num score baixo convida a
-    conclusao de que a ironia derrubou a nota, e nao derrubou: o que derrubou
-    esta em `contribuicoes`, que so fala das dezesseis. Ligar emocao e ironia ao
-    score exigiria retreinar o fusor com elas dentro.
-
-    Os dois classificadores sao OPCIONAIS. Sem eles a API continua pontuando
-    igual, porque nada do score depende deles -- os campos saem `None`, que e a
-    diferenca honesta entre "o modelo nao rodou" e "o modelo rodou e deu zero".
-    """
-
-    def __init__(
-        self,
-        classificador: ClassificadorTexto,
-        fusor: Fusor,
-        emocao: ClassificadorEmocao | None = None,
-        ironia: ClassificadorIronia | None = None,
-    ) -> None:
-        self._classificador = classificador
-        self._fusor = fusor
-        self._emocao = emocao
-        self._ironia = ironia
-
-    def _emocao_de(self, textos: list[str]) -> list[dict] | None:
-        """Sete probabilidades mais o desprezo da diade, por texto. None sem modelo."""
-        if self._emocao is None or not textos:
-            return None
-        previsoes = self._emocao.prever_mensagens(textos)
-        return [
-            {
-                **{nome: float(p[i]) for i, nome in enumerate(NOMES_EMOCOES)},
-                # Oitava emocao de Ekman, derivada da diade raiva+nojo
-                # (Plutchik 1980) porque nenhum corpus PT-BR a anota.
-                "desprezo": desprezo_derivado(
-                    p[NOMES_EMOCOES.index("raiva")], p[NOMES_EMOCOES.index("nojo")]
-                ),
-            }
-            for p in previsoes
-        ]
-
-    def _ironia_de(self, textos: list[str]) -> list[float] | None:
-        """Probabilidade de ironia por texto. None sem modelo carregado."""
-        if self._ironia is None or not textos:
-            return None
-        return [float(p[IRONICO]) for p in self._ironia.prever_mensagens(textos)]
-
-    def pontuar_conversa(self, conversa) -> float | None:
-        if not conversa.tem_sinal_cliente:
-            return None  # ausencia de dado nao e insatisfacao
-        return self._fusor.pontuar(montar_features(conversa, self._classificador))
-
-    def atribuir_conversa(self, conversa) -> dict:
-        """Quebra a nota por mensagem: quem falou o que, e com que probabilidade.
-
-        SO a fala do cliente recebe probabilidade -- bot e humano vem com os
-        tres campos nulos, porque o classificador foi treinado em texto de
-        cliente e pontuar a fala do bot seria numero inventado. A transcricao
-        inteira volta assim mesmo: a interface precisa dela para alinhar o
-        `indice` com `/conversas/{id}` sem recontar nada.
-
-        A ordem das classes e a de `fraus.sinais.texto`: 0 insatisfeito,
-        1 neutro, 2 satisfeito.
-
-        O classificador e o fusor NAO vazam daqui: o que sai e o resultado ja
-        montado, para a rota nao ter que saber que existe modelo por baixo.
-
-        `contribuicoes` e o quanto cada feature pesou NESTA conversa (sinal:
-        positivo empurra para satisfeito, negativo para insatisfeito) --
-        diferente de `importancias`, que e o peso GLOBAL do modelo. Sem fala
-        do cliente nao ha score, entao tambem nao ha contribuicao: `None`.
-        """
-        indices_do_cliente = [
-            indice
-            for indice, mensagem in enumerate(conversa.mensagens)
-            if mensagem.autor == "cliente"
-        ]
-        textos_do_cliente = [
-            conversa.mensagens[indice].texto for indice in indices_do_cliente
-        ]
-        probabilidades = self._classificador.prever_mensagens(textos_do_cliente)
-        por_indice = dict(zip(indices_do_cliente, probabilidades))
-
-        # Mesma regra das probabilidades de satisfacao: so a fala do CLIENTE.
-        # As tres cabecas foram fine-tunadas em texto de cliente, e rodar
-        # qualquer uma na fala do bot devolveria numero sem lastro.
-        emocoes = self._emocao_de(textos_do_cliente)
-        ironias = self._ironia_de(textos_do_cliente)
-        emocao_por_indice = dict(zip(indices_do_cliente, emocoes or []))
-        ironia_por_indice = dict(zip(indices_do_cliente, ironias or []))
-
-        mensagens = []
-        for indice, mensagem in enumerate(conversa.mensagens):
-            previsao = por_indice.get(indice)
-            mensagens.append(
-                {
-                    "indice": indice,
-                    "autor": mensagem.autor,
-                    "texto": mensagem.texto,
-                    "prob_insatisfeito": (
-                        float(previsao[INSATISFEITO]) if previsao else None
-                    ),
-                    "prob_neutro": float(previsao[NEUTRO]) if previsao else None,
-                    "prob_satisfeito": (
-                        float(previsao[SATISFEITO]) if previsao else None
-                    ),
-                    "emocao": emocao_por_indice.get(indice),
-                    "prob_ironia": ironia_por_indice.get(indice),
-                }
-            )
-
-        contribuicoes = None
-        if conversa.tem_sinal_cliente:
-            features = montar_features(conversa, self._classificador)
-            contribuicoes = self._fusor.contribuicoes(features)
-
-        return {
-            "mensagens": mensagens,
-            "importancias": self._fusor.importancias(),
-            "contribuicoes": contribuicoes,
-            # Bandeira explicita para a interface: emocao e ironia vieram, mas
-            # NAO estao em `contribuicoes` nem no score. Sem isso a tela nao tem
-            # como saber que precisa separar o que descreve do que pontua.
-            "sinais_fora_do_score": ["emocao", "prob_ironia"],
-        }
-
-    def importancias(self) -> dict:
-        """Peso global de cada feature -- usado pela ficha do modelo em `/modelo`."""
-        return self._fusor.importancias()
-
-    def analisar_conversa(self, conversa, referencia=None) -> dict:
-        """Analise completa de UMA conversa, com peso palavra a palavra.
-
-        E a atribuicao de `atribuir_conversa` mais duas coisas que so fazem
-        sentido no exame de um atendimento especifico: o peso de cada palavra
-        (por oclusao, ver `fraus.sinais.palavras`) e o vocabulario do cliente
-        comparado ao restante do banco.
-
-        SO A FALA DO CLIENTE recebe peso de palavra, pela mesma razao de sempre:
-        o classificador foi fine-tunado em texto de cliente. Medir o quanto uma
-        palavra do roteiro do bot "empurra a nota" produziria um numero
-        bonito e sem lastro.
-        """
-        atribuicao = self.atribuir_conversa(conversa)
-        for mensagem in atribuicao["mensagens"]:
-            mensagem["palavras"] = (
-                pesos_das_palavras(mensagem["texto"], self._classificador)
-                if mensagem["autor"] == "cliente"
-                else None
-            )
-
-        score = self.pontuar_conversa(conversa)
-        return {
-            **atribuicao,
-            "score": score,
-            "vocabulario": vocabulario(conversa, referencia),
-        }
-
-    def simular_texto(self, texto: str) -> dict:
-        """Roda o classificador de texto sobre uma mensagem avulsa, fora do banco.
-
-        Usado por `/modelo/simular` para deixar o operador testar frases sem
-        importar CSV. So mexe no classificador de texto (nao ha conversa, nao
-        ha as outras 12 features de tempo/emoji agregadas) -- o classificador
-        e o fusor continuam sem vazar para a rota.
-        """
-        probabilidades = self._classificador.prever_mensagens([texto])[0]
-        emojis = [
-            {"emoji": emoji, "score": score_do_emoji(emoji), "posicao_relativa": posicao}
-            for emoji, posicao in emojis_com_posicao(texto)
-        ]
-        emocoes = self._emocao_de([texto])
-        ironias = self._ironia_de([texto])
-        return {
-            "prob_insatisfeito": float(probabilidades[INSATISFEITO]),
-            "prob_neutro": float(probabilidades[NEUTRO]),
-            "prob_satisfeito": float(probabilidades[SATISFEITO]),
-            "emojis": emojis,
-            # As duas cabecas de leitura. E aqui que a frase irônica se
-            # denuncia: "que atendimento maravilhoso, so esperei 3 horas" sai
-            # com prob_satisfeito alta E prob_ironia alta ao mesmo tempo -- as
-            # duas coisas juntas sao a informacao, e por isso ironia e cabeca
-            # separada em vez de mais uma classe de satisfacao.
-            "emocao": emocoes[0] if emocoes else None,
-            "prob_ironia": ironias[0] if ironias else None,
-        }
 
 
 def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
