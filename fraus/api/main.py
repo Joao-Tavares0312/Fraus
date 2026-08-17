@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from fraus.api.rotas import configuracoes, saude
 from fraus.api.seguranca import (chave_do_cabecalho, exigir_mestra,
                                  fonte_autorizada,
                                  registrar_middleware_de_acesso)
@@ -153,10 +154,6 @@ def criar_app(
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
-    @app.get("/saude")
-    def saude() -> dict:
-        return {"status": "ok"}
-
     @app.post("/conversas/importar")
     def importar(pedido: PedidoImportacao) -> dict:
         caminho = resolver_dentro_da_raiz(raiz, pedido.caminho)
@@ -332,33 +329,6 @@ def criar_app(
             "ate": fim.isoformat() if fim else None,
             "pontos": serie_diaria(registros, ctx.faixas_vigentes()),
         }
-
-    @app.get("/configuracoes")
-    def configuracoes() -> dict:
-        """Configuracao vigente E a de fabrica -- a tela precisa das duas.
-
-        Sem a de fabrica, "voltar ao padrao" seria um botao que a interface
-        teria que preencher com numeros digitados de novo, e digitar de novo e
-        exatamente como faixa duplicada nasce.
-        """
-        return {
-            "vigente": carregar_configuracao(banco),
-            "fabrica": CONFIGURACAO_DE_FABRICA,
-        }
-
-    @app.put("/configuracoes")
-    def configurar(pedido: dict) -> dict:
-        """Grava as chaves enviadas. Chave desconhecida ou valor invalido e 400.
-
-        O corpo e um dicionario cru de proposito: chave desconhecida precisa
-        chegar a validacao para ser NOMEADA no erro, e nao ser descartada em
-        silencio por um modelo de entrada tolerante.
-        """
-        try:
-            vigente = salvar_configuracao(banco, pedido)
-        except ValueError as erro:
-            raise HTTPException(status_code=400, detail=str(erro)) from erro
-        return {"vigente": vigente, "fabrica": CONFIGURACAO_DE_FABRICA}
 
     @app.get("/integracoes/fontes")
     def listar_fontes() -> list[dict]:
@@ -852,6 +822,9 @@ def criar_app(
             "tem_tempo": resultado.tem_tempo,
             "avisos": resultado.avisos,
         }
+
+    app.include_router(saude.router)
+    app.include_router(configuracoes.router)
 
     return app
 
