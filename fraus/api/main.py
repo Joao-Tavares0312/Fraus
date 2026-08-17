@@ -27,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from fraus.api.rotas import configuracoes, saude
+from fraus.api.rotas import acesso, configuracoes, saude
 from fraus.api.seguranca import (chave_do_cabecalho, exigir_mestra,
                                  fonte_autorizada,
                                  registrar_middleware_de_acesso)
@@ -43,7 +43,6 @@ from fraus.api.esquemas import (TIPOS_DE_FONTE, PedidoAjusteFonte,
                                 PedidoAnalise, PedidoChaveAcesso,
                                 PedidoFonte, PedidoImportacao,
                                 PedidoIngestao, PedidoSimulacao)
-from fraus import acesso
 from fraus import credencial
 from fraus.configuracao import PADROES as CONFIGURACAO_DE_FABRICA
 from fraus.configuracao import carregar as carregar_configuracao
@@ -430,43 +429,6 @@ def criar_app(
             raise HTTPException(status_code=404, detail="fonte nao encontrada")
         banco.revogar_chave(fonte_id)
 
-    @app.post("/acesso/chaves", status_code=201)
-    def criar_chave_acesso(
-        pedido: PedidoChaveAcesso, authorization: str | None = Header(default=None)
-    ) -> dict:
-        """Gera uma chave de acesso e a devolve EM CLARO uma unica vez."""
-        exigir_mestra(ctx, authorization)
-        registro = banco.criar_chave_acesso(
-            nome=pedido.nome,
-            criada_em=datetime.now(timezone.utc).isoformat(),
-        )
-        chave, chave_hash = acesso.gerar(registro["id"])
-        banco.gravar_chave_acesso(
-            registro["id"], chave_hash=chave_hash, dica=credencial.dica(chave)
-        )
-        return {
-            **registro,
-            "dica": credencial.dica(chave),
-            "chave": chave,
-            "aviso": (
-                "Guarde agora: esta chave não pode ser lida de novo. "
-                "Revogue e gere outra se perdê-la."
-            ),
-        }
-
-    @app.get("/acesso/chaves")
-    def listar_chaves_acesso(authorization: str | None = Header(default=None)) -> list[dict]:
-        exigir_mestra(ctx, authorization)
-        return banco.listar_chaves_acesso()
-
-    @app.delete("/acesso/chaves/{chave_id}", status_code=204)
-    def revogar_chave_acesso(
-        chave_id: int, authorization: str | None = Header(default=None)
-    ) -> None:
-        exigir_mestra(ctx, authorization)
-        if not banco.apagar_chave_acesso(chave_id):
-            raise HTTPException(status_code=404, detail="chave nao encontrada")
-
     @app.post("/ingestao", status_code=201)
     def ingerir(pedido: PedidoIngestao, authorization: str | None = Header(default=None)) -> dict:
         """Recebe atendimento de um sistema EXTERNO, autenticado por chave.
@@ -823,6 +785,7 @@ def criar_app(
             "avisos": resultado.avisos,
         }
 
+    app.include_router(acesso.router)
     app.include_router(saude.router)
     app.include_router(configuracoes.router)
 
