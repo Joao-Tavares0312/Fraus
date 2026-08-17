@@ -70,6 +70,22 @@ CREATE TABLE IF NOT EXISTS chaves_acesso (
     dica TEXT,
     criada_em TEXT NOT NULL
 );
+
+-- Chave MESTRA gravada pela tela (`POST /acesso/mestra`), a segunda procedencia
+-- da mestra ao lado de FRAUS_CHAVE_MESTRA -- que continua vencendo. Existe para
+-- a autenticacao ligada por botao SOBREVIVER a reiniciar o processo: mestra que
+-- mora so em memoria volta a API para aberta em silencio, e "parece protegido e
+-- nao esta" e a pior falha possivel aqui.
+--
+-- `CHECK (id = 1)` faz do "existe no maximo UMA mestra" uma garantia do banco,
+-- nao uma regra que a aplicacao precisa lembrar de conferir. A chave em claro
+-- nunca chega aqui: so o hash, como em toda credencial deste projeto.
+CREATE TABLE IF NOT EXISTS chave_mestra (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    chave_hash TEXT NOT NULL,
+    dica TEXT NOT NULL,
+    criada_em TEXT NOT NULL
+);
 """
 
 
@@ -359,3 +375,40 @@ class Banco:
                 "DELETE FROM chaves_acesso WHERE id = ?", (identificador,)
             )
             return cursor.rowcount > 0
+
+    def gravar_chave_mestra(self, chave_hash: str, dica: str, criada_em: str) -> None:
+        """Grava a mestra NO LUGAR da anterior, se houver.
+
+        `INSERT OR REPLACE` com `id = 1` fixo: a rotacao TROCA a credencial em
+        vez de acumular uma segunda valida -- duas mestras aceitas ao mesmo
+        tempo pareceriam rotacao sem risco, mas a antiga seguiria autorizando
+        sem ninguem saber quem ainda a usa.
+        """
+        with self._conectar() as conexao:
+            conexao.execute(
+                "INSERT OR REPLACE INTO chave_mestra (id, chave_hash, dica, criada_em)"
+                " VALUES (1, ?, ?, ?)",
+                (chave_hash, dica, criada_em),
+            )
+
+    def hash_da_chave_mestra(self) -> str | None:
+        """O unico caminho para ler o hash da mestra -- explicito no nome."""
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT chave_hash FROM chave_mestra WHERE id = 1"
+            ).fetchone()
+        return linha["chave_hash"] if linha is not None else None
+
+    def chave_mestra_registrada(self) -> dict | None:
+        """Dica e data da mestra gravada. O HASH NAO SAI POR AQUI.
+
+        `None` quando nao ha mestra no banco -- que e diferente de "nao ha
+        mestra": a do ambiente nao passa por esta tabela.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT dica, criada_em FROM chave_mestra WHERE id = 1"
+            ).fetchone()
+        if linha is None:
+            return None
+        return {"dica": linha["dica"], "criada_em": linha["criada_em"]}
