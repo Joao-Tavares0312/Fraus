@@ -27,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from fraus.api.rotas import integracoes, acesso, configuracoes, saude
+from fraus.api.rotas import ingestao, integracoes, acesso, configuracoes, saude
 from fraus.api.seguranca import (chave_do_cabecalho, exigir_mestra,
                                  fonte_autorizada,
                                  registrar_middleware_de_acesso)
@@ -317,47 +317,6 @@ def criar_app(
             "pontos": serie_diaria(registros, ctx.faixas_vigentes()),
         }
 
-    @app.post("/ingestao", status_code=201)
-    def ingerir(pedido: PedidoIngestao, authorization: str | None = Header(default=None)) -> dict:
-        """Recebe atendimento de um sistema EXTERNO, autenticado por chave.
-
-        E o unico caminho de escrita que nao exige acesso ao disco da maquina:
-        a importacao le arquivo de uma pasta local, e isto aqui aceita a
-        conversa pela rede.
-
-        O CANAL e o da FONTE cadastrada, nao o que veio no corpo: quem manda o
-        dado nao escolhe em que canal ele e contabilizado, do mesmo jeito que
-        nao escolhe o proprio score. Fonte desativada recusa -- o interruptor
-        da tela de Integracoes precisa de fato desligar alguma coisa.
-
-        Score e categoria sao derivados aqui, como em toda entrada.
-        """
-        chave = chave_do_cabecalho(authorization)
-        fonte = fonte_autorizada(ctx.banco, chave)
-
-        try:
-            conversa = Conversa(
-                id=pedido.id,
-                canal=fonte["canal"],
-                iniciada_em=pedido.mensagens[0].enviada_em,
-                encerrada_em=pedido.encerrada_em,
-                escalou_para_humano=pedido.escalou_para_humano,
-                mensagens=sorted(pedido.mensagens, key=lambda m: m.enviada_em),
-            )
-        except ValidationError as erro:
-            raise HTTPException(status_code=400, detail=str(erro)) from erro
-
-        score = motor.pontuar_conversa(conversa)
-        banco.salvar(conversa, score, ctx.categoria_de(score, ctx.faixas_vigentes()))
-        return {
-            "id": conversa.id,
-            "canal": conversa.canal,
-            "score": score,
-            "nota": nota_0_10(score) if score is not None else None,
-            "categoria": ctx.categoria_de(score, ctx.faixas_vigentes()),
-            "fonte": fonte["nome"],
-        }
-
     @app.get("/modelo")
     def modelo() -> dict:
         """Ficha do modelo: pesos globais, metricas de treino, faixas e lexicon.
@@ -610,6 +569,7 @@ def criar_app(
 
     app.include_router(acesso.router)
     app.include_router(integracoes.router)
+    app.include_router(ingestao.router)
     app.include_router(saude.router)
     app.include_router(configuracoes.router)
 
