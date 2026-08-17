@@ -19,9 +19,8 @@ testes fazem ao importar `criar_app` -- nunca dispara essa construcao, porque
 """
 
 import hmac
-import json
 import os
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
@@ -29,6 +28,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_FUSOR,
+                                CAMINHO_METRICAS, CAMINHO_METRICAS_EMOCAO,
+                                CAMINHO_METRICAS_IRONIA, CAMINHO_MODELO_EMOCAO,
+                                CAMINHO_MODELO_IRONIA, CAMINHO_MODELO_TEXTO,
+                                RAIZ_IMPORTACAO, metricas_de,
+                                resolver_dentro_da_raiz)
+from fraus.api.periodo import dia_ou_400, no_recorte, recorte_ou_400
 from fraus.api.esquemas import (TIPOS_DE_FONTE, PedidoAjusteFonte,
                                 PedidoAnalise, PedidoChaveAcesso,
                                 PedidoFonte, PedidoImportacao,
@@ -54,26 +60,6 @@ from fraus.sinais.emocao import NOMES_EMOCOES, ClassificadorEmocao
 from fraus.sinais.emoji import linhas_lexicon, score_do_emoji
 from fraus.sinais.ironia import ClassificadorIronia
 from fraus.sinais.texto import ClassificadorTexto
-
-CAMINHO_MODELO_TEXTO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
-CAMINHO_MODELO_EMOCAO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_EMOCAO", "modelos/bertimbau-emocao"))
-CAMINHO_MODELO_IRONIA = Path(os.environ.get("FRAUS_CAMINHO_MODELO_IRONIA", "modelos/bertimbau-ironia"))
-CAMINHO_FUSOR = Path(os.environ.get("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
-CAMINHO_BANCO = Path(os.environ.get("FRAUS_CAMINHO_BANCO", "fraus.db"))
-
-# Exportado pelo notebook 01 (acuracia, F1-macro do BERTimbau). Ausente e
-# esperado antes do treino: `/modelo` devolve `metricas: null`, nunca inventa.
-# O padrao aponta para dentro da pasta do modelo porque e onde o notebook 01
-# de fato grava -- metrica ao lado do peso que ela mediu, nao solta na raiz.
-CAMINHO_METRICAS = Path(
-    os.environ.get("FRAUS_CAMINHO_METRICAS", "modelos/bertimbau-satisfacao/metricas.json")
-)
-CAMINHO_METRICAS_EMOCAO = Path(
-    os.environ.get("FRAUS_CAMINHO_METRICAS_EMOCAO", "modelos/metricas_emocao.json")
-)
-CAMINHO_METRICAS_IRONIA = Path(
-    os.environ.get("FRAUS_CAMINHO_METRICAS_IRONIA", "modelos/metricas_ironia.json")
-)
 
 # Teto de tamanho do texto aceito por /modelo/simular -- nao e limite de
 # modelo (BERTimbau trunca em TAMANHO_MAXIMO tokens), e limite de payload.
@@ -115,43 +101,9 @@ def origens_liberadas() -> list[str]:
 
 LIMITE_LEXICON_PADRAO = 50
 
-# Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
-# (uso local, ver README) -- entao ele nao pode aceitar caminho arbitrario do
-# sistema de arquivos: tudo que entra e resolvido DENTRO desta pasta.
-RAIZ_IMPORTACAO = Path(os.environ.get("FRAUS_RAIZ_IMPORTACAO", "dados_brutos"))
-
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o CSV inteiro.
 LIMITE_MOTIVOS = 20
-
-
-def resolver_dentro_da_raiz(raiz: Path, caminho_pedido: str) -> Path:
-    """Resolve `caminho_pedido` DENTRO de `raiz`, recusando qualquer escape.
-
-    Trata os dois vetores de uma vez: `..` e caminho absoluto (que o operador
-    `/` do pathlib faz substituir a raiz inteira). A verificacao de contencao
-    e feita sobre os caminhos ja resolvidos -- `Path.resolve()` normaliza
-    ligacao simbolica, `..` e maiusculas/minusculas do Windows.
-    """
-    raiz_resolvida = raiz.resolve()
-    alvo = (raiz_resolvida / caminho_pedido).resolve()
-    if alvo != raiz_resolvida and raiz_resolvida not in alvo.parents:
-        raise HTTPException(
-            status_code=400,
-            detail=f"caminho fora da raiz de importacao ({raiz_resolvida}): {caminho_pedido}",
-        )
-    return alvo
-
-
-def _metricas_de(caminho: Path) -> dict | None:
-    """Metricas de treino de uma cabeca, ou None se o notebook ainda nao exportou.
-
-    None, nunca um dicionario vazio ou zerado: "nao medimos" e "medimos zero"
-    sao respostas diferentes, e a interface precisa poder dizer a primeira.
-    """
-    if not caminho.is_file():
-        return None
-    return json.loads(caminho.read_text(encoding="utf-8"))
 
 
 def _chave_bearer(authorization: str | None) -> str | None:
@@ -388,20 +340,6 @@ def criar_app(
             "motivos": motivos,
         }
 
-    def _recorte_ou_400(de: str | None, ate: str | None) -> tuple[date | None, date | None]:
-        """As duas pontas do recorte, validadas juntas -- inclusive a ordem."""
-        inicio, fim = _dia_ou_400(de, "de"), _dia_ou_400(ate, "ate")
-        if inicio and fim and inicio > fim:
-            raise HTTPException(
-                status_code=400,
-                detail=f"periodo invertido: de {inicio} vem depois de ate {fim}",
-            )
-        return inicio, fim
-
-    def _no_recorte(iniciada_em: datetime, inicio: date | None, fim: date | None) -> bool:
-        dia = iniciada_em.date()
-        return (inicio is None or dia >= inicio) and (fim is None or dia <= fim)
-
     @app.get("/conversas")
     def listar(de: str | None = None, ate: str | None = None) -> list[dict]:
         """Lista de atendimentos com a ficha operacional de cada um.
@@ -415,7 +353,7 @@ def criar_app(
         `de`/`ate` recortam por dia de inicio, pontas INCLUSIVAS -- o mesmo
         contrato do /serie-temporal. Sem filtro, a lista inteira, como sempre.
         """
-        inicio, fim = _recorte_ou_400(de, ate)
+        inicio, fim = recorte_ou_400(de, ate)
         # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
         # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
         faixas = faixas_vigentes()
@@ -427,7 +365,7 @@ def criar_app(
                 **resumir(conversa),
             }
             for linha, conversa in banco.listar_com_conversa()
-            if _no_recorte(conversa.iniciada_em, inicio, fim)
+            if no_recorte(conversa.iniciada_em, inicio, fim)
         ]
 
     @app.get("/conversas/{conversa_id}")
@@ -479,11 +417,11 @@ def criar_app(
 
     def _registros_do_recorte(de: str | None, ate: str | None) -> list:
         """Conversas do periodo, com validacao de recorte compartilhada."""
-        inicio, fim = _recorte_ou_400(de, ate)
+        inicio, fim = recorte_ou_400(de, ate)
         return [
             (conversa, score)
             for conversa, score in banco.todas()
-            if _no_recorte(conversa.iniciada_em, inicio, fim)
+            if no_recorte(conversa.iniciada_em, inicio, fim)
         ]
 
     @app.get("/indicadores")
@@ -519,23 +457,6 @@ def criar_app(
         registros = _registros_do_recorte(de, ate)
         return {"classes": lexico_por_classe(registros, faixas_vigentes())}
 
-    def _dia_ou_400(valor: str | None, nome: str) -> date | None:
-        """AAAA-MM-DD, ou 400 nomeando o parametro -- nunca ignorado em silencio.
-
-        Filtro de periodo malformado que e descartado sem aviso devolveria a
-        serie INTEIRA parecendo o recorte pedido, e o grafico mentiria sem
-        nenhum sinal de erro.
-        """
-        if valor is None:
-            return None
-        try:
-            return date.fromisoformat(valor)
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail=f"{nome} invalido: esperava AAAA-MM-DD, veio {valor!r}",
-            )
-
     @app.get("/serie-temporal")
     def serie_temporal(de: str | None = None, ate: str | None = None) -> dict:
         """NPS inferido x latencia mediana por dia, com recorte de periodo.
@@ -545,11 +466,11 @@ def criar_app(
         recorte so para ler timestamps. As duas pontas do recorte sao
         INCLUSIVAS, que e como quem opera le "de 01/03 ate 07/03".
         """
-        inicio, fim = _recorte_ou_400(de, ate)
+        inicio, fim = recorte_ou_400(de, ate)
         registros = [
             (conversa, score)
             for conversa, score in banco.todas()
-            if _no_recorte(conversa.iniciada_em, inicio, fim)
+            if no_recorte(conversa.iniciada_em, inicio, fim)
         ]
         return {
             "de": inicio.isoformat() if inicio else None,
@@ -836,7 +757,7 @@ def criar_app(
         vigente, a MESMA fonte que alimenta a categoria de cada atendimento --
         faixa duplicada em dois lugares ja foi defeito deste projeto uma vez.
         """
-        metricas = _metricas_de(CAMINHO_METRICAS)
+        metricas = metricas_de(CAMINHO_METRICAS)
         return {
             "importancias": motor.importancias(),
             "metricas": metricas,
@@ -854,13 +775,13 @@ def criar_app(
                 {
                     "nome": "emocao",
                     "classes": [*NOMES_EMOCOES, "desprezo"],
-                    "metricas": _metricas_de(CAMINHO_METRICAS_EMOCAO),
+                    "metricas": metricas_de(CAMINHO_METRICAS_EMOCAO),
                     "pontua": False,
                 },
                 {
                     "nome": "ironia",
                     "classes": ["nao-ironico", "ironico"],
-                    "metricas": _metricas_de(CAMINHO_METRICAS_IRONIA),
+                    "metricas": metricas_de(CAMINHO_METRICAS_IRONIA),
                     "pontua": False,
                 },
             ],
