@@ -31,6 +31,28 @@ class Contexto:
     raiz: Path
     chave_mestra: str | None
 
+    def autenticacao_ligada(self) -> bool:
+        """Se alguma mestra existe -- do ambiente ou gravada pela tela."""
+        return self.origem_da_mestra() is not None
+
+    def origem_da_mestra(self) -> str | None:
+        """De onde vem a mestra vigente: "ambiente", "banco" ou None.
+
+        Duas procedencias porque resolvem problemas diferentes: a variavel e o
+        caminho de quem opera por ambiente (e a saida de quem perdeu a chave
+        gerada pela tela), e o banco e o que faz a autenticacao ligada por
+        botao SOBREVIVER a reiniciar o processo.
+
+        O ambiente vence -- e a fonte declarada do deploy. Ler as duas A CADA
+        requisicao e o que permite ligar a autenticacao sem derrubar o
+        servidor: nao existe copia do estado envelhecendo em memoria.
+        """
+        if self.chave_mestra is not None:
+            return "ambiente"
+        if self.banco.hash_da_chave_mestra() is not None:
+            return "banco"
+        return None
+
     def faixas_vigentes(self) -> dict:
         """Faixa de NPS da configuracao vigente, lida a cada requisicao.
 

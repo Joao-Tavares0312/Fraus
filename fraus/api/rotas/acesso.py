@@ -21,6 +21,19 @@ from fraus.api.seguranca import exigir_mestra
 router = APIRouter()
 
 
+@router.get("/acesso/estado")
+def estado(ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """A autenticacao esta ligada, e de onde vem a mestra.
+
+    PUBLICA por necessidade (ver `seguranca.ISENTAS`): a tela precisa desta
+    resposta exatamente quando ainda nao existe credencial nenhuma para
+    apresentar. Por isso ela nao carrega dica, hash nem data -- so o suficiente
+    para a interface saber o que desenhar, e nada que ajude quem esta do lado
+    de fora.
+    """
+    return {"ligada": ctx.autenticacao_ligada(), "origem": ctx.origem_da_mestra()}
+
+
 @router.post("/acesso/chaves", status_code=201)
 def criar_chave_acesso(
     pedido: PedidoChaveAcesso,

@@ -22,6 +22,13 @@ from fraus.api.contexto import Contexto
 from fraus.db import Banco
 
 
+# Rotas que o middleware de chave de acesso NAO cobre, cada uma por um motivo
+# proprio: /ingestao tem credencial de FONTE (uma credencial por rota), e
+# /acesso/estado precisa responder a quem ainda nao tem credencial nenhuma --
+# e a resposta que diz a tela se ha o que apresentar.
+ISENTAS = ("/ingestao", "/acesso/estado")
+
+
 def chave_bearer(authorization: str | None) -> str | None:
     """A chave de um `Authorization: Bearer ...`, ou None se nao for um.
 
@@ -88,11 +95,20 @@ def fonte_autorizada(banco: Banco, chave: str) -> dict:
 
 
 def e_mestra(ctx: Contexto, chave: str) -> bool:
-    if ctx.chave_mestra is None:
-        return False
-    return hmac.compare_digest(
-        chave.encode("utf-8"), ctx.chave_mestra.encode("utf-8")
-    )
+    """Confere a chave contra as DUAS procedencias da mestra.
+
+    A do ambiente e comparada em tempo constante contra o valor cru; a do
+    banco, contra o hash (`credencial.confere` tambem nao vaza pelo tempo).
+    As duas conferencias rodam SEMPRE, mesmo quando a primeira ja decidiu:
+    curto-circuitar faria o tempo de resposta contar qual das duas existe.
+    """
+    do_ambiente = False
+    if ctx.chave_mestra is not None:
+        do_ambiente = hmac.compare_digest(
+            chave.encode("utf-8"), ctx.chave_mestra.encode("utf-8")
+        )
+    do_banco = credencial.confere(chave, ctx.banco.hash_da_chave_mestra())
+    return do_ambiente or do_banco
 
 
 def acesso_autorizado(ctx: Contexto, chave: str) -> bool:
@@ -115,7 +131,7 @@ def exigir_mestra(ctx: Contexto, authorization: str | None) -> None:
     403, nao 401: quem chega aqui com chave de acesso valida ja passou pelo
     middleware -- a credencial esta certa, o privilegio e que falta.
     """
-    if ctx.chave_mestra is None:
+    if not ctx.autenticacao_ligada():
         return
     chave = chave_do_cabecalho(authorization)
     if not e_mestra(ctx, chave):
@@ -125,25 +141,32 @@ def exigir_mestra(ctx: Contexto, authorization: str | None) -> None:
 
 
 def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
-    """Exige chave em toda rota, quando ha chave mestra definida.
+    """Exige chave em toda rota QUANDO ha mestra -- decidido por REQUISICAO.
 
-    Nao registra nada sem mestra: a API aberta e o modo local documentado no
-    README, e um middleware que sempre autoriza seria so custo por requisicao
-    com aparencia de defesa.
+    O middleware e registrado sempre, e pergunta o estado a cada requisicao.
+    Antes ele so era registrado se houvesse mestra no boot, e isso tornava
+    impossivel ligar a autenticacao sem reiniciar: o app que subiu aberto nao
+    tinha onde exigir a chave, e a rota que grava a mestra apenas PARECERIA
+    ligar a defesa. Sem mestra ele libera, exatamente como antes.
+
+    O custo e uma leitura de estado por requisicao -- uma consulta a uma tabela
+    de uma linha, no mesmo SQLite que a rota ja vai abrir.
     """
-    if ctx.chave_mestra is None:
-        return
 
     @app.middleware("http")
     async def exigir_chave_de_acesso(request, call_next):
+        if not ctx.autenticacao_ligada():
+            return await call_next(request)
         # /ingestao tem credencial propria (chave de FONTE): uma credencial
-        # por rota. OPTIONS e o preflight do navegador -- nao carrega
-        # header de autorizacao por definicao.
+        # por rota. /acesso/estado e publica por necessidade -- a tela precisa
+        # dela justamente quando ainda nao ha credencial nenhuma. OPTIONS e o
+        # preflight do navegador -- nao carrega header de autorizacao por
+        # definicao.
         # `rstrip("/")`: `/ingestao/` e a MESMA rota (o Starlette redireciona
         # para ela), e comparar o path exato mandava o integrador que
         # configurou a URL com barra final para o 401 daqui em vez da
         # credencial de fonte.
-        if request.url.path.rstrip("/") == "/ingestao" or request.method == "OPTIONS":
+        if request.url.path.rstrip("/") in ISENTAS or request.method == "OPTIONS":
             return await call_next(request)
         cabecalho = request.headers.get("authorization")
         chave_recebida = chave_bearer(cabecalho)
