@@ -8,27 +8,9 @@
  * do servidor, nao a que o cliente mandar.
  */
 
+import { autorizacaoDoServidor } from "@/lib/credencial-do-servidor";
+
 const API = process.env.FRAUS_API_URL ?? "http://localhost:8000";
-const CHAVE_DO_AMBIENTE = process.env.FRAUS_CHAVE_ACESSO;
-const COOKIE = "fraus_acesso";
-
-function chaveDaRequisicao(requisicao: Request): string | undefined {
-  // O ambiente VENCE: e a credencial declarada do deploy. O cookie e o atalho
-  // de quem ligou a autenticacao pela tela, e existe porque variavel de
-  // ambiente nao muda em processo vivo -- sem ele, o clique que liga a
-  // autenticacao derrubaria a propria dashboard.
-  if (CHAVE_DO_AMBIENTE) return CHAVE_DO_AMBIENTE;
-
-  const bruto = requisicao.headers.get("cookie");
-  if (!bruto) return undefined;
-  for (const pedaco of bruto.split(";")) {
-    const [nome, ...resto] = pedaco.trim().split("=");
-    // `join("=")`: valor de cookie pode conter `=`, e cortar no primeiro
-    // truncaria a chave sem erro nenhum aparecer.
-    if (nome === COOKIE) return resto.join("=");
-  }
-  return undefined;
-}
 
 async function repassar(
   requisicao: Request,
@@ -45,8 +27,8 @@ async function repassar(
   // que ele carrega e a credencial, e ela sai no Authorization abaixo.
   cabecalhos.delete("cookie");
 
-  const chave = chaveDaRequisicao(requisicao);
-  if (chave) cabecalhos.set("authorization", `Bearer ${chave}`);
+  const autorizacao = autorizacaoDoServidor(requisicao);
+  if (autorizacao) cabecalhos.set("authorization", autorizacao);
 
   let resposta: Response;
   try {

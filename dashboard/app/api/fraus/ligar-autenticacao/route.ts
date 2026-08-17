@@ -11,13 +11,17 @@
  * dashboard em 401 no clique -- variavel de ambiente nao muda em processo vivo.
  */
 
+import {
+  NOME_DO_COOKIE,
+  autorizacaoParaLigar,
+} from "@/lib/credencial-do-servidor";
+
 const API = process.env.FRAUS_API_URL ?? "http://localhost:8000";
-const COOKIE = "fraus_acesso";
 
 export async function POST(requisicao: Request): Promise<Response> {
-  // Repassado para a ROTACAO: a API exige a mestra atual para trocar a chave.
-  // No primeiro uso nao ha header nenhum, e e assim que deve ser.
-  const autorizacao = requisicao.headers.get("authorization");
+  // Repassada para a ROTACAO: a API exige a mestra atual para trocar a chave.
+  // No primeiro uso nao ha credencial nenhuma, e e assim que deve ser.
+  const autorizacao = autorizacaoParaLigar(requisicao);
 
   let resposta: Response;
   try {
@@ -47,7 +51,7 @@ export async function POST(requisicao: Request): Promise<Response> {
     devolvida.headers.append(
       "set-cookie",
       [
-        `${COOKIE}=${corpo.chave_acesso}`,
+        `${NOME_DO_COOKIE}=${corpo.chave_acesso}`,
         "Path=/",
         "HttpOnly",
         "SameSite=Lax",

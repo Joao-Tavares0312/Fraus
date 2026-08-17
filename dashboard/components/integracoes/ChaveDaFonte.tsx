@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, KeyRound, Trash2 } from "lucide-react";
+import { KeyRound, Trash2 } from "lucide-react";
 import { gerarChave, revogarChave, type FonteIntegracao } from "@/lib/api";
 import { formatarDataHora } from "@/lib/formato";
+import { ChaveEmClaro } from "@/components/ChaveEmClaro";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -28,7 +29,6 @@ export function ChaveDaFonte({
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [chave, setChave] = useState<string | null>(null);
-  const [copiado, setCopiado] = useState(false);
 
   /**
    * Dica da chave vigente, com o que ACABOU de acontecer tendo precedencia.
@@ -57,7 +57,6 @@ export function ChaveDaFonte({
     }
     setChave(resposta.dado.chave);
     setDicaLocal(resposta.dado.fonte.chave_dica);
-    setCopiado(false);
     router.refresh();
   }
 
@@ -73,12 +72,6 @@ export function ChaveDaFonte({
     setChave(null);
     setDicaLocal(null);
     router.refresh();
-  }
-
-  async function copiar() {
-    if (!chave) return;
-    await navigator.clipboard.writeText(chave);
-    setCopiado(true);
   }
 
   const exemplo = [
@@ -100,26 +93,19 @@ export function ChaveDaFonte({
         </Alert>
       ) : null}
 
-      {/* A chave em claro: aparece agora ou nunca mais. */}
+      {/* A chave em claro: aparece agora ou nunca mais. Mesmo componente que
+          exibe a mestra em Configuracoes -- o aviso de "copie agora" e parte da
+          credencial, e duas copias dele divergiriam. */}
       {chave ? (
-        <Alert>
-          <AlertTitle>Copie agora — esta chave não pode ser lida de novo</AlertTitle>
-          <AlertDescription>
-            <p className="mb-2">
-              O servidor guarda apenas o hash dela. Se você perder, o conserto é
-              gerar outra — e a de agora para de funcionar.
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <code className="num min-w-0 flex-1 overflow-x-auto rounded-sm bg-muted px-2 py-1.5 text-xs text-foreground">
-                {chave}
-              </code>
-              <Button type="button" size="sm" variant="outline" onClick={copiar}>
-                {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
-                {copiado ? "Copiado" : "Copiar"}
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
+        <ChaveEmClaro
+          chave={chave}
+          titulo="Copie agora — esta chave não pode ser lida de novo"
+        >
+          <p>
+            O servidor guarda apenas o hash dela. Se você perder, o conserto é
+            gerar outra — e a de agora para de funcionar.
+          </p>
+        </ChaveEmClaro>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">

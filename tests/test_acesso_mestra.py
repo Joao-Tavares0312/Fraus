@@ -121,3 +121,28 @@ def test_estado_passa_a_dizer_banco_depois_de_ligar(tmp_path):
     cliente = _cliente(tmp_path)
     cliente.post("/acesso/mestra")
     assert cliente.get("/acesso/estado").json() == {"ligada": True, "origem": "banco"}
+
+
+def test_ligou_continua_ligada_depois_de_reiniciar(tmp_path):
+    """O que separa esta feature de um interruptor em memoria.
+
+    Mestra que mora so no processo volta a API para ABERTA no reinicio, em
+    silencio -- e "parece protegido e nao esta" e a pior falha possivel neste
+    caminho. Um app NOVO sobre o MESMO banco e o reinicio.
+    """
+    cliente = _cliente(tmp_path)
+    chaves = cliente.post("/acesso/mestra").json()
+
+    banco = Banco(tmp_path / "t.db")  # mesmo arquivo, processo "novo"
+    reiniciado = TestClient(criar_app(
+        banco=banco, motor=MotorFalso(), raiz_importacao=tmp_path,
+    ))
+
+    assert reiniciado.get("/conversas").status_code == 401
+    assert reiniciado.get("/acesso/estado").json() == {
+        "ligada": True, "origem": "banco",
+    }
+    for chave in (chaves["chave_mestra"], chaves["chave_acesso"]):
+        assert reiniciado.get(
+            "/conversas", headers={"Authorization": f"Bearer {chave}"}
+        ).status_code == 200

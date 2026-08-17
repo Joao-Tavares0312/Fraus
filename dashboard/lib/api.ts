@@ -511,6 +511,22 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
 export const obterConfiguracoes = () =>
   proteger(buscar<Configuracoes>("/configuracoes"));
 
+export type EstadoDeAcesso = {
+  ligada: boolean;
+  /** De onde vem a mestra vigente. O ambiente vence o banco. */
+  origem: "ambiente" | "banco" | null;
+};
+
+/**
+ * A autenticacao da API esta ligada, e por qual procedencia.
+ *
+ * Unica leitura que funciona SEM credencial -- a rota e isenta do middleware de
+ * chave de proposito, porque a tela precisa dela justamente quando ainda nao ha
+ * chave nenhuma para apresentar.
+ */
+export const obterEstadoDeAcesso = () =>
+  proteger(buscar<EstadoDeAcesso>("/acesso/estado"));
+
 /**
  * Grava as chaves enviadas. Manda so o que mudou -- o `PUT` valida chave a
  * chave, entao enviar o bloco inteiro faria um erro de latencia recusar
