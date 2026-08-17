@@ -31,7 +31,7 @@ from fraus.api.rotas.modelo import (TETO_ARQUIVO_ANALISE,  # reexportados: os te
                                     TETO_CONVERSAS_ANALISE,
                                     TETO_LEXICON,
                                     TETO_TEXTO_SIMULACAO)
-from fraus.api.rotas import indicadores, modelo, ingestao, integracoes, acesso, configuracoes, saude
+from fraus.api.rotas import conversas, indicadores, modelo, ingestao, integracoes, acesso, configuracoes, saude
 from fraus.api.seguranca import (chave_do_cabecalho, exigir_mestra,
                                  fonte_autorizada,
                                  registrar_middleware_de_acesso)
@@ -133,135 +133,15 @@ def criar_app(
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
-    @app.post("/conversas/importar")
-    def importar(pedido: PedidoImportacao) -> dict:
-        caminho = resolver_dentro_da_raiz(raiz, pedido.caminho)
-        if not caminho.is_file():
-            raise HTTPException(status_code=400, detail=f"arquivo nao encontrado: {caminho}")
-
-        try:
-            resultado = carregar_csv(caminho)
-        except KeyError as erro:
-            # Coluna estrutural ausente. O driver deixa o KeyError propagar de
-            # proposito (erro de esquema nao e dado sujo de uma linha), mas a
-            # borda HTTP nao pode devolver 500 cru: o operador precisa saber
-            # QUAL coluna falta para consertar o arquivo.
-            raise HTTPException(
-                status_code=400,
-                detail=f"coluna ausente no CSV: {erro.args[0]}",
-            ) from erro
-
-        faixas = ctx.faixas_vigentes()
-        for conversa in resultado.conversas:
-            score = motor.pontuar_conversa(conversa)
-            # A coluna `categoria` e o retrato do instante da importacao; quem
-            # le nao a consome (ver `categoria_de`), mas gravar com a faixa
-            # vigente evita que o banco inspecionado a mao conte outra historia.
-            banco.salvar(conversa, score, ctx.categoria_de(score, faixas))
-
-        # "Motivo registrado" (spec 9) tem que CHEGAR a alguem: a contagem
-        # sozinha nao diz o que ficou de fora.
-        motivos = [linha.model_dump() for linha in resultado.rejeitadas[:LIMITE_MOTIVOS]]
-
-        # O historico guarda o MESMO que a resposta devolve. Sem ele,
-        # "importado com sucesso" e alegacao sem lastro: some da tela no
-        # instante seguinte e ninguem consegue mais dizer o que ficou de fora.
-        banco.registrar_importacao(
-            ocorrida_em=datetime.now(timezone.utc).isoformat(),
-            arquivo=caminho.name,
-            aceitas=len(resultado.conversas),
-            rejeitadas=len(resultado.rejeitadas),
-            motivos=motivos,
-        )
-
-        return {
-            "importadas": len(resultado.conversas),
-            "rejeitadas": len(resultado.rejeitadas),
-            "motivos": motivos,
-        }
-
-    @app.get("/conversas")
-    def listar(de: str | None = None, ate: str | None = None) -> list[dict]:
-        """Lista de atendimentos com a ficha operacional de cada um.
-
-        Alem de nota e categoria, cada linha carrega o que `fraus.resumo`
-        deriva da conversa: contagem de mensagens por autor, tempo de resposta
-        do bot e do humano SEPARADOS, duracao e desfecho. Vem tudo junto de
-        proposito -- a tela precisa disso por linha, e busca-los um a um era um
-        N+1 contra a API.
-
-        `de`/`ate` recortam por dia de inicio, pontas INCLUSIVAS -- o mesmo
-        contrato do /serie-temporal. Sem filtro, a lista inteira, como sempre.
-        """
-        inicio, fim = recorte_ou_400(de, ate)
-        # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
-        # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
-        faixas = ctx.faixas_vigentes()
-        return [
-            {
-                **linha,
-                "categoria": ctx.categoria_de(linha["score"], faixas),
-                "nota": nota_0_10(linha["score"]) if linha["score"] is not None else None,
-                **resumir(conversa),
-            }
-            for linha, conversa in banco.listar_com_conversa()
-            if no_recorte(conversa.iniciada_em, inicio, fim)
-        ]
-
-    @app.get("/conversas/{conversa_id}")
-    def detalhar(conversa_id: str) -> dict:
-        achado = banco.buscar(conversa_id)
-        if achado is None:
-            raise HTTPException(status_code=404, detail="conversa nao encontrada")
-        conversa, score, _categoria_gravada = achado
-        return {
-            **conversa.model_dump(mode="json"),
-            "score": score,
-            "categoria": ctx.categoria_de(score, ctx.faixas_vigentes()),
-            "nota": nota_0_10(score) if score is not None else None,
-            # A MESMA ficha operacional de `/conversas`, pela mesma funcao. A
-            # lista e o detalhe nao podem calcular tempo de resposta por
-            # caminhos diferentes: seria a divergencia que a nota derivada no
-            # servidor ja existe para evitar, repetida na coluna do lado.
-            **resumir(conversa),
-        }
-
-    @app.get("/conversas/{conversa_id}/atribuicao")
-    def atribuir(conversa_id: str) -> dict:
-        """Quais falas puxaram a nota para baixo e quais puxaram para cima.
-
-        Score, categoria e nota saem do que o SERVIDOR ja gravou na
-        importacao -- nao sao repontuados aqui. Repontuar criaria uma segunda
-        fonte de verdade que poderia divergir de `/conversas/{id}` se o fusor
-        em disco mudasse entre a importacao e a leitura.
-        """
-        achado = banco.buscar(conversa_id)
-        if achado is None:
-            raise HTTPException(status_code=404, detail="conversa nao encontrada")
-        conversa, score, _categoria_gravada = achado
-        atribuicao = motor.atribuir_conversa(conversa)
-        return {
-            "conversa_id": conversa.id,
-            "score": score,
-            "nota": nota_0_10(score) if score is not None else None,
-            "categoria": ctx.categoria_de(score, ctx.faixas_vigentes()),
-            "mensagens": atribuicao["mensagens"],
-            "importancias": atribuicao["importancias"],
-            "contribuicoes": atribuicao["contribuicoes"],
-            # Quais campos das mensagens sao LEITURA e nao entram no score.
-            # Vem do motor, nao de uma constante daqui: um motor sem as cabecas
-            # de emocao/ironia devolve lista vazia, e a tela nao promete um
-            # painel que ela nao tem dado para preencher.
-            "sinais_fora_do_score": atribuicao.get("sinais_fora_do_score", []),
-        }
-
     app.include_router(acesso.router)
+    app.include_router(conversas.router)
     app.include_router(indicadores.router)
     app.include_router(configuracoes.router)
     app.include_router(ingestao.router)
     app.include_router(integracoes.router)
     app.include_router(modelo.router)
     app.include_router(indicadores.router)
+    app.include_router(conversas.router)
     app.include_router(saude.router)
 
     return app
