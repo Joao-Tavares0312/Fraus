@@ -306,19 +306,28 @@ mesmo em dev, para testar a dashboard como ela se comporta publicada.
 
 **Não habilite isso num deploy real.** É uma rota HTTP que executa um comando —
 em uso local é conveniência, publicada é execução remota de código. Ela existe
-sob quatro travas: desligada por padrão fora de desenvolvimento (sem ela
+sob cinco travas: desligada por padrão fora de desenvolvimento (sem ela
 responde **404**, não 403 — quem não deveria saber que ela existe não
 descobre); comando **literal** no código-fonte, sem nada vindo da requisição e
 sem shell; uma instância por vez (consulta `/saude` antes de subir e confere se
-o processo lembrado ainda está vivo); e a API subida escuta apenas em
-`127.0.0.1`. Se `FRAUS_API_URL` aponta para outra máquina, o botão não aparece
-— não há o que iniciar aqui.
+o processo lembrado ainda está vivo); a API subida escuta apenas em
+`127.0.0.1`; e **só a própria dashboard pode chamá-la** — requisição de outro
+site leva 403, porque as quatro travas anteriores defendem contra *comando*
+arbitrário e nenhuma delas perguntava *quem* pediu. Se `FRAUS_API_URL` aponta
+para outra máquina, o botão não aparece — não há o que iniciar aqui.
 
-**Não existe botão de derrubar.** Matar processo é irreversível e não tem
-contrapartida numa tela sem login; quem subiu pelo terminal derruba pelo
-terminal. O `stdout` da API vai para `dashboard/.fraus-api.log`, que é onde
-olhar quando a subida falha — o motivo mais comum é modelo ausente em
-`modelos/`, que derruba o boot por design.
+**Desligar** tem botão, no rodapé da navegação, ao lado do "API no ar" — e ele
+só aparece para a API que **esta dashboard subiu**. Um `uvicorn` que você
+iniciou no terminal continua fora do alcance da tela: a rota responde **409**
+dizendo isso, porque derrubar processo de outra pessoa não é poder que uma tela
+sem login deva ter. O que ela encerra é a **árvore** do processo, não o pid: o
+que a dashboard inicia é o `uv`, e o servidor que atende na porta é neto dele —
+matar só o pid deixaria a API no ar, órfã, com o botão anunciando que a
+desligou.
+
+A subida **não abre janela de terminal**. O `stdout` da API vai para
+`dashboard/.fraus-api.log`, que é onde olhar quando ela falha — o motivo mais
+comum é modelo ausente em `modelos/`, que derruba o boot por design.
 
 ## Roadmap
 
@@ -337,7 +346,7 @@ ordem lá é a ordem de importância.
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
 | **Ligar a autenticação sem terminal** | ✅ | botão em Configurações; a mestra sobrevive a reiniciar, e a dashboard segue navegando por cookie `httpOnly` |
-| **Dashboard sem terminal** | ✅ | botão **Iniciar API** no modo local, com as quatro travas descritas em [§5](#5-quando-a-api-não-está-no-ar) |
+| **Dashboard sem terminal** | ✅ | **Iniciar API** (sem abrir janela de console) e **Desligar**, este último só para a API que a própria dashboard subiu — travas em [§5](#5-quando-a-api-não-está-no-ar) |
 | **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
 | **Agregação no servidor (fim do N+1)** | ✅ | `/serie-temporal`, `/lexico`, `/indicadores` (com tempo mediano) e o recorte `de`/`ate` em `/conversas`; **nenhuma tela baixa transcrição** no caminho feliz |
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
