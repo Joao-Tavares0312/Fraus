@@ -17,6 +17,7 @@ import {
   obterIndicadores,
   obterLexico,
   obterSerieTemporal,
+  type DetalheConversa,
   type ResumoConversa,
 } from "@/lib/api";
 import { carregarRecorte } from "@/lib/carregar";
@@ -31,7 +32,7 @@ import {
   tempoMedianoDeResposta,
 } from "@/lib/derivacoes";
 import { formatarDataHora } from "@/lib/formato";
-import { lerPeriodo, periodoEstaAtivo } from "@/lib/periodo";
+import { lerPeriodo } from "@/lib/periodo";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { DistribuicaoScores } from "@/components/DistribuicaoScores";
 import { EstadoVazio } from "@/components/EstadoVazio";
@@ -57,7 +58,7 @@ export default async function Pagina(props: PageProps<"/">) {
       // Sem transcricoes: serie, lexico e tempo mediano vem AGREGADOS do
       // servidor agora, e baixar toda conversa so para derivar de novo era o
       // ultimo N+1 desta tela.
-      carregarRecorte(parametros, { comDetalhes: false }),
+      carregarRecorte(parametros),
       obterIndicadores(periodoPedido.de, periodoPedido.ate),
       obterConfiguracoes(),
       obterSerieTemporal(periodoPedido.de, periodoPedido.ate),
@@ -67,8 +68,8 @@ export default async function Pagina(props: PageProps<"/">) {
   // PLANO B: as transcricoes so sao baixadas se algum agregado do servidor
   // falhou -- e o unico caso em que a derivacao no cliente ainda roda. No
   // caminho feliz esta tela nao le transcricao nenhuma.
-  let detalhes = recorte.detalhes;
-  let falhasDeDetalhe = recorte.falhas;
+  let detalhes: DetalheConversa[] = [];
+  let falhasDeDetalhe = 0;
   if (
     (!serieDaApi.ok || !indicadoresDoServidor.ok || !lexicoDaApi.ok) &&
     !recorte.erro
@@ -93,7 +94,6 @@ export default async function Pagina(props: PageProps<"/">) {
    * categoria. A agregacao no cliente sobrevive so como plano B de falha do
    * endpoint, agregando a CATEGORIA gravada, nunca recalculando score.
    */
-  const filtrado = periodoEstaAtivo(periodo);
   const indicadores = indicadoresDoServidor.ok
     ? {
         nps: indicadoresDoServidor.dado.nps,

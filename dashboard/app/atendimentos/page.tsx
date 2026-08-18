@@ -43,6 +43,9 @@ export default async function PaginaAtendimentos(
   props: PageProps<"/atendimentos">,
 ) {
   const parametros = await props.searchParams;
+  // So a listagem: esta tela nunca leu transcricao nenhuma -- a ficha
+  // operacional de cada linha (contagem por autor, latencias, desfecho) ja
+  // vem derivada pelo servidor em `GET /conversas`.
   const { periodo, extensao, rotulo, sufixo, resumos, erro } =
     await carregarRecorte(parametros);
 
