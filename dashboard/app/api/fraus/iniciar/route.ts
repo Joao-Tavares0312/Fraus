@@ -4,9 +4,13 @@
  * Uma rota HTTP que dispara um comando e execucao remota de codigo. Esta aqui
  * existe sob quatro travas SIMULTANEAS, e nenhuma delas e opcional:
  *
- * 1. **Desligada por padrao.** So existe com `FRAUS_MODO_LOCAL=1` no ambiente
- *    do servidor. Sem a variavel responde 404 -- nao 403: quem nao deveria
- *    saber que ela existe nao descobre que existe. Num deploy ela nao esta la.
+ * 1. **Ligada em desenvolvimento, desligada em producao.** Padrao por
+ *    `NODE_ENV`, com `FRAUS_MODO_LOCAL` como override explicito nos dois
+ *    sentidos (ver `modoLocalLigado`). Desligada, a rota responde 404 -- nao
+ *    403: quem nao deveria saber que ela existe nao descobre que existe. Um
+ *    build de producao (`npm run build && npm run start`) fica sem ela por
+ *    padrao; publicar isso ligado exige `FRAUS_MODO_LOCAL=1` no deploy, o que
+ *    e deliberadamente um passo a mais, nao um esquecimento.
  * 2. **Comando fixo.** O argv e literal neste arquivo. Nada do corpo, da query
  *    ou dos cabecalhos entra nele, e o spawn roda SEM shell -- nao ha string
  *    de comando a injetar.
@@ -66,8 +70,23 @@ const estado = globalThis as unknown as {
   __fraus_subindo?: { pid: number; desde: number } | null;
 };
 
+/**
+ * Ligado por padrao em DESENVOLVIMENTO, desligado por padrao em producao.
+ *
+ * `npm run dev` seta `NODE_ENV=development` sozinho -- e essa e a distincao
+ * que importa, nao a presenca da variavel. Sem o padrao, quem roda `npm run
+ * dev` sem lembrar de exportar `FRAUS_MODO_LOCAL=1` perde o botao sem aviso
+ * nenhum, e foi exatamente esse o caso que motivou a mudanca.
+ *
+ * `FRAUS_MODO_LOCAL` continua valendo como OVERRIDE explicito nos dois
+ * sentidos: `"1"` liga mesmo em producao (raro, e por isso exige a variavel),
+ * `"0"` desliga mesmo em dev (para quem quer testar a dashboard como ela se
+ * comporta publicada, sem subir outro ambiente).
+ */
 function modoLocalLigado(): boolean {
-  return process.env.FRAUS_MODO_LOCAL === "1";
+  if (process.env.FRAUS_MODO_LOCAL === "1") return true;
+  if (process.env.FRAUS_MODO_LOCAL === "0") return false;
+  return process.env.NODE_ENV !== "production";
 }
 
 /**
@@ -88,7 +107,11 @@ function apiELocal(): boolean {
 }
 
 function indisponivel(): string | null {
-  if (!modoLocalLigado()) return "modo local desligado (FRAUS_MODO_LOCAL)";
+  if (!modoLocalLigado()) {
+    return process.env.NODE_ENV === "production"
+      ? "modo local desligado em produção (defina FRAUS_MODO_LOCAL=1 para ligar)"
+      : "modo local desligado (FRAUS_MODO_LOCAL=0)";
+  }
   if (!apiELocal()) return `a API não é local: ${API}`;
   return null;
 }

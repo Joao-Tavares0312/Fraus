@@ -240,23 +240,29 @@ topo de qualquer tela diz isso com todas as letras — *as telas ficam vazias
 porque o dado vem dela, não porque não há atendimento* — e carrega o comando
 para subir, pronto para copiar, mais um botão de **tentar de novo**.
 
-**Modo local.** Com `FRAUS_MODO_LOCAL=1` no ambiente da dashboard, o aviso
-ganha um botão **Iniciar API**: ele sobe o `uvicorn` como processo filho do
-servidor Next, mostra "subindo…" e recarrega a tela sozinho quando `GET /saude`
-responde (30 a 60 s, o tempo de carregar os três BERTimbau).
+**Modo local.** Rodando `npm run dev`, o aviso já vem com um botão **Iniciar
+API** — sem precisar de nenhuma variável: ele sobe o `uvicorn` como processo
+filho do servidor Next, mostra "subindo…" e recarrega a tela sozinho quando
+`GET /saude` responde (30 a 60 s, o tempo de carregar os três BERTimbau).
 
 ```bash
-cd dashboard && FRAUS_MODO_LOCAL=1 npm run dev
+cd dashboard && npm run dev
 ```
 
-**Não habilite isso num deploy.** É uma rota HTTP que executa um comando — em
-uso local é conveniência, publicada é execução remota de código. Ela existe sob
-quatro travas: só com a variável (sem ela responde **404**, não 403 — quem não
-deveria saber que ela existe não descobre); comando **literal** no código-fonte,
-sem nada vindo da requisição e sem shell; uma instância por vez (consulta
-`/saude` antes de subir e confere se o processo lembrado ainda está vivo); e a
-API subida escuta apenas em `127.0.0.1`. Se `FRAUS_API_URL` aponta para outra
-máquina, o botão não aparece — não há o que iniciar aqui.
+**Em produção (`npm run build && npm run start`) o botão some por padrão.**
+`FRAUS_MODO_LOCAL` é o override explícito nos dois sentidos: `=1` liga mesmo
+num build de produção (raro, e por isso exige o passo extra), `=0` desliga
+mesmo em dev, para testar a dashboard como ela se comporta publicada.
+
+**Não habilite isso num deploy real.** É uma rota HTTP que executa um comando —
+em uso local é conveniência, publicada é execução remota de código. Ela existe
+sob quatro travas: desligada por padrão fora de desenvolvimento (sem ela
+responde **404**, não 403 — quem não deveria saber que ela existe não
+descobre); comando **literal** no código-fonte, sem nada vindo da requisição e
+sem shell; uma instância por vez (consulta `/saude` antes de subir e confere se
+o processo lembrado ainda está vivo); e a API subida escuta apenas em
+`127.0.0.1`. Se `FRAUS_API_URL` aponta para outra máquina, o botão não aparece
+— não há o que iniciar aqui.
 
 **Não existe botão de derrubar.** Matar processo é irreversível e não tem
 contrapartida numa tela sem login; quem subiu pelo terminal derruba pelo
