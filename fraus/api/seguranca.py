@@ -23,10 +23,18 @@ from fraus.db import Banco
 
 
 # Rotas que o middleware de chave de acesso NAO cobre, cada uma por um motivo
-# proprio: /ingestao tem credencial de FONTE (uma credencial por rota), e
-# /acesso/estado precisa responder a quem ainda nao tem credencial nenhuma --
-# e a resposta que diz a tela se ha o que apresentar.
-ISENTAS = ("/ingestao", "/acesso/estado")
+# proprio:
+#
+# - `/ingestao` tem credencial de FONTE -- uma credencial por rota.
+# - `/acesso/estado` precisa responder a quem ainda nao tem credencial nenhuma:
+#   e a resposta que diz a tela se ha o que apresentar.
+# - `/saude` porque ela e o DIAGNOSTICO, e diagnostico atras de credencial
+#   mente. Com ela fechada, a dashboard sem chave recebia 401 no health check e
+#   anunciava "API fora do ar" com a API perfeitamente no ar -- mandando quem
+#   opera procurar servidor derrubado quando o que faltava era uma chave. Ela
+#   nao devolve dado nenhum: o corpo e `{"status": "ok"}`, o mesmo fato que
+#   qualquer um confirma abrindo uma conexao TCP na porta.
+ISENTAS = ("/ingestao", "/acesso/estado", "/saude")
 
 
 def chave_bearer(authorization: str | None) -> str | None:

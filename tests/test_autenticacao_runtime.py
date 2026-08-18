@@ -104,3 +104,21 @@ def test_estado_e_publico_mesmo_com_autenticacao_ligada(tmp_path):
     assert sem_header.json()["ligada"] is True
     # E nao vaza mais do que o necessario para desenhar a tela.
     assert set(sem_header.json()) == {"ligada", "origem"}
+
+
+def test_saude_responde_sem_chave_com_autenticacao_ligada(tmp_path):
+    """Diagnostico atras de credencial MENTE.
+
+    Com /saude fechada, a dashboard sem chave recebia 401 no health check e
+    anunciava "API fora do ar" com a API no ar -- mandando quem opera procurar
+    servidor derrubado quando o que faltava era uma chave.
+    """
+    cliente, banco = _cliente(tmp_path)
+    _grava(banco, "frm_" + "f" * 64)
+
+    # A rota de dados fecha...
+    assert cliente.get("/conversas").status_code == 401
+    # ...e o diagnostico continua respondendo.
+    resposta = cliente.get("/saude")
+    assert resposta.status_code == 200
+    assert resposta.json() == {"status": "ok"}
