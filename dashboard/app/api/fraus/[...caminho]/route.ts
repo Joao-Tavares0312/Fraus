@@ -9,6 +9,7 @@
  */
 
 import { autorizacaoDoServidor } from "@/lib/credencial-do-servidor";
+import { pedidoDeOutroSite, recusaDeOutroSite } from "@/lib/mesma-origem";
 
 const API = process.env.FRAUS_API_URL ?? "http://localhost:8000";
 
@@ -16,6 +17,12 @@ async function repassar(
   requisicao: Request,
   contexto: { params: Promise<{ caminho: string[] }> },
 ): Promise<Response> {
+  // Antes de qualquer coisa: este proxy escreve na API com a credencial do
+  // DEPLOY, então um POST vindo de outro site seria uma escrita autenticada
+  // que o dono nunca pediu. Leitura (GET) não passa por aqui — ela já é
+  // barrada pelo CORS na hora de ler a resposta.
+  if (pedidoDeOutroSite(requisicao)) return recusaDeOutroSite();
+
   const { caminho } = await contexto.params;
   const busca = new URL(requisicao.url).search;
   const destino = `${API}/${caminho.join("/")}${busca}`;

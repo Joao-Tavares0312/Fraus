@@ -28,6 +28,8 @@ import { spawn } from "node:child_process";
 import { openSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { pedidoDeOutroSite, recusaDeOutroSite } from "@/lib/mesma-origem";
+
 const API = process.env.FRAUS_API_URL ?? "http://localhost:8000";
 
 /** Onde o stdout/stderr da API vai parar. Sem log, "nao subiu" e beco sem saida. */
@@ -157,7 +159,14 @@ export async function GET(): Promise<Response> {
   });
 }
 
-export async function POST(): Promise<Response> {
+export async function POST(requisicao: Request): Promise<Response> {
+  // A QUINTA trava, e a que faltava. As quatro acima defendem contra COMANDO
+  // arbitrário; nenhuma delas perguntava QUEM pediu. Um POST sem corpo e sem
+  // cabeçalho customizado é requisição simples: não gera preflight, então
+  // qualquer página aberta noutra aba conseguia spawnar este processo na
+  // máquina de quem roda a dashboard.
+  if (pedidoDeOutroSite(requisicao)) return recusaDeOutroSite();
+
   if (indisponivel() !== null) {
     // 404 e nao 403: a rota simplesmente NAO EXISTE fora do modo local.
     return Response.json({ detail: "não encontrado" }, { status: 404 });
