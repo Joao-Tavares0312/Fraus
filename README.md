@@ -173,11 +173,35 @@ precisa dela justamente quando ainda não há credencial para apresentar.
 tem contrapartida de risco aceitável: desligar é apagar a variável e a linha
 `chave_mestra` do banco.
 
-`GET /acesso/chaves` lista as chaves emitidas (nome, dica dos 4 últimos
-caracteres, nunca o hash) e `DELETE /acesso/chaves/{id}` revoga na hora — a
-chamada seguinte com a chave revogada leva 401. Se uma chave de acesso vazar,
-revogue-a sem trocar a mestra; se a **mestra** vazar, troque a variável e
-reinicie: as chaves de acesso continuam valendo, quem perde o posto é só ela.
+**As chaves de acesso têm painel próprio**, em Configurações → *Chaves de
+acesso*: lista o que existe (nome, dica dos 4 últimos caracteres, data — nunca
+o hash), emite uma nova (que aparece em claro **uma única vez**) e revoga, com
+confirmação. Como gerenciar chave é privilégio da mestra e a dashboard carrega
+apenas a de acesso, o painel **pede a mestra** — ela fica só na memória da aba,
+nunca em cookie, `localStorage` ou URL. Com a API aberta ele carrega sozinho,
+porque nesse estado a API não cobra credencial e pedi-la seria a tela inventar
+uma exigência.
+
+Pelas rotas, o mesmo: `GET /acesso/chaves` lista, `POST` emite e
+`DELETE /acesso/chaves/{id}` revoga na hora — a chamada seguinte com a chave
+revogada leva 401. Se uma chave de acesso vazar, revogue-a sem trocar a mestra;
+se a **mestra** vazar, troque-a: as chaves de acesso continuam valendo, quem
+perde o posto é só ela.
+
+**Se a mestra se perdeu**, ela não volta — o banco guarda só o hash. Além da
+saída pelo ambiente (`FRAUS_CHAVE_MESTRA` vence a gravada), há o comando que
+reabre a API de vez:
+
+```bash
+uv run python scripts/resetar_mestra.py   # pede a palavra DESLIGAR
+```
+
+Ele apaga a linha `chave_mestra` e devolve a API ao estado aberto, para ligar
+de novo ser possível. **As chaves de acesso e de fonte não são apagadas**: quem
+perdeu a mestra não perdeu o que já distribuiu, e elas voltam a valer quando a
+autenticação for ligada. É comando de terminal, e não botão, pela mesma razão
+de sempre — desligar pela rede seria uma chamada que baixa a defesa, alcançável
+justamente quando a API está aberta.
 
 Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
 caminho relativo a ela:
@@ -346,12 +370,13 @@ ordem lá é a ordem de importância.
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
 | **Ligar a autenticação sem terminal** | ✅ | botão em Configurações; a mestra sobrevive a reiniciar, e a dashboard segue navegando por cookie `httpOnly` |
+| **Gerenciar chaves sem terminal** | ✅ | painel que emite, lista e revoga chaves de acesso, pedindo a mestra; e `scripts/resetar_mestra.py` para quando ela se perde |
 | **Dashboard sem terminal** | ✅ | **Iniciar API** (sem abrir janela de console) e **Desligar**, este último só para a API que a própria dashboard subiu — travas em [§5](#5-quando-a-api-não-está-no-ar) |
 | **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
 | **Agregação no servidor (fim do N+1)** | ✅ | `/serie-temporal`, `/lexico`, `/indicadores` (com tempo mediano) e o recorte `de`/`ate` em `/conversas`; **nenhuma tela baixa transcrição** no caminho feliz |
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
-| **Suíte** | ✅ | **340 testes** passando, build da dashboard verde, contraste AA verificado por `npm run contraste` |
+| **Suíte** | ✅ | **343 testes** passando, build da dashboard verde, contraste AA verificado por `npm run contraste` |
 
 ### Falta
 
