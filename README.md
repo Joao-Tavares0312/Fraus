@@ -193,6 +193,56 @@ rejeitado com **400**. Coluna estrutural ausente no CSV também dá **400**,
 nomeando a coluna; linha individual malformada não derruba o lote — ela volta
 na resposta, em `motivos`.
 
+#### Enviando um atendimento pela rede (`POST /ingestao`)
+
+É o único caminho de escrita que não pede acesso ao disco da máquina, e a
+**chave de fonte** (`frs_...`) é a única credencial aceita nele — a mestra e a
+chave de acesso levam 401 aqui, de propósito: uma credencial por rota. O
+**canal** é o da fonte cadastrada, não o que vier no corpo.
+
+```bash
+curl -X POST localhost:8000/ingestao \
+  -H "Authorization: Bearer frs_..." \
+  -H 'content-type: application/json' \
+  -d '{"id":"atendimento-123","mensagens":[
+        {"autor":"cliente","texto":"meu pedido não chegou","enviada_em":"2026-08-14T10:00:00-03:00"},
+        {"autor":"bot","texto":"vou verificar","enviada_em":"2026-08-14T10:00:12-03:00"}
+      ]}'
+```
+
+**No PowerShell esse comando não roda** — e falha de um jeito que não parece
+falha de shell. `curl` ali é **alias de `Invoke-WebRequest`**, que não conhece
+`-X`, `-H` nem `-d`, e a `\` no fim da linha não continua comando nenhum: cada
+linha vira um comando solto (`O termo '-H' não é reconhecido…`). O equivalente
+nativo, que é o que rodar na banca:
+
+```powershell
+$corpo = @{
+  id = "atendimento-123"
+  mensagens = @(
+    @{ autor = "cliente"; texto = "meu pedido não chegou"; enviada_em = "2026-08-14T10:00:00-03:00" }
+    @{ autor = "bot";     texto = "vou verificar";         enviada_em = "2026-08-14T10:00:12-03:00" }
+  )
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Uri http://localhost:8000/ingestao -Method Post `
+  -Headers @{ Authorization = "Bearer frs_..." } `
+  -ContentType "application/json; charset=utf-8" `
+  -Body ([System.Text.Encoding]::UTF8.GetBytes($corpo))
+```
+
+O `UTF8.GetBytes` **não é firula**: passar `-Body` como string faz o
+PowerShell 5.1 serializar na codepage do sistema, e `não chegou` chega à API
+como `n?o chegou`. O léxico perde a negação, o BERTimbau lê outro texto, e o
+score sai errado por um defeito de terminal — o tipo de bug que se procura no
+modelo por horas.
+
+Se preferir o curl de verdade, chame-o pelo nome completo (`curl.exe`), **numa
+linha só** e trocando a `\` pela crase `` ` `` — o Windows 11 traz o binário.
+Nos outros exemplos deste README vale a mesma tradução; e para definir variável
+de ambiente, `$env:FRAUS_CHAVE_MESTRA = "..."` antes do comando, já que
+`VAR=valor comando` é sintaxe de bash.
+
 ### 4. Dashboard
 
 ```bash
@@ -269,6 +319,47 @@ contrapartida numa tela sem login; quem subiu pelo terminal derruba pelo
 terminal. O `stdout` da API vai para `dashboard/.fraus-api.log`, que é onde
 olhar quando a subida falha — o motivo mais comum é modelo ausente em
 `modelos/`, que derruba o boot por design.
+
+## Roadmap
+
+Onde o trabalho está. **Entregue** é o que existe no repositório e tem teste ou
+verificação por trás; **falta** está detalhado em [Pendências](#pendências), e a
+ordem lá é a ordem de importância.
+
+### Entregue
+
+| Frente | Estado | O que existe |
+|---|---|---|
+| **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, sinais de texto, emoji e tempo, e o score 0–100 → nota 0–10 → categoria de NPS |
+| **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
+| **Fusor** | ✅ ⚠️ | 16 features (texto, emoji, tempo); emoção e ironia ficam **fora do score**, marcadas em `sinais_fora_do_score` |
+| **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
+| **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
+| **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
+| **Ligar a autenticação sem terminal** | ✅ | botão em Configurações; a mestra sobrevive a reiniciar, e a dashboard segue navegando por cookie `httpOnly` |
+| **Dashboard sem terminal** | ✅ | botão **Iniciar API** no modo local, com as quatro travas descritas em [§5](#5-quando-a-api-não-está-no-ar) |
+| **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
+| **Recorte de período no servidor** | ⏳ | `/serie-temporal`, `/lexico` e o recorte em `/conversas` e `/indicadores` existem; **sobra N+1** em léxico por classe e tempo mediano |
+| **Suíte** | ✅ | **337 testes** passando, build da dashboard verde, contraste AA verificado por `npm run contraste` |
+
+### Falta
+
+Em ordem, com o detalhe em [Pendências](#pendências):
+
+1. **Retreinar a cabeça de ironia** — o vazamento está medido em
+   `tests/test_ironia_dominio.py` e o gerador já foi corrigido; falta rodar
+   `notebooks/04_treino_ironia.ipynb` de novo. **Bloqueia o item 2.**
+2. **Subir o fusor de 16 para 30 features**, colocando emoção e ironia na nota.
+3. **Matar o N+1 restante** — agregados de léxico por classe e de tempo mediano.
+4. **Fixar a empresa fictícia** do trabalho — ela define volume, canais e o que
+   conta como bom tempo de resposta na apresentação.
+5. **Decisões em aberto** — tema claro para projetor de banca, pin do
+   `scikit-learn` no `pyproject.toml`, e remover `content/fraus` da raiz.
+
+Fora de escopo por decisão, não por falta de tempo: **deploy e k8s** (o destino
+é a máquina local e a banca) e **login de usuário** na dashboard — o cookie da
+autenticação é meio caminho, e dizer o contrário seria o mesmo tipo de mentira
+que o projeto existe para não cometer.
 
 ## Limitações conhecidas
 
