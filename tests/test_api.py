@@ -1173,3 +1173,69 @@ def test_upload_acima_do_teto_e_recusado_antes_de_rodar_o_modelo(cliente_com_sin
     )
     assert resposta.status_code == 400
     assert "limite" in resposta.json()["detail"]
+
+
+def test_upload_acima_do_teto_nao_e_lido_por_inteiro(cliente_com_sinal, monkeypatch):
+    """O teto tem que recusar SEM materializar o arquivo.
+
+    Antes, a rota fazia `await arquivo.read()` (sem argumento) e so entao
+    conferia o tamanho: o limite protegia a CPU do BERTimbau, que era a
+    intencao declarada, e nunca a memoria -- o arquivo inteiro ja estava
+    dentro dela quando a recusa acontecia. Este teste falha se alguem voltar a
+    ler tudo de uma vez, porque a leitura sem tamanho reaparece no espiao.
+    """
+    # A classe espionada e a do STARLETTE, nao a reexportada pelo FastAPI: quem
+    # instancia o upload e o parser do multipart, e ele constroi a do Starlette.
+    # Espionar a subclasse do FastAPI nao intercepta chamada nenhuma -- foi o
+    # primeiro jeito que tentei, e o teste passou por engano com zero leituras.
+    from starlette.datastructures import UploadFile as UploadFileDoStarlette
+
+    from fraus.api.rotas import analise
+
+    tamanhos_pedidos = []
+    leitura_original = UploadFileDoStarlette.read
+
+    async def espiao(self, size=-1):
+        tamanhos_pedidos.append(size)
+        return await leitura_original(self, size)
+
+    monkeypatch.setattr(UploadFileDoStarlette, "read", espiao)
+
+    resposta = cliente_com_sinal.post(
+        "/analisar/arquivo",
+        files={"arquivo": ("grande.csv", b"x" * (analise.TETO_ARQUIVO_ANALISE + 1), "text/csv")},
+    )
+
+    assert resposta.status_code == 400
+    # Nenhuma leitura ilimitada, e nenhum pedaco maior que o combinado.
+    assert tamanhos_pedidos, "a rota nao leu o upload"
+    assert all(0 < tamanho <= analise.PEDACO_DE_LEITURA for tamanho in tamanhos_pedidos)
+
+
+def test_corpo_absurdo_e_413_antes_de_qualquer_parse(cliente_com_sinal):
+    """A unica trava que age ANTES do multipart ser lido.
+
+    Quando o handler de `/analisar/arquivo` comeca a rodar, o `UploadFile` ja
+    foi resolvido -- o corpo ja foi lido e ja escorreu para um temporario em
+    disco. Conferir tamanho la dentro nunca poderia evitar esse custo; so o
+    middleware de `Content-Length` pode, e e ele que este teste cobre.
+    """
+    from fraus.api.main import TETO_CORPO
+
+    resposta = cliente_com_sinal.post(
+        "/analisar",
+        content=b"x" * (TETO_CORPO + 1),
+        headers={"content-type": "application/json"},
+    )
+    assert resposta.status_code == 413
+    assert "limite" in resposta.json()["detail"]
+
+
+def test_content_length_nao_numerico_e_recusado(cliente_com_sinal):
+    """Deixar passar seria abrir a excecao exata que pula o teto."""
+    resposta = cliente_com_sinal.post(
+        "/analisar",
+        content=b"{}",
+        headers={"content-type": "application/json", "content-length": "abc"},
+    )
+    assert resposta.status_code == 400
