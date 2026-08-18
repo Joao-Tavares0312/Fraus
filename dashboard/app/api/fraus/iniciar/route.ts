@@ -2,7 +2,7 @@
  * MODO LOCAL: sobe a API do Fraus como processo filho do servidor Next.
  *
  * Uma rota HTTP que dispara um comando e execucao remota de codigo. Esta aqui
- * existe sob quatro travas SIMULTANEAS, e nenhuma delas e opcional:
+ * existe sob CINCO travas SIMULTANEAS, e nenhuma delas e opcional:
  *
  * 1. **Ligada em desenvolvimento, desligada em producao.** Padrao por
  *    `NODE_ENV`, com `FRAUS_MODO_LOCAL` como override explicito nos dois
@@ -18,14 +18,17 @@
  *    que ja iniciou.
  * 4. **Escuta so em 127.0.0.1.** A API subida daqui nao aceita conexao de fora
  *    da maquina.
+ * 5. **So a propria dashboard chama.** Requisicao de outro site leva 403. As
+ *    quatro travas acima defendem contra COMANDO arbitrario, e nenhuma delas
+ *    perguntava QUEM pediu -- um POST sem corpo e sem cabecalho customizado e
+ *    requisicao simples, que nao gera preflight.
  *
- * NAO existe caminho para DERRUBAR a API: matar processo e irreversivel e nao
- * tem contrapartida numa tela sem login. Quem subiu pelo terminal derruba pelo
- * terminal.
+ * DERRUBAR e possivel (`DELETE`), mas so o processo que ESTA rota subiu: um
+ * uvicorn iniciado no terminal continua sendo trabalho de terminal.
  */
 
 import { spawn } from "node:child_process";
-import { openSync } from "node:fs";
+import { existsSync, openSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { pedidoDeOutroSite, recusaDeOutroSite } from "@/lib/mesma-origem";
@@ -60,6 +63,83 @@ const ARGUMENTOS = [
   "--port",
   "8000",
 ];
+
+/** Os argumentos do uvicorn, sem quem o executa. */
+const ALVO = ARGUMENTOS.slice(2);
+
+/**
+ * O `pythonw.exe` BASE do venv -- o interpretador que não abre console.
+ *
+ * O PROBLEMA QUE ISTO RESOLVE. Subir pelo botão abria uma janela de console
+ * por cima da tela, e ela ficava aberta enquanto a API vivesse. `windowsHide:
+ * true` sozinho não resolve, por dois motivos que se somam:
+ *
+ * 1. `detached: true` liga `DETACHED_PROCESS`, e a documentação do
+ *    `CreateProcess` diz que `CREATE_NO_WINDOW` -- o que o `windowsHide`
+ *    liga -- é IGNORADO nessa combinação. E `detached` não é opcional aqui: a
+ *    API precisa sobreviver ao reload do servidor Next. Medido: sem ele, o
+ *    processo morre junto com quem o iniciou.
+ * 2. Mesmo que resolvesse, a flag vale para o filho IMEDIATO. `uv run python`
+ *    executa o interpretador como processo PRÓPRIO, e esse neto é um app de
+ *    console sem console para herdar -- situação em que o Windows aloca um
+ *    novo. O `conhost` observado tinha como pai o `python`, não o `uv`.
+ *
+ * A saída é não ter neto: chamar o interpretador direto. O `python.exe` do
+ * `.venv/Scripts` também não serve -- num venv do `uv` ele é um TRAMPOLIM que
+ * lança o interpretador de verdade, recriando o neto (`sys._base_executable`
+ * aponta para outro lugar). Quem serve é o `pythonw.exe` do diretório `home`
+ * declarado no `pyvenv.cfg`: mesmo interpretador, compilado para o subsistema
+ * GUI, sem console e sem alocar um.
+ *
+ * Como ele é o interpretador BASE, o venv precisa entrar por `PYTHONPATH` (ver
+ * `comandoReal`). É um degrau a menos de isolamento do que ativar o venv,
+ * e aceitável aqui porque o venv foi criado A PARTIR deste mesmo interpretador:
+ * mesma versão, mesmo ABI, e o `site-packages` da base do `uv` é vazio.
+ *
+ * `null` fora do Windows (não há console a esconder) ou quando o venv não
+ * existe -- e aí o comando volta a ser o `uv`, com a janela e tudo. Preferível
+ * a não subir.
+ */
+function pythonSemConsole(): string | null {
+  if (process.platform !== "win32") return null;
+  try {
+    const configuracao = readFileSync(resolve(RAIZ, ".venv", "pyvenv.cfg"), "utf8");
+    const base = /^home\s*=\s*(.+)$/m.exec(configuracao)?.[1]?.trim();
+    if (!base) return null;
+    const caminho = resolve(base, "pythonw.exe");
+    return existsSync(caminho) ? caminho : null;
+  } catch {
+    // Sem `.venv` ainda (clone novo, antes do `uv sync`). O `uv` resolve.
+    return null;
+  }
+}
+
+/**
+ * O que vai ser executado de fato, com o ambiente que aquele caminho exige.
+ *
+ * `PYTHONPATH` só entra no caminho do interpretador BASE, e só nele: é ele que
+ * não enxergaria o `uvicorn` nem o `torch` sem ajuda, porque não é o
+ * interpretador do venv. Pelo `uv` a variável não teria função nenhuma -- e o
+ * caminho `Lib/Scripts` que ela apontaria nem existe fora do Windows.
+ */
+function comandoReal(): {
+  comando: string;
+  argumentos: string[];
+  ambiente: NodeJS.ProcessEnv;
+} {
+  const semConsole = pythonSemConsole();
+  if (semConsole) {
+    return {
+      comando: semConsole,
+      argumentos: ALVO,
+      ambiente: {
+        ...process.env,
+        PYTHONPATH: resolve(RAIZ, ".venv", "Lib", "site-packages"),
+      },
+    };
+  }
+  return { comando: COMANDO, argumentos: ARGUMENTOS, ambiente: process.env };
+}
 
 /**
  * O processo que ESTA rota iniciou, lembrado entre requisicoes.
@@ -175,8 +255,13 @@ export async function GET(): Promise<Response> {
     nossa: nosso !== null,
     pid: nosso?.pid ?? null,
     // Sempre devolvido: o aviso mostra o comando para copiar mesmo quando o
-    // botão não existe, e a frase do comando é a mesma que a rota executa --
-    // uma fonte só, para a instrução da tela não envelhecer.
+    // botão não existe.
+    //
+    // É o comando do `uv`, e NÃO o `pythonw.exe` que a rota pode executar: no
+    // terminal, quem digita quer ver o log rolando e derrubar com Ctrl+C, e o
+    // `pythonw` sairia mudo e sem console -- exatamente o que se quer do botão
+    // e exatamente o que não se quer da mão. Cada caminho mostra o comando que
+    // serve a ele.
     comando: `${COMANDO} ${ARGUMENTOS.join(" ")}`,
     log: LOG,
   });
@@ -217,8 +302,10 @@ export async function POST(requisicao: Request): Promise<Response> {
 
   try {
     const log = openSync(LOG, "a");
-    const processo = spawn(COMANDO, ARGUMENTOS, {
+    const { comando, argumentos, ambiente } = comandoReal();
+    const processo = spawn(comando, argumentos, {
       cwd: RAIZ,
+      env: ambiente,
       // Sem shell: o argv vai direto para o executável, e não existe string de
       // comando para um `;` ou um `&&` alterarem.
       shell: false,
@@ -228,10 +315,10 @@ export async function POST(requisicao: Request): Promise<Response> {
       // ele também põe o filho num grupo de processos próprio, que é o que
       // permite ao DELETE derrubar a árvore inteira de uma vez.
       detached: true,
-      // Sem isto, no Windows, `detached` abre uma JANELA DE CONSOLE por cima do
-      // que o João estiver fazendo -- e ela fica lá, aberta, enquanto a API
-      // viver. O stdout já vai para o log; o console não mostrava nada que o
-      // arquivo não mostre, só roubava o foco.
+      // Esconde o console do filho IMEDIATO. Sozinho não bastava: quem abria a
+      // janela era o NETO (`uv` -> `python`), e por isso a subida usa o
+      // `pythonw.exe` do venv quando ele existe -- ver `interpretadorSemConsole`.
+      // As duas coisas juntas é que fecham o caso.
       windowsHide: true,
       stdio: ["ignore", log, log],
     });
