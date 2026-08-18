@@ -389,11 +389,34 @@ async function escrever<T>(
   return (await resposta.json()) as T;
 }
 
+/**
+ * A frase de falha de CONEXAO -- a API nao esta no ar.
+ *
+ * Constante porque duas partes da interface precisam reconhece-la: a mensagem
+ * em si, e o estado vazio, que encurta a propria prosa quando a causa e esta
+ * (a regua no topo da tela ja carrega a instrucao e a acao, e repetir a
+ * instrucao em cada painel e ruido, nao reforco).
+ */
+const MARCA_API_FORA = "API não respondeu em";
+
+/**
+ * A explicação de um estado vazio vem de a API estar fora do ar?
+ *
+ * `includes` e nao `startsWith`: quem monta a explicacao costuma prefixar o
+ * proprio contexto ("Não foi possível listar os atendimentos: API não
+ * respondeu em …"), e um detector ancorado no inicio deixava justamente essas
+ * passarem -- o painel da serie continuava com o paragrafo inteiro ao lado de
+ * um painel vizinho ja encurtado.
+ */
+export function ehFalhaDeConexao(explicacao: string): boolean {
+  return explicacao.includes(MARCA_API_FORA);
+}
+
 function mensagemDeErro(erro: unknown): string {
   if (erro instanceof Error) {
     // `fetch` recusado dá "fetch failed" — inútil para quem está na banca.
     if (/fetch failed|ECONNREFUSED/i.test(erro.message)) {
-      return `API não respondeu em ${urlDaApi("")}`;
+      return `${MARCA_API_FORA} ${urlDaApi("")}`;
     }
     return erro.message;
   }
@@ -510,6 +533,22 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
  */
 export const obterConfiguracoes = () =>
   proteger(buscar<Configuracoes>("/configuracoes"));
+
+export type EstadoDeAcesso = {
+  ligada: boolean;
+  /** De onde vem a mestra vigente. O ambiente vence o banco. */
+  origem: "ambiente" | "banco" | null;
+};
+
+/**
+ * A autenticacao da API esta ligada, e por qual procedencia.
+ *
+ * Unica leitura que funciona SEM credencial -- a rota e isenta do middleware de
+ * chave de proposito, porque a tela precisa dela justamente quando ainda nao ha
+ * chave nenhuma para apresentar.
+ */
+export const obterEstadoDeAcesso = () =>
+  proteger(buscar<EstadoDeAcesso>("/acesso/estado"));
 
 /**
  * Grava as chaves enviadas. Manda so o que mudou -- o `PUT` valida chave a

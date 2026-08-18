@@ -1,4 +1,5 @@
 import { CircleSlash } from "lucide-react";
+import { ehFalhaDeConexao } from "@/lib/api";
 import {
   Empty,
   EmptyDescription,
@@ -18,6 +19,12 @@ import { cn } from "@/lib/utils";
  *
  * Ele e tambem o modo de FALHA ISOLADA: um painel que nao carrega mostra o
  * proprio erro aqui dentro e os vizinhos continuam de pe.
+ *
+ * QUANDO A CAUSA E A API FORA DO AR, ele fala menos. A regua no topo da tela ja
+ * anuncia o estado e carrega a acao; um paragrafo por painel repetindo a mesma
+ * instrucao nao reforca nada -- so empurra o resto da tela para baixo, tres,
+ * quatro vezes na mesma pagina. A prosa metodologica NAO e removida: ela recolhe
+ * para aparato (DESIGN.md 4.1), porque recolher e permitido e remover nao.
  */
 export function EstadoVazio({
   titulo,
@@ -34,10 +41,25 @@ export function EstadoVazio({
   etapa?: string;
   className?: string;
 }) {
+  const apiFora = ehFalhaDeConexao(explicacao);
+
+  // A primeira frase é a marca ("API não respondeu em …"), que a régua do topo
+  // já diz melhor. O resto é a prosa metodológica, e ela sobrevive no aparato.
+  const aparato = apiFora
+    ? explicacao.slice(explicacao.indexOf(". ") + 1).trim()
+    : "";
+
   return (
     <Empty
       className={cn(
         "items-start border border-dashed border-border text-left",
+        // O `Empty` do chassi tem `flex-1` e estica para preencher a coluna da
+        // pagina. Com a prosa recolhida, isso virava uma moldura tracejada de
+        // meia tela em volta de duas linhas de texto -- desperdicio que parece
+        // defeito. Falha de conexao ocupa a altura do que tem a dizer; os
+        // outros vazios continuam preenchendo a area do painel que substituem
+        // (o do grafico, por exemplo, precisa da altura do grafico).
+        apiFora && "flex-none py-8",
         className,
       )}
     >
@@ -46,7 +68,16 @@ export function EstadoVazio({
           <CircleSlash aria-hidden />
         </EmptyMedia>
         <EmptyTitle className="text-sm text-foreground">{titulo}</EmptyTitle>
-        <EmptyDescription className="text-xs">{explicacao}</EmptyDescription>
+
+        {apiFora ? (
+          <EmptyDescription className="text-xs">
+            Sem dado enquanto a API não responde — a ação está na faixa no topo
+            da tela.
+          </EmptyDescription>
+        ) : (
+          <EmptyDescription className="text-xs">{explicacao}</EmptyDescription>
+        )}
+
         {endpoint ? (
           <EmptyDescription className="text-xs">
             Resolvido por{" "}
@@ -60,6 +91,18 @@ export function EstadoVazio({
           <EmptyDescription className="text-xs">
             Falta rodar: <span className="text-foreground">{etapa}</span>.
           </EmptyDescription>
+        ) : null}
+
+        {apiFora && aparato ? (
+          <details className="group mt-1 text-xs text-muted-foreground">
+            <summary className="cursor-pointer list-none hover:text-foreground">
+              <span className="inline-block transition-transform duration-200 group-open:rotate-90">
+                ›
+              </span>{" "}
+              por que esta tela não preenche sozinha
+            </summary>
+            <p className="mt-1.5 max-w-[62ch]">{aparato}</p>
+          </details>
         ) : null}
       </EmptyHeader>
     </Empty>

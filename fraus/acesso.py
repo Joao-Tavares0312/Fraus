@@ -14,6 +14,11 @@ from fraus import credencial
 
 PREFIXO = "fra"
 
+# A mestra gerada pela tela. Prefixo proprio pelo mesmo motivo dos outros dois:
+# varredura de segredo em repositorio reconhece o que e, e chave apresentada no
+# papel errado falha na leitura do prefixo antes de qualquer consulta.
+PREFIXO_MESTRA = "frm"
+
 
 def gerar(chave_id: int) -> tuple[str, str]:
     """Cria uma chave nova. Devolve `(chave_em_claro, hash)`.
@@ -24,6 +29,22 @@ def gerar(chave_id: int) -> tuple[str, str]:
     """
     segredo = secrets.token_hex(credencial.BYTES_DO_SEGREDO)
     chave = f"{PREFIXO}_{chave_id}_{segredo}"
+    return chave, credencial.hash_da_chave(chave)
+
+
+def gerar_mestra() -> tuple[str, str]:
+    """Cria uma chave mestra nova. Devolve `(chave_em_claro, hash)`.
+
+    Sem id embutido, ao contrario de `gerar`: existe no maximo UMA mestra
+    (`CHECK (id = 1)` na tabela), e nao ha linha a localizar -- a conferencia
+    le o unico hash gravado.
+
+    O segredo tem os mesmos 32 bytes sorteados das outras credenciais. A mestra
+    inventada a mao pelo operador continua valendo pela variavel de ambiente;
+    esta funcao existe para a tela nao pedir ao Joao que invente entropia.
+    """
+    segredo = secrets.token_hex(credencial.BYTES_DO_SEGREDO)
+    chave = f"{PREFIXO_MESTRA}_{segredo}"
     return chave, credencial.hash_da_chave(chave)
 
 

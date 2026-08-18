@@ -215,3 +215,62 @@ def test_ingestao_com_barra_final_segue_isenta_do_middleware(tmp_path):
     # 307 e o redirect do proprio Starlette para /ingestao -- o que importa e
     # nao ter sido barrado pelo middleware com 401.
     assert resposta.status_code in (201, 307)
+
+
+def test_ingestao_usa_o_canal_da_fonte_e_ignora_o_corpo(tmp_path):
+    """Quem manda o dado nao escolhe em que canal ele e contabilizado."""
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    mestra = {"Authorization": f"Bearer {MESTRA}"}
+    fonte = _criar_fonte(cliente, mestra)
+    chave = cliente.post(
+        f"/integracoes/fontes/{fonte['id']}/chave", headers=mestra
+    ).json()["chave"]
+
+    resposta = cliente.post(
+        "/ingestao",
+        json={
+            "id": "canal-1",
+            "canal": "canal-inventado-pelo-cliente",
+            "mensagens": [
+                {
+                    "autor": "cliente",
+                    "texto": "obrigado",
+                    "enviada_em": "2026-08-14T12:00:00+00:00",
+                }
+            ],
+        },
+        headers={"Authorization": f"Bearer {chave}"},
+    )
+    assert resposta.status_code == 201
+    assert resposta.json()["canal"] == fonte["canal"]
+    assert resposta.json()["fonte"] == fonte["nome"]
+
+
+def test_ingestao_de_fonte_desativada_e_403(tmp_path):
+    """O interruptor da tela de Integracoes precisa desligar de fato."""
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    mestra = {"Authorization": f"Bearer {MESTRA}"}
+    fonte = _criar_fonte(cliente, mestra)
+    chave = cliente.post(
+        f"/integracoes/fontes/{fonte['id']}/chave", headers=mestra
+    ).json()["chave"]
+    cliente.patch(
+        f"/integracoes/fontes/{fonte['id']}", json={"ativa": False}, headers=mestra
+    )
+
+    resposta = cliente.post(
+        "/ingestao",
+        json={
+            "id": "desligada-1",
+            "mensagens": [
+                {
+                    "autor": "cliente",
+                    "texto": "oi",
+                    "enviada_em": "2026-08-14T12:00:00+00:00",
+                }
+            ],
+        },
+        headers={"Authorization": f"Bearer {chave}"},
+    )
+    # 403, nao 401: a chave esta certa, o que esta desligado e a fonte.
+    assert resposta.status_code == 403

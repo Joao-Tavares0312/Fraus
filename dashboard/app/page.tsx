@@ -173,10 +173,24 @@ export default async function Pagina(props: PageProps<"/">) {
             legenda="Faixas canônicas de NPS: 0–6 detrator, 7–8 neutro, 9–10 promotor — lidas de GET /modelo, não digitadas aqui."
             semPadding
           >
-            <DistribuicaoScores
-              barras={distribuicao.barras}
-              semSinal={distribuicao.semSinal}
-            />
+            {/* Sem este ramo, a distribuição recebia zero barras e anunciava
+                "Nenhum atendimento no período" quando a causa era a API fora --
+                afirmando ausência de atendimento sem ter como saber. Numa
+                ferramenta batizada com o nome do daemon do engano, esse é o
+                erro mais caro que uma tela vazia pode cometer. Mesmo ramo que
+                a lista e o vocabulário já tinham. */}
+            {erro ? (
+              <EstadoVazio
+                className="m-5"
+                titulo="Distribuição indisponível"
+                explicacao={erro}
+              />
+            ) : (
+              <DistribuicaoScores
+                barras={distribuicao.barras}
+                semSinal={distribuicao.semSinal}
+              />
+            )}
           </Painel>
 
           <Painel

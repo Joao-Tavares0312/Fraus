@@ -15,12 +15,13 @@
  * =============================================================================
  */
 
-import { obterConfiguracoes } from "@/lib/api";
+import { obterConfiguracoes, obterEstadoDeAcesso } from "@/lib/api";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
 import { FaixasNps } from "@/components/configuracoes/FaixasNps";
 import { LimiaresLatencia } from "@/components/configuracoes/LimiaresLatencia";
+import { Autenticacao } from "@/components/configuracoes/Autenticacao";
 import type { Faixas } from "@/components/configuracoes/EscalaNps";
 
 export const dynamic = "force-dynamic";
@@ -29,13 +30,26 @@ const SUBTITULO =
   "O que esta tela muda vale na LEITURA: as faixas decidem em que categoria cada nota já medida cai, e os limiares decidem onde a espera passa a ser chamada de longa. Nenhum score é recalculado aqui.";
 
 export default async function PaginaConfiguracoes() {
-  const resultado = await obterConfiguracoes();
+  // As duas em paralelo: uma nao depende da outra, e /acesso/estado responde
+  // mesmo quando /configuracoes leva 401 por falta de credencial.
+  const [resultado, acesso] = await Promise.all([
+    obterConfiguracoes(),
+    obterEstadoDeAcesso(),
+  ]);
 
   if (!resultado.ok) {
     return (
       <>
         <CabecalhoPagina titulo="Configurações" subtitulo={SUBTITULO} />
         <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+          {/* O painel de autenticação vem TAMBÉM neste caminho, e de propósito:
+              401 por falta de credencial é justamente quando saber o estado da
+              autenticação explica o erro logo abaixo. */}
+
+          {acesso.ok ? (
+            <Autenticacao estado={acesso.dado} semCredencial={acesso.dado.ligada} />
+          ) : null}
+
           <EstadoVazio
             titulo="A configuração não carregou"
             explicacao={`${resultado.erro}. Sem ela não há faixa vigente nem padrão de fábrica a exibir — e preencher os campos com 0–6/7–8/9–10 digitados aqui criaria uma segunda fonte da mesma regra, que é exatamente o defeito que esta tela existe para não ter.`}
@@ -53,6 +67,8 @@ export default async function PaginaConfiguracoes() {
       <CabecalhoPagina titulo="Configurações" subtitulo={SUBTITULO} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+        {acesso.ok ? <Autenticacao estado={acesso.dado} /> : null}
+
         <Painel
           titulo="Faixas de NPS"
           legenda="Qual nota é detrator, neutro e promotor. É a mesma faixa que o servidor usa para responder /indicadores e /conversas, no mesmo instante — não existe cópia dela na interface."
@@ -97,6 +113,15 @@ export default async function PaginaConfiguracoes() {
               </strong>{" "}
               Os três são derivados no servidor e nunca aceitos do cliente. O que
               muda aqui é a faixa pela qual eles são lidos.
+            </li>
+            <li>
+              <strong className="text-foreground">
+                Desligar a autenticação.
+              </strong>{" "}
+              Ligar é um clique; desligar não é botão. Um controle que baixa a
+              defesa numa tela sem login não tem contrapartida de risco
+              aceitável — desligar é trabalho de ambiente (apagar a variável e a
+              linha do banco).
             </li>
             <li>
               <strong className="text-foreground">

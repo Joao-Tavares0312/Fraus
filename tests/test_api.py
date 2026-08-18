@@ -445,7 +445,7 @@ def test_modelo_traz_as_dezesseis_importancias_e_as_faixas_corretas(cliente):
 
 
 def test_modelo_sem_arquivo_de_metricas_devolve_null(cliente, tmp_path, monkeypatch):
-    import fraus.api.main as main_module
+    import fraus.api.rotas.modelo as main_module
 
     monkeypatch.setattr(main_module, "CAMINHO_METRICAS", tmp_path / "nao-existe.json")
     corpo = cliente.get("/modelo").json()
@@ -453,7 +453,7 @@ def test_modelo_sem_arquivo_de_metricas_devolve_null(cliente, tmp_path, monkeypa
 
 
 def test_modelo_traz_metricas_quando_arquivo_existe(cliente, tmp_path, monkeypatch):
-    import fraus.api.main as main_module
+    import fraus.api.rotas.modelo as main_module
 
     caminho_metricas = tmp_path / "metricas.json"
     caminho_metricas.write_text('{"acuracia": 0.9, "f1_macro": 0.88}', encoding="utf-8")
@@ -1049,7 +1049,7 @@ def test_modelo_publica_as_tres_cabecas_marcando_quem_pontua(cliente):
 
 def test_cabeca_sem_metricas_exportadas_vem_null_e_nao_zerada(cliente, tmp_path, monkeypatch):
     """Antes do treino, `null`. Zero seria dizer que a cabeca erra tudo."""
-    from fraus.api import main as main_module
+    from fraus.api.rotas import modelo as main_module
 
     monkeypatch.setattr(main_module, "CAMINHO_METRICAS_IRONIA", tmp_path / "nao-existe.json")
     corpo = cliente.get("/modelo").json()

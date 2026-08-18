@@ -8,8 +8,9 @@
  * do servidor, nao a que o cliente mandar.
  */
 
+import { autorizacaoDoServidor } from "@/lib/credencial-do-servidor";
+
 const API = process.env.FRAUS_API_URL ?? "http://localhost:8000";
-const CHAVE = process.env.FRAUS_CHAVE_ACESSO;
 
 async function repassar(
   requisicao: Request,
@@ -22,7 +23,12 @@ async function repassar(
   const cabecalhos = new Headers(requisicao.headers);
   cabecalhos.delete("host");
   cabecalhos.delete("authorization");
-  if (CHAVE) cabecalhos.set("authorization", `Bearer ${CHAVE}`);
+  // O cookie da dashboard nao tem nada a fazer numa requisicao para a API: o
+  // que ele carrega e a credencial, e ela sai no Authorization abaixo.
+  cabecalhos.delete("cookie");
+
+  const autorizacao = autorizacaoDoServidor(requisicao);
+  if (autorizacao) cabecalhos.set("authorization", autorizacao);
 
   let resposta: Response;
   try {

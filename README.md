@@ -101,8 +101,13 @@ uv run pytest -q       # ou -v para ver caso a caso
 ### 3. API
 
 ```bash
-uv run uvicorn fraus.api.main:app --reload   # http://localhost:8000
+uv run python -m uvicorn fraus.api.main:app --reload   # http://localhost:8000
 ```
+
+> `python -m uvicorn`, e não `uv run uvicorn`: o segundo passa pelo trampolim
+> que o `uv` instala para o `uvicorn.exe` do `.venv`, e ele quebra com
+> `uv trampoline failed to canonicalize script path` se o venv foi recriado ou
+> movido. Chamar o módulo pelo interpretador não depende de shim nenhum.
 
 A API real **exige o modelo treinado** em `modelos/` (BERTimbau fine-tunado e
 `fusor.joblib`) e **falha alto no boot** se ele não existir — por design:
@@ -119,20 +124,31 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
-| `FRAUS_CHAVE_MESTRA` | (nenhum) | ausente: API aberta (uso local), com aviso no boot. Presente: toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao`, que segue exigindo chave de fonte |
+| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente, que **vence** a gravada pela tela. Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao` (chave de fonte) e `GET /acesso/estado` (pública) |
 
 #### Ligando a autenticação
 
-A chave mestra não é gerada pelo sistema: é um segredo que **você inventa** e
-entrega à API pelo ambiente. Ela nunca é gravada em disco — a API compara o
-header com o valor da variável, em tempo constante.
+**Pela tela, em um clique.** Abra **Configurações → Autenticação** e clique em
+*Ligar autenticação*. A API gera a chave mestra, grava o hash dela e emite junto
+uma chave de acesso para a dashboard — as duas aparecem **uma única vez**, para
+você guardar. O servidor **não é reiniciado**: quem decide é um middleware que
+lê o estado a cada requisição, então a exigência de chave vale já na chamada
+seguinte. A dashboard continua navegando porque a chave de acesso emitida vai
+para um cookie `httpOnly` do servidor Next.
+
+Ligada assim, a mestra **sobrevive a reiniciar a API** (o hash fica no banco, em
+`chave_mestra`, uma linha só). Para trocá-la depois, o mesmo painel pede a
+mestra **atual** — sem ela a troca é recusada com 409, e é isso que impede
+alguém de tomar a API de quem já está dentro.
+
+**Pelo ambiente**, se você opera por variável — e ela **vence** a gravada:
 
 ```bash
 # 1. Invente um segredo forte:
 python -c "import secrets; print(secrets.token_hex(32))"
 
 # 2. Suba a API com ele (PowerShell: $env:FRAUS_CHAVE_MESTRA = "..."):
-FRAUS_CHAVE_MESTRA=<segredo> uv run uvicorn fraus.api.main:app
+FRAUS_CHAVE_MESTRA=<segredo> uv run python -m uvicorn fraus.api.main:app
 
 # 3. Toda rota agora exige chave. Gere uma chave de ACESSO para a dashboard:
 curl -X POST localhost:8000/acesso/chaves \
@@ -143,6 +159,19 @@ curl -X POST localhost:8000/acesso/chaves \
 # 4. Suba a dashboard com a chave (server-side, nunca vai ao navegador):
 cd dashboard && FRAUS_CHAVE_ACESSO=fra_... npm run dev
 ```
+
+Com a variável definida, o painel da tela **não troca** a mestra: gravar por
+cima criaria duas credenciais com a do ambiente ganhando, e o botão pareceria
+funcionar sem mudar nada. A variável é também a saída de quem perdeu a chave
+gerada pela tela.
+
+`GET /acesso/estado` responde `{"ligada": ..., "origem": "ambiente"|"banco"|null}`
+e é a **única** rota que continua pública com a autenticação ligada — a tela
+precisa dela justamente quando ainda não há credencial para apresentar.
+
+**Desligar não é botão.** Um controle que baixa a defesa numa tela sem login não
+tem contrapartida de risco aceitável: desligar é apagar a variável e a linha
+`chave_mestra` do banco.
 
 `GET /acesso/chaves` lista as chaves emitidas (nome, dica dos 4 últimos
 caracteres, nunca o hash) e `DELETE /acesso/chaves/{id}` revoga na hora — a
@@ -183,29 +212,85 @@ quando essa variável existe. A chave de acesso nunca toca o navegador.
 FRAUS_API_URL=http://localhost:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
 ```
 
-O proxy é um **relay sem autenticação própria**: ele anexa a chave do deploy em
-toda chamada que chega nele, e a dashboard publicada continua sem login — quem
-alcança a URL dela lê os dados pelo proxy. A mestra fecha a API, não a
-dashboard; para publicar com dado real, proteja o deploy (por exemplo, Vercel
-Deployment Protection) ou não publique com dado real.
+O proxy monta o header com `FRAUS_CHAVE_ACESSO` **ou**, na falta dela, com a
+chave guardada no cookie `httpOnly` de quem ligou a autenticação pela tela — o
+ambiente vence, e o `Authorization` que vier do navegador continua sendo
+**descartado** (a credencial da API é a do deploy, não a que o cliente mandar).
 
-Sem `FRAUS_CHAVE_ACESSO`, o proxy repassa sem header — desenvolvimento local
+Com `FRAUS_CHAVE_ACESSO` no ambiente, a dashboard publicada continua **sem
+login**: quem alcança a URL dela lê os dados pelo proxy, e para publicar com dado
+real você ainda precisa proteger o deploy (por exemplo, Vercel Deployment
+Protection). Sem a variável, o cookie passa a ser a credencial da sessão — e
+então um navegador que não clicou em ligar cai em **401** nas telas de dados, com
+o painel de Autenticação explicando o que falta. É meio caminho de um login, não
+um login: o cookie não expira por conta própria além da sessão do navegador, e
+não há usuários nem senha.
+
+Sem nenhuma das duas, o proxy repassa sem header — desenvolvimento local
 contra uma API aberta continua funcionando com zero configuração. Como são
 variáveis **server-side**, mudar depois exige reiniciar o processo — mas,
 diferente de `NEXT_PUBLIC_*`, elas nunca são embutidas no bundle do navegador.
 `NEXT_PUBLIC_API_URL` não é mais lida pelo app: sobrevive só como texto do
 exemplo de `curl` na tela de integrações.
 
+### 5. Quando a API não está no ar
+
+A dashboard é uma casca sobre a API: sem ela, toda tela fica vazia. Um aviso no
+topo de qualquer tela diz isso com todas as letras — *as telas ficam vazias
+porque o dado vem dela, não porque não há atendimento* — e carrega o comando
+para subir, pronto para copiar, mais um botão de **tentar de novo**.
+
+**Modo local.** Rodando `npm run dev`, o aviso já vem com um botão **Iniciar
+API** — sem precisar de nenhuma variável: ele sobe o `uvicorn` como processo
+filho do servidor Next, mostra "subindo…" e recarrega a tela sozinho quando
+`GET /saude` responde (30 a 60 s, o tempo de carregar os três BERTimbau).
+
+```bash
+cd dashboard && npm run dev
+```
+
+**Em produção (`npm run build && npm run start`) o botão some por padrão.**
+`FRAUS_MODO_LOCAL` é o override explícito nos dois sentidos: `=1` liga mesmo
+num build de produção (raro, e por isso exige o passo extra), `=0` desliga
+mesmo em dev, para testar a dashboard como ela se comporta publicada.
+
+**Não habilite isso num deploy real.** É uma rota HTTP que executa um comando —
+em uso local é conveniência, publicada é execução remota de código. Ela existe
+sob quatro travas: desligada por padrão fora de desenvolvimento (sem ela
+responde **404**, não 403 — quem não deveria saber que ela existe não
+descobre); comando **literal** no código-fonte, sem nada vindo da requisição e
+sem shell; uma instância por vez (consulta `/saude` antes de subir e confere se
+o processo lembrado ainda está vivo); e a API subida escuta apenas em
+`127.0.0.1`. Se `FRAUS_API_URL` aponta para outra máquina, o botão não aparece
+— não há o que iniciar aqui.
+
+**Não existe botão de derrubar.** Matar processo é irreversível e não tem
+contrapartida numa tela sem login; quem subiu pelo terminal derruba pelo
+terminal. O `stdout` da API vai para `dashboard/.fraus-api.log`, que é onde
+olhar quando a subida falha — o motivo mais comum é modelo ausente em
+`modelos/`, que derruba o boot por design.
+
 ## Limitações conhecidas
 
-- **A API é aberta por padrão, e passa a exigir chave quando `FRAUS_CHAVE_MESTRA`
-  é definida.** Sem a variável, o comportamento é o de sempre — sem login, sem
-  token — pensado para uso local, e o boot avisa disso. Com ela, toda rota
+- **A API é aberta por padrão, e passa a exigir chave quando existe uma mestra**
+  — do ambiente (`FRAUS_CHAVE_MESTRA`) ou gravada pelo botão em Configurações,
+  que persiste no banco. Sem nenhuma das duas, o comportamento é o de sempre —
+  sem login, sem token — pensado para uso local, e o boot avisa disso. A decisão
+  é tomada **por requisição**, não no boot: é o que permite ligar a autenticação
+  sem reiniciar o servidor. Com mestra, toda rota
   exige `Authorization: Bearer <chave>`: a mestra, ou uma **chave de acesso**
   (`fra_...`) gerada por ela via `POST /acesso/chaves`. A **chave de fonte**
   (`frs_...`) existente continua sendo a única credencial aceita em
   `POST /ingestao` — as duas não se substituem, porque a rota só escreve e uma
-  segunda credencial não compraria segurança a mais. Gerenciar chaves (criar,
+  segunda credencial não compraria segurança a mais. `GET /acesso/estado` é a
+  única rota que permanece **pública** com a autenticação ligada, e devolve
+  apenas se ela está ligada e de onde vem a mestra: sem dica, sem hash, sem
+  data. `POST /acesso/mestra` fica alcançável enquanto a API está aberta, e é
+  assim que se liga a autenticação sem terminal — o preço é que, numa rede
+  compartilhada, **quem chegar primeiro** liga a autenticação e fica com a
+  mestra (é o padrão de primeiro uso de Grafana e afins). Depois de ligada, ela
+  exige a mestra atual e responde 409 a qualquer outra credencial. Gerenciar
+  chaves (criar,
   listar, revogar — tanto de acesso quanto de fonte) é privilégio exclusivo da
   mestra; uma chave de acesso que tenta recebe **403**. Sem a mestra definida,
   não exponha a API na internet: a raiz configurável (`FRAUS_RAIZ_IMPORTACAO`)
@@ -338,6 +423,25 @@ que conta como bom tempo de resposta.
   `notebooks/`; é lixo e pode ser removido.
 
 ## Desenvolvimento
+
+### Onde mora a API
+
+Nenhuma rota é definida em `fraus/api/main.py`: ele só monta o app — o
+`Contexto`, os middlewares na ordem certa e os oito routers. Cada domínio tem
+o seu arquivo, e é nele que se mexe:
+
+| Arquivo | O que tem |
+|---|---|
+| `api/main.py` | montagem do app e `criar_app` — nada mais |
+| `api/contexto.py` | `Contexto` (banco, motor, raiz, chave mestra) + os derivados compartilhados; as rotas o recebem por `Depends(obter_contexto)` |
+| `api/esquemas.py` | os contratos de **entrada** (nenhum aceita veredito) |
+| `api/seguranca.py` | as duas credenciais — chave de acesso/mestra e chave de fonte — e o middleware |
+| `api/periodo.py` | validação do recorte `de`/`ate`, pontas inclusivas |
+| `api/caminhos.py` | caminhos configuráveis por ambiente + contenção da importação |
+| `api/rotas/` | um módulo por domínio: `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso` (estado, mestra e chaves), `ingestao`, `modelo`, `analise` |
+
+As dependências chegam por injeção, não por fechamento léxico — é o que
+permite a rota morar fora do arquivo que constrói o app.
 
 ### Servidor de demonstração da interface
 
