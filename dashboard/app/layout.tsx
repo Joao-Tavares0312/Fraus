@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
+import { SaudeProvider } from "@/components/shell/SaudeProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -46,16 +48,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Pular para o conteúdo
         </a>
         <TooltipProvider>
-          <SidebarProvider>
+          <SaudeProvider>
+            <SidebarProvider>
             {/* A navegacao le `useSearchParams` para carregar o periodo entre
                 as secoes, e isso exige limite de Suspense no App Router. */}
-            <Suspense fallback={null}>
-              <NavegacaoLateral />
-            </Suspense>
-            <SidebarInset id="conteudo" className="min-w-0">
-              {children}
-            </SidebarInset>
-          </SidebarProvider>
+              <Suspense fallback={null}>
+                <NavegacaoLateral />
+              </Suspense>
+              <SidebarInset id="conteudo" className="min-w-0">
+                {/* Acima do conteudo, em TODA tela: sem a API todas quebram
+                    igual, e a instrucao tem que estar onde o Joao ja esta. */}
+                <AvisoApiFora />
+                {children}
+              </SidebarInset>
+            </SidebarProvider>
+          </SaudeProvider>
         </TooltipProvider>
       </body>
     </html>

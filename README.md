@@ -101,8 +101,13 @@ uv run pytest -q       # ou -v para ver caso a caso
 ### 3. API
 
 ```bash
-uv run uvicorn fraus.api.main:app --reload   # http://localhost:8000
+uv run python -m uvicorn fraus.api.main:app --reload   # http://localhost:8000
 ```
+
+> `python -m uvicorn`, e não `uv run uvicorn`: o segundo passa pelo trampolim
+> que o `uv` instala para o `uvicorn.exe` do `.venv`, e ele quebra com
+> `uv trampoline failed to canonicalize script path` se o venv foi recriado ou
+> movido. Chamar o módulo pelo interpretador não depende de shim nenhum.
 
 A API real **exige o modelo treinado** em `modelos/` (BERTimbau fine-tunado e
 `fusor.joblib`) e **falha alto no boot** se ele não existir — por design:
@@ -143,7 +148,7 @@ alguém de tomar a API de quem já está dentro.
 python -c "import secrets; print(secrets.token_hex(32))"
 
 # 2. Suba a API com ele (PowerShell: $env:FRAUS_CHAVE_MESTRA = "..."):
-FRAUS_CHAVE_MESTRA=<segredo> uv run uvicorn fraus.api.main:app
+FRAUS_CHAVE_MESTRA=<segredo> uv run python -m uvicorn fraus.api.main:app
 
 # 3. Toda rota agora exige chave. Gere uma chave de ACESSO para a dashboard:
 curl -X POST localhost:8000/acesso/chaves \
@@ -227,6 +232,37 @@ variáveis **server-side**, mudar depois exige reiniciar o processo — mas,
 diferente de `NEXT_PUBLIC_*`, elas nunca são embutidas no bundle do navegador.
 `NEXT_PUBLIC_API_URL` não é mais lida pelo app: sobrevive só como texto do
 exemplo de `curl` na tela de integrações.
+
+### 5. Quando a API não está no ar
+
+A dashboard é uma casca sobre a API: sem ela, toda tela fica vazia. Um aviso no
+topo de qualquer tela diz isso com todas as letras — *as telas ficam vazias
+porque o dado vem dela, não porque não há atendimento* — e carrega o comando
+para subir, pronto para copiar, mais um botão de **tentar de novo**.
+
+**Modo local.** Com `FRAUS_MODO_LOCAL=1` no ambiente da dashboard, o aviso
+ganha um botão **Iniciar API**: ele sobe o `uvicorn` como processo filho do
+servidor Next, mostra "subindo…" e recarrega a tela sozinho quando `GET /saude`
+responde (30 a 60 s, o tempo de carregar os três BERTimbau).
+
+```bash
+cd dashboard && FRAUS_MODO_LOCAL=1 npm run dev
+```
+
+**Não habilite isso num deploy.** É uma rota HTTP que executa um comando — em
+uso local é conveniência, publicada é execução remota de código. Ela existe sob
+quatro travas: só com a variável (sem ela responde **404**, não 403 — quem não
+deveria saber que ela existe não descobre); comando **literal** no código-fonte,
+sem nada vindo da requisição e sem shell; uma instância por vez (consulta
+`/saude` antes de subir e confere se o processo lembrado ainda está vivo); e a
+API subida escuta apenas em `127.0.0.1`. Se `FRAUS_API_URL` aponta para outra
+máquina, o botão não aparece — não há o que iniciar aqui.
+
+**Não existe botão de derrubar.** Matar processo é irreversível e não tem
+contrapartida numa tela sem login; quem subiu pelo terminal derruba pelo
+terminal. O `stdout` da API vai para `dashboard/.fraus-api.log`, que é onde
+olhar quando a subida falha — o motivo mais comum é modelo ausente em
+`modelos/`, que derruba o boot por design.
 
 ## Limitações conhecidas
 

@@ -1,11 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ENDERECO_API, obterSaude } from "@/lib/api";
-
-type Estado = "verificando" | "no-ar" | "fora-do-ar";
-
-const INTERVALO_MS = 20_000;
+import { ENDERECO_API } from "@/lib/api";
+import { useSaude, type EstadoDeSaude as Estado } from "./SaudeProvider";
 
 const APARENCIA: Record<
   Estado,
@@ -37,26 +33,14 @@ const APARENCIA: Record<
  *
  * Cor nao e o unico canal: o rotulo textual diz o estado, e o `title` diz qual
  * endereco foi consultado.
+ *
+ * O POLLING nao mora mais aqui: ele vive no `SaudeProvider`, porque o aviso de
+ * "API fora do ar" mostra o mesmo fato e dois pollings independentes
+ * discordariam por ate 20 segundos -- este rodape dizendo "API no ar" com o
+ * aviso ainda na tela.
  */
 export function EstadoSaude() {
-  const [estado, setEstado] = useState<Estado>("verificando");
-
-  useEffect(() => {
-    let vivo = true;
-
-    const verificar = async () => {
-      const resultado = await obterSaude();
-      if (!vivo) return;
-      setEstado(resultado.ok ? "no-ar" : "fora-do-ar");
-    };
-
-    verificar();
-    const relogio = setInterval(verificar, INTERVALO_MS);
-    return () => {
-      vivo = false;
-      clearInterval(relogio);
-    };
-  }, []);
+  const { estado } = useSaude();
 
   const { rotulo, cor, detalhe } = APARENCIA[estado];
 

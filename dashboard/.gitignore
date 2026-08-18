@@ -44,3 +44,6 @@ dev.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Log da API subida pelo botão do modo local (FRAUS_MODO_LOCAL).
+.fraus-api.log
