@@ -8,3 +8,6 @@ dados_brutos/
 node_modules/
 .next/
 .superpowers/
+
+# Credenciais geradas na primeira subida da API. Unica copia em claro delas.
+.fraus-chaves.txt

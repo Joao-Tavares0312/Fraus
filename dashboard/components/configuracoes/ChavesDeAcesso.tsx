@@ -198,6 +198,12 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
               <strong className="text-foreground">mestra</strong>. Ela fica
               apenas nesta aba, em memória — não é gravada em lugar nenhum.
             </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Se a autenticação ligou sozinha na primeira subida da API, ela
+              está em <code className="num">.fraus-chaves.txt</code>, na raiz do
+              projeto. Ler os atendimentos não precisa dela — a dashboard já usa
+              a chave de acesso do mesmo arquivo.
+            </p>
             <Label htmlFor="mestra-chaves" className="text-foreground">
               Chave mestra
             </Label>

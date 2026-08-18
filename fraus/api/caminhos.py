@@ -17,6 +17,12 @@ CAMINHO_MODELO_IRONIA = Path(os.environ.get("FRAUS_CAMINHO_MODELO_IRONIA", "mode
 CAMINHO_FUSOR = Path(os.environ.get("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
 CAMINHO_BANCO = Path(os.environ.get("FRAUS_CAMINHO_BANCO", "fraus.db"))
 
+# Onde a PRIMEIRA subida escreve a mestra e a chave de acesso que ela gera.
+# E a unica copia em claro delas -- o banco guarda so o hash. Fica fora do git
+# (`.gitignore`), e o servidor da dashboard le daqui para nao obrigar ninguem a
+# copiar chave nenhuma para uma variavel de ambiente.
+CAMINHO_CHAVES = Path(os.environ.get("FRAUS_CAMINHO_CHAVES", ".fraus-chaves.txt"))
+
 # Exportado pelo notebook 01 (acuracia, F1-macro do BERTimbau). Ausente e
 # esperado antes do treino: `/modelo` devolve `metricas: null`, nunca inventa.
 # O padrao aponta para dentro da pasta do modelo porque e onde o notebook 01
