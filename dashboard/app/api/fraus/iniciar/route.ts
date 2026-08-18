@@ -67,10 +67,27 @@ const ARGUMENTOS = [
  * Vai no `globalThis` porque o hot reload do Next descarta o modulo e criaria
  * um segundo "primeiro" processo a cada recompilacao em desenvolvimento --
  * exatamente o cenario em que este botao e usado.
+ *
+ * O registro sobrevive a API SUBIR: ele nao e so o guard de "ja tem uma
+ * subindo", e a resposta para "esta API e nossa?". Sem isso o botao de
+ * desligar nao teria como distinguir o processo que a dashboard iniciou de um
+ * uvicorn que o Joao subiu no terminal -- e derrubar o segundo pela tela seria
+ * matar processo de outra pessoa.
  */
 const estado = globalThis as unknown as {
-  __fraus_subindo?: { pid: number; desde: number } | null;
+  __fraus_api?: { pid: number; desde: number } | null;
 };
+
+/** O processo que iniciamos, se ele ainda existe. */
+function nossoProcesso(): { pid: number; desde: number } | null {
+  const lembrado = estado.__fraus_api;
+  if (!lembrado) return null;
+  if (!processoVivo(lembrado.pid)) {
+    estado.__fraus_api = null;
+    return null;
+  }
+  return lembrado;
+}
 
 /**
  * Ligado por padrao em DESENVOLVIMENTO, desligado por padrao em producao.
@@ -148,9 +165,15 @@ async function apiResponde(): Promise<boolean> {
 /** A tela pergunta ANTES de desenhar o botão: sem isto ela ofereceria um 404. */
 export async function GET(): Promise<Response> {
   const motivo = indisponivel();
+  const nosso = nossoProcesso();
   return Response.json({
     disponivel: motivo === null,
     motivo,
+    // A API no ar foi subida por ESTA dashboard? É o que decide se o botão de
+    // desligar aparece. Falso para um uvicorn de terminal -- e aí a tela não
+    // oferece uma ação que levaria 409.
+    nossa: nosso !== null,
+    pid: nosso?.pid ?? null,
     // Sempre devolvido: o aviso mostra o comando para copiar mesmo quando o
     // botão não existe, e a frase do comando é a mesma que a rota executa --
     // uma fonte só, para a instrução da tela não envelhecer.
@@ -173,27 +196,23 @@ export async function POST(requisicao: Request): Promise<Response> {
   }
 
   if (await apiResponde()) {
-    estado.__fraus_subindo = null;
-    return Response.json({ estado: "ja-no-ar" });
+    // O registro NÃO é apagado aqui: subir com sucesso é exatamente quando ele
+    // passa a valer, porque é ele que autoriza o botão de desligar a mexer
+    // neste processo e em nenhum outro.
+    return Response.json({ estado: "ja-no-ar", nossa: nossoProcesso() !== null });
   }
 
-  const subindo = estado.__fraus_subindo;
-  if (subindo) {
-    // Duas condicoes, e as DUAS precisam valer para recusar: o processo
-    // lembrado ainda existe E ainda esta dentro do teto.
-    //
-    // Sem a checagem de vida, este guard mentia no cenario mais comum de todos:
-    // subir pela tela, derrubar a API no terminal e tentar subir de novo --
-    // dentro dos 90s a rota respondia "ja ha uma API subindo" apontando um pid
-    // que ja tinha morrido, e o botao ficava inerte sem explicar por que.
-    const decorrido = Date.now() - subindo.desde;
-    if (decorrido < 90_000 && processoVivo(subindo.pid)) {
-      return Response.json(
-        { detail: `já há uma API subindo (pid ${subindo.pid})` },
-        { status: 409 },
-      );
-    }
-    estado.__fraus_subindo = null;
+  // `nossoProcesso` ja confere se ele esta VIVO -- sem isso este guard mentia
+  // no cenario mais comum de todos: subir pela tela, derrubar a API no terminal
+  // e tentar subir de novo. Dentro dos 90s a rota respondia "ja ha uma API
+  // subindo" apontando um pid que ja tinha morrido, e o botao ficava inerte sem
+  // explicar por que.
+  const subindo = nossoProcesso();
+  if (subindo && Date.now() - subindo.desde < 90_000) {
+    return Response.json(
+      { detail: `já há uma API subindo (pid ${subindo.pid})` },
+      { status: 409 },
+    );
   }
 
   try {
@@ -205,8 +224,15 @@ export async function POST(requisicao: Request): Promise<Response> {
       shell: false,
       // `detached` para a API sobreviver a um reload do servidor Next -- em
       // desenvolvimento ele recompila e reinicia o tempo todo, e uma API que
-      // morre junto tornaria o botão inútil no cenário que o motiva.
+      // morre junto tornaria o botão inútil no cenário que o motiva. No POSIX
+      // ele também põe o filho num grupo de processos próprio, que é o que
+      // permite ao DELETE derrubar a árvore inteira de uma vez.
       detached: true,
+      // Sem isto, no Windows, `detached` abre uma JANELA DE CONSOLE por cima do
+      // que o João estiver fazendo -- e ela fica lá, aberta, enquanto a API
+      // viver. O stdout já vai para o log; o console não mostrava nada que o
+      // arquivo não mostre, só roubava o foco.
+      windowsHide: true,
       stdio: ["ignore", log, log],
     });
     processo.unref();
@@ -218,7 +244,7 @@ export async function POST(requisicao: Request): Promise<Response> {
       );
     }
 
-    estado.__fraus_subindo = { pid: processo.pid, desde: Date.now() };
+    estado.__fraus_api = { pid: processo.pid, desde: Date.now() };
     return Response.json(
       { estado: "subindo", pid: processo.pid, log: LOG },
       { status: 202 },
@@ -232,4 +258,83 @@ export async function POST(requisicao: Request): Promise<Response> {
       { status: 500 },
     );
   }
+}
+
+/**
+ * Derruba a ÁRVORE do processo, não o processo.
+ *
+ * O pid que guardamos é o do `uv`, e o uvicorn que atende na porta é NETO dele
+ * (`uv` -> `python` -> servidor). Um `kill` no pid lembrado encerra o `uv` e
+ * deixa a API no ar, órfã e sem ninguém lembrando o pid dela -- o botão diria
+ * "desliguei" com o servidor respondendo normalmente atrás. Foi exatamente esse
+ * o comportamento observado ao encerrar processos desta rota na mão.
+ *
+ * Windows: `taskkill /T` percorre a árvore pelo pai. POSIX: o `detached` da
+ * subida pôs o filho num grupo próprio, e o sinal negativo alcança o grupo.
+ */
+async function pararArvore(pid: number): Promise<void> {
+  if (process.platform === "win32") {
+    await new Promise<void>((resolver) => {
+      const matador = spawn("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        shell: false,
+        windowsHide: true,
+        stdio: "ignore",
+      });
+      matador.on("close", () => resolver());
+      matador.on("error", () => resolver());
+    });
+    return;
+  }
+  // SIGTERM, não SIGKILL: o uvicorn fecha as conexões abertas e encerra
+  // sozinho. Matar à força uma API que sabe se despedir não compra nada.
+  process.kill(-pid, "SIGTERM");
+}
+
+/**
+ * Desliga a API que ESTA dashboard subiu -- e só ela.
+ *
+ * Aqui havia uma decisão registrada de que este botão não existiria: matar
+ * processo é irreversível e não tem contrapartida numa tela sem login. Ela cai
+ * porque a premissa mudou em dois pontos. O primeiro é de escopo: a rota só
+ * alcança o processo cujo pid ELA guardou ao subir, então não há como derrubar
+ * um uvicorn que o João iniciou no terminal -- esse continua respondendo 409 e
+ * sendo trabalho de terminal, como sempre foi. O segundo é de origem: rota que
+ * muda estado agora recusa chamada de outro site, então "qualquer aba consegue
+ * disparar isto" deixou de ser verdade.
+ *
+ * O que sobra de irreversível é ligar de novo -- que é o botão ao lado.
+ */
+export async function DELETE(requisicao: Request): Promise<Response> {
+  if (pedidoDeOutroSite(requisicao)) return recusaDeOutroSite();
+
+  if (indisponivel() !== null) {
+    return Response.json({ detail: "não encontrado" }, { status: 404 });
+  }
+
+  const nosso = nossoProcesso();
+  if (!nosso) {
+    // 409 e não 404: a rota existe, e a recusa tem um motivo que o operador
+    // precisa ler. Uma API subida pelo terminal não é nossa para derrubar.
+    return Response.json(
+      {
+        detail:
+          "esta API não foi iniciada pela dashboard — quem subiu pelo " +
+          "terminal derruba pelo terminal (Ctrl+C na janela dela).",
+      },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await pararArvore(nosso.pid);
+  } catch (erro) {
+    const motivo = erro instanceof Error ? erro.message : String(erro);
+    return Response.json(
+      { detail: `não foi possível encerrar o processo ${nosso.pid}: ${motivo}` },
+      { status: 500 },
+    );
+  }
+
+  estado.__fraus_api = null;
+  return Response.json({ estado: "desligada", pid: nosso.pid });
 }
