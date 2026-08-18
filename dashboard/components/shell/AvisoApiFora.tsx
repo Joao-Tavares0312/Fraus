@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Play, RotateCcw, ServerCrash } from "lucide-react";
+import { Check, ChevronRight, Copy, Play, RotateCcw } from "lucide-react";
 import { useSaude } from "./SaudeProvider";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 type ModoLocal = {
@@ -19,16 +18,23 @@ const TETO_MS = 90_000;
 const PASSO_MS = 2_000;
 
 /**
- * O que fazer quando a API nao responde -- na tela, sem procurar o terminal.
+ * A RÉGUA DE ESTADO: o que fazer quando a API não responde.
  *
- * Aparece em QUALQUER pagina, porque sem a API todas quebram igual: consertar
- * so a de Configuracoes deixaria Visao geral e Atendimentos com o mesmo erro
- * seco e nenhuma instrucao.
+ * Isto era um `Alert variant="destructive"` de largura total, e estava errado
+ * por tres razoes do DESIGN.md ao mesmo tempo: cartao como agrupador onde o
+ * mundo pede regua e espaco; vermelho preenchido no topo competindo com o
+ * vermelho que codifica DETRATOR no dado; e um titulo de tamanho de secao para
+ * um fato que o rodape da navegacao ja anuncia.
  *
- * O botao de iniciar so existe no MODO LOCAL (`FRAUS_MODO_LOCAL=1`), e quem
- * decide isso e o servidor: a tela pergunta a `GET /api/fraus/iniciar` antes
- * de desenhar. Sem o modo, o aviso ainda serve -- ele carrega o comando pronto
- * para copiar, que e a mesma linha que a rota executaria.
+ * O que ficou: uma faixa da altura de uma barra de sistema. Ponto de estado,
+ * uma frase, e a ACAO a direita -- que e a unica coisa aqui que a barra lateral
+ * nao tem. O dourado de `--primary` aparece porque este e literalmente o papel
+ * reservado a ele: acao primaria. O comando de terminal e o caminho do log
+ * viraram APARATO recolhivel (secao 4.1), porque sao instrucao de contingencia,
+ * nao a acao do momento.
+ *
+ * Aparece em QUALQUER tela: sem a API todas ficam vazias igual, e a acao tem de
+ * estar onde o Joao ja esta olhando.
  */
 export function AvisoApiFora() {
   const { estado, reconsultar } = useSaude();
@@ -57,8 +63,16 @@ export function AvisoApiFora() {
     };
   }, [estado, modo]);
 
-  useEffect(() => () => {
-    cancelado.current = true;
+  useEffect(() => {
+    // O `false` na ENTRADA não é redundante: em desenvolvimento o React monta,
+    // desmonta e remonta o componente, e o cleanup do primeiro mount deixava a
+    // bandeira levantada para sempre. O efeito era o contador de "subindo…"
+    // travado em 0s e a espera morta na primeira volta -- o botão ficava
+    // girando enquanto a API subia normalmente atrás dele.
+    cancelado.current = false;
+    return () => {
+      cancelado.current = true;
+    };
   }, []);
 
   const esperarSubir = useCallback(async () => {
@@ -77,7 +91,7 @@ export function AvisoApiFora() {
     }
     setSubindo(false);
     setErro(
-      `a API não respondeu em ${TETO_MS / 1000}s. O log está em ${modo?.log ?? ".fraus-api.log"} — o motivo mais comum é modelo ausente em modelos/, que derruba o boot por design.`,
+      `a API não respondeu em ${TETO_MS / 1000}s — o log está em ${modo?.log ?? ".fraus-api.log"}. O motivo mais comum é modelo ausente em modelos/, que derruba o boot por design.`,
     );
   }, [reconsultar, router, modo]);
 
@@ -116,44 +130,45 @@ export function AvisoApiFora() {
   if (estado !== "fora-do-ar") return null;
 
   return (
-    <div className="px-4 pt-4 sm:px-6">
-      <Alert variant="destructive">
-        <ServerCrash aria-hidden />
-        <AlertTitle>A API não está respondendo</AlertTitle>
-        <AlertDescription>
-          <p className="mb-2">
-            As telas ficam vazias porque o dado vem dela — não porque não há
-            atendimento. {modo?.disponivel
-              ? "Você pode subir a API por aqui:"
-              : "Suba a API no terminal, na raiz do projeto:"}
+    <div className="border-b border-[var(--linha)] bg-card/40">
+      <div className="flex min-w-0 flex-col gap-2 px-4 py-2.5 sm:px-6">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          {/* O ponto carrega o estado; o rótulo textual vem colado, porque cor
+              nunca é o único canal. Pulsa só enquanto sobe -- movimento que
+              comunica estado, e o único desta faixa. */}
+          <span className="flex shrink-0 items-center gap-2">
+            <span
+              aria-hidden
+              className={`size-2 rounded-full bg-destructive ${subindo ? "motion-safe:animate-pulse" : ""}`}
+            />
+            <span className="text-sm font-medium text-foreground">
+              {subindo ? "Subindo a API" : "API fora do ar"}
+            </span>
+          </span>
+
+          <p role="status" className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {subindo ? (
+              <>
+                carregando os três BERTimbau do disco —{" "}
+                <span className="num text-foreground">{segundos}s</span>, costuma
+                levar de 30 a 60
+              </>
+            ) : (
+              "as telas ficam vazias porque o dado vem dela, não porque não há atendimento"
+            )}
           </p>
 
-          {modo?.comando ? (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <code className="num min-w-0 flex-1 overflow-x-auto rounded-sm bg-muted px-2 py-1.5 text-xs text-foreground">
-                {modo.comando}
-              </code>
-              <Button type="button" size="sm" variant="outline" onClick={copiar}>
-                {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
-                {copiado ? "Copiado" : "Copiar"}
-              </Button>
-            </div>
-          ) : null}
-
-          {erro ? <p className="mb-3 text-foreground">{erro}</p> : null}
-
-          <div className="flex flex-wrap items-center gap-2">
+          <span className="flex shrink-0 items-center gap-2">
             {modo?.disponivel ? (
               <Button type="button" size="sm" onClick={iniciar} disabled={subindo}>
                 <Play aria-hidden />
-                {subindo ? `subindo… (${segundos}s)` : "Iniciar API"}
+                {subindo ? "subindo…" : "Iniciar API"}
               </Button>
             ) : null}
-
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={async () => {
                 if (await reconsultar()) router.refresh();
               }}
@@ -162,16 +177,44 @@ export function AvisoApiFora() {
               <RotateCcw aria-hidden />
               Tentar de novo
             </Button>
-          </div>
+          </span>
+        </div>
 
-          {subindo ? (
-            <p className="mt-2 text-xs">
-              A API real carrega os três BERTimbau do disco — costuma levar de 30
-              a 60 segundos na primeira subida.
-            </p>
-          ) : null}
-        </AlertDescription>
-      </Alert>
+        {erro ? (
+          <p className="max-w-[75ch] text-xs text-[var(--destructive-rich-text)]">
+            {erro}
+          </p>
+        ) : null}
+
+        {/* APARATO: instrução de contingência, a um gesto de distância. Fica
+            fechada porque o botão ao lado resolve o caso normal -- e continua
+            existindo porque nem todo caso é o normal. */}
+        {modo?.comando ? (
+          <details className="group min-w-0 text-xs text-muted-foreground">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1 hover:text-foreground">
+              <ChevronRight
+                aria-hidden
+                className="size-3 transition-transform duration-200 group-open:rotate-90"
+              />
+              {modo.disponivel ? "subir pelo terminal" : "como subir no terminal"}
+            </summary>
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+              <code className="num min-w-0 flex-1 overflow-x-auto rounded-sm bg-muted px-2 py-1.5 text-foreground">
+                {modo.comando}
+              </code>
+              <Button type="button" size="sm" variant="outline" onClick={copiar}>
+                {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
+                {copiado ? "Copiado" : "Copiar"}
+              </Button>
+            </div>
+            {modo.motivo ? (
+              <p className="mt-2">
+                O botão não aparece porque {modo.motivo}.
+              </p>
+            ) : null}
+          </details>
+        ) : null}
+      </div>
     </div>
   );
 }

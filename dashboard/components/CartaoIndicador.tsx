@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ehFalhaDeConexao } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -92,7 +93,22 @@ export function CartaoIndicador({
       </div>
 
       {erro ? (
-        <p className="text-xs leading-relaxed text-destructive">{erro}</p>
+        ehFalhaDeConexao(erro) ? (
+          /* A armadura tem quatro indicadores lado a lado. Com a mensagem
+             inteira, a MESMA url aparecia quatro vezes em vermelho na coluna
+             da esquerda, e o que o olho lia era o endereco, nao a ausencia de
+             dado. Aqui vale o mesmo travessao do resto do sistema: o estado da
+             API e da conexao ja esta na regua do topo e no rodape da
+             navegacao, dito uma vez. */
+          <p className="text-lg leading-none font-medium text-muted-foreground">
+            <span className="num" aria-hidden>
+              —
+            </span>
+            <span className="sr-only">sem dado: a API não respondeu</span>
+          </p>
+        ) : (
+          <p className="text-xs leading-relaxed text-destructive">{erro}</p>
+        )
       ) : valor === null ? (
         <>
           <p className="text-lg leading-none font-medium text-muted-foreground">

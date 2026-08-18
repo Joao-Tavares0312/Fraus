@@ -45,6 +45,7 @@ export default async function PaginaConfiguracoes() {
           {/* O painel de autenticação vem TAMBÉM neste caminho, e de propósito:
               401 por falta de credencial é justamente quando saber o estado da
               autenticação explica o erro logo abaixo. */}
+
           {acesso.ok ? (
             <Autenticacao estado={acesso.dado} semCredencial={acesso.dado.ligada} />
           ) : null}
