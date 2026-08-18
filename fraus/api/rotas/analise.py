@@ -27,6 +27,11 @@ from fraus.sinais.palavras import contar_palavras
 TETO_ARQUIVO_ANALISE = 200_000
 TETO_CONVERSAS_ANALISE = 10
 
+# Quanto se le por vez ao medir um upload. Grande o bastante para nao
+# multiplicar chamadas num arquivo legitimo, pequeno o bastante para o
+# excedente que chega a entrar na memoria nunca passar disso.
+PEDACO_DE_LEITURA = 64 * 1024
+
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o arquivo inteiro.
 LIMITE_MOTIVOS = 20
@@ -79,24 +84,54 @@ async def analisar_arquivo(
     planilha e PDF nao sao texto, e obrigar o cliente a codificar em base64
     inflaria o corpo em um terco por nada.
 
-    Continua sem gravar coisa alguma -- os bytes sao lidos em memoria e
-    descartados. Nao ha `open()` de escrita em lugar nenhum deste caminho.
+    Nada daqui e GRAVADO: nem a conversa, nem o score, nem o arquivo. Nao ha
+    `open()` de escrita em lugar nenhum deste caminho.
+
+    Nao confundir com "nenhum byte toca o disco", que e o que esta docstring
+    prometia e nao era verdade: o `UploadFile` do Starlette escorre para um
+    arquivo temporario acima de ~1 MB, e isso acontece no parse do multipart,
+    ANTES deste corpo rodar. Quem impede um upload absurdo de chegar ate la e
+    o teto de `Content-Length` em `fraus.api.limites`; o teto daqui recusa o
+    que passou por ele, e o temporario e descartado pelo Starlette ao fim da
+    requisicao.
     """
-    dados = await arquivo.read()
+    dados = await ler_ate_o_teto(arquivo, TETO_ARQUIVO_ANALISE)
     if not dados:
         raise HTTPException(status_code=400, detail="arquivo vazio")
-    if len(dados) > TETO_ARQUIVO_ANALISE:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"arquivo de {len(dados) // 1024} kB, acima do limite de "
-                f"{TETO_ARQUIVO_ANALISE // 1024} kB. Esta tela examina um "
-                "atendimento por vez; para um lote, use a importacao."
-            ),
-        )
 
     extracao = extrair_ou_400(arquivo.filename or "arquivo", dados)
     return montar_analise(ctx, extracao)
+
+
+async def ler_ate_o_teto(arquivo: UploadFile, teto: int) -> bytes:
+    """Le o upload em pedacos e para no primeiro byte acima do teto.
+
+    `await arquivo.read()` sem argumento materializa o upload INTEIRO na
+    memoria antes de qualquer conferencia -- o teto era conferido na linha
+    seguinte, ja tendo pago o custo que ele existia para evitar. Lendo em
+    pedacos, o que entra na memoria nunca passa do teto mais um pedaco.
+
+    A mensagem NAO afirma o tamanho do arquivo, e a diferenca importa: a
+    leitura parou antes do fim, entao esse numero nao existe aqui. Dizer "seu
+    arquivo tem N kB" a partir do que se leu ate desistir seria inventar um
+    dado -- exatamente o tipo de numero com confianca sem lastro que este
+    projeto existe para nao produzir.
+    """
+    pedacos: list[bytes] = []
+    lidos = 0
+    while pedaco := await arquivo.read(PEDACO_DE_LEITURA):
+        lidos += len(pedaco)
+        if lidos > teto:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"arquivo acima do limite de {teto // 1024} kB. Esta tela "
+                    "examina um atendimento por vez; para um lote, use a "
+                    "importacao."
+                ),
+            )
+        pedacos.append(pedaco)
+    return b"".join(pedacos)
 
 
 def extrair_ou_400(nome: str, dados: bytes):

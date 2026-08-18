@@ -58,12 +58,22 @@ export function cabecalhosDaApi(extras?: Record<string, string>): Record<string,
 }
 
 /**
- * SO o endereco exibido no exemplo de `curl` da tela de integracoes/ingestao
+ * O endereco da API para MOSTRAR no exemplo de `curl` da tela de integracoes
  * -- nunca destino de fetch. Quem le esse exemplo e um integrador externo,
  * que fala com a API direto (nao com o proxy, que so existe para o navegador
  * desta dashboard).
+ *
+ * So pode ser chamada NO SERVIDOR, e e o ponto todo: antes isto era uma
+ * constante lida de `NEXT_PUBLIC_API_URL`, uma SEGUNDA fonte de verdade para
+ * um endereco que `FRAUS_API_URL` ja definia. Com as duas existindo, um deploy
+ * que configurasse so a segunda continuava ensinando `localhost:8000` ao
+ * integrador -- um comando errado, exibido com confianca, sem nada na tela
+ * reclamando. Uma variavel so, lida onde ela existe, e a resposta desce por
+ * prop ate o componente que a imprime.
  */
-export const BASE_DA_API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export function baseDaApi(): string {
+  return process.env.FRAUS_API_URL ?? "http://localhost:8000";
+}
 
 export type Categoria = "detrator" | "neutro" | "promotor";
 

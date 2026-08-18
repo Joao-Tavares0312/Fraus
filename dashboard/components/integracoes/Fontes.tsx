@@ -4,7 +4,6 @@ import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import {
-  BASE_DA_API,
   ajustarFonte,
   apagarFonte,
   criarFonte,
@@ -50,10 +49,17 @@ const NOVA_VAZIA = { nome: "", canal: "", tipo: "csv", variavel_segredo: "" };
 export function Fontes({
   iniciais,
   tipos: TIPOS,
+  baseDaApi,
 }: {
   iniciais: FonteIntegracao[];
   /** Publicados por `GET /integracoes/tipos` — nunca digitados aqui. */
   tipos: TipoDeFonte[];
+  /**
+   * O endereço da API no exemplo de `curl`. Vem por prop, do servidor: é lá
+   * que `FRAUS_API_URL` existe, e uma variável pública só para exibir isto
+   * seria um segundo endereço configurável que pode discordar do real.
+   */
+  baseDaApi: string;
 }) {
   const router = useRouter();
   const identificador = useId();
@@ -470,7 +476,7 @@ export function Fontes({
                      importante da tela ilegivel. */
                   <TableRow key={`${fonte.id}-chave`} className="border-b-0">
                     <TableCell colSpan={6} className="pt-0">
-                      <ChaveDaFonte fonte={fonte} base={BASE_DA_API} />
+                      <ChaveDaFonte fonte={fonte} base={baseDaApi} />
                     </TableCell>
                   </TableRow>,
                 ];

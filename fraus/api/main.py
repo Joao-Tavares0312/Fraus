@@ -33,6 +33,7 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_FUSOR,
                                 CAMINHO_MODELO_EMOCAO, CAMINHO_MODELO_IRONIA,
                                 CAMINHO_MODELO_TEXTO, RAIZ_IMPORTACAO)
 from fraus.api.contexto import Contexto
+from fraus.api.limites import TETO_CORPO, registrar_middleware_de_corpo  # TETO_CORPO reexportado para os testes
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
 from fraus.api.rotas import (acesso, analise, configuracoes, conversas,
                              indicadores, ingestao, integracoes, modelo,
@@ -51,15 +52,23 @@ from fraus.sinais.emocao import ClassificadorEmocao
 from fraus.sinais.ironia import ClassificadorIronia
 from fraus.sinais.texto import ClassificadorTexto
 
-# Origens que o NAVEGADOR pode usar para falar com a API. A dashboard busca
-# `/saude` e `/modelo/simular` do lado do cliente, e sem isso o navegador
-# bloqueia o pedido antes de ele sair -- a tela mostra "Failed to fetch"
-# enquanto a API responde 200 no curl.
+# Origens que o NAVEGADOR pode usar para falar com a API.
 #
-# Lista explicita, nunca `*`: esta API le o banco de atendimentos e nao tem
-# autenticacao (uso local, ver README), entao qualquer pagina aberta no mesmo
+# A dashboard NAO esta mais entre elas: todo caminho dela -- inclusive o que
+# roda no navegador -- passa pelo proxy do Next (`/api/fraus/...`), que fala
+# com a API de servidor para servidor. Isto aqui vale para quem chama a API
+# direto do navegador (um curl no console, uma ferramenta de terceiro), e
+# continua existindo como defesa em profundidade.
+#
+# Lista explicita, nunca `*`: esta API le o banco de atendimentos e pode estar
+# aberta (uso local, ver README), entao qualquer pagina aberta no mesmo
 # navegador poderia varrer as conversas. `FRAUS_ORIGENS` sobrescreve, separado
 # por virgula, para quando a dashboard rodar em outra porta ou maquina.
+#
+# `allow_headers` NAO inclui `Authorization` de proposito: com a dashboard
+# inteira no proxy, ninguem precisa mandar credencial do navegador, e liberar
+# o cabecalho convidaria a fazer justamente isso -- que e como uma chave de
+# acesso acabaria dentro do bundle JS.
 ORIGENS_PADRAO = (
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -93,6 +102,13 @@ def criar_app(
     )
     # Como as rotas alcancam o contexto: `Depends(obter_contexto)` le daqui.
     app.state.contexto = ctx
+
+    # Registrado ANTES do de acesso -- em Starlette o ultimo registrado e o
+    # mais externo, entao este fica por DENTRO, e o 413 sai de uma requisicao
+    # que ja passou pela credencial. E a ordem certa: o teto de corpo defende
+    # o parse, nao a autenticacao, e um 413 respondido antes do 401 diria a
+    # quem nao tem chave o tamanho que a API aceita.
+    registrar_middleware_de_corpo(app)
 
     registrar_middleware_de_acesso(app, ctx)
 

@@ -1,4 +1,4 @@
-import { listarConversas, obterDetalhes, type DetalheConversa, type ResumoConversa } from "./api";
+import { listarConversas, type ResumoConversa } from "./api";
 import {
   extensaoDosDados,
   filtrarPorPeriodo,
@@ -18,10 +18,6 @@ export type Recorte = {
   sufixo: string;
   /** Conversas dentro do periodo. */
   resumos: ResumoConversa[];
-  /** Transcricoes das conversas do periodo. */
-  detalhes: DetalheConversa[];
-  /** Quantas transcricoes falharam individualmente (falha isolada). */
-  falhas: number;
   /** Erro da listagem; quando presente, tudo que depende dela mostra falha. */
   erro?: string;
 };
@@ -35,13 +31,15 @@ export type Recorte = {
  * cliente por isso; `GET /conversas?de=&ate=` existe para quem nao precisa
  * da extensao.
  *
- * As TRANSCRICOES sao o N+1 real, e `comDetalhes: false` as pula: a visao
- * geral nao precisa mais delas -- serie, lexico e tempo mediano vem agregados
- * do servidor (`/serie-temporal`, `/lexico`, `/indicadores`).
+ * NENHUMA TRANSCRICAO passa por aqui. Elas eram o N+1 real -- uma chamada a
+ * `/conversas/{id}` por linha do recorte -- e nao ha mais tela que precise
+ * delas no caminho feliz: serie, lexico, indicadores e tempo mediano vem
+ * agregados do servidor. Quem ainda quiser transcricao (a Visao geral, so
+ * quando um agregado FALHA) chama `obterDetalhes` explicitamente, e paga o
+ * custo a vista em vez de recebe-lo embutido num carregador de lista.
  */
 export async function carregarRecorte(
   parametros: Record<string, string | string[] | undefined>,
-  { comDetalhes = true }: { comDetalhes?: boolean } = {},
 ): Promise<Recorte> {
   const periodo = lerPeriodo(parametros);
   const sufixo = paraQuery(periodo);
@@ -54,25 +52,17 @@ export async function carregarRecorte(
       rotulo: rotuloPeriodo(periodo, null),
       sufixo,
       resumos: [],
-      detalhes: [],
-      falhas: 0,
       erro: conversas.erro,
     };
   }
 
   const extensao = extensaoDosDados(conversas.dado);
-  const resumos = filtrarPorPeriodo(conversas.dado, periodo);
-  const { detalhes, falhas } = comDetalhes
-    ? await obterDetalhes(resumos.map((resumo) => resumo.id))
-    : { detalhes: [], falhas: 0 };
 
   return {
     periodo,
     extensao,
     rotulo: rotuloPeriodo(periodo, extensao),
     sufixo,
-    resumos,
-    detalhes,
-    falhas,
+    resumos: filtrarPorPeriodo(conversas.dado, periodo),
   };
 }

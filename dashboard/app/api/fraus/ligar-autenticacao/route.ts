@@ -15,10 +15,17 @@ import {
   NOME_DO_COOKIE,
   autorizacaoParaLigar,
 } from "@/lib/credencial-do-servidor";
+import { pedidoDeOutroSite, recusaDeOutroSite } from "@/lib/mesma-origem";
 
 const API = process.env.FRAUS_API_URL ?? "http://localhost:8000";
 
 export async function POST(requisicao: Request): Promise<Response> {
+  // Ligar a autenticação é irreversível pela tela (não existe botão de
+  // desligar), e a mestra sai em claro uma única vez. Disparada de outro site,
+  // essa resposta não chega a ninguém: o efeito seria trancar o dono fora da
+  // própria API.
+  if (pedidoDeOutroSite(requisicao)) return recusaDeOutroSite();
+
   // Repassada para a ROTACAO: a API exige a mestra atual para trocar a chave.
   // No primeiro uso nao ha credencial nenhuma, e e assim que deve ser.
   const autorizacao = autorizacaoParaLigar(requisicao);

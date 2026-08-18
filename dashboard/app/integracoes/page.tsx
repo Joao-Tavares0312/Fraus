@@ -14,6 +14,7 @@
  */
 
 import {
+  baseDaApi,
   listarArquivosImportaveis,
   listarFontes,
   listarTiposDeFonte,
@@ -80,6 +81,7 @@ export default async function PaginaIntegracoes() {
             <Fontes
               iniciais={fontes.dado}
               tipos={tipos.ok ? tipos.dado : []}
+              baseDaApi={baseDaApi()}
             />
           ) : (
             <EstadoVazio
