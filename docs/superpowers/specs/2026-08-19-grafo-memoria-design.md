@@ -29,7 +29,7 @@ aprendeu, e de onde cada dado veio.
 |---|---|---|
 | **Léxico** (o que o modelo sabe) | `termo`, `emoji`, `feature` | `conversa→termo`, `conversa→emoji`, `feature→categoria` |
 | **Domínio** (o que foi atendido) | `conversa`, `categoria`, `canal`, `desfecho` | `conversa→categoria`, `conversa→canal`, `conversa→desfecho` |
-| **Proveniência** (de onde veio) | `fonte`, `importacao`, `configuracao` | `fonte→canal`, `importacao→canal` |
+| **Proveniência** (de onde veio) | `fonte`, `importacao`, `configuracao` | `fonte→canal` — e nada mais (ver §2.0) |
 
 O nó `conversa` é a **espinha**: ele é o único tipo que aparece nas três
 camadas, e é por isso que o grafo unificado se sustenta. Sem ele seriam três
@@ -42,10 +42,23 @@ O schema **não permite** ligar uma importação às conversas que ela criou:
 nenhuma coluna aponta para `conversas`. `fontes_integracao` também não tem
 vínculo direto — só o campo `canal` em comum.
 
-Então a proveniência liga pelo que **existe**: `fonte→canal` e
-`importacao→canal`, ambos por igualdade de canal. A aresta é honesta sobre a
-força do vínculo (`tipo: "alimenta_canal"`), e não finge granularidade por
-conversa que o banco não tem.
+Então a proveniência liga **só pelo que existe**: `fonte→canal`, por igualdade
+de canal — `fontes_integracao` tem a coluna `canal`, então a aresta é
+derivável. Ela é honesta sobre a força do vínculo (`tipo: "alimenta_canal"`) e
+não finge granularidade por conversa que o banco não tem.
+
+**A importação não liga em nada.** `importacoes` não tem coluna `canal`, e um
+arquivo CSV não declara origem: não há igualdade a fazer. Uma versão anterior
+desta spec afirmava `importacao→canal` "por igualdade de canal", e a
+implementação que a seguiu ligou cada importação a **todos** os canais do
+recorte — arestas inventadas, em produto cartesiano, afirmando que um arquivo
+alimentou um canal que ninguém disse que ele alimentou. O erro foi pego na
+revisão final e o texto está corrigido aqui para não reincidir.
+
+O nó `importacao` existe e fica **solto** na camada. Isso é deliberado: num
+graph view, um nó desconectado **é** a informação — ele mostra, sem legenda,
+que a proveniência por importação não é rastreável no schema de hoje. Um fio
+falso esconderia essa lacuna; o vazio a declara.
 
 **Isto não vira migração de schema neste escopo.** Adicionar
 `conversas.importacao_id` é uma mudança de modelo de dados com backfill, e
