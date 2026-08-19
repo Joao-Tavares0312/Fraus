@@ -2,9 +2,14 @@
  * =============================================================================
  * GRAFO DA MEMORIA — o que o sistema guarda, como um graph view do Obsidian
  *
- * Ate a Task 8 nao ha canvas: os nos aparecem em lista, e essa lista NAO e
- * provisoria -- ela vira o fallback acessivel permanente, porque canvas e um
- * bitmap opaco para leitor de tela.
+ * Esta pagina e SERVIDOR: ela busca, trata erro e vazio, e entrega o grafo
+ * pronto. O canvas e cliente (`GrafoDaMemoria`) porque `dynamic` com
+ * `ssr: false` so vale em Client Component -- e o force-graph precisa de
+ * `window` para existir.
+ *
+ * A lista de nos nao sumiu com a chegada do canvas: ela virou o fallback
+ * acessivel permanente dentro do `GrafoDaMemoria`, porque canvas e um bitmap
+ * opaco para leitor de tela.
  * =============================================================================
  */
 
@@ -13,7 +18,7 @@ import { lerPeriodo } from "@/lib/periodo";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
-import { ListaDeNos } from "@/components/grafo/ListaDeNos";
+import { GrafoDaMemoria } from "@/components/grafo/GrafoDaMemoria";
 
 export const dynamic = "force-dynamic";
 
@@ -57,8 +62,8 @@ export default async function PaginaGrafo(props: PageProps<"/grafo">) {
       <CabecalhoPagina titulo="Grafo da memória" periodo={periodo} />
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         <Painel
-          titulo={`${grafo.dado.nos.length} nós`}
-          legenda="Lista dos nós do grafo — conversas, categorias, canais, desfechos, termos, emojis, features, fontes e importações. É o mesmo dado que o canvas (Task 8) vai desenhar, e continua sendo o caminho por teclado e leitor de tela depois que ele existir."
+          titulo={`${grafo.dado.nos.length} nós, ${grafo.dado.arestas.length} arestas`}
+          legenda="Conversas, categorias, canais, desfechos, termos, emojis, features, fontes e importações. Âmbar é o que foi dito; azul é o que foi medido. O tamanho do ponto é o número de conexões — nunca a nota, porque então um atendimento sem sinal encolheria até sumir. Conversa sem sinal aparece vazada: o marcador existe, ocupa a posição, e é oco. A lista equivalente ao canvas fica a um Tab de distância, e seleciona os mesmos nós."
           semPadding
           rodape={
             grafo.dado.meta.truncado
@@ -66,9 +71,7 @@ export default async function PaginaGrafo(props: PageProps<"/grafo">) {
               : undefined
           }
         >
-          <div className="px-2 py-2">
-            <ListaDeNos nos={grafo.dado.nos} />
-          </div>
+          <GrafoDaMemoria grafo={grafo.dado} />
         </Painel>
       </div>
     </>
