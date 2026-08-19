@@ -186,6 +186,31 @@ def _camada_lexico(montagem: _Montagem, registros: list, teto_termos: int, faixa
     }
 
 
+def _camada_features(montagem: _Montagem, eixo: dict[str, float], faixas: dict) -> None:
+    """O peso GLOBAL do fusor, ligado a categoria que ele empurra.
+
+    Positivo aponta para a faixa mais alta (promotor), negativo para a mais
+    baixa (detrator) -- lidas de `faixas` e nao escritas a mao, porque a
+    configuracao vigente pode renomear ou remover uma delas.
+
+    Peso zero nao vira aresta: e "esta feature nao importa", e desenhar o fio
+    diria o contrario com a mesma tinta das que importam.
+    """
+    ordenadas = sorted(faixas.items(), key=lambda item: item[1][0])
+    mais_baixa, mais_alta = ordenadas[0][0], ordenadas[-1][0]
+
+    for nome, peso in eixo.items():
+        if peso == 0.0:
+            continue
+        categoria = mais_alta if peso > 0 else mais_baixa
+        montagem.aresta(
+            montagem.no("feature", nome, "lexico", nome.replace("_", " ")),
+            montagem.no("categoria", categoria, "dominio", categoria.capitalize()),
+            "caracteriza",
+            peso=abs(peso),
+        )
+
+
 def montar_grafo(
     registros: list[tuple[Conversa, float | None]],
     faixas: dict,
@@ -210,6 +235,9 @@ def montar_grafo(
     lexico = {"termos_totais": 0, "termos_exibidos": 0, "truncado": False}
     if "lexico" in camadas:
         lexico = _camada_lexico(montagem, registros, teto_termos, faixas)
+
+    if "lexico" in camadas and eixo:
+        _camada_features(montagem, eixo, faixas)
 
     return {
         "nos": montagem.nos,

@@ -180,6 +180,37 @@ def test_no_conversa_tem_schema_completo_so_com_lexico_ligado():
     assert no["sem_sinal"] is True
 
 
+def test_feature_liga_na_categoria_que_ela_empurra():
+    """Peso positivo aponta para promotor; negativo, para detrator.
+
+    A aresta e para CATEGORIA e nao para conversa de proposito: `contribuicoes`
+    nao e persistida, e uma aresta por conversa exigiria rodar o BERTimbau N
+    vezes numa requisicao de pagina (spec 2.1).
+    """
+    eixo = {"escalou": -1.5, "emoji_score_medio": 0.8}
+    grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, eixo=eixo)
+
+    ligacoes = {(a["de"], a["para"]): a for a in grafo["arestas"]}
+    assert ("feature:escalou", "categoria:detrator") in ligacoes
+    assert ligacoes[("feature:escalou", "categoria:detrator")]["peso"] == 1.5
+    assert ("feature:emoji_score_medio", "categoria:promotor") in ligacoes
+
+
+def test_sem_fusor_treinado_nao_ha_aresta_de_feature():
+    """Dezesseis fios de peso zero afirmariam que o modelo aprendeu nada disso."""
+    grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, eixo=None)
+    assert not _nos_por_tipo(grafo, "feature")
+
+    grafo_vazio = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, eixo={})
+    assert not _nos_por_tipo(grafo_vazio, "feature")
+
+
+def test_feature_de_peso_zero_fica_de_fora():
+    """Peso zero e "nao importa" -- desenhar o fio poluiria sem informar."""
+    grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, eixo={"escalou": 0.0})
+    assert not _nos_por_tipo(grafo, "feature")
+
+
 def test_emoji_repetido_vira_uma_aresta_agregada():
     """Emoji 3x na fala e UMA aresta de peso 3, nao 3 arestas de peso 1.
 
