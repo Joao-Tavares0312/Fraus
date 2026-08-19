@@ -13,10 +13,13 @@ virar tres nuvens soltas.
 O que este modulo NAO tem, e por que:
   - `emocao`: sai do classificador, e inferencia (ver spec 2.0.1).
   - `feature -> conversa`: `contribuicoes` nao e persistida (spec 2.1).
-  - `importacao -> conversa`: o schema nao guarda esse vinculo (spec 2.0).
+  - `importacao -> conversa` e `importacao -> canal`: o schema nao guarda
+    vinculo nenhum de importacao com canal ou conversa (spec 2.0) -- o no
+    `importacao` existe solto, sem aresta.
 """
 
 from collections import Counter
+from collections.abc import Sequence
 
 from fraus.indicadores import nota_0_10
 from fraus.modelos import Conversa
@@ -106,6 +109,18 @@ def _no_conversa(montagem: _Montagem, conversa: Conversa, score: float | None, f
     )
 
 
+def _no_canal(montagem: _Montagem, canal: str) -> str:
+    """Cria (ou recupera) o no `canal`, sempre com `camada: "dominio"`.
+
+    `_camada_dominio` e `_camada_proveniencia` ligam nele, e `_Montagem.no` so
+    grava a `camada` na PRIMEIRA criacao do id -- sem este helper, quem
+    rodasse primeiro decidia se o canal e "dominio" ou "proveniencia", bug de
+    ordem de execucao. O canal e sempre do dominio (e onde o atendimento
+    chegou); a proveniencia so se pendura nele, nao o redefine.
+    """
+    return montagem.no("canal", canal, "dominio", canal)
+
+
 def _camada_dominio(montagem: _Montagem, registros: list, faixas: dict) -> None:
     for conversa, score in registros:
         categoria = _categoria_de(score, faixas)
@@ -118,7 +133,7 @@ def _camada_dominio(montagem: _Montagem, registros: list, faixas: dict) -> None:
             )
         montagem.aresta(
             conversa_id,
-            montagem.no("canal", conversa.canal, "dominio", conversa.canal),
+            _no_canal(montagem, conversa.canal),
             "chegou_por",
         )
         fim = desfecho(conversa)
@@ -214,30 +229,27 @@ def _camada_features(montagem: _Montagem, eixo: dict[str, float], faixas: dict) 
 def _camada_proveniencia(montagem: _Montagem, fontes: list[dict], importacoes: list[dict]) -> None:
     """De onde o dado veio -- ate onde o schema deixa afirmar.
 
-    `importacoes` NAO tem coluna apontando para `conversas`, e
-    `fontes_integracao` so compartilha o campo `canal`. Entao a ligacao e por
-    canal, e o tipo da aresta diz exatamente isso: `alimenta_canal`, nao
-    `criou`. A aresta que faltaria (importacao -> conversa) exige migracao de
-    schema, e ela esta registrada na spec como decisao propria -- nao se
-    inventa vinculo para o desenho ficar bonito.
+    `fontes_integracao` compartilha o campo `canal`, entao `fonte -> canal` e
+    honesto. `importacoes`, porem, NAO tem coluna `canal` nem qualquer outra
+    apontando para `conversas` (confira `fraus/db.py`) -- nao existe vinculo
+    nenhum entre uma importacao e um canal. O no `importacao` continua
+    aparecendo, com o arquivo e as aceitas no rotulo, mas fica SOLTO: ligar a
+    "todo canal que existir no grafo" seria produto cartesiano de arestas
+    falsas, nao informacao. Rastrear origem por conversa e migracao de schema
+    (`conversas.importacao_id` + backfill), registrada como decisao propria
+    fora deste escopo na spec (2.0) -- nao se inventa vinculo para o desenho
+    ficar bonito.
     """
     for fonte in fontes:
         montagem.aresta(
             montagem.no("fonte", str(fonte["id"]), "proveniencia", fonte["nome"]),
-            montagem.no("canal", fonte["canal"], "proveniencia", fonte["canal"]),
+            _no_canal(montagem, fonte["canal"]),
             "alimenta_canal",
         )
 
-    canais = {no["id"] for no in montagem.nos if no["tipo"] == "canal"}
     for importacao in importacoes:
         rotulo = f"{importacao['arquivo']} ({importacao['aceitas']} aceitas)"
-        importacao_id = montagem.no(
-            "importacao", str(importacao["id"]), "proveniencia", rotulo
-        )
-        # A importacao so se liga a canal se algum canal existir no conjunto;
-        # ela nao guarda canal proprio, e um arquivo CSV nao declara origem.
-        for canal in sorted(canais):
-            montagem.aresta(importacao_id, canal, "alimenta_canal")
+        montagem.no("importacao", str(importacao["id"]), "proveniencia", rotulo)
 
 
 def montar_grafo(
@@ -247,8 +259,8 @@ def montar_grafo(
     camadas: frozenset[str] = TODAS_AS_CAMADAS,
     teto_termos: int = TETO_TERMOS_PADRAO,
     eixo: dict[str, float] | None = None,
-    fontes: list[dict] = (),
-    importacoes: list[dict] = (),
+    fontes: Sequence[dict] = (),
+    importacoes: Sequence[dict] = (),
 ) -> dict:
     """Nos, arestas e metadados do recorte pedido.
 
@@ -265,7 +277,12 @@ def montar_grafo(
     if "lexico" in camadas:
         lexico = _camada_lexico(montagem, registros, teto_termos, faixas)
 
-    if "lexico" in camadas and eixo:
+    # A aresta feature->categoria atravessa camadas: sem "dominio" pedido, o
+    # no `categoria` nao existe, e a aresta nao tem onde chegar -- emiti-la
+    # mesmo assim vazaria dado da camada dominio para um pedido que a excluiu
+    # de proposito (camadas=lexico so, que e o que a rota sempre chama junto
+    # de eixo).
+    if "lexico" in camadas and "dominio" in camadas and eixo:
         _camada_features(montagem, eixo, faixas)
 
     if "proveniencia" in camadas:

@@ -205,6 +205,23 @@ def test_sem_fusor_treinado_nao_ha_aresta_de_feature():
     assert not _nos_por_tipo(grafo_vazio, "feature")
 
 
+def test_camadas_lexico_com_eixo_nao_emite_categoria():
+    """A rota SEMPRE passa `eixo` -- este e o caso real de GET /grafo?camadas=lexico.
+
+    Sem "dominio" nas camadas pedidas, o no `categoria` nao existe: emitir a
+    aresta feature->categoria mesmo assim vazaria dado da camada excluida
+    (spec 5, "camadas restrito nao emite no nem aresta das camadas
+    excluidas").
+    """
+    eixo = {"escalou": -1.5, "emoji_score_medio": 0.8}
+    grafo = montar_grafo(
+        [(_conversa(), 30.0)], FAIXAS_NPS, camadas=frozenset({"lexico"}), eixo=eixo
+    )
+
+    assert not _nos_por_tipo(grafo, "categoria")
+    assert not [a for a in grafo["arestas"] if a["tipo"] == "caracteriza"]
+
+
 def test_feature_de_peso_zero_fica_de_fora():
     """Peso zero e "nao importa" -- desenhar o fio poluiria sem informar."""
     grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, eixo={"escalou": 0.0})
@@ -240,6 +257,18 @@ def test_fonte_liga_no_canal_e_nunca_na_conversa():
     assert _no(grafo, "fonte:1")["camada"] == "proveniencia"
 
 
+def test_canal_e_sempre_do_dominio_mesmo_criado_pela_proveniencia():
+    """`_no_canal` fixa camada "dominio" -- quem cria primeiro nao decide mais.
+
+    Antes do helper, `_camada_proveniencia` criava `canal:whatsapp` com
+    camada "proveniencia" quando nao havia conversa daquele canal no recorte
+    de dominio, e o shape do no dependia da ordem de execucao das camadas.
+    """
+    fontes = [{"id": 9, "nome": "Suporte", "canal": "whatsapp", "tipo": "webhook", "ativa": 1}]
+    grafo = montar_grafo([], FAIXAS_NPS, fontes=fontes)
+    assert _no(grafo, "canal:whatsapp")["camada"] == "dominio"
+
+
 def test_fonte_de_canal_fora_do_recorte_aparece_sozinha():
     """Ela existe no sistema mesmo sem conversa no periodo -- some-la esconderia
     uma integracao configurada e sem dado, que e justamente o que alguem
@@ -248,7 +277,10 @@ def test_fonte_de_canal_fora_do_recorte_aparece_sozinha():
     grafo = montar_grafo([(_conversa(canal="whatsapp"), 30.0)], FAIXAS_NPS, fontes=fontes)
 
     assert _no(grafo, "fonte:2")
-    assert _no(grafo, "canal:discord")["camada"] == "proveniencia"
+    # O canal e sempre do dominio (Achado 2 / `_no_canal`) -- a proveniencia
+    # e quem cria o no aqui (nenhuma conversa em "discord" no recorte), mas a
+    # camada gravada nao muda por isso.
+    assert _no(grafo, "canal:discord")["camada"] == "dominio"
 
 
 def test_importacao_vira_no_com_o_arquivo_no_rotulo():
@@ -259,6 +291,23 @@ def test_importacao_vira_no_com_o_arquivo_no_rotulo():
     no = _no(grafo, "importacao:7")
     assert "julho.csv" in no["rotulo"]
     assert no["camada"] == "proveniencia"
+
+
+def test_importacao_fica_solta_sem_nenhuma_aresta():
+    """`importacoes` nao tem coluna `canal` (confira fraus/db.py) -- nao existe
+    vinculo pra desenhar. Ligar a "todo canal existente" seria produto
+    cartesiano de arestas falsas, o achado que este teste trava (spec 2.0).
+    """
+    fontes = [{"id": 1, "nome": "Suporte", "canal": "whatsapp", "tipo": "webhook", "ativa": 1}]
+    importacoes = [{"id": 7, "ocorrida_em": "2026-08-19T10:00:00Z", "arquivo": "julho.csv",
+                    "aceitas": 40, "rejeitadas": 2}]
+    grafo = montar_grafo(
+        [(_conversa(), 30.0)], FAIXAS_NPS, fontes=fontes, importacoes=importacoes
+    )
+
+    no = _no(grafo, "importacao:7")
+    assert no["grau"] == 0
+    assert not [a for a in grafo["arestas"] if a["de"] == "importacao:7" or a["para"] == "importacao:7"]
 
 
 def test_camada_proveniencia_desligada_nao_emite_fonte():
