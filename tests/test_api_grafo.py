@@ -27,10 +27,25 @@ def test_grafo_responde_com_nos_arestas_e_meta(cliente):
 
 
 def test_banco_vazio_devolve_grafo_vazio_e_nao_erro(cliente):
-    """Vazio nao e falha -- a tela tem estado vazio proprio para isso."""
+    """Vazio nao e falha -- a tela tem estado vazio proprio para isso.
+
+    `cliente` sobe de um `tmp_path` novo a cada teste, migrado e sem nenhuma
+    importacao rodada -- e o banco vazio de verdade, o mesmo padrao usado em
+    `tests/test_api.py`. A camada de feature e GLOBAL (spec 2.1): o peso do
+    fusor vem do disco, nao de conversa nenhuma, entao o dublê `MotorFalso`
+    (herda `eixo_global` de `AtribuicaoDuble`) continua devolvendo pesos e o
+    grafo ainda tem no `feature`/`categoria` mesmo aqui -- isso e correto, nao
+    residuo de dado. O que precisa estar vazio e tudo que depende de
+    CONVERSA: nenhum no `conversa`, nenhuma aresta que nasce de conversa, e o
+    contador de conversas do `meta`.
+    """
     resposta = cliente.get("/grafo")
     assert resposta.status_code == 200
-    assert resposta.json()["nos"] == [] or resposta.json()["meta"]["conversas"] >= 0
+    corpo = resposta.json()
+    assert not [no for no in corpo["nos"] if no["tipo"] == "conversa"]
+    arestas_de_conversa = {"ativou", "classificada", "chegou_por", "terminou_em"}
+    assert not [a for a in corpo["arestas"] if a["tipo"] in arestas_de_conversa]
+    assert corpo["meta"]["conversas"] == 0
 
 
 def test_camada_desconhecida_da_400(cliente):
