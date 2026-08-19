@@ -19,7 +19,7 @@ export function ListaDeNos({
   aoSelecionar,
 }: {
   nos: NoDoGrafo[];
-  aoSelecionar?: (no: NoDoGrafo) => void;
+  aoSelecionar: (no: NoDoGrafo) => void;
 }) {
   return (
     <ul className="flex flex-col gap-1">
@@ -27,7 +27,7 @@ export function ListaDeNos({
         <li key={no.id}>
           <button
             type="button"
-            onClick={() => aoSelecionar?.(no)}
+            onClick={() => aoSelecionar(no)}
             className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm text-foreground transition-colors duration-150 ease-fluid hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="min-w-0 truncate">{no.rotulo}</span>
