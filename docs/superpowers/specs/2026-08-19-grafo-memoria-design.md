@@ -27,7 +27,7 @@ aprendeu, e de onde cada dado veio.
 
 | Camada | Tipos de nó | Arestas |
 |---|---|---|
-| **Léxico** (o que o modelo sabe) | `termo`, `emoji`, `emocao`, `feature` | `conversa→termo`, `conversa→emoji`, `conversa→emocao`, `feature→categoria` |
+| **Léxico** (o que o modelo sabe) | `termo`, `emoji`, `feature` | `conversa→termo`, `conversa→emoji`, `feature→categoria` |
 | **Domínio** (o que foi atendido) | `conversa`, `categoria`, `canal`, `desfecho` | `conversa→categoria`, `conversa→canal`, `conversa→desfecho` |
 | **Proveniência** (de onde veio) | `fonte`, `importacao`, `configuracao` | `fonte→canal`, `importacao→canal` |
 
@@ -52,6 +52,15 @@ conversa que o banco não tem.
 misturá-la numa entrega de visualização é como se perde o controle das duas.
 Fica registrado aqui como consequência descoberta, para virar decisão própria
 depois.
+
+### 2.0.1 Nada de `emocao` no grafo
+
+Emoção por conversa sai do `ClassificadorEmocao` — é **inferência**, e a rota
+não toca no `Motor` (§3.3.3). Um nó `emocao` exigiria rodar o modelo por
+conversa dentro de uma requisição de página, o mesmo erro de §2.1.
+
+Termo e emoji ficam porque são extração **textual pura**
+(`contar_palavras`, `emojis_com_posicao`) — nenhum modelo carregado.
 
 Pelo mesmo motivo não existe nó `modelo` ligado a conversa: não há registro de
 qual versão de modelo pontuou qual conversa. Um nó `modelo` desconectado seria
@@ -214,7 +223,7 @@ A página segue o shell existente: `CabecalhoPagina`, `FiltroPeriodo`,
 - **Cabeça vazada = `sem_sinal`.** Nó com `score: null` desenha só o contorno,
   oco. É a mesma forma que a `CabecasDeLeitura` já usa na linha do tempo: a
   regra de produto vira notação, não nota de rodapé.
-- **Âmbar acima, azul abaixo.** Nós do *dito* (`termo`, `emoji`, `emocao`,
+- **Âmbar acima, azul abaixo.** Nós do *dito* (`termo`, `emoji`,
   `conversa`) em âmbar; nós do *medido* (`feature`, `categoria`, `desfecho`,
   `fonte`, `importacao`, `configuracao`) em azul. Paleta herdada dos
   tokens OKLCH existentes — o grafo não introduz cor nova.
