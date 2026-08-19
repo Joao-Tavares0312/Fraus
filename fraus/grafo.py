@@ -84,19 +84,32 @@ def _categoria_de(score: float | None, faixas: dict) -> str | None:
     return None
 
 
+def _no_conversa(montagem: _Montagem, conversa: Conversa, score: float | None, faixas: dict) -> str:
+    """Cria (ou recupera) o no `conversa`, sempre com o mesmo schema.
+
+    O no `conversa` e a ponte entre as camadas -- `_camada_dominio` e
+    `_camada_lexico` chamam este helper. `_Montagem.no` so grava os `extras`
+    na PRIMEIRA criacao do id; se cada camada montasse os seus proprios
+    campos, o shape do no dependeria de qual camada rodou primeiro, e ponte
+    com schema variavel e pior que ponte nenhuma.
+    """
+    categoria = _categoria_de(score, faixas)
+    return montagem.no(
+        "conversa",
+        conversa.id,
+        "dominio",
+        f"Atendimento {conversa.id}",
+        score=score,
+        nota=None if score is None else nota_0_10(score),
+        categoria=categoria,
+        sem_sinal=score is None,
+    )
+
+
 def _camada_dominio(montagem: _Montagem, registros: list, faixas: dict) -> None:
     for conversa, score in registros:
         categoria = _categoria_de(score, faixas)
-        conversa_id = montagem.no(
-            "conversa",
-            conversa.id,
-            "dominio",
-            f"Atendimento {conversa.id}",
-            score=score,
-            nota=None if score is None else nota_0_10(score),
-            categoria=categoria,
-            sem_sinal=score is None,
-        )
+        conversa_id = _no_conversa(montagem, conversa, score, faixas)
         if categoria is not None:
             montagem.aresta(
                 conversa_id,
@@ -116,7 +129,7 @@ def _camada_dominio(montagem: _Montagem, registros: list, faixas: dict) -> None:
         )
 
 
-def _camada_lexico(montagem: _Montagem, registros: list, teto_termos: int) -> dict:
+def _camada_lexico(montagem: _Montagem, registros: list, teto_termos: int, faixas: dict) -> dict:
     """Termos e emojis ATIVADOS no recorte, cortados por frequencia.
 
     Duas passadas de proposito: a primeira conta o conjunto inteiro para saber
@@ -138,10 +151,8 @@ def _camada_lexico(montagem: _Montagem, registros: list, teto_termos: int) -> di
 
     sobreviventes = {termo for termo, _ in contagem_global.most_common(teto_termos)}
 
-    for conversa, _ in registros:
-        conversa_id = montagem.no(
-            "conversa", conversa.id, "dominio", f"Atendimento {conversa.id}"
-        )
+    for conversa, score in registros:
+        conversa_id = _no_conversa(montagem, conversa, score, faixas)
         for termo, ocorrencias in por_conversa[conversa.id].items():
             if termo not in sobreviventes:
                 continue
@@ -151,13 +162,22 @@ def _camada_lexico(montagem: _Montagem, registros: list, teto_termos: int) -> di
                 "ativou",
                 peso=ocorrencias,
             )
+        # Agregado como o termo: emoji repetido 3x vira UMA aresta de peso 3,
+        # nao 3 arestas de peso 1 -- o grau do no e o raio dele na tela, e
+        # inflar arestas infla o desenho sem acrescentar informacao nova. A
+        # posicao relativa que `emojis_com_posicao` devolve fica descartada
+        # aqui: o grafo nao usa posicao, so contagem.
+        emojis_da_conversa: Counter = Counter()
         for mensagem in conversa.mensagens_cliente:
             for emoji, _posicao in emojis_com_posicao(mensagem.texto):
-                montagem.aresta(
-                    conversa_id,
-                    montagem.no("emoji", emoji, "lexico", emoji),
-                    "ativou",
-                )
+                emojis_da_conversa[emoji] += 1
+        for emoji, ocorrencias in emojis_da_conversa.items():
+            montagem.aresta(
+                conversa_id,
+                montagem.no("emoji", emoji, "lexico", emoji),
+                "ativou",
+                peso=ocorrencias,
+            )
 
     return {
         "termos_totais": len(contagem_global),
@@ -189,7 +209,7 @@ def montar_grafo(
 
     lexico = {"termos_totais": 0, "termos_exibidos": 0, "truncado": False}
     if "lexico" in camadas:
-        lexico = _camada_lexico(montagem, registros, teto_termos)
+        lexico = _camada_lexico(montagem, registros, teto_termos, faixas)
 
     return {
         "nos": montagem.nos,

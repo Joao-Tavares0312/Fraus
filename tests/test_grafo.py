@@ -160,3 +160,35 @@ def test_sem_truncar_o_meta_diz_que_nao_truncou():
 def test_camada_lexico_desligada_nao_emite_termo():
     grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, camadas=frozenset({"dominio"}))
     assert not _nos_por_tipo(grafo, "termo")
+
+
+def test_no_conversa_tem_schema_completo_so_com_lexico_ligado():
+    """O no `conversa` e a ponte entre camadas -- schema variavel quebra a ponte.
+
+    Antes do conserto, `_camada_lexico` criava o no `conversa` sem
+    score/nota/categoria/sem_sinal quando a camada dominio nao rodava
+    primeiro. A invariante "ausencia nao e zero" precisa valer em toda
+    combinacao de camadas, nao so na combinacao padrao.
+    """
+    conversa = _conversa(falas=(("bot", "ola, posso ajudar?"),))
+    grafo = montar_grafo([(conversa, None)], FAIXAS_NPS, camadas=frozenset({"lexico"}))
+
+    no = _no(grafo, "conversa:c1")
+    assert no["score"] is None
+    assert no["nota"] is None
+    assert no["categoria"] is None
+    assert no["sem_sinal"] is True
+
+
+def test_emoji_repetido_vira_uma_aresta_agregada():
+    """Emoji 3x na fala e UMA aresta de peso 3, nao 3 arestas de peso 1.
+
+    O grau do no e o raio dele na tela: multiplicar arestas por ocorrencia
+    infla o desenho sem acrescentar informacao (mesma regra do termo).
+    """
+    conversa = _conversa(falas=(("cliente", "😡 muito 😡 ruim 😡"),))
+    grafo = montar_grafo([(conversa, 20.0)], FAIXAS_NPS)
+
+    arestas_emoji = [a for a in grafo["arestas"] if a["para"] == "emoji:😡"]
+    assert len(arestas_emoji) == 1
+    assert arestas_emoji[0]["peso"] == 3
