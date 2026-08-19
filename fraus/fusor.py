@@ -92,6 +92,27 @@ class Fusor:
         """Classe predita: 0 insatisfeito, 1 neutro ou 2 satisfeito."""
         return int(self._pipeline.predict([vetorizar(features)])[0])
 
+    def _diferenca(self):
+        """O eixo satisfeito-menos-insatisfeito dos coeficientes aprendidos.
+
+        Mora aqui porque `contribuicoes` (por conversa) e `eixo_global` (peso
+        do modelo) precisam da MESMA regra de qual diferenca usar conforme as
+        classes que o treino de fato viu -- duas copias divergiriam em silencio
+        no caso binario, que e justamente o que ninguem testa a mao.
+        """
+        modelo = self._pipeline.named_steps["modelo"]
+        classes = list(modelo.classes_)
+
+        if len(classes) >= 3:
+            return modelo.coef_[classes.index(SATISFEITO)] - modelo.coef_[classes.index(INSATISFEITO)]
+        if len(classes) == 2 and INSATISFEITO in classes and SATISFEITO in classes:
+            # Caso binario: sklearn guarda uma unica linha de coeficiente, que
+            # ja representa a classe mais alta (classes_[1]) contra a mais
+            # baixa (classes_[0]) -- aqui sempre satisfeito vs insatisfeito,
+            # porque classes_ vem ordenado e insatisfeito (0) < satisfeito (2).
+            return modelo.coef_[0]
+        return [0.0] * len(NOMES_FEATURES)
+
     def contribuicoes(self, features: dict[str, float]) -> dict[str, float]:
         """Quanto cada feature empurrou a nota DESTA conversa, com sinal.
 
@@ -107,24 +128,27 @@ class Fusor:
         interpretavel: a contribuicao volta zerada para todas as features,
         em vez de estourar.
         """
-        modelo = self._pipeline.named_steps["modelo"]
         escala = self._pipeline.named_steps["escala"]
-        classes = list(modelo.classes_)
         vetor_padronizado = escala.transform([vetorizar(features)])[0]
-
-        if len(classes) >= 3:
-            diferenca = modelo.coef_[classes.index(SATISFEITO)] - modelo.coef_[classes.index(INSATISFEITO)]
-        elif len(classes) == 2 and INSATISFEITO in classes and SATISFEITO in classes:
-            # Caso binario: sklearn guarda uma unica linha de coeficiente,
-            # que ja representa a classe mais alta (classes_[1]) contra a
-            # mais baixa (classes_[0]) -- aqui sempre satisfeito vs insatisfeito,
-            # porque classes_ vem ordenado e insatisfeito (0) < satisfeito (2).
-            diferenca = modelo.coef_[0]
-        else:
-            diferenca = [0.0] * len(NOMES_FEATURES)
-
-        contribuicoes = [d * v for d, v in zip(diferenca, vetor_padronizado)]
+        contribuicoes = [d * v for d, v in zip(self._diferenca(), vetor_padronizado)]
         return dict(zip(NOMES_FEATURES, (float(v) for v in contribuicoes)))
+
+    def eixo_global(self) -> dict[str, float]:
+        """Quanto cada feature empurra a nota NO MODELO INTEIRO, com sinal.
+
+        Diferente de `importancias`, que e o peso ABSOLUTO (diz que a feature
+        pesa, nao para que lado), e de `contribuicoes`, que e o numero de UMA
+        conversa. O grafo da memoria consome este: ele responde "o que o modelo
+        aprendeu que caracteriza um detrator".
+
+        Nao ha padronizacao aqui porque nao ha conversa: e o coeficiente cru.
+
+        Fusor nao treinado devolve `{}` -- e a ausencia de eixo, que o grafo
+        distingue de "todas as features pesam zero".
+        """
+        if not hasattr(self._pipeline.named_steps["modelo"], "coef_"):
+            return {}
+        return dict(zip(NOMES_FEATURES, (float(v) for v in self._diferenca())))
 
     def importancias(self) -> dict[str, float]:
         """Peso absoluto medio de cada feature -- alimenta a explicacao na dashboard."""

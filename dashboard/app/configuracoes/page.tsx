@@ -22,6 +22,7 @@ import { Painel } from "@/components/Painel";
 import { FaixasNps } from "@/components/configuracoes/FaixasNps";
 import { LimiaresLatencia } from "@/components/configuracoes/LimiaresLatencia";
 import { Autenticacao } from "@/components/configuracoes/Autenticacao";
+import { ChavesDeAcesso } from "@/components/configuracoes/ChavesDeAcesso";
 import type { Faixas } from "@/components/configuracoes/EscalaNps";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,10 @@ export default async function PaginaConfiguracoes() {
             <Autenticacao estado={acesso.dado} semCredencial={acesso.dado.ligada} />
           ) : null}
 
+          {/* Vem junto neste caminho porque emitir uma chave de acesso é
+              exatamente o conserto do 401 que derrubou a leitura acima. */}
+          {acesso.ok ? <ChavesDeAcesso estado={acesso.dado} /> : null}
+
           <EstadoVazio
             titulo="A configuração não carregou"
             explicacao={`${resultado.erro}. Sem ela não há faixa vigente nem padrão de fábrica a exibir — e preencher os campos com 0–6/7–8/9–10 digitados aqui criaria uma segunda fonte da mesma regra, que é exatamente o defeito que esta tela existe para não ter.`}
@@ -68,6 +73,8 @@ export default async function PaginaConfiguracoes() {
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         {acesso.ok ? <Autenticacao estado={acesso.dado} /> : null}
+
+        {acesso.ok ? <ChavesDeAcesso estado={acesso.dado} /> : null}
 
         <Painel
           titulo="Faixas de NPS"

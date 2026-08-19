@@ -1,6 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Power } from "lucide-react";
 import { ENDERECO_API } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { useSaude, type EstadoDeSaude as Estado } from "./SaudeProvider";
 
 const APARENCIA: Record<
@@ -40,26 +44,99 @@ const APARENCIA: Record<
  * aviso ainda na tela.
  */
 export function EstadoSaude() {
-  const { estado } = useSaude();
+  const { estado, reconsultar } = useSaude();
+  const router = useRouter();
+  const [nossa, setNossa] = useState(false);
+  const [desligando, setDesligando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Só pergunta com a API NO AR: é o único estado em que desligar faz sentido,
+  // e perguntar com ela fora seria uma chamada por poll sem resposta útil.
+  useEffect(() => {
+    // Sem `setNossa(false)` neste ramo: apagar o estado aqui seria escrever
+    // durante o efeito, e o próprio render já não mostra o botão fora do
+    // "no-ar" (ver a condição abaixo). Um estado a menos para sincronizar.
+    if (estado !== "no-ar") return;
+    let vivo = true;
+    fetch("/api/fraus/iniciar", { cache: "no-store" })
+      .then((resposta) => resposta.json())
+      .then((dado: { disponivel: boolean; nossa: boolean }) => {
+        if (vivo) setNossa(Boolean(dado.disponivel && dado.nossa));
+      })
+      .catch(() => {
+        if (vivo) setNossa(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [estado]);
+
+  async function desligar() {
+    setErro(null);
+    setDesligando(true);
+    try {
+      const resposta = await fetch("/api/fraus/iniciar", { method: "DELETE" });
+      const corpo = await resposta.json().catch(() => null);
+      if (!resposta.ok) {
+        setErro(corpo?.detail ?? `a dashboard respondeu ${resposta.status}`);
+        return;
+      }
+      setNossa(false);
+      // `reconsultar` troca o rótulo para "fora do ar" e faz o aviso com o
+      // botão de subir aparecer -- o caminho de volta, no mesmo gesto.
+      await reconsultar();
+      router.refresh();
+    } catch {
+      setErro("não foi possível falar com o servidor da dashboard");
+    } finally {
+      setDesligando(false);
+    }
+  }
 
   const { rotulo, cor, detalhe } = APARENCIA[estado];
 
   return (
-    <div
-      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground"
-      title={`${detalhe} — ${ENDERECO_API}`}
-    >
-      <span
-        aria-hidden
-        className={`size-2 shrink-0 rounded-full ${cor}`}
-      />
-      <span
-        role="status"
-        className="truncate group-data-[collapsible=icon]:hidden"
+    <div className="flex min-w-0 flex-col gap-1">
+      <div
+        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground"
+        title={`${detalhe} — ${ENDERECO_API}`}
       >
-        {rotulo}
-      </span>
-      <span className="sr-only">{`${rotulo}. ${detalhe}.`}</span>
+        <span
+          aria-hidden
+          className={`size-2 shrink-0 rounded-full ${cor}`}
+        />
+        <span
+          role="status"
+          className="truncate group-data-[collapsible=icon]:hidden"
+        >
+          {rotulo}
+        </span>
+        <span className="sr-only">{`${rotulo}. ${detalhe}.`}</span>
+
+        {/* Só aparece para a API que ESTA dashboard subiu. Para um uvicorn de
+            terminal o botão não existe -- oferecer uma ação que levaria 409
+            seria prometer um poder que a tela não tem. */}
+        {estado === "no-ar" && nossa ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="ml-auto h-6 shrink-0 px-1.5 text-xs group-data-[collapsible=icon]:hidden"
+            onClick={desligar}
+            disabled={desligando}
+            title="Encerra a API que esta dashboard iniciou"
+          >
+            <Power aria-hidden />
+            {desligando ? "desligando…" : "Desligar"}
+          </Button>
+        ) : null}
+      </div>
+
+      {erro ? (
+        <p className="px-2 text-[11px] leading-tight text-[var(--destructive-rich-text)] group-data-[collapsible=icon]:hidden">
+          {erro}
+        </p>
+      ) : null}
     </div>
   );
 }

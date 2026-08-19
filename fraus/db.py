@@ -399,6 +399,22 @@ class Banco:
             ).fetchone()
         return linha["chave_hash"] if linha is not None else None
 
+    def apagar_chave_mestra(self) -> bool:
+        """Remove a mestra do banco. Devolve se havia alguma para remover.
+
+        NAO existe rota que chame isto, e a ausencia e a decisao: desligar a
+        autenticacao pela rede seria uma chamada que baixa a defesa, e a API
+        pode estar aberta justamente quando ela e feita. O unico chamador e
+        `scripts/resetar_mestra.py`, que exige o disco e a mao de quem opera --
+        e e a saida para quem perdeu a chave gerada pela tela.
+
+        A autenticacao e decidida POR REQUISICAO, entao o efeito vale na
+        chamada seguinte, sem reiniciar a API.
+        """
+        with self._conectar() as conexao:
+            cursor = conexao.execute("DELETE FROM chave_mestra WHERE id = 1")
+            return cursor.rowcount > 0
+
     def chave_mestra_registrada(self) -> dict | None:
         """Dica e data da mestra gravada. O HASH NAO SAI POR AQUI.
 

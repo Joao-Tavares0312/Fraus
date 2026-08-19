@@ -29,14 +29,15 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_FUSOR,
+from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 CAMINHO_MODELO_EMOCAO, CAMINHO_MODELO_IRONIA,
                                 CAMINHO_MODELO_TEXTO, RAIZ_IMPORTACAO)
 from fraus.api.contexto import Contexto
+from fraus.api.primeiro_uso import ligar_no_primeiro_uso
 from fraus.api.limites import TETO_CORPO, registrar_middleware_de_corpo  # TETO_CORPO reexportado para os testes
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
 from fraus.api.rotas import (acesso, analise, configuracoes, conversas,
-                             indicadores, ingestao, integracoes, modelo,
+                             grafo, indicadores, ingestao, integracoes, modelo,
                              saude)
 # Reexportados: os testes os importam daqui desde antes da quebra em modulos,
 # e mudar de onde se importa um teto seria mexer no contrato de quem consome
@@ -132,6 +133,7 @@ def criar_app(
     app.include_router(ingestao.router)
     app.include_router(modelo.router)
     app.include_router(analise.router)
+    app.include_router(grafo.router)
 
     return app
 
@@ -159,11 +161,29 @@ def criar_app_padrao() -> FastAPI:
     banco.migrar()
 
     chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
-    if chave_mestra is None:
+
+    # PRIMEIRA subida: gera mestra e chave de acesso e as grava em disco, para
+    # a instalacao nascer fechada sem ninguem precisar clicar em nada. Nao roda
+    # aqui dentro de `criar_app` de proposito: quem monta o app com dependencias
+    # proprias (os testes, o `api_demo`) nao deve ganhar credencial de brinde.
+    gravadas = ligar_no_primeiro_uso(banco, CAMINHO_CHAVES, chave_mestra)
+    if gravadas is not None:
         print(
-            "AVISO: API sem autenticacao (uso local). "
-            "Defina FRAUS_CHAVE_MESTRA para exigir chave em todas as rotas."
+            f"Primeira subida: autenticacao LIGADA.\n"
+            f"  Mestra e chave de acesso gravadas em: {gravadas.resolve()}\n"
+            f"  Esta e a unica copia em claro delas -- o banco guarda so o hash."
         )
+    elif chave_mestra is None and banco.hash_da_chave_mestra() is None:
+        # Cai aqui quando o arquivo NAO pode ser escrito: nada foi gravado, e a
+        # API sobe aberta. Aberta com aviso e recuperavel; fechada com a chave
+        # perdida no primeiro boot, nao.
+        print(
+            f"AVISO: API sem autenticacao. Nao foi possivel escrever "
+            f"{CAMINHO_CHAVES} -- ligar sem guardar a chave em lugar nenhum "
+            f"trancaria voce para fora. Corrija a permissao e suba de novo, ou "
+            f"defina FRAUS_CHAVE_MESTRA."
+        )
+
     return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
 
 

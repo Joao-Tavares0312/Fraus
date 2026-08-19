@@ -9,6 +9,7 @@ import {
   MessagesSquare,
   PlugZap,
   ScanText,
+  Share2,
   SlidersHorizontal,
 } from "lucide-react";
 import {
@@ -45,6 +46,10 @@ const SECOES = [
   // configuracao e fonte de dado.
   { href: "/analisar", rotulo: "Analisar", Icone: ScanText },
   { href: "/modelo", rotulo: "Modelo", Icone: Activity },
+  // Tambem fica em OLHAR, nao em AJUSTES: o grafo mostra o que o sistema
+  // guarda, e nao grava nada -- nenhuma configuracao ou fonte muda por causa
+  // dele.
+  { href: "/grafo", rotulo: "Grafo", Icone: Share2 },
 ] as const;
 
 /**

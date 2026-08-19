@@ -124,12 +124,39 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
-| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente, que **vence** a gravada pela tela. Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao` (chave de fonte) e `GET /acesso/estado` (pública) |
+| `FRAUS_CAMINHO_CHAVES` | `.fraus-chaves.txt` | onde a **primeira subida** grava a mestra e a chave de acesso que ela gera. Única cópia em claro delas; fora do git |
+| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente, que **vence** a gravada. Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao` (chave de fonte) e `GET /acesso/estado` (pública) |
 
-#### Ligando a autenticação
+#### A autenticação já vem ligada
 
-**Pela tela, em um clique.** Abra **Configurações → Autenticação** e clique em
-*Ligar autenticação*. A API gera a chave mestra, grava o hash dela e emite junto
+**Na primeira vez que a API sobe, ela liga sozinha.** Gera a chave mestra e uma
+chave de acesso para a dashboard, grava as duas em `.fraus-chaves.txt` (fora do
+git) e anuncia o caminho no boot:
+
+```
+Primeira subida: autenticacao LIGADA.
+  Mestra e chave de acesso gravadas em: .../.fraus-chaves.txt
+  Esta e a unica copia em claro delas -- o banco guarda so o hash.
+```
+
+Você não clica em nada e não copia nada: **a dashboard lê a chave de acesso
+desse arquivo sozinha**. Gerar credencial é trabalho do projeto, não de quem só
+quer usar o produto — ninguém deveria precisar saber que uma chave mestra
+existe para estar protegido por ela.
+
+A **ordem** dessa geração é a parte que importa: o arquivo é escrito **antes**
+de o hash da mestra ir para o banco. Se a escrita falhar (pasta somente
+leitura, disco cheio), nada é gravado e a API sobe **aberta, com aviso** — uma
+API aberta que avisa é um problema recuperável; uma API fechada cuja única
+chave não existe em lugar nenhum é um tijolo.
+
+Não liga sozinha quando já há mestra no banco (não é a primeira subida) ou
+quando `FRAUS_CHAVE_MESTRA` está no ambiente — a variável vence a gravada, e
+gerar uma segunda credencial que perde para ela seria escrever no arquivo uma
+chave que não abre nada.
+
+**Ligando à mão**, se a instalação é antiga ou você reabriu a API: abra
+**Configurações → Autenticação** e clique em *Ligar autenticação*. A API gera a chave mestra, grava o hash dela e emite junto
 uma chave de acesso para a dashboard — as duas aparecem **uma única vez**, para
 você guardar. O servidor **não é reiniciado**: quem decide é um middleware que
 lê o estado a cada requisição, então a exigência de chave vale já na chamada
@@ -173,11 +200,35 @@ precisa dela justamente quando ainda não há credencial para apresentar.
 tem contrapartida de risco aceitável: desligar é apagar a variável e a linha
 `chave_mestra` do banco.
 
-`GET /acesso/chaves` lista as chaves emitidas (nome, dica dos 4 últimos
-caracteres, nunca o hash) e `DELETE /acesso/chaves/{id}` revoga na hora — a
-chamada seguinte com a chave revogada leva 401. Se uma chave de acesso vazar,
-revogue-a sem trocar a mestra; se a **mestra** vazar, troque a variável e
-reinicie: as chaves de acesso continuam valendo, quem perde o posto é só ela.
+**As chaves de acesso têm painel próprio**, em Configurações → *Chaves de
+acesso*: lista o que existe (nome, dica dos 4 últimos caracteres, data — nunca
+o hash), emite uma nova (que aparece em claro **uma única vez**) e revoga, com
+confirmação. Como gerenciar chave é privilégio da mestra e a dashboard carrega
+apenas a de acesso, o painel **pede a mestra** — ela fica só na memória da aba,
+nunca em cookie, `localStorage` ou URL. Com a API aberta ele carrega sozinho,
+porque nesse estado a API não cobra credencial e pedi-la seria a tela inventar
+uma exigência.
+
+Pelas rotas, o mesmo: `GET /acesso/chaves` lista, `POST` emite e
+`DELETE /acesso/chaves/{id}` revoga na hora — a chamada seguinte com a chave
+revogada leva 401. Se uma chave de acesso vazar, revogue-a sem trocar a mestra;
+se a **mestra** vazar, troque-a: as chaves de acesso continuam valendo, quem
+perde o posto é só ela.
+
+**Se a mestra se perdeu**, ela não volta — o banco guarda só o hash. Além da
+saída pelo ambiente (`FRAUS_CHAVE_MESTRA` vence a gravada), há o comando que
+reabre a API de vez:
+
+```bash
+uv run python scripts/resetar_mestra.py   # pede a palavra DESLIGAR
+```
+
+Ele apaga a linha `chave_mestra` e devolve a API ao estado aberto, para ligar
+de novo ser possível. **As chaves de acesso e de fonte não são apagadas**: quem
+perdeu a mestra não perdeu o que já distribuiu, e elas voltam a valer quando a
+autenticação for ligada. É comando de terminal, e não botão, pela mesma razão
+de sempre — desligar pela rede seria uma chamada que baixa a defesa, alcançável
+justamente quando a API está aberta.
 
 Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
 caminho relativo a ela:
@@ -306,19 +357,28 @@ mesmo em dev, para testar a dashboard como ela se comporta publicada.
 
 **Não habilite isso num deploy real.** É uma rota HTTP que executa um comando —
 em uso local é conveniência, publicada é execução remota de código. Ela existe
-sob quatro travas: desligada por padrão fora de desenvolvimento (sem ela
+sob cinco travas: desligada por padrão fora de desenvolvimento (sem ela
 responde **404**, não 403 — quem não deveria saber que ela existe não
 descobre); comando **literal** no código-fonte, sem nada vindo da requisição e
 sem shell; uma instância por vez (consulta `/saude` antes de subir e confere se
-o processo lembrado ainda está vivo); e a API subida escuta apenas em
-`127.0.0.1`. Se `FRAUS_API_URL` aponta para outra máquina, o botão não aparece
-— não há o que iniciar aqui.
+o processo lembrado ainda está vivo); a API subida escuta apenas em
+`127.0.0.1`; e **só a própria dashboard pode chamá-la** — requisição de outro
+site leva 403, porque as quatro travas anteriores defendem contra *comando*
+arbitrário e nenhuma delas perguntava *quem* pediu. Se `FRAUS_API_URL` aponta
+para outra máquina, o botão não aparece — não há o que iniciar aqui.
 
-**Não existe botão de derrubar.** Matar processo é irreversível e não tem
-contrapartida numa tela sem login; quem subiu pelo terminal derruba pelo
-terminal. O `stdout` da API vai para `dashboard/.fraus-api.log`, que é onde
-olhar quando a subida falha — o motivo mais comum é modelo ausente em
-`modelos/`, que derruba o boot por design.
+**Desligar** tem botão, no rodapé da navegação, ao lado do "API no ar" — e ele
+só aparece para a API que **esta dashboard subiu**. Um `uvicorn` que você
+iniciou no terminal continua fora do alcance da tela: a rota responde **409**
+dizendo isso, porque derrubar processo de outra pessoa não é poder que uma tela
+sem login deva ter. O que ela encerra é a **árvore** do processo, não o pid: o
+que a dashboard inicia é o `uv`, e o servidor que atende na porta é neto dele —
+matar só o pid deixaria a API no ar, órfã, com o botão anunciando que a
+desligou.
+
+A subida **não abre janela de terminal**. O `stdout` da API vai para
+`dashboard/.fraus-api.log`, que é onde olhar quando ela falha — o motivo mais
+comum é modelo ausente em `modelos/`, que derruba o boot por design.
 
 ## Roadmap
 
@@ -336,13 +396,15 @@ ordem lá é a ordem de importância.
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
-| **Ligar a autenticação sem terminal** | ✅ | botão em Configurações; a mestra sobrevive a reiniciar, e a dashboard segue navegando por cookie `httpOnly` |
-| **Dashboard sem terminal** | ✅ | botão **Iniciar API** no modo local, com as quatro travas descritas em [§5](#5-quando-a-api-não-está-no-ar) |
+| **Nasce fechada** | ✅ | a primeira subida gera mestra e chave de acesso, grava em `.fraus-chaves.txt` e a dashboard lê de lá — sem clique e sem cópia |
+| **Ligar a autenticação sem terminal** | ✅ | botão em Configurações, para instalação antiga ou reaberta; a mestra sobrevive a reiniciar |
+| **Gerenciar chaves sem terminal** | ✅ | painel que emite, lista e revoga chaves de acesso, pedindo a mestra; e `scripts/resetar_mestra.py` para quando ela se perde |
+| **Dashboard sem terminal** | ✅ | **Iniciar API** (sem abrir janela de console) e **Desligar**, este último só para a API que a própria dashboard subiu — travas em [§5](#5-quando-a-api-não-está-no-ar) |
 | **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
 | **Agregação no servidor (fim do N+1)** | ✅ | `/serie-temporal`, `/lexico`, `/indicadores` (com tempo mediano) e o recorte `de`/`ate` em `/conversas`; **nenhuma tela baixa transcrição** no caminho feliz |
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
-| **Suíte** | ✅ | **340 testes** passando, build da dashboard verde, contraste AA verificado por `npm run contraste` |
+| **Suíte** | ✅ | **350 testes** passando, build da dashboard verde, contraste AA verificado por `npm run contraste` |
 
 ### Falta
 
@@ -364,10 +426,11 @@ que o projeto existe para não cometer.
 
 ## Limitações conhecidas
 
-- **A API é aberta por padrão, e passa a exigir chave quando existe uma mestra**
-  — do ambiente (`FRAUS_CHAVE_MESTRA`) ou gravada pelo botão em Configurações,
-  que persiste no banco. Sem nenhuma das duas, o comportamento é o de sempre —
-  sem login, sem token — pensado para uso local, e o boot avisa disso. A decisão
+- **A API nasce fechada:** a primeira subida gera a mestra e a chave de acesso
+  e as grava em `.fraus-chaves.txt`. Ela só fica aberta se alguém apagar a
+  mestra do banco (`scripts/resetar_mestra.py`) ou se a escrita desse arquivo
+  falhar — e nesse caso o boot avisa, porque ligar sem guardar a chave em lugar
+  nenhum trancaria o dono para fora. A decisão
   é tomada **por requisição**, não no boot: é o que permite ligar a autenticação
   sem reiniciar o servidor. Com mestra, toda rota
   exige `Authorization: Bearer <chave>`: a mestra, ou uma **chave de acesso**

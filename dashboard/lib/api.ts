@@ -479,6 +479,75 @@ export const obterLexico = (de?: string | null, ate?: string | null) =>
     buscar<{ classes: ClasseDoLexico[] }>(`/lexico${queryDePeriodo(de, ate)}`),
   );
 
+export type Camada = "lexico" | "dominio" | "proveniencia";
+
+export type TipoDeNo =
+  | "conversa"
+  | "categoria"
+  | "canal"
+  | "desfecho"
+  | "termo"
+  | "emoji"
+  | "feature"
+  | "fonte"
+  | "importacao";
+
+export type NoDoGrafo = {
+  id: string;
+  tipo: TipoDeNo;
+  camada: Camada;
+  rotulo: string;
+  grau: number;
+  /**
+   * Só existem em nós `conversa`, e `null` quer dizer SEM SINAL -- nunca zero.
+   * Quem consumir isto com `?? 0` transforma "não se sabe" em "péssimo".
+   */
+  score?: number | null;
+  nota?: number | null;
+  categoria?: Categoria | null;
+  sem_sinal?: boolean;
+};
+
+export type ArestaDoGrafo = {
+  de: string;
+  para: string;
+  tipo: string;
+  peso: number;
+};
+
+export type MetaDoGrafo = {
+  camadas: Camada[];
+  conversas: number;
+  sem_sinal: number;
+  termos_totais: number;
+  termos_exibidos: number;
+  truncado: boolean;
+};
+
+export type Grafo = {
+  nos: NoDoGrafo[];
+  arestas: ArestaDoGrafo[];
+  meta: MetaDoGrafo;
+};
+
+/**
+ * O grafo inteiro do periodo -- as tres camadas, sempre.
+ *
+ * A rota `/grafo` aceita um parametro `camadas` que recorta quais delas
+ * voltam, e este cliente NAO o envia de proposito. O foco de camada da tela
+ * do grafo e CLIENTE: ele muda a opacidade do que ja esta desenhado, sem
+ * refetch. Buscar de novo devolveria outro conjunto de nos, o que reiniciaria
+ * a simulacao e rearranjaria o layout inteiro a cada troca de camada -- e
+ * apagaria do dado justamente as arestas ENTRE camadas, que sao o motivo de
+ * aquilo ser um grafo so em vez de tres abas.
+ *
+ * Quem um dia precisar do recorte no SERVIDOR (um export, uma tela que so
+ * olhe lexico) acrescenta o parametro aqui em uma linha. Ate la ele nao
+ * existe, para ninguem confundi-lo com o caminho da regua de foco.
+ */
+export const obterGrafo = (de?: string | null, ate?: string | null) =>
+  proteger(buscar<Grafo>(`/grafo${queryDePeriodo(de, ate)}`));
+
 export const obterConversa = (id: string) =>
   proteger(buscar<DetalheConversa>(`/conversas/${encodeURIComponent(id)}`));
 
