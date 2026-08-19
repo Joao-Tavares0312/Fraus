@@ -531,24 +531,22 @@ export type Grafo = {
 };
 
 /**
- * `camadas`, quando informado, filtra quais das tres camadas o servidor
- * devolve -- vai como lista separada por virgula, do jeito que `/grafo`
- * espera. Sem ele a API devolve as tres.
+ * O grafo inteiro do periodo -- as tres camadas, sempre.
+ *
+ * A rota `/grafo` aceita um parametro `camadas` que recorta quais delas
+ * voltam, e este cliente NAO o envia de proposito. O foco de camada da tela
+ * do grafo e CLIENTE: ele muda a opacidade do que ja esta desenhado, sem
+ * refetch. Buscar de novo devolveria outro conjunto de nos, o que reiniciaria
+ * a simulacao e rearranjaria o layout inteiro a cada troca de camada -- e
+ * apagaria do dado justamente as arestas ENTRE camadas, que sao o motivo de
+ * aquilo ser um grafo so em vez de tres abas.
+ *
+ * Quem um dia precisar do recorte no SERVIDOR (um export, uma tela que so
+ * olhe lexico) acrescenta o parametro aqui em uma linha. Ate la ele nao
+ * existe, para ninguem confundi-lo com o caminho da regua de foco.
  */
-export const obterGrafo = (
-  de?: string | null,
-  ate?: string | null,
-  camadas?: Camada[],
-) => {
-  const parametros = new URLSearchParams();
-  if (de) parametros.set("de", de);
-  if (ate) parametros.set("ate", ate);
-  if (camadas && camadas.length > 0) {
-    parametros.set("camadas", camadas.join(","));
-  }
-  const sufixo = parametros.toString();
-  return proteger(buscar<Grafo>(`/grafo${sufixo ? `?${sufixo}` : ""}`));
-};
+export const obterGrafo = (de?: string | null, ate?: string | null) =>
+  proteger(buscar<Grafo>(`/grafo${queryDePeriodo(de, ate)}`));
 
 export const obterConversa = (id: string) =>
   proteger(buscar<DetalheConversa>(`/conversas/${encodeURIComponent(id)}`));
