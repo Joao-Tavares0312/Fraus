@@ -91,6 +91,48 @@ export function autorizacaoDoServidor(requisicao: Request): string | undefined {
 }
 
 /**
+ * A mesma credencial do servidor, para quem fala com a API SEM ter um
+ * `Request` em maos -- os Server Components, que (em `lib/api.ts`) chamam a
+ * API direto em vez de passar pelo proxy (ver o comentario de `urlDaApi`).
+ *
+ * Existe para nao deixar os Server Components reinventarem o proprio degrau:
+ * credencial resolvida em dois lugares diverge, e essa divergencia especifica
+ * -- quem ligou a autenticacao pela tela (cookie) ou depende so do arquivo da
+ * primeira subida nunca era autenticado no render -- e o bug que este export
+ * conserta. A ordem e a MESMA de `autorizacaoDoServidor` acima, de proposito:
+ * ambiente, cookie, arquivo.
+ *
+ * O cookie aqui vem de `next/headers`, que so funciona DENTRO do escopo de
+ * uma requisicao (Server Component, Route Handler, Server Action) e lanca
+ * fora dele. Por isso so ele fica em try/catch: sem escopo de requisicao a
+ * resolucao degrada para ambiente/arquivo em vez de derrubar a pagina --
+ * o caso comum de uma dashboard sem cookie mas com o arquivo presente
+ * continua funcionando.
+ *
+ * O degrau 1 do proxy (`Authorization` do cliente) fica de fora de proposito:
+ * aqui nao ha requisicao de NAVEGADOR para inspecionar -- o Server Component
+ * roda no processo do servidor, nunca no do usuario, entao nao existe cliente
+ * para mandar header nenhum.
+ */
+export async function autorizacaoDoServidorAtual(): Promise<string | undefined> {
+  const doAmbiente = process.env.FRAUS_CHAVE_ACESSO;
+  if (doAmbiente) return `Bearer ${doAmbiente}`;
+
+  let doCookie: string | undefined;
+  try {
+    const { cookies } = await import("next/headers");
+    doCookie = (await cookies()).get(COOKIE)?.value;
+  } catch {
+    // Fora do escopo de uma requisicao -- `cookies()` lanca. Degrada para os
+    // proximos degraus, que nao dependem dele.
+  }
+  if (doCookie) return `Bearer ${doCookie}`;
+
+  const doArquivo = chaveDoArquivo();
+  return doArquivo ? `Bearer ${doArquivo}` : undefined;
+}
+
+/**
  * A credencial para a rota que LIGA/ROTACIONA a mestra.
  *
  * Aqui o `Authorization` do cliente entra, e precisa: e o unico lugar da

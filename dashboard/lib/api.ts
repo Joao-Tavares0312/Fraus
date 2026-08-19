@@ -45,14 +45,26 @@ export function urlDaApi(rota: string): string {
  * API (server-side). No navegador nao ha o que anexar: quem autentica e o
  * proxy.
  *
- * `FRAUS_CHAVE_ACESSO` nao tem o prefixo NEXT_PUBLIC_, entao o Next NAO a
- * inlina no bundle do cliente -- do lado do navegador ela vale `undefined`, e
- * o ramo acima nem a consulta. A chave nao vaza por este arquivo.
+ * A resolucao de credencial (ambiente, cookie de quem ligou pela tela, ou o
+ * arquivo que a API escreve na primeira subida) mora em
+ * `lib/credencial-do-servidor.ts`, NUNCA aqui -- e so chegada por `import()`
+ * DINAMICO, dentro do `if (noServidor())`. Este arquivo e importado por
+ * componentes de CLIENTE (o simulador, a tela de autenticacao, a de
+ * integracoes -- `grep -rn "from \"@/lib/api\"" components`), entao vai para
+ * o bundle do navegador. Um `import` estatico do modulo de credencial
+ * arrastaria `node:fs` e `next/headers` para esse bundle e quebraria o build
+ * do lado do cliente. O `import()` dinamico so resolve o modulo fisicamente
+ * quando o ramo roda -- e esse ramo so roda no servidor, entao o navegador
+ * nunca pede esse chunk.
  */
-export function cabecalhosDaApi(extras?: Record<string, string>): Record<string, string> {
+export async function cabecalhosDaApi(
+  extras?: Record<string, string>,
+): Promise<Record<string, string>> {
   const cabecalhos: Record<string, string> = { ...(extras ?? {}) };
-  if (noServidor() && process.env.FRAUS_CHAVE_ACESSO) {
-    cabecalhos["Authorization"] = `Bearer ${process.env.FRAUS_CHAVE_ACESSO}`;
+  if (noServidor()) {
+    const { autorizacaoDoServidorAtual } = await import("./credencial-do-servidor");
+    const autorizacao = await autorizacaoDoServidorAtual();
+    if (autorizacao) cabecalhos["Authorization"] = autorizacao;
   }
   return cabecalhos;
 }
@@ -354,7 +366,7 @@ export type Resultado<T> =
 async function buscar<T>(rota: string): Promise<T> {
   const resposta = await fetch(urlDaApi(rota), {
     cache: "no-store",
-    headers: cabecalhosDaApi(),
+    headers: await cabecalhosDaApi(),
   });
   if (!resposta.ok) throw new Error(`${rota} respondeu ${resposta.status}`);
   return (await resposta.json()) as T;
@@ -374,7 +386,7 @@ async function escrever<T>(
 ): Promise<T> {
   const resposta = await fetch(urlDaApi(rota), {
     method: metodo,
-    headers: cabecalhosDaApi(
+    headers: await cabecalhosDaApi(
       corpo === undefined ? undefined : { "Content-Type": "application/json" },
     ),
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
@@ -585,7 +597,7 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
     (async () => {
       const resposta = await fetch(urlDaApi("/modelo/simular"), {
         method: "POST",
-        headers: cabecalhosDaApi({ "Content-Type": "application/json" }),
+        headers: await cabecalhosDaApi({ "Content-Type": "application/json" }),
         body: JSON.stringify({ texto }),
         cache: "no-store",
       });
@@ -841,7 +853,7 @@ export async function analisarUpload(
       // multipart, e fixa-lo aqui quebraria o parse do lado da API.
       const resposta = await fetch(urlDaApi("/analisar/arquivo"), {
         method: "POST",
-        headers: cabecalhosDaApi(),
+        headers: await cabecalhosDaApi(),
         body: corpo,
       });
       if (!resposta.ok) {
