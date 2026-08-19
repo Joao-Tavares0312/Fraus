@@ -127,3 +127,37 @@ def test_contribuicoes_tem_sinal_interpretavel():
 def test_prever_devolve_uma_das_tres_classes():
     fusor = _fusor_treinado()
     assert fusor.prever(_features(texto_prob_satisfeito_media=0.9)) in (0, 1, 2)
+
+
+def test_eixo_global_vazio_sem_treino():
+    """Fusor nao treinado nao tem eixo -- e dict vazio, nao dezesseis zeros.
+
+    Zero e um peso valido ("esta feature nao importa"); ausencia de treino e
+    outra coisa. O grafo usa essa diferenca para OMITIR as arestas de feature
+    em vez de desenhar dezesseis fios de peso zero.
+    """
+    assert Fusor().eixo_global() == {}
+
+
+def test_eixo_global_tem_sinal():
+    """Positivo empurra para satisfeito, negativo para insatisfeito.
+
+    `importancias()` nao serve para o grafo porque e valor ABSOLUTO: ela diz
+    que `escalou` pesa, nao para que lado.
+    """
+    eixo = _fusor_treinado().eixo_global()
+
+    assert set(eixo) == set(NOMES_FEATURES)
+    # No conjunto de treino, `escalou` so aparece nos exemplos insatisfeitos
+    # e `texto_prob_satisfeito_media` so nos satisfeitos.
+    assert eixo["escalou"] < 0
+    assert eixo["texto_prob_satisfeito_media"] > 0
+
+
+def test_contribuicoes_seguem_iguais_depois_da_extracao():
+    """Trava o refactor: extrair `_diferenca` nao pode mudar a atribuicao."""
+    fusor = _fusor_treinado()
+    contribuicoes = fusor.contribuicoes(_features(escalou=1.0))
+
+    assert set(contribuicoes) == set(NOMES_FEATURES)
+    assert contribuicoes["escalou"] != 0.0
