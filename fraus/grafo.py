@@ -16,9 +16,13 @@ O que este modulo NAO tem, e por que:
   - `importacao -> conversa`: o schema nao guarda esse vinculo (spec 2.0).
 """
 
+from collections import Counter
+
 from fraus.indicadores import nota_0_10
 from fraus.modelos import Conversa
 from fraus.resumo import desfecho
+from fraus.sinais.emoji import emojis_com_posicao
+from fraus.sinais.palavras import contar_palavras
 
 CAMADAS = ("lexico", "dominio", "proveniencia")
 TODAS_AS_CAMADAS = frozenset(CAMADAS)
@@ -112,6 +116,56 @@ def _camada_dominio(montagem: _Montagem, registros: list, faixas: dict) -> None:
         )
 
 
+def _camada_lexico(montagem: _Montagem, registros: list, teto_termos: int) -> dict:
+    """Termos e emojis ATIVADOS no recorte, cortados por frequencia.
+
+    Duas passadas de proposito: a primeira conta o conjunto inteiro para saber
+    quais termos sobrevivem ao teto GLOBALMENTE, a segunda liga cada conversa
+    aos sobreviventes. Cortar por conversa daria um teto por conversa, e o
+    total do recorte estouraria de novo.
+
+    So a fala do CLIENTE conta, e a extracao e a mesma de `lexico_por_classe`
+    e do sinal de emoji -- contagem propria aqui divergiria do motor.
+    """
+    contagem_global: Counter = Counter()
+    por_conversa: dict[str, Counter] = {}
+
+    for conversa, _ in registros:
+        falas = [mensagem.texto for mensagem in conversa.mensagens_cliente]
+        contagem = contar_palavras(falas)
+        por_conversa[conversa.id] = contagem
+        contagem_global.update(contagem)
+
+    sobreviventes = {termo for termo, _ in contagem_global.most_common(teto_termos)}
+
+    for conversa, _ in registros:
+        conversa_id = montagem.no(
+            "conversa", conversa.id, "dominio", f"Atendimento {conversa.id}"
+        )
+        for termo, ocorrencias in por_conversa[conversa.id].items():
+            if termo not in sobreviventes:
+                continue
+            montagem.aresta(
+                conversa_id,
+                montagem.no("termo", termo, "lexico", termo),
+                "ativou",
+                peso=ocorrencias,
+            )
+        for mensagem in conversa.mensagens_cliente:
+            for emoji, _posicao in emojis_com_posicao(mensagem.texto):
+                montagem.aresta(
+                    conversa_id,
+                    montagem.no("emoji", emoji, "lexico", emoji),
+                    "ativou",
+                )
+
+    return {
+        "termos_totais": len(contagem_global),
+        "termos_exibidos": len(sobreviventes),
+        "truncado": len(contagem_global) > len(sobreviventes),
+    }
+
+
 def montar_grafo(
     registros: list[tuple[Conversa, float | None]],
     faixas: dict,
@@ -133,6 +187,10 @@ def montar_grafo(
     if "dominio" in camadas:
         _camada_dominio(montagem, registros, faixas)
 
+    lexico = {"termos_totais": 0, "termos_exibidos": 0, "truncado": False}
+    if "lexico" in camadas:
+        lexico = _camada_lexico(montagem, registros, teto_termos)
+
     return {
         "nos": montagem.nos,
         "arestas": montagem.arestas,
@@ -140,8 +198,6 @@ def montar_grafo(
             "camadas": sorted(camadas),
             "conversas": len(registros),
             "sem_sinal": sum(1 for _, score in registros if score is None),
-            "termos_totais": 0,
-            "termos_exibidos": 0,
-            "truncado": False,
+            **lexico,
         },
     }
