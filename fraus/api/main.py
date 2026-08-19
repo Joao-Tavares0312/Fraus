@@ -37,7 +37,7 @@ from fraus.api.primeiro_uso import ligar_no_primeiro_uso
 from fraus.api.limites import TETO_CORPO, registrar_middleware_de_corpo  # TETO_CORPO reexportado para os testes
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
 from fraus.api.rotas import (acesso, analise, configuracoes, conversas,
-                             indicadores, ingestao, integracoes, modelo,
+                             grafo, indicadores, ingestao, integracoes, modelo,
                              saude)
 # Reexportados: os testes os importam daqui desde antes da quebra em modulos,
 # e mudar de onde se importa um teto seria mexer no contrato de quem consome
@@ -133,6 +133,7 @@ def criar_app(
     app.include_router(ingestao.router)
     app.include_router(modelo.router)
     app.include_router(analise.router)
+    app.include_router(grafo.router)
 
     return app
 

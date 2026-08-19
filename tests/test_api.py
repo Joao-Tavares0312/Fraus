@@ -65,6 +65,10 @@ class AtribuicaoDuble:
     def importancias(self) -> dict:
         return {nome: 1.0 for nome in NOMES_FEATURES}
 
+    def eixo_global(self) -> dict:
+        """Peso global com sinal, determinístico -- sem fusor treinado de verdade."""
+        return {nome: float((indice % 5) - 2) for indice, nome in enumerate(NOMES_FEATURES)}
+
     def analisar_conversa(self, conversa, referencia=None) -> dict:
         """Analise avulsa do dublê: peso de palavra deterministico, sem modelo.
 

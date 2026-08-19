@@ -152,6 +152,10 @@ class Motor:
         """Peso global de cada feature -- usado pela ficha do modelo em `/modelo`."""
         return self._fusor.importancias()
 
+    def eixo_global(self) -> dict:
+        """Passthrough do peso global COM sinal -- o grafo da memoria consome."""
+        return self._fusor.eixo_global()
+
     def analisar_conversa(self, conversa, referencia=None) -> dict:
         """Analise completa de UMA conversa, com peso palavra a palavra.
 
