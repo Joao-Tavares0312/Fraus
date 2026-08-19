@@ -479,6 +479,77 @@ export const obterLexico = (de?: string | null, ate?: string | null) =>
     buscar<{ classes: ClasseDoLexico[] }>(`/lexico${queryDePeriodo(de, ate)}`),
   );
 
+export type Camada = "lexico" | "dominio" | "proveniencia";
+
+export type TipoDeNo =
+  | "conversa"
+  | "categoria"
+  | "canal"
+  | "desfecho"
+  | "termo"
+  | "emoji"
+  | "feature"
+  | "fonte"
+  | "importacao";
+
+export type NoDoGrafo = {
+  id: string;
+  tipo: TipoDeNo;
+  camada: Camada;
+  rotulo: string;
+  grau: number;
+  /**
+   * Só existem em nós `conversa`, e `null` quer dizer SEM SINAL -- nunca zero.
+   * Quem consumir isto com `?? 0` transforma "não se sabe" em "péssimo".
+   */
+  score?: number | null;
+  nota?: number | null;
+  categoria?: Categoria | null;
+  sem_sinal?: boolean;
+};
+
+export type ArestaDoGrafo = {
+  de: string;
+  para: string;
+  tipo: string;
+  peso: number;
+};
+
+export type MetaDoGrafo = {
+  camadas: Camada[];
+  conversas: number;
+  sem_sinal: number;
+  termos_totais: number;
+  termos_exibidos: number;
+  truncado: boolean;
+};
+
+export type Grafo = {
+  nos: NoDoGrafo[];
+  arestas: ArestaDoGrafo[];
+  meta: MetaDoGrafo;
+};
+
+/**
+ * `camadas`, quando informado, filtra quais das tres camadas o servidor
+ * devolve -- vai como lista separada por virgula, do jeito que `/grafo`
+ * espera. Sem ele a API devolve as tres.
+ */
+export const obterGrafo = (
+  de?: string | null,
+  ate?: string | null,
+  camadas?: Camada[],
+) => {
+  const parametros = new URLSearchParams();
+  if (de) parametros.set("de", de);
+  if (ate) parametros.set("ate", ate);
+  if (camadas && camadas.length > 0) {
+    parametros.set("camadas", camadas.join(","));
+  }
+  const sufixo = parametros.toString();
+  return proteger(buscar<Grafo>(`/grafo${sufixo ? `?${sufixo}` : ""}`));
+};
+
 export const obterConversa = (id: string) =>
   proteger(buscar<DetalheConversa>(`/conversas/${encodeURIComponent(id)}`));
 
