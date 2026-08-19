@@ -211,6 +211,35 @@ def _camada_features(montagem: _Montagem, eixo: dict[str, float], faixas: dict) 
         )
 
 
+def _camada_proveniencia(montagem: _Montagem, fontes: list[dict], importacoes: list[dict]) -> None:
+    """De onde o dado veio -- ate onde o schema deixa afirmar.
+
+    `importacoes` NAO tem coluna apontando para `conversas`, e
+    `fontes_integracao` so compartilha o campo `canal`. Entao a ligacao e por
+    canal, e o tipo da aresta diz exatamente isso: `alimenta_canal`, nao
+    `criou`. A aresta que faltaria (importacao -> conversa) exige migracao de
+    schema, e ela esta registrada na spec como decisao propria -- nao se
+    inventa vinculo para o desenho ficar bonito.
+    """
+    for fonte in fontes:
+        montagem.aresta(
+            montagem.no("fonte", str(fonte["id"]), "proveniencia", fonte["nome"]),
+            montagem.no("canal", fonte["canal"], "proveniencia", fonte["canal"]),
+            "alimenta_canal",
+        )
+
+    canais = {no["id"] for no in montagem.nos if no["tipo"] == "canal"}
+    for importacao in importacoes:
+        rotulo = f"{importacao['arquivo']} ({importacao['aceitas']} aceitas)"
+        importacao_id = montagem.no(
+            "importacao", str(importacao["id"]), "proveniencia", rotulo
+        )
+        # A importacao so se liga a canal se algum canal existir no conjunto;
+        # ela nao guarda canal proprio, e um arquivo CSV nao declara origem.
+        for canal in sorted(canais):
+            montagem.aresta(importacao_id, canal, "alimenta_canal")
+
+
 def montar_grafo(
     registros: list[tuple[Conversa, float | None]],
     faixas: dict,
@@ -238,6 +267,9 @@ def montar_grafo(
 
     if "lexico" in camadas and eixo:
         _camada_features(montagem, eixo, faixas)
+
+    if "proveniencia" in camadas:
+        _camada_proveniencia(montagem, list(fontes), list(importacoes))
 
     return {
         "nos": montagem.nos,

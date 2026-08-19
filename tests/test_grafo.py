@@ -223,3 +223,47 @@ def test_emoji_repetido_vira_uma_aresta_agregada():
     arestas_emoji = [a for a in grafo["arestas"] if a["para"] == "emoji:😡"]
     assert len(arestas_emoji) == 1
     assert arestas_emoji[0]["peso"] == 3
+
+
+def test_fonte_liga_no_canal_e_nunca_na_conversa():
+    """O schema nao guarda qual importacao criou qual conversa (spec 2.0).
+
+    Ligar fonte -> conversa exigiria inventar o vinculo. O canal e o que
+    existe de verdade, e a aresta diz isso no proprio tipo.
+    """
+    fontes = [{"id": 1, "nome": "Suporte WhatsApp", "canal": "whatsapp", "tipo": "webhook", "ativa": 1}]
+    grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, fontes=fontes)
+
+    ligacoes = {(a["de"], a["para"], a["tipo"]) for a in grafo["arestas"]}
+    assert ("fonte:1", "canal:whatsapp", "alimenta_canal") in ligacoes
+    assert not [a for a in grafo["arestas"] if a["de"].startswith("fonte:") and "conversa:" in a["para"]]
+    assert _no(grafo, "fonte:1")["camada"] == "proveniencia"
+
+
+def test_fonte_de_canal_fora_do_recorte_aparece_sozinha():
+    """Ela existe no sistema mesmo sem conversa no periodo -- some-la esconderia
+    uma integracao configurada e sem dado, que e justamente o que alguem
+    precisa ver."""
+    fontes = [{"id": 2, "nome": "Discord", "canal": "discord", "tipo": "bot", "ativa": 1}]
+    grafo = montar_grafo([(_conversa(canal="whatsapp"), 30.0)], FAIXAS_NPS, fontes=fontes)
+
+    assert _no(grafo, "fonte:2")
+    assert _no(grafo, "canal:discord")["camada"] == "proveniencia"
+
+
+def test_importacao_vira_no_com_o_arquivo_no_rotulo():
+    importacoes = [{"id": 7, "ocorrida_em": "2026-08-19T10:00:00Z", "arquivo": "julho.csv",
+                    "aceitas": 40, "rejeitadas": 2}]
+    grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, importacoes=importacoes)
+
+    no = _no(grafo, "importacao:7")
+    assert "julho.csv" in no["rotulo"]
+    assert no["camada"] == "proveniencia"
+
+
+def test_camada_proveniencia_desligada_nao_emite_fonte():
+    fontes = [{"id": 1, "nome": "Suporte", "canal": "whatsapp", "tipo": "webhook", "ativa": 1}]
+    grafo = montar_grafo(
+        [(_conversa(), 30.0)], FAIXAS_NPS, fontes=fontes, camadas=frozenset({"dominio"})
+    )
+    assert not _nos_por_tipo(grafo, "fonte")
