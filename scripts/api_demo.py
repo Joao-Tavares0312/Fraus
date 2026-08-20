@@ -371,6 +371,26 @@ def montar_app():
             "[api_demo] AVISO: API sem autenticacao (uso local). "
             "Defina FRAUS_CHAVE_MESTRA para exigir chave em todas as rotas."
         )
+    else:
+        # A demo NAO passa por `ligar_no_primeiro_uso` -- e nem deveria: com a
+        # mestra vindo do ambiente, aquele fluxo tambem nao grava nada na API
+        # real, porque a variavel VENCE a gravada e escrever em disco uma chave
+        # gerada seria guardar credencial que nao abre nada.
+        #
+        # A consequencia e que aqui nao existe chave de ACESSO em lugar nenhum:
+        # a API sobe fechada e a dashboard toma 401 em toda tela, sem nada na
+        # saida dizendo como sair disso. Fechar em silencio e o que transforma
+        # uma protecao em parede -- entao a saida ensina o caminho inteiro.
+        print(
+            "[api_demo] API FECHADA pela FRAUS_CHAVE_MESTRA do ambiente.\n"
+            "  Nenhuma chave de acesso existe ainda -- a dashboard levara 401.\n"
+            "  Emita uma e entregue a ela:\n"
+            "    curl -X POST localhost:8000/acesso/chaves \\\n"
+            "      -H \"Authorization: Bearer $FRAUS_CHAVE_MESTRA\" \\\n"
+            "      -H 'content-type: application/json' -d '{\"nome\": \"dashboard\"}'\n"
+            "    cd dashboard && FRAUS_CHAVE_ACESSO=<a chave fra_...> npm run dev\n"
+            "  A chave morre junto com este banco: a demo o recria a cada boot."
+        )
     return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
 
 
