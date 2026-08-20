@@ -23,10 +23,50 @@ export type NoPosicionado = NoDoGrafo & { x?: number; y?: number };
  * Acima da linha o que foi DITO, abaixo o que foi MEDIDO (DESIGN.md secao 1).
  *
  * Num grafo nao ha "acima" e "abaixo" geometricos -- a simulacao coloca o no
- * onde a fisica manda. Entao a regra que aqui sobrevive e a CROMATICA: ambar
- * para o dito, azul para o medido. A posicao volta a valer nas outras telas.
+ * onde a fisica manda. Entao a regra que aqui sobrevive e a CROMATICA. Ela
+ * deixou de ser "ambar contra azul" e passou a ser QUENTE contra FRIO: a
+ * familia continua dizendo dito/medido a distancia, e o matiz dentro da
+ * familia diz o TIPO. Duas cores nao davam conta de nove tipos -- `categoria`,
+ * `canal`, `fonte` e `feature` saiam todas do mesmo azul, e a tela nao
+ * distinguia o eixo aprendido pelo fusor de um canal de atendimento.
+ *
+ * Esta lista sobrevive porque a FICHA e a lista ainda falam em dito/medido, e
+ * porque a familia precisa de uma definicao unica -- deduzi-la do matiz seria
+ * espalhar a regra por dois lugares.
  */
 const DITO: TipoDeNo[] = ["conversa", "termo", "emoji"];
+
+/**
+ * O token de cor de cada tipo de no.
+ *
+ * `Record` completo, e nao um mapa com padrao: se um tipo novo nascer na API,
+ * o TypeScript para o build aqui em vez de deixar o no aparecer cinza na tela
+ * sem ninguem perceber. Cor faltando e um tipo que ninguem decidiu como ler.
+ */
+const TOKEN_DO_TIPO: Record<TipoDeNo, string> = {
+  conversa: "--no-conversa",
+  termo: "--no-termo",
+  emoji: "--no-emoji",
+  feature: "--no-feature",
+  categoria: "--no-categoria",
+  canal: "--no-canal",
+  desfecho: "--no-desfecho",
+  fonte: "--no-fonte",
+  importacao: "--no-importacao",
+};
+
+/** Os tipos na ordem em que a legenda os apresenta: dito primeiro, medido depois. */
+export const TIPOS_NA_LEGENDA: TipoDeNo[] = [
+  "conversa",
+  "termo",
+  "emoji",
+  "feature",
+  "categoria",
+  "canal",
+  "desfecho",
+  "fonte",
+  "importacao",
+];
 
 /**
  * Os tokens do `globals.css` resolvidos em string que o canvas entende.
@@ -39,6 +79,8 @@ const DITO: TipoDeNo[] = ["conversa", "termo", "emoji"];
 export type Paleta = {
   dito: string;
   medido: string;
+  /** A cor resolvida de CADA tipo de no -- e daqui que o canvas pinta. */
+  porTipo: Record<TipoDeNo, string>;
   linha: string;
   rotulo: string;
   fundo: string;
@@ -49,6 +91,9 @@ export type Paleta = {
 const PALETA_VAZIA: Paleta = {
   dito: "transparent",
   medido: "transparent",
+  porTipo: Object.fromEntries(
+    TIPOS_NA_LEGENDA.map((tipo) => [tipo, "transparent"]),
+  ) as Record<TipoDeNo, string>,
   linha: "transparent",
   rotulo: "transparent",
   fundo: "transparent",
@@ -78,6 +123,9 @@ function lerPaleta(): Paleta {
   return {
     dito: token("--dito"),
     medido: token("--medido"),
+    porTipo: Object.fromEntries(
+      TIPOS_NA_LEGENDA.map((tipo) => [tipo, token(TOKEN_DO_TIPO[tipo])]),
+    ) as Record<TipoDeNo, string>,
     // A aresta e ESTRUTURA, nao dado: ela usa a regua do sistema e nao gasta
     // um canal de cor proprio. Duas vozes na tela ja sao as duas que existem.
     linha: token("--linha"),
@@ -93,15 +141,28 @@ function lerPaleta(): Paleta {
 }
 
 /**
- * A cor de um no: ambar se foi dito, azul se foi medido.
+ * A cor de um no: uma por TIPO, dentro da familia quente/fria do dito/medido.
  *
  * O esboco do brief pedia um `temaClaro: boolean` -- ele nao entrou porque o
  * tema e escuro UNICO (DESIGN.md), e parametro que so aceita um valor e
  * mentira sobre a variacao que existe. O que de fato varia e a paleta, e ela
  * entra explicita.
+ *
+ * O fallback para dito/medido nao e defensivo a toa: `paletaAtual()` devolve a
+ * paleta VAZIA no SSR, e um tipo que a API inventar depois de um deploy
+ * chegaria aqui sem token. Cair na familia certa e melhor que pintar de
+ * `undefined` -- que no canvas e silenciosamente preto sobre fundo preto.
  */
 export function corDoNo(no: NoDoGrafo, paleta: Paleta): string {
-  return DITO.includes(no.tipo) ? paleta.dito : paleta.medido;
+  return (
+    paleta.porTipo[no.tipo] ||
+    (DITO.includes(no.tipo) ? paleta.dito : paleta.medido)
+  );
+}
+
+/** Se o tipo pertence a familia do que foi DITO. A legenda agrupa por isto. */
+export function eDito(tipo: TipoDeNo): boolean {
+  return DITO.includes(tipo);
 }
 
 /**

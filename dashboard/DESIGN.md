@@ -107,6 +107,36 @@ Cada uma tem variante `-texto` com contraste verificado. Cor de marcação e cor
 de tipo não são a mesma coisa: `npm run contraste` é o juiz, e todo par que
 carrega texto cruza AA (4.5:1).
 
+#### 3.2.1 No grafo, as duas vozes viram duas *famílias*
+
+O canvas do grafo da memória é a única tela com **nove tipos de nó**, e duas
+cores não distinguem nove coisas: `categoria`, `canal`, `fonte` e `feature`
+saíam todas do mesmo azul, e quem olhava não separava o eixo aprendido pelo
+fusor de um canal de atendimento.
+
+A regra não foi trocada — ela subiu de nível. **A família continua dizendo
+dito/medido; o matiz dentro dela passou a dizer o tipo:**
+
+| Família | Faixa de matiz | Tipos |
+|---|---|---|
+| **dito** (quente) | 30–95 | `emoji` 30, `conversa` 60, `termo` 95 |
+| **medido** (frio) | 150–340 | `fonte` 150, `canal` 195, `feature` 265, `categoria` 305, `desfecho` 340 |
+
+Tokens `--no-<tipo>`, todos em **L 0.75 / C 0.14**. Claridade e croma iguais são
+deliberados: matiz distingue o tipo, e claridade não pode virar hierarquia
+acidental — um nó mais claro pareceria mais importante, e nenhum tipo é mais
+importante que outro.
+
+`--no-importacao` é a exceção, e ela é semântica: cinza acromático, porque
+importação é um nó **solto** cuja origem o schema não rastreia, e cinza é a
+ausência de afirmação — a mesma disciplina da cabeça vazada do `sem_sinal`.
+
+A leitura de longe ("isto é fala ou é medida?") sobrevive intacta; a de perto
+("que coisa é esta?") passa a existir. E porque essas nove cores só existem
+nesta tela, ela carrega **legenda própria** agrupada pelas duas famílias:
+nove matizes sem legenda seriam o grafo afirmando uma distinção que o leitor
+não tem como ler.
+
 ### 3.3 A cor da marca: o dourado do monograma
 
 `--primary` é o **dourado do R da logo**, medido do próprio arquivo

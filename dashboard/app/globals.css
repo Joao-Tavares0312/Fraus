@@ -82,6 +82,15 @@
   --color-dito: var(--dito);
   --color-dito-fraco: var(--dito-fraco);
   --color-dito-texto: var(--dito-texto);
+  --color-no-conversa: var(--no-conversa);
+  --color-no-termo: var(--no-termo);
+  --color-no-emoji: var(--no-emoji);
+  --color-no-feature: var(--no-feature);
+  --color-no-categoria: var(--no-categoria);
+  --color-no-canal: var(--no-canal);
+  --color-no-desfecho: var(--no-desfecho);
+  --color-no-fonte: var(--no-fonte);
+  --color-no-importacao: var(--no-importacao);
   --color-medido: var(--medido);
   --color-medido-fraco: var(--medido-fraco);
   --color-medido-texto: var(--medido-texto);
@@ -204,6 +213,35 @@
   --medido: oklch(0.7 0.15 265);
   --medido-fraco: color-mix(in oklch, var(--medido) 18%, transparent);
   --medido-texto: oklch(0.78 0.13 265);
+
+  /* --- os tipos de no do GRAFO DA MEMORIA ---
+
+     O canvas do grafo precisa distinguir NOVE tipos de no, e a dupla
+     dito/medido so oferece duas vozes: com ela, `categoria`, `canal`, `fonte`
+     e `feature` saiam todas do mesmo azul, e quem olhava a tela nao
+     distinguia o eixo aprendido pelo fusor de um canal de atendimento.
+
+     A regra antiga NAO foi jogada fora -- ela virou a FAMILIA. Matiz quente
+     (30-95) continua sendo o que foi DITO; matiz frio (150-340), o que foi
+     MEDIDO ou cadastrado. O que o matiz individual acrescenta e o tipo. Ou
+     seja: a leitura de longe ("isto e fala ou e medida?") sobrevive intacta,
+     e a leitura de perto ("que coisa e esta?") passa a existir.
+
+     L e C sao os MESMOS em todos (0.75 / 0.14) de proposito: matiz distingue
+     o tipo, e claridade nao pode virar hierarquia acidental -- um no mais
+     claro pareceria mais importante, e nenhum tipo e mais importante que
+     outro. `--no-importacao` e a unica excecao, e ela e semantica: importacao
+     e um no SOLTO, cuja origem o schema nao rastreia, e cinza e a ausencia de
+     afirmacao. Ver DESIGN.md, "O grafo da memoria". */
+  --no-conversa: oklch(0.75 0.14 60); /* ambar: a espinha, e fala */
+  --no-termo: oklch(0.75 0.14 95); /* amarelo: palavra do lexico */
+  --no-emoji: oklch(0.75 0.14 30); /* laranja: fala sem letra */
+  --no-feature: oklch(0.75 0.14 265); /* azul: o que o fusor mede */
+  --no-categoria: oklch(0.75 0.14 305); /* roxo: promotor/detrator/neutro */
+  --no-canal: oklch(0.75 0.14 195); /* ciano: por onde entrou */
+  --no-desfecho: oklch(0.75 0.14 340); /* rosa: como terminou */
+  --no-fonte: oklch(0.75 0.14 150); /* verde: de onde veio */
+  --no-importacao: oklch(0.7 0 0); /* cinza: origem nao rastreavel */
 
   /* magenta: tempo — a serie e SEMPRE tracejada, cor nunca e o unico canal */
   --tempo: oklch(0.72 0.13 320);
