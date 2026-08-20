@@ -41,6 +41,31 @@ NOMES_FEATURES = [
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
 
+# Quanto P(neutro) vale no score 0-100. E o que faz a classe neutra do modelo
+# alcancar a faixa neutra do NPS (7-8), e nao ha nada de arbitrario no valor:
+#
+#   classe pura      score              nota   categoria
+#   insatisfeito     0                  0      detrator
+#   neutro           100 * 0.75 = 75    8      neutro
+#   satisfeito       100                10     promotor
+#
+# Com 0.5 -- o valor anterior -- a linha do meio dava score 50, nota 5, e caia
+# em 0-6: DETRATOR. Nao numa borda rara, mas a classe neutra inteira, e num
+# lote equilibrado por construcao isso produzia NPS negativo sem que o modelo
+# tivesse errado nada. Ver `scripts/medir_faixas.py`, que mede as duas reguas.
+#
+# NAO e configuracao, e a diferenca importa: a faixa de NPS pode ser
+# configuravel porque `categoria` e derivada na LEITURA e refatia dado que ja
+# existe; o peso muda o `score` GRAVADO. Um botao aqui deixaria o banco com
+# scores de duas reguas somados no mesmo agregado, e nenhuma leitura
+# conseguiria separa-los. Mudar isto e mudar codigo e repontuar o banco --
+# e e honesto que custe isso.
+#
+# O valor exato depende de arredondamento bancario: `round(7.5)` da 8 porque 8
+# e par. Com 0.65 daria `round(6.5)` = 6, de volta a detrator. A fronteira esta
+# fixada em tests/test_indicadores.py de proposito -- ela e fragil.
+PESO_NEUTRO_NO_SCORE = 0.75
+
 
 def montar_features(conversa: Conversa, classificador) -> dict[str, float]:
     """Junta os tres sinais numa linha unica de features."""
@@ -67,25 +92,26 @@ class Fusor:
         self._pipeline.fit([vetorizar(e) for e in exemplos], rotulos)
 
     def pontuar(self, features: dict[str, float]) -> float:
-        """Score 0-100: P(satisfeito) + metade de P(neutro).
+        """Score 0-100: P(satisfeito) mais P(neutro) pesado por
+        `PESO_NEUTRO_NO_SCORE`.
 
-        CONSEQUENCIA CONHECIDA E ACEITA, nao mexa achando que e bug: com peso
-        0.5, uma conversa classificada com certeza como NEUTRA pontua 50, que
-        vira nota 5, que cai na faixa 0-6 e portanto em DETRATOR. A classe
-        neutra do modelo nunca alcanca a faixa neutra do NPS (7-8), que exigiria
-        P(satisfeito) entre 0.4 e 0.8 -- um empate, nao uma neutralidade
-        confiante.
+        O score e uma PROJECAO das tres probabilidades num eixo, nao uma quarta
+        predicao: o modelo continua o mesmo, treinado do mesmo jeito. O peso do
+        neutro decide onde a classe do meio pousa nesse eixo -- e, por
+        composicao com a faixa de NPS, em qual categoria ela cai. A tabela e o
+        raciocinio estao na constante.
 
-        O efeito medido em 90 conversas do simulador, 30 por classe: 67%
-        detrator, 29% promotor, 4% neutro, com NPS -38 num lote equilibrado por
-        construcao. Subir o peso para 0.75 alinharia as tres classes as tres
-        categorias; a decisao foi manter e declarar. Ver README, "Limitacoes
-        conhecidas".
+        O que este metodo NAO e: um lugar para consertar predicao. Se o modelo
+        confunde as classes, o conserto e treino -- as medianas por classe do
+        `scripts/medir_faixas.py` sao justamente o que separa os dois casos.
         """
         probabilidades = self._pipeline.predict_proba([vetorizar(features)])[0]
         classes = list(self._pipeline.named_steps["modelo"].classes_)
         por_classe = dict(zip(classes, probabilidades))
-        score = 100.0 * (por_classe.get(SATISFEITO, 0.0) + 0.5 * por_classe.get(NEUTRO, 0.0))
+        score = 100.0 * (
+            por_classe.get(SATISFEITO, 0.0)
+            + PESO_NEUTRO_NO_SCORE * por_classe.get(NEUTRO, 0.0)
+        )
         return max(0.0, min(100.0, score))
 
     def prever(self, features: dict[str, float]) -> int:

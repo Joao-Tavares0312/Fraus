@@ -65,6 +65,37 @@ outro.
 > **Nota metodológica:** o NPS aqui é **inferido do texto**, não perguntado ao
 > cliente. A dashboard rotula como estimativa.
 
+O score é `100 * (P(satisfeito) + 0.75 * P(neutro))`. O peso do neutro é o que
+faz **as três classes do modelo caírem nas três categorias do NPS**:
+
+| classe pura | score | nota | categoria |
+|---|---|---|---|
+| insatisfeito | 0 | 0 | detrator |
+| neutro | 75 | 8 | neutro |
+| satisfeito | 100 | 10 | promotor |
+
+Ele já foi `0.5`, e o efeito não era sutil: a classe neutra pontuava 50, virava
+nota 5 e caía em 0–6 — **detrator**. Não numa borda rara: a classe inteira.
+Medido com o motor real em 90 conversas do simulador (30 por classe,
+equilibradas por construção), os **30 neutros iam todos para detrator** e o NPS
+saía **−36,67** onde o esperado era ≈ 0. Não era erro de treino — o fusor
+separa as classes com folga, medianas de score 0,84 / 75,06 / 99,68 — era a
+composição entre o peso e a faixa. Com `0.75`: **32,2% detrator · 35,6% neutro
+· 32,2% promotor**, NPS **+0,00**.
+
+A medida se reproduz, e é para isso que o script existe:
+
+```bash
+uv run python scripts/medir_faixas.py                    # a régua vigente
+uv run python scripts/medir_faixas.py --peso-neutro 0.5  # a régua antiga
+```
+
+O peso é **constante** (`fraus.fusor.PESO_NEUTRO_NO_SCORE`), não configuração,
+e a assimetria em relação à faixa de NPS — que *é* configurável — é
+deliberada: `categoria` é derivada na leitura e refatia dado que já existe, mas
+o peso muda o `score` **gravado**. Um botão aqui deixaria o banco com scores de
+duas réguas somados no mesmo agregado, sem nenhuma leitura capaz de separá-los.
+
 ## Stack
 
 Python 3.11 · transformers + torch (CPU) · scikit-learn · FastAPI · SQLite ·
@@ -441,9 +472,12 @@ que o projeto existe para não cometer.
   única rota que permanece **pública** com a autenticação ligada, e devolve
   apenas se ela está ligada e de onde vem a mestra: sem dica, sem hash, sem
   data. `POST /acesso/mestra` fica alcançável enquanto a API está aberta, e é
-  assim que se liga a autenticação sem terminal — o preço é que, numa rede
-  compartilhada, **quem chegar primeiro** liga a autenticação e fica com a
-  mestra (é o padrão de primeiro uso de Grafana e afins). Depois de ligada, ela
+  assim que se liga a autenticação sem terminal. Como ela **não** nasce aberta,
+  essa janela não é mais o primeiro uso: ela só existe nos dois casos acima
+  (mestra apagada, ou escrita do arquivo falhada) — e nesses, **quem chegar
+  primeiro** liga a autenticação e fica com a mestra. É a razão de o boot
+  gritar quando sobe aberto: a janela é curta, mas é real enquanto durar.
+  Depois de ligada, ela
   exige a mestra atual e responde 409 a qualquer outra credencial. Gerenciar
   chaves (criar,
   listar, revogar — tanto de acesso quanto de fonte) é privilégio exclusivo da
@@ -481,9 +515,14 @@ que o projeto existe para não cometer.
   de cada linha já vem derivada em `GET /conversas`. A agregação do servidor
   ainda varre as conversas do recorte em memória (uma consulta, não N), o que é
   o custo certo no volume do trabalho (dezenas de atendimentos).
-- A atribuição por sentença do classificador de texto não tem endpoint, então a
-  transcrição marca só evidência **observável** (polaridade de emoji e tempo de
-  espera) — e diz isso em voz alta em vez de fingir atribuição.
+- A atribuição por sentença sai de `GET /conversas/{id}/atribuicao`, que
+  devolve a probabilidade **por mensagem** do classificador de texto — a
+  transcrição marca a fala com o que o modelo achou dela, não só evidência
+  observável. **Só a fala do cliente** recebe probabilidade: bot e humano vêm
+  com os três campos nulos, porque as cabeças foram fine-tunadas em texto de
+  cliente e pontuar o roteiro do bot seria número sem lastro. Se a leitura da
+  atribuição falha, a transcrição aparece **sem marcação nenhuma** em vez de
+  cair num plano B que pareceria a mesma coisa com outra régua.
 - Latência **não é persistida**: é sempre derivada dos timestamps na leitura.
 - Os cortes de latência da interface (10 s / 60 s / 180 s por padrão) são de
   **exibição** e saem de `GET /configuracoes`: eles movem onde a leitura chama
@@ -492,17 +531,22 @@ que o projeto existe para não cometer.
 - A tela **Configurações** não reimplementa a validação: quando a faixa de NPS
   não cobre 0–10 de forma contígua, quem escreve a mensagem é a API, que nomeia
   a nota descoberta.
-- **A classe neutra do modelo conta como detratora, e o NPS sai pessimista.**
-  O score é `100 * (P(satisfeito) + 0.5 * P(neutro))`: uma conversa classificada
-  com certeza como neutra pontua **50**, vira nota **5** e cai em **0–6,
-  detrator**. A faixa neutra do NPS (7–8) exigiria `P(satisfeito)` entre 0,4 e
-  0,8 — um empate entre classes, não uma neutralidade confiante. Medido em 90
-  conversas do simulador (30 por classe, equilibradas por construção): **67%
-  detrator · 29% promotor · 4% neutro**, com **NPS −38** onde o esperado seria
-  ≈ 0. É consequência da composição entre o peso do neutro no score e a faixa
-  padrão do NPS, não erro de treino — o fusor separa as três classes com
-  medianas 0,11 / 50,99 / 99,03. Mantido assim por decisão de projeto; subir o
-  peso do neutro para 0,75 alinharia as três classes às três categorias.
+- **A categoria de NPS é uma composição, e a fronteira do neutro é apertada.**
+  O peso do neutro (0,75) alinha as três classes às três categorias — ver
+  *Indicadores* —, mas o alinhamento passa por `score → nota → faixa`, e a nota
+  do neutro puro é `round(7,5)`, que dá **8** só porque o Python arredonda para
+  o par mais próximo. Não há margem: com peso 0,65 seria `round(6,5) = 6`, de
+  volta a detrator, pela mesma regra. A fronteira está fixada em teste
+  (`tests/test_indicadores.py`) exatamente porque é frágil. Consequência
+  prática: **mudar a faixa de NPS em Configurações pode desalinhar a classe
+  neutra de novo** — a API valida que as faixas cubram 0–10 sem buraco, e não
+  que a nota 8 continue caindo em neutro.
+- **Mudar o peso do neutro exige repontuar o banco.** Ele é constante, não
+  configuração, e o `score` é gravado na importação: um banco com conversas
+  pontuadas antes e depois da mudança soma duas réguas no mesmo agregado, e
+  nenhuma leitura consegue separá-las. Não existe hoje um script de repontuar —
+  o caminho é reimportar. A mudança de 0,5 para 0,75 não precisou de nenhum dos
+  dois: o banco estava vazio quando ela foi feita.
 - **O fusor é treinado em conversas sintéticas.** Nenhum corpus público de
   resenha PT-BR tem timestamps de diálogo: latência, escalação e abandono saem
   de distribuições calibradas por literatura de live chat. O texto é real, o

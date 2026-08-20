@@ -41,7 +41,8 @@ from fraus.api.main import (CAMINHO_FUSOR, CAMINHO_MODELO_EMOCAO,  # noqa: E402
 from fraus.db import Banco  # noqa: E402
 from fraus.fusor import NOMES_FEATURES, Fusor  # noqa: E402
 from fraus.indicadores import categoria_nps  # noqa: E402
-from fraus.ingest.simulador import INICIO, gerar_lote  # noqa: E402
+from fraus.ingest.simulador import (FRASES_POR_ROTULO, INICIO,  # noqa: E402
+                                    gerar_lote)
 from fraus.modelos import Conversa, Mensagem  # noqa: E402
 from fraus.sinais.emocao import ClassificadorEmocao  # noqa: E402
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji  # noqa: E402
@@ -49,33 +50,6 @@ from fraus.sinais.ironia import ClassificadorIronia  # noqa: E402
 from fraus.sinais.tempo import features_tempo  # noqa: E402
 from fraus.sinais.texto import ClassificadorTexto  # noqa: E402
 
-# Frases rotuladas: 0 = insatisfeito, 1 = neutro, 2 = satisfeito.
-FRASES_POR_ROTULO: dict[int, list[str]] = {
-    0: [
-        "ja e a terceira vez que eu explico a mesma coisa e ninguem resolve 😡",
-        "isso nao me ajudou em nada, quero falar com um atendente de verdade",
-        "cancela minha assinatura, perdi a paciencia com esse atendimento",
-        "voces cobraram duas vezes no meu cartao e ninguem me da retorno 😤",
-        "pessimo, fiquei quase uma hora esperando por uma resposta automatica",
-        "nao foi isso que eu perguntei, voce esta lendo o que eu escrevo?",
-    ],
-    1: [
-        "ok, obrigado 🙂",
-        "entendi, vou verificar aqui e retorno depois",
-        "ta bom entao",
-        "certo, e quanto tempo costuma demorar?",
-        "so isso mesmo, valeu",
-        "hmm, acho que da pra tentar assim",
-    ],
-    2: [
-        "perfeito, resolveu na hora, muito obrigado! 😄",
-        "atendimento excelente, voces sao rapidos demais 👏",
-        "era exatamente isso que eu precisava, gratidao ❤️",
-        "otimo, ja consegui acompanhar meu pedido, valeu mesmo",
-        "nossa, que rapidez, adorei o suporte de voces 😍",
-        "resolvido! obrigado pela atencao e paciencia",
-    ],
-}
 
 TERMOS_NEGATIVOS = (
     "pessimo", "nao resolve", "cancela", "terceira vez", "paciencia", "cobraram",

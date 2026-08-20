@@ -5,6 +5,7 @@ import pytest
 from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
                                categoria_nps, containment_rate, nota_0_10,
                                serie_diaria, validar_faixas_nps)
+from fraus.fusor import PESO_NEUTRO_NO_SCORE
 from fraus.modelos import Conversa, Mensagem
 
 BASE = datetime(2026, 8, 13, 10, 0, 0, tzinfo=timezone.utc)
@@ -191,3 +192,63 @@ def test_conversa_sem_resposta_nao_falsifica_latencia_zero():
     )
     (ponto,) = serie_diaria([(muda, None)])
     assert ponto["latencia_mediana_s"] is None
+
+
+# --- O neutro do modelo alcanca o neutro do NPS -------------------------------
+#
+# O score e uma projecao das tres probabilidades num eixo 0-100, e a categoria
+# sai dele por faixa. Com peso 0.5 a classe neutra pousava em 50 -> nota 5 ->
+# DETRATOR, e o NPS de um lote equilibrado saia negativo sem que o modelo
+# tivesse errado nada (medido: -36,67 em 90 conversas do simulador).
+#
+# Estes testes fixam a composicao inteira -- peso, score, nota e categoria --
+# porque cada elo dela ja quebrou ou e fragil, e nenhum deles avisa sozinho
+# quando quebra: o NPS continua saindo um numero plausivel.
+
+
+@pytest.mark.parametrize("classe,prob_satisfeito,prob_neutro,categoria", [
+    ("insatisfeito", 0.0, 0.0, "detrator"),
+    ("neutro", 0.0, 1.0, "neutro"),
+    ("satisfeito", 1.0, 0.0, "promotor"),
+])
+def test_cada_classe_pura_cai_na_categoria_correspondente(
+    classe, prob_satisfeito, prob_neutro, categoria
+):
+    """As tres classes do modelo -> as tres categorias do NPS, sem sobra.
+
+    E o contrato que da sentido a categoria "neutro" existir: antes de
+    PESO_NEUTRO_NO_SCORE = 0.75 ela era inalcancavel por predicao confiante --
+    so um empate entre classes chegava la, e empate nao e neutralidade.
+    """
+    score = 100.0 * (prob_satisfeito + PESO_NEUTRO_NO_SCORE * prob_neutro)
+    assert categoria_nps(score) == categoria, f"classe {classe} fora da sua categoria"
+
+
+def test_neutro_puro_pontua_75_e_o_arredondamento_bancario_leva_para_oito():
+    """A fronteira e FRAGIL de proposito explicito: 75 -> 7,5 -> 8.
+
+    `round(7.5)` da 8 porque Python arredonda para o par mais proximo, e 8 e
+    par. Nao ha margem: com peso 0.65 seria `round(6.5)` = 6 -- para BAIXO,
+    de volta a detrator, pela mesma regra. O handoff registra que as fronteiras
+    6/7 e 8/9 ja divergiram uma vez neste projeto por arredondamento, entao a
+    escolha do peso fica presa aqui em vez de virar comentario.
+    """
+    score_do_neutro_puro = 100.0 * PESO_NEUTRO_NO_SCORE
+    assert score_do_neutro_puro == 75.0
+    assert nota_0_10(score_do_neutro_puro) == 8
+    assert FAIXAS_NPS["neutro"] == (7, 8)
+
+
+def test_lote_equilibrado_entre_as_classes_puras_da_nps_zero():
+    """Um terco de cada classe se cancela: promotores - detratores = 0.
+
+    E o criterio de aceite do conserto em miniatura. `scripts/medir_faixas.py`
+    faz a mesma conta com o motor real em 90 conversas do simulador (mediu
+    +0,00); aqui ela roda sem modelo nenhum, para a regressao aparecer em meio
+    segundo de pytest e nao so em quem lembrar de rodar o script.
+    """
+    puros = [
+        100.0 * (satisfeito + PESO_NEUTRO_NO_SCORE * neutro)
+        for satisfeito, neutro in ((0.0, 0.0), (0.0, 1.0), (1.0, 0.0))
+    ]
+    assert calcular_nps(puros) == 0.0
