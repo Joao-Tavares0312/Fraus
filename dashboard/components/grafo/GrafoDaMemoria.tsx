@@ -13,6 +13,7 @@ import type { ArestaDoGrafo, Camada, Grafo, NoDoGrafo } from "@/lib/api";
 import { ListaDeNos } from "./ListaDeNos";
 import { FichaDoNo } from "./FichaDoNo";
 import { ReguaDeCamadas } from "./ReguaDeCamadas";
+import { LegendaDeCores } from "./LegendaDeCores";
 import {
   comOpacidade,
   desenharNo,
@@ -215,6 +216,17 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
 
   const contagem = `${grafo.nos.length} nós, ${grafo.arestas.length} arestas`;
 
+  /**
+   * Os tipos que de fato existem no grafo em tela -- e so eles entram na
+   * legenda. Depende do `grafo`, nao do foco: apagar uma camada nao apaga a
+   * cor dela do canvas, entao tirar o item da legenda deixaria uma cor
+   * visivel sem nome.
+   */
+  const tiposPresentes = useMemo(
+    () => new Set(grafo.nos.map((no) => no.tipo)),
+    [grafo.nos],
+  );
+
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <ReguaDeCamadas
@@ -223,6 +235,8 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
         aoFocar={setFoco}
         meta={grafo.meta}
       />
+
+      <LegendaDeCores tipos={tiposPresentes} />
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <div className="relative min-w-0">

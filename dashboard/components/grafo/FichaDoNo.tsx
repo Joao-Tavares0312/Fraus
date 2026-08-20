@@ -16,7 +16,7 @@ import { ROTULO_SEM_SINAL, formatarNumero } from "@/lib/formato";
  * `sem_sinal` escreve "sem sinal", nunca 0. Um zero aqui afirmaria que o
  * atendimento foi pessimo quando o que houve foi nao ter sido medido.
  */
-const ROTULO_TIPO: Record<TipoDeNo, string> = {
+export const ROTULO_TIPO: Record<TipoDeNo, string> = {
   conversa: "Atendimento",
   categoria: "Categoria",
   canal: "Canal",
