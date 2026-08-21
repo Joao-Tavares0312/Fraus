@@ -441,9 +441,14 @@ ordem lá é a ordem de importância.
 
 Em ordem, com o detalhe em [Pendências](#pendências):
 
-1. **Retreinar a cabeça de ironia** — o vazamento está medido em
-   `tests/test_ironia_dominio.py` e o gerador já foi corrigido; falta rodar
-   `notebooks/04_treino_ironia.ipynb` de novo.
+1. **Retreinar a cabeça de ironia — dívida assumida, não mais bloqueio.** O
+   vazamento está medido em `tests/test_ironia_dominio.py` (6 em 10 falas
+   sinceras marcadas como irônicas) e o gerador já foi corrigido; falta rodar
+   `notebooks/04_treino_ironia.ipynb` de novo. **A ironia já entra no score**
+   desde o item 2 — o aviso antigo ("não treinar o fusor sobre uma cabeça que
+   erra 6 em 10") deixou de valer como trava e passou a descrever o que
+   acontece hoje: o score carrega esse vazamento até este notebook rodar de
+   novo.
 2. ~~Subir o fusor de 16 para 30 features~~ — **resolvido em 21/08/2026**: são
    35, sete famílias, emoção e ironia entram na nota.
 3. **Fixar a empresa fictícia** do trabalho — ela define volume, canais e o que
@@ -566,7 +571,7 @@ que o projeto existe para não cometer.
 O que falta, em ordem de importância. Cada item diz o que existe hoje e o que
 o desbloqueia.
 
-### 1. Retreinar a cabeça de ironia — vazamento de corpus MEDIDO
+### 1. Retreinar a cabeça de ironia — vazamento de corpus MEDIDO, DÍVIDA ASSUMIDA
 
 **As três cabeças estão treinadas e no ar** (satisfação, emoção e ironia), e o
 `api_demo` carrega o motor real quando os pesos estão em `modelos/`. O dublê
@@ -586,6 +591,16 @@ gargalo dos emojis e da caixa) e ganhou o teste que faltava. Falta rodar
 `notebooks/04_treino_ironia.ipynb` de novo e substituir
 `modelos/bertimbau-ironia/`. Até lá a probabilidade de ironia é exibida como
 **indício com a ressalva colada**, nunca como veredito.
+
+**Isto passou de pré-requisito a dívida assumida em 21/08/2026.** Antes do
+contrato de 35 features, o aviso deste item era uma trava: "não treinar o
+fusor sobre uma cabeça de ironia que erra 6 em 10 injetaria o vazamento dela
+no score" — e por isso o item 2 ficava bloqueado por este aqui. O contrato
+subiu mesmo assim, `ironia_*` entrou no vetor, e a trava não foi respeitada:
+**a ironia pontua hoje com a cabeça que erra 6 em 10**, então o score de todo
+atendimento carrega esse vazamento até este notebook rodar de novo. Não é um
+risco resolvido nem neutro — é um risco que já está dentro do número que a
+tela mostra.
 
 ### 2. Resolvido em 21/08/2026: as features de emoção e ironia entram no fusor
 

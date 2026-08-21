@@ -224,7 +224,7 @@ cor estão fechadas e documentadas.
 
 O `README.md` tem a lista canônica e foi atualizado hoje. Resumo:
 
-### P0 — Retreinar a ironia
+### P0 — Retreinar a ironia — DÍVIDA ASSUMIDA, não mais pré-requisito
 
 A cabeça reporta acurácia `1.0` e erra **6 em 10** falas sinceras de
 atendimento, com 0,999 de confiança. Causa medida: vazamento de marcador de
@@ -232,11 +232,39 @@ discurso no gerador. **O gerador já foi corrigido**; falta rodar
 `notebooks/04_treino_ironia.ipynb` no Colab e substituir
 `modelos/bertimbau-ironia/`.
 
+**Isto deixou de ser um risco evitado e passou a ser um risco assumido.** A
+ironia entra no score desde 21/08/2026 (contrato de 35 features, `ironia_*`).
+O aviso antigo era "não treinar o fusor sobre uma cabeça de ironia que erra 6
+em 10 injetaria o vazamento dela no score" — e é exatamente isso que
+acontece hoje: **o score carrega esse vazamento** enquanto o notebook 04 não
+rodar de novo. Retreinar a ironia não é mais bloqueio de outra coisa (item
+"P0 — Retreinar o fusor" abaixo depende do contrato, não deste retreino
+específico), mas o número que sai do fusor está pontuando com uma cabeça que
+a gente já sabe que erra 6 em 10.
+
 Verificação: `uv run pytest tests/test_ironia_dominio.py`. Se o modelo melhorar,
 **aperte os limiares desse arquivo junto** — limiar frouxo que nunca falha não
 mede nada. E se `test_acuracia_perfeita_do_relatorio_vale_so_no_corpus_gerado`
 passar a falhar, a limitação foi superada e os textos de ressalva na interface
 precisam ser reescritos, não mantidos por inércia.
+
+### P0 — Retreinar o fusor no contrato de 35
+
+O contrato subiu de 16 para 35 features (sete famílias) em 21/08/2026, e o
+código está pronto: `montar_features` monta o vetor de 35, `vetorizar` exige
+as 35 chaves. **O fusor NÃO foi retreinado.** O retreino é o
+`notebooks/02_treino_fusor.ipynb`, roda no Colab, exige os três artefatos
+fine-tunados e não rodou nesta sessão — é a Task 7 do plano de
+21/08/2026, fora de escopo aqui porque depende de GPU e do Drive do João.
+
+**Enquanto isso não acontece, `modelos/fusor.joblib` — se existir na
+máquina — ainda é o fusor treinado sobre as 16 features antigas.** Ele NÃO
+serve mais: `Fusor.pontuar` chama `vetorizar`, que espera as 35 chaves de
+`NOMES_FEATURES` e levanta `KeyError` para um artefato de 16. A API não sobe
+com o artefato velho — **isto é o comportamento correto da invariante 7**
+(modelo ausente/incompatível é falha alta e explícita), não um bug a
+consertar. Rodar o notebook 02 de novo é o que destrava a API real de
+novo. Ver `docs/treinamento.md`, seção "Contrato de features".
 
 ### Feita — Autenticação, antes de hospedar
 
@@ -250,13 +278,6 @@ mais com a API direto: passa pelo proxy `app/api/fraus/[...caminho]/route.ts`,
 que anexa a chave de acesso no servidor Next e nunca a deixa chegar ao
 navegador. Ver `README.md` e `docs/hospedagem.md`. Falta só mesclar a branch em
 `main`.
-
-### Feita — Emoção, léxico, ironia e estilo no fusor
-
-Resolvida em 21/08/2026: o contrato subiu de 16 para 35 features (sete
-famílias) e o fusor foi retreinado. Ver `docs/treinamento.md`, seção
-"Contrato de features". A ironia continua com o P0 aberto abaixo — ela pontua,
-mas com a ressalva medida de `tests/test_ironia_dominio.py` até o retreino.
 
 ### P1 — Hospedagem
 
