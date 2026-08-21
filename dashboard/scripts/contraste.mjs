@@ -61,7 +61,22 @@ for (const m of css.matchAll(
   tokens.set(m[1], [Number(m[2]), Number(m[3]), Number(m[4])]);
 }
 
-const fundos = ["--background", "--card", "--muted"];
+// Os PISOS DE VIDRO entram aqui porque superficie translucida nao tem cor
+// fixa: ela depende do que esta atras. Cada piso e a cor MAIS CLARA que
+// aquela espessura pode assumir -- o fundo do vidro composto sobre a mancha
+// mais brilhante do atelie --, ou seja, o pior caso para texto claro.
+//
+// Eles sao opacos e pre-calculados de proposito: o regex acima so captura
+// `oklch(L C H)` literal, e um piso escrito com color-mix seria ignorado em
+// silencio -- o modo de falha que esta lista existe para evitar.
+const fundos = [
+  "--background",
+  "--card",
+  "--muted",
+  "--vidro-fino-piso",
+  "--vidro-piso",
+  "--vidro-denso-piso",
+];
 
 // Tokens que CARREGAM TEXTO em algum lugar da interface. So estes precisam AA.
 const textos = [

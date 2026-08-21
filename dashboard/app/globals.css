@@ -207,6 +207,44 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.78 0.085 80);
 
+  /* --- A MATERIALIDADE: vidro liquido ---------------------------------
+     Ver DESIGN.md, "A materialidade", e a spec de 2026-08-21.
+
+     Tres espessuras, e nao uma escala continua, porque o custo de
+     `backdrop-filter` e real e cada espessura resolve um problema diferente:
+       fino  -> so sinaliza flutuacao (header, tooltip)
+       medio -> superficie de trabalho (sidebar, painel, controle)
+       denso -> o conteudo atras PRECISA sumir (sheet, popover, select), ou o
+                rotulo da opcao compete com a tabela por tras dele.
+
+     Cada espessura tem um PISO: a cor mais clara que ela pode assumir, com o
+     vidro composto sobre a mancha mais brilhante do atelie. E contra o piso
+     que `scripts/contraste.mjs` verifica o texto -- superficie translucida
+     nao tem cor fixa, e o pior caso e o unico caso honesto de medir.
+
+     Os pisos sao mais ESCUROS que --muted (L 0.274), que ja esta no conjunto
+     verificado ha tempo. Se algum dia um piso passar de 0.274, isso nao e um
+     detalhe: e o sinal de que o vidro clareou a ponto de ameacar o texto, e a
+     espessura correspondente precisa de mais opacidade. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 45%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 62%, transparent);
+  --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
+
+  --vidro-fino-piso: oklch(0.25 0.006 78);
+  --vidro-piso: oklch(0.24 0.006 78);
+  --vidro-denso-piso: oklch(0.23 0.006 78);
+
+  --vidro-blur-fino: 8px;
+  --vidro-blur: 16px;
+  --vidro-blur-denso: 28px;
+
+  /* A QUINA ILUMINADA. E este par -- claro na aresta de cima, escuro na de
+     baixo -- que faz a superficie parecer vidro em vez de plastico fosco.
+     Sem ele, translucidez sozinha le como opacidade mal resolvida. */
+  --vidro-quina: oklch(1 0 0 / 12%);
+  --vidro-quina-baixa: oklch(0 0 0 / 20%);
+  --vidro-sombra: 0 1px 2px oklch(0 0 0 / 20%), 0 8px 24px oklch(0 0 0 / 28%);
+
   /* --- a pauta --- */
 
   /* A REGUA do sistema: o eixo que separa o dito (acima) do medido (abaixo).
