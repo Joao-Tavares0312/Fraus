@@ -67,6 +67,13 @@ HOMOGLIFOS = str.maketrans({
     # cada simbolo como curinga de uma letra qualquer -- nao esta funcao.
     "*": "", "#": "", "%": "", "&": "",
 })
+# Nota: `@ 4 0 1 3 $ * # % &` estao TODOS em `SIMBOLOS_CENSURA`. Isso quer
+# dizer que qualquer palavra que os contenha entra pelo ramo do curinga em
+# `features_estilo` (via `tem_censura` + `casar_censurado`) e nunca chega a
+# passar por este `translate`. Na pratica, so o "5" ainda usa o mapeamento
+# no caminho da feature de estilo. O translate continua aqui porque
+# `normalizar` e usado por outros chamadores (ou podera ser) para palavra
+# SEM simbolo de censura, e nesse caminho `5 -> s` ainda importa.
 
 # Separador de palavra que PRESERVA simbolo de censura: `\w` sozinho quebraria
 # "p*rra" em "p" e "rra" e a censura sumiria antes de ser contada.
@@ -127,10 +134,19 @@ def casar_censurado(
         for c in _sem_acento(palavra)
     )
     regex = re.compile(f"^{padrao}$")
+    melhor: tuple[float, bool] | None = None
     for termo, entrada in lexicon.items():
-        if regex.match(termo):
-            return entrada
-    return None
+        if not regex.match(termo):
+            continue
+        # Mais de um termo do lexicon pode casar o mesmo padrao com curinga
+        # (ex.: "p..a" casa "poha" e "puta"). Desempatar pela ORDEM do CSV
+        # deixaria a intensidade dependente de onde a linha foi inserida --
+        # um bug silencioso a espera de uma edicao futura no arquivo. Em vez
+        # disso, o desempate e deterministico: fica o casamento de MAIOR
+        # intensidade, que e a leitura mais conservadora do sinal.
+        if melhor is None or entrada[0] > melhor[0]:
+            melhor = entrada
+    return melhor
 
 
 # Siglas que sao caixa alta sem serem gritaria. Sem esta lista, "preciso do CPF"
@@ -220,16 +236,30 @@ def features_estilo(conversa: Conversa) -> dict[str, float]:
             gritos += 1
         if _tem_alongamento(palavra):
             alongadas += 1
-        # A censura e lida ANTES da normalizacao: `normalizar` apaga os
-        # simbolos que sao justamente a evidencia.
-        censurada = tem_censura(palavra)
-        if censurada:
-            censuradas += 1
-        entrada = (
-            casar_censurado(palavra, lexicon)
-            if censurada
-            else lexicon.get(normalizar(palavra))
-        )
+        # O casamento (quando ha simbolo de censura) e feito na palavra CRUA,
+        # com a mascara intacta -- nao na normalizada. Isso NAO inverte a
+        # ordem censura-antes-de-normalizacao: `casar_censurado` so olha a
+        # palavra original, entao a evidencia da mascara nunca e apagada
+        # antes de ser usada, so decidimos o que fazer com o resultado dele
+        # antes de chamar `normalizar`.
+        if tem_censura(palavra):
+            match = casar_censurado(palavra, lexicon)
+            if any(c.isalpha() for c in palavra):
+                # Palavra com letra + simbolo (`pedido2024`, `joao@gmail`) so
+                # conta como autocensura se o curinga resolver um palavrao
+                # DE VERDADE no lexicon -- senao a feature mediria "cliente
+                # citou um codigo", nao autocensura, e ruido correlacionado
+                # com atendimento normal e pior que feature ausente.
+                if match is not None:
+                    censuradas += 1
+                entrada = match
+            else:
+                # Token so de simbolo (`#@$%`) nao tem o que resolver: e
+                # xingamento mascarado inequivoco e conta sempre.
+                censuradas += 1
+                entrada = match
+        else:
+            entrada = lexicon.get(normalizar(palavra))
         if entrada is not None:
             intensidade, dirigido = entrada
             intensidades.append(intensidade)

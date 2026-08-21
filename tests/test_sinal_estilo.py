@@ -157,5 +157,26 @@ def test_asterisco_casa_qualquer_letra():
 
 
 def test_censura_nao_casa_termo_de_tamanho_diferente():
-    features = features_estilo(_conversa(["a*"]))
+    # "p*rr" vira o padrao "p.rr" (4 chars); sem a ancora de fim `$` isso
+    # casaria "porra" (5 chars) via `.match`, entao este caso exercita a
+    # ancoragem de verdade -- "a*" nao provava nada, so faltava termo de
+    # 2 chars no lexicon.
+    features = features_estilo(_conversa(["p*rr"]))
     assert features["estilo_palavrao_intensidade"] == 0.0
+
+
+def test_codigo_de_pedido_nao_conta_censura():
+    for texto in ["pedido2024", "protocolo1", "joao@gmail"]:
+        features = features_estilo(_conversa([texto]))
+        assert features["estilo_frac_censurado"] == 0.0, texto
+
+
+def test_palavrao_censurado_ainda_conta_censura_e_intensidade():
+    features = features_estilo(_conversa(["que p*rra e essa"]))
+    assert features["estilo_frac_censurado"] > 0.0
+    assert features["estilo_palavrao_intensidade"] > 0.0
+
+
+def test_simbolo_puro_conta_censura_sozinho():
+    features = features_estilo(_conversa(["#@$%"]))
+    assert features["estilo_frac_censurado"] > 0.0
