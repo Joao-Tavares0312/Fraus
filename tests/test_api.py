@@ -334,24 +334,24 @@ def test_atribuicao_de_conversa_inexistente_e_404(cliente):
     assert cliente.get("/conversas/nao-existe/atribuicao").status_code == 404
 
 
-def test_atribuicao_traz_as_dezesseis_importancias(cliente, tmp_path):
+def test_atribuicao_traz_as_35_importancias(cliente, tmp_path):
     caminho = tmp_path / "entrada.csv"
     caminho.write_text(CSV, encoding="utf-8")
     cliente.post("/conversas/importar", json={"caminho": str(caminho)})
 
     importancias = cliente.get("/conversas/c1/atribuicao").json()["importancias"]
-    assert len(importancias) == 16
+    assert len(importancias) == 35
     assert set(importancias) == set(NOMES_FEATURES)
 
 
-def test_atribuicao_traz_as_dezesseis_contribuicoes(cliente, tmp_path):
+def test_atribuicao_traz_as_35_contribuicoes(cliente, tmp_path):
     caminho = tmp_path / "entrada.csv"
     caminho.write_text(CSV, encoding="utf-8")
     cliente.post("/conversas/importar", json={"caminho": str(caminho)})
 
     contribuicoes = cliente.get("/conversas/c1/atribuicao").json()["contribuicoes"]
     assert contribuicoes is not None
-    assert len(contribuicoes) == 16
+    assert len(contribuicoes) == 35
     assert set(contribuicoes) == set(NOMES_FEATURES)
 
 
@@ -438,9 +438,9 @@ def test_caminho_relativo_dentro_da_raiz_e_aceito(cliente, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_modelo_traz_as_dezesseis_importancias_e_as_faixas_corretas(cliente):
+def test_modelo_traz_as_35_importancias_e_as_faixas_corretas(cliente):
     corpo = cliente.get("/modelo").json()
-    assert len(corpo["importancias"]) == 16
+    assert len(corpo["importancias"]) == 35
     assert set(corpo["importancias"]) == set(NOMES_FEATURES)
     assert corpo["classes"] == ["insatisfeito", "neutro", "satisfeito"]
     assert corpo["faixas_nps"] == {

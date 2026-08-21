@@ -16,30 +16,23 @@ from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
 
 
 class Motor:
-    """Amarra classificador de texto e fusor num unico ponto de pontuacao.
+    """Amarra os tres classificadores e o fusor num unico ponto de pontuacao.
 
-    Emocao e ironia entram como LEITURA, nunca como julgamento. O fusor foi
-    treinado com dezesseis features -- texto, emoji e tempo -- e nenhuma delas
-    vem dessas duas cabecas (confira em `fraus.fusor.NOMES_FEATURES`). Elas
-    descrevem a fala do cliente sem mover a nota um centesimo.
+    Emocao e ironia ENTRAM no score desde que o contrato subiu para 35 features
+    (21/08/2026). Antes disso elas eram leitura decorativa e esta docstring
+    dizia, corretamente, que nao moviam a nota -- nao dizem mais.
 
-    Isso PRECISA aparecer em toda resposta que carrega os dois numeros lado a
-    lado. Uma tela que mostra "ironia 0,99" encostada num score baixo convida a
-    conclusao de que a ironia derrubou a nota, e nao derrubou: o que derrubou
-    esta em `contribuicoes`, que so fala das dezesseis. Ligar emocao e ironia ao
-    score exigiria retreinar o fusor com elas dentro.
-
-    Os dois classificadores sao OPCIONAIS. Sem eles a API continua pontuando
-    igual, porque nada do score depende deles -- os campos saem `None`, que e a
-    diferenca honesta entre "o modelo nao rodou" e "o modelo rodou e deu zero".
+    A consequencia pratica: os tres modelos sao obrigatorios. Sem qualquer um
+    deles a API nao sobe, e esse e o comportamento correto (invariante 7) --
+    servir predicao com vetor incompleto e pior do que estar fora do ar.
     """
 
     def __init__(
         self,
         classificador: ClassificadorTexto,
         fusor: Fusor,
-        emocao: ClassificadorEmocao | None = None,
-        ironia: ClassificadorIronia | None = None,
+        emocao: ClassificadorEmocao,
+        ironia: ClassificadorIronia,
     ) -> None:
         self._classificador = classificador
         self._fusor = fusor
@@ -72,7 +65,9 @@ class Motor:
     def pontuar_conversa(self, conversa) -> float | None:
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
-        return self._fusor.pontuar(montar_features(conversa, self._classificador))
+        return self._fusor.pontuar(
+            montar_features(conversa, self._classificador, self._emocao, self._ironia)
+        )
 
     def atribuir_conversa(self, conversa) -> dict:
         """Quebra a nota por mensagem: quem falou o que, e com que probabilidade.
@@ -135,7 +130,7 @@ class Motor:
 
         contribuicoes = None
         if conversa.tem_sinal_cliente:
-            features = montar_features(conversa, self._classificador)
+            features = montar_features(conversa, self._classificador, self._emocao, self._ironia)
             contribuicoes = self._fusor.contribuicoes(features)
 
         return {
