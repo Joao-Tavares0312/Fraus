@@ -98,7 +98,7 @@ class MotorDuble:
                     "prob_satisfeito": p[2],
                 }
             )
-        # Pesos ficticios, so para a interface ter as 16 chaves com forma certa.
+        # Pesos ficticios, so para a interface ter as chaves de NOMES_FEATURES com forma certa.
         importancias = {
             nome: round(0.2 + 0.05 * (indice % 7), 3)
             for indice, nome in enumerate(NOMES_FEATURES)
@@ -139,7 +139,7 @@ class MotorDuble:
 
     def importancias(self) -> dict:
         # Mesmos pesos ficticios de `atribuir_conversa`, so para a ficha do
-        # modelo em `/modelo` ter as 16 chaves com forma certa.
+        # modelo em `/modelo` ter as chaves de NOMES_FEATURES com forma certa.
         return {
             nome: round(0.2 + 0.05 * (indice % 7), 3)
             for indice, nome in enumerate(NOMES_FEATURES)
@@ -305,9 +305,18 @@ def montar_motor():
         print("[api_demo] FRAUS_DEMO_DUBLE=1 -- dublê forcado, numeros SINTETICOS.")
         return MotorDuble()
 
-    if not CAMINHO_MODELO_TEXTO.is_dir() or not CAMINHO_FUSOR.is_file():
+    # Os tres modelos sao obrigatorios para o Motor real desde o contrato de 35
+    # features -- sem qualquer um deles montar_features nao fecha o vetor. Falta
+    # de UM dos tres cai no dublê inteiro, nunca num Motor real com cabeca None.
+    if (
+        not CAMINHO_MODELO_TEXTO.is_dir()
+        or not CAMINHO_FUSOR.is_file()
+        or not CAMINHO_MODELO_EMOCAO.is_dir()
+        or not CAMINHO_MODELO_IRONIA.is_dir()
+    ):
         print(
-            f"[api_demo] ATENCAO: motor dublê, sem modelo em {CAMINHO_MODELO_TEXTO}/. "
+            f"[api_demo] ATENCAO: motor dublê, falta modelo em {CAMINHO_MODELO_TEXTO}/, "
+            f"{CAMINHO_MODELO_EMOCAO}/ ou {CAMINHO_MODELO_IRONIA}/. "
             "Numeros SINTETICOS. Nao use em producao."
         )
         return MotorDuble()
@@ -315,11 +324,10 @@ def montar_motor():
     print("[api_demo] carregando os modelos reais (CPU, leva alguns segundos)...")
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)
     fusor = Fusor.carregar(CAMINHO_FUSOR)
-    emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO) if CAMINHO_MODELO_EMOCAO.is_dir() else None
-    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA) if CAMINHO_MODELO_IRONIA.is_dir() else None
-    carregadas = ["satisfacao"] + [n for n, c in (("emocao", emocao), ("ironia", ironia)) if c]
-    print(f"[api_demo] motor REAL. Cabecas carregadas: {', '.join(carregadas)}.")
-    return Motor(classificador, fusor, emocao=emocao, ironia=ironia)
+    emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO)
+    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA)
+    print("[api_demo] motor REAL. Cabecas carregadas: satisfacao, emocao, ironia.")
+    return Motor(classificador, fusor, emocao, ironia)
 
 
 def montar_app():

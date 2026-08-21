@@ -94,9 +94,23 @@
   --color-medido: var(--medido);
   --color-medido-fraco: var(--medido-fraco);
   --color-medido-texto: var(--medido-texto);
+  --color-emocao: var(--emocao);
+  --color-emocao-fraco: var(--emocao-fraco);
+  --color-emocao-texto: var(--emocao-texto);
+  --color-lexico: var(--lexico);
+  --color-lexico-fraco: var(--lexico-fraco);
+  --color-lexico-texto: var(--lexico-texto);
+  --color-ironia: var(--ironia);
+  --color-ironia-fraco: var(--ironia-fraco);
+  --color-ironia-texto: var(--ironia-texto);
+  --color-estilo: var(--estilo);
+  --color-estilo-fraco: var(--estilo-fraco);
+  --color-estilo-texto: var(--estilo-texto);
   --color-tempo: var(--tempo);
   --color-tempo-fraco: var(--tempo-fraco);
   --color-tempo-texto: var(--tempo-texto);
+  --color-outros-sinal: var(--outros-sinal);
+  --color-outros-sinal-texto: var(--outros-sinal-texto);
   --color-detrator: var(--detrator);
   --color-detrator-texto: var(--detrator-texto);
   --color-neutro: var(--neutro);
@@ -214,6 +228,26 @@
   --medido-fraco: color-mix(in oklch, var(--medido) 18%, transparent);
   --medido-texto: oklch(0.78 0.13 265);
 
+  /* --- as quatro familias que entraram no fusor em 21/08/2026 ---
+     texto, emoji e tempo ja tinham cor (dito/medido/tempo); emocao, lexico,
+     ironia e estilo sao NOVAS, sem reciclar hue de nenhuma existente -- ver
+     PesosFeatures.tsx e BarrasDeFeature.tsx, que agora tem sete familias. */
+  --emocao: oklch(0.72 0.16 10); /* vermelho: as sete emocoes + desprezo */
+  --emocao-fraco: color-mix(in oklch, var(--emocao) 18%, transparent);
+  --emocao-texto: oklch(0.8 0.14 10);
+
+  --lexico: oklch(0.75 0.14 140); /* verde: SentiLex-PT02 */
+  --lexico-fraco: color-mix(in oklch, var(--lexico) 18%, transparent);
+  --lexico-texto: oklch(0.82 0.12 140);
+
+  --ironia: oklch(0.72 0.15 230); /* azul-arroxeado: cabeca binaria */
+  --ironia-fraco: color-mix(in oklch, var(--ironia) 18%, transparent);
+  --ironia-texto: oklch(0.8 0.13 230);
+
+  --estilo: oklch(0.75 0.14 170); /* teal: forma da escrita */
+  --estilo-fraco: color-mix(in oklch, var(--estilo) 18%, transparent);
+  --estilo-texto: oklch(0.82 0.12 170);
+
   /* --- os tipos de no do GRAFO DA MEMORIA ---
 
      O canvas do grafo precisa distinguir NOVE tipos de no, e a dupla
@@ -258,6 +292,14 @@
 
   /* ausencia de dado NAO pertence a escala de satisfacao: e cinza de proposito. */
   --sem-sinal: oklch(0.705 0.015 286.067);
+
+  /* prefixo de feature que nenhuma das sete familias reconhece. Cinza de
+     proposito, igual --sem-sinal e --no-importacao: nunca reciclar a cor de
+     uma familia real, ou um prefixo novo (bug ou coluna renomeada) some
+     silenciosamente dentro do balde errado -- ver derivacoes.ts,
+     sinalDaFeature. */
+  --outros-sinal: oklch(0.705 0.015 286.067);
+  --outros-sinal-texto: oklch(0.78 0.015 286.067);
 }
 
 @layer base {

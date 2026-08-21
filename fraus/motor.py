@@ -16,30 +16,23 @@ from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
 
 
 class Motor:
-    """Amarra classificador de texto e fusor num unico ponto de pontuacao.
+    """Amarra os tres classificadores e o fusor num unico ponto de pontuacao.
 
-    Emocao e ironia entram como LEITURA, nunca como julgamento. O fusor foi
-    treinado com dezesseis features -- texto, emoji e tempo -- e nenhuma delas
-    vem dessas duas cabecas (confira em `fraus.fusor.NOMES_FEATURES`). Elas
-    descrevem a fala do cliente sem mover a nota um centesimo.
+    Emocao e ironia ENTRAM no score desde que o contrato subiu para 35 features
+    (21/08/2026). Antes disso elas eram leitura decorativa e esta docstring
+    dizia, corretamente, que nao moviam a nota -- nao dizem mais.
 
-    Isso PRECISA aparecer em toda resposta que carrega os dois numeros lado a
-    lado. Uma tela que mostra "ironia 0,99" encostada num score baixo convida a
-    conclusao de que a ironia derrubou a nota, e nao derrubou: o que derrubou
-    esta em `contribuicoes`, que so fala das dezesseis. Ligar emocao e ironia ao
-    score exigiria retreinar o fusor com elas dentro.
-
-    Os dois classificadores sao OPCIONAIS. Sem eles a API continua pontuando
-    igual, porque nada do score depende deles -- os campos saem `None`, que e a
-    diferenca honesta entre "o modelo nao rodou" e "o modelo rodou e deu zero".
+    A consequencia pratica: os tres modelos sao obrigatorios. Sem qualquer um
+    deles a API nao sobe, e esse e o comportamento correto (invariante 7) --
+    servir predicao com vetor incompleto e pior do que estar fora do ar.
     """
 
     def __init__(
         self,
         classificador: ClassificadorTexto,
         fusor: Fusor,
-        emocao: ClassificadorEmocao | None = None,
-        ironia: ClassificadorIronia | None = None,
+        emocao: ClassificadorEmocao,
+        ironia: ClassificadorIronia,
     ) -> None:
         self._classificador = classificador
         self._fusor = fusor
@@ -47,8 +40,13 @@ class Motor:
         self._ironia = ironia
 
     def _emocao_de(self, textos: list[str]) -> list[dict] | None:
-        """Sete probabilidades mais o desprezo da diade, por texto. None sem modelo."""
-        if self._emocao is None or not textos:
+        """Sete probabilidades mais o desprezo da diade, por texto.
+
+        `None` quando nao ha texto de cliente para classificar (`not textos`) --
+        o modelo em si e obrigatorio desde o contrato de 35 features, entao o
+        unico jeito de nao ter previsao aqui e nao ter fala para prever.
+        """
+        if not textos:
             return None
         previsoes = self._emocao.prever_mensagens(textos)
         return [
@@ -64,15 +62,21 @@ class Motor:
         ]
 
     def _ironia_de(self, textos: list[str]) -> list[float] | None:
-        """Probabilidade de ironia por texto. None sem modelo carregado."""
-        if self._ironia is None or not textos:
+        """Probabilidade de ironia por texto.
+
+        `None` quando nao ha texto de cliente para classificar (`not textos`) --
+        o modelo e obrigatorio desde o contrato de 35 features.
+        """
+        if not textos:
             return None
         return [float(p[IRONICO]) for p in self._ironia.prever_mensagens(textos)]
 
     def pontuar_conversa(self, conversa) -> float | None:
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
-        return self._fusor.pontuar(montar_features(conversa, self._classificador))
+        return self._fusor.pontuar(
+            montar_features(conversa, self._classificador, self._emocao, self._ironia)
+        )
 
     def atribuir_conversa(self, conversa) -> dict:
         """Quebra a nota por mensagem: quem falou o que, e com que probabilidade.
@@ -135,17 +139,22 @@ class Motor:
 
         contribuicoes = None
         if conversa.tem_sinal_cliente:
-            features = montar_features(conversa, self._classificador)
+            features = montar_features(conversa, self._classificador, self._emocao, self._ironia)
             contribuicoes = self._fusor.contribuicoes(features)
 
         return {
             "mensagens": mensagens,
             "importancias": self._fusor.importancias(),
             "contribuicoes": contribuicoes,
-            # Bandeira explicita para a interface: emocao e ironia vieram, mas
-            # NAO estao em `contribuicoes` nem no score. Sem isso a tela nao tem
-            # como saber que precisa separar o que descreve do que pontua.
-            "sinais_fora_do_score": ["emocao", "prob_ironia"],
+            # Ate 20/08/2026 esta lista trazia ["emocao", "prob_ironia"]: os dois
+            # vinham na resposta mas nao entravam no score. Desde o contrato de
+            # 35 features (21/08/2026) as duas cabecas ENTRAM em `contribuicoes`
+            # e no score, entao a lista esvaziou. O campo continua existindo --
+            # "sinais que vieram mas nao entram no score" e uma pergunta valida
+            # mesmo com o conjunto vazio hoje, e a interface ja consome o
+            # contrato de tipo (`dashboard/lib/api.ts`); sumir com o campo
+            # trocaria "nao ha nenhum" por "campo ausente", que e outra coisa.
+            "sinais_fora_do_score": [],
         }
 
     def importancias(self) -> dict:
@@ -188,8 +197,9 @@ class Motor:
         """Roda o classificador de texto sobre uma mensagem avulsa, fora do banco.
 
         Usado por `/modelo/simular` para deixar o operador testar frases sem
-        importar CSV. So mexe no classificador de texto (nao ha conversa, nao
-        ha as outras 12 features de tempo/emoji agregadas) -- o classificador
+        importar CSV. So mexe no classificador de texto (nao ha conversa, entao
+        nao ha as outras 31 features -- tempo, emoji, emocao, lexico, ironia e
+        estilo -- que so existem agregadas na conversa) -- o classificador
         e o fusor continuam sem vazar para a rota.
         """
         probabilidades = self._classificador.prever_mensagens([texto])[0]

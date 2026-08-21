@@ -58,6 +58,50 @@ EMOJIS_POR_ROTULO = {
 # tivessem, a ausencia de emoji viraria informacao por si so.
 PROB_EMOJI = 0.45
 
+# Marcas de estilo por rotulo, com o MESMO cruzamento deliberado dos emojis: a
+# ultima entrada de cada lista pertence ao registro da classe OPOSTA. Cliente
+# satisfeito tambem grita ("OBRIGADOOO"), cliente insatisfeito tambem escreve
+# em minusculas e agradece.
+#
+# Sem esse cruzamento o palavrao viraria o novo gabarito e a regressao
+# logistica leria a gritaria em vez do texto -- exatamente o que a latencia
+# disjunta fez com o primeiro fusor.
+#
+# Cada entrada e (sufixo, transforma_em_caixa_alta).
+ESTILO_POR_ROTULO = {
+    0: [
+        ("que MERDA de atendimento", True),
+        ("ja e a QUARTA vez!!!", True),
+        ("que p*rra e essa???", False),
+        ("nao aguento maisss", False),
+        ("voces sao uns incompetentes", False),
+        ("por favor, poderia verificar?", False),
+    ],
+    1: [
+        ("ok???", False),
+        ("hmmmm", False),
+        ("que droga, mas tudo bem", False),
+        ("CERTO", True),
+        ("entendi", False),
+        ("c*ralho, demorou mas resolveu", False),
+        ("o atendente foi meio incompetente, mas ok", False),
+    ],
+    2: [
+        ("OBRIGADOOO", True),
+        ("kkkk PERFEITO", True),
+        ("que caralho de suporte bom", False),
+        ("valeuuuu", False),
+        ("muito bom!!!", False),
+        ("obrigado", False),
+        ("p*rra, ate que enfim, valeu", False),
+        ("o outro atendente foi meio trouxa, mas voces resolveram", False),
+    ],
+}
+
+# Fracao das falas do cliente que recebem marca de estilo. Como no emoji: se
+# todas tivessem, a AUSENCIA de estilo viraria informacao por si so.
+PROB_ESTILO = 0.40
+
 RESPOSTAS_BOT = [
     "Entendi, vou verificar isso para voce.",
     "Um momento, por favor.",
@@ -122,6 +166,29 @@ def _com_emoji(aleatorio: random.Random, texto: str, rotulo: int) -> str:
     return f"{texto} {aleatorio.choice(EMOJIS_POR_ROTULO[rotulo])}"
 
 
+def _com_estilo(aleatorio: random.Random, texto: str, rotulo: int) -> str:
+    """Anexa uma marca de estilo do perfil do rotulo, as vezes.
+
+    Ver ESTILO_POR_ROTULO para o motivo do cruzamento entre classes.
+
+    Efeito colateral registrado no sinal de emoji: em `gerar_conversa` esta
+    funcao envolve `_com_emoji` (`_com_estilo(aleatorio, _com_emoji(...),
+    rotulo)`), entao o sufixo de estilo vem DEPOIS do emoji sempre que os dois
+    caem na mesma fala -- em ate PROB_ESTILO * PROB_EMOJI das falas o emoji
+    deixa de ser o ultimo token. Isso muda `emoji_posicao_relativa_media`, que
+    antes desta task era quase constante em ~1.0 (emoji quase sempre no fim) e
+    agora varia de verdade. E MELHORA, nao regressao -- feature quase
+    constante e o mesmo bug de peso zero que matou `emoji_score_medio` no
+    primeiro fusor -- mas e uma mudanca de distribuicao em OUTRA feature que
+    ninguem pediu, por isso o registro aqui. Nao inverta a ordem do
+    aninhamento: ela e proposital.
+    """
+    if aleatorio.random() >= PROB_ESTILO:
+        return texto
+    sufixo, gritar = aleatorio.choice(ESTILO_POR_ROTULO[rotulo])
+    return f"{texto} {sufixo.upper() if gritar else sufixo}"
+
+
 def gerar_conversa(rotulo: int, frases_cliente: list[str], semente: int) -> Conversa:
     """Gera uma conversa deterministica para a semente dada."""
     aleatorio = random.Random(semente)
@@ -139,7 +206,11 @@ def gerar_conversa(rotulo: int, frases_cliente: list[str], semente: int) -> Conv
         mensagens.append(
             Mensagem(
                 autor="cliente",
-                texto=_com_emoji(aleatorio, aleatorio.choice(frases_cliente), rotulo),
+                texto=_com_estilo(
+                    aleatorio,
+                    _com_emoji(aleatorio, aleatorio.choice(frases_cliente), rotulo),
+                    rotulo,
+                ),
                 enviada_em=relogio,
             )
         )
@@ -158,7 +229,11 @@ def gerar_conversa(rotulo: int, frases_cliente: list[str], semente: int) -> Conv
         mensagens.append(
             Mensagem(
                 autor="cliente",
-                texto=_com_emoji(aleatorio, aleatorio.choice(frases_cliente), rotulo),
+                texto=_com_estilo(
+                    aleatorio,
+                    _com_emoji(aleatorio, aleatorio.choice(frases_cliente), rotulo),
+                    rotulo,
+                ),
                 enviada_em=relogio,
             )
         )

@@ -76,7 +76,7 @@ export default async function PaginaModelo() {
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <Painel
             titulo={`Peso global das ${Object.keys(modelo.importancias).length} features`}
-            legenda="Coeficientes do fusor (regressão logística), agrupados pelos três sinais do trabalho. Este é o peso do MODELO — vale para todos os atendimentos e não explica nenhum em particular."
+            legenda="Coeficientes do fusor (regressão logística), agrupados pelas sete famílias do trabalho. Este é o peso do MODELO — vale para todos os atendimentos e não explica nenhum em particular."
             semPadding
             rodape={
               <>
