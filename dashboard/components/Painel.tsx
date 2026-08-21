@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useEspecular } from "@/hooks/useEspecular";
 
 /**
  * O SISTEMA: a unidade de composicao da interface.
@@ -39,9 +42,16 @@ export function Painel({
   children: ReactNode;
 }) {
   const temAparato = Boolean(legenda || rodape);
+  const refEspecular = useEspecular<HTMLElement>();
 
   return (
-    <section className={cn("quebra-evitar min-w-0", className)}>
+    <section
+      ref={refEspecular}
+      className={cn(
+        "vidro especular quebra-evitar min-w-0 rounded-lg p-4 sm:p-5",
+        className,
+      )}
+    >
       {/* A regua do sistema. Mais espaco acima do titulo do que abaixo. */}
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-linha pb-2">
         <h2 className="text-sm font-semibold tracking-tight text-foreground">
@@ -50,7 +60,12 @@ export function Painel({
         {acessorio ? <div className="shrink-0">{acessorio}</div> : null}
       </header>
 
-      <div className={cn("min-w-0", semPadding ? "pt-3" : "pt-4")}>
+      <div
+        className={cn(
+          "min-w-0",
+          semPadding ? "-mx-4 pt-3 sm:-mx-5" : "pt-4",
+        )}
+      >
         {children}
       </div>
 
