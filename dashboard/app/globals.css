@@ -474,6 +474,42 @@
       background-color: var(--vidro-denso-piso);
     }
   }
+
+  /* O realce especular. Posicionado por `--px`/`--py`, que o hook
+     `useEspecular` escreve no no; sem o hook, o padrao 50%/0% deixa um brilho
+     discreto no alto da superficie, que e um repouso plausivel e nao um bug.
+
+     `isolation: isolate` porque o pseudo-elemento usa `overlay`, e sem
+     contexto de empilhamento proprio ele mistura com o que estiver embaixo na
+     pagina, nao com a superficie. */
+  .especular {
+    position: relative;
+    isolation: isolate;
+    --px: 50%;
+    --py: 0%;
+  }
+  .especular::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      35rem circle at var(--px) var(--py),
+      oklch(1 0 0 / 9%),
+      transparent 60%
+    );
+    transition: opacity 200ms var(--ease-fluid);
+  }
+
+  /* Os dois desligamentos, espelhando o hook. Touch nao tem hover: o realce
+     ficaria aceso no ultimo ponto tocado, parado, que le como sujeira na tela. */
+  @media (prefers-reduced-motion: reduce), (pointer: coarse) {
+    .especular::after {
+      display: none;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
