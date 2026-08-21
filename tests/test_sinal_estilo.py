@@ -147,3 +147,15 @@ def test_palavrao_censurado_conta_nas_duas_features():
 def test_texto_limpo_zera_tudo():
     features = features_estilo(_conversa(["bom dia, poderia verificar meu pedido?"]))
     assert all(valor == 0.0 for valor in features.values())
+
+
+def test_asterisco_casa_qualquer_letra():
+    # "*" mascara a vogal do meio de "caralho", nao a de "porra" -- um chute
+    # fixo de letra acertaria um caso e erraria este calado.
+    features = features_estilo(_conversa(["que c*ralho e isso"]))
+    assert features["estilo_palavrao_intensidade"] > 0.0
+
+
+def test_censura_nao_casa_termo_de_tamanho_diferente():
+    features = features_estilo(_conversa(["a*"]))
+    assert features["estilo_palavrao_intensidade"] == 0.0

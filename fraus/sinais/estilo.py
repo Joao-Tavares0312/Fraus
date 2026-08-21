@@ -60,16 +60,30 @@ HOMOGLIFOS = str.maketrans({
     "1": "i",
     "3": "e",
     "$": "s", "5": "s",
-    # "*" mascara a vogal do meio nos palavroes mais comuns em PT-BR
-    # (p*rra -> porra, c*ralho -> caralho): mapear para "" derrubava a
-    # palavra para "prra"/"crlho", que nunca casa com o lexicon.
-    "*": "o",
-    "#": "", "%": "", "&": "",
+    # "*", "#", "%" e "&" NAO mapeiam para uma letra fixa: um asterisco pode
+    # mascarar qualquer letra (p*rra -> porra, c*ralho -> caralho), e chutar
+    # uma vogal fixa acertaria um caso e erraria o outro em silencio. Quem
+    # casa palavra censurada contra o lexicon e `casar_censurado`, tratando
+    # cada simbolo como curinga de uma letra qualquer -- nao esta funcao.
+    "*": "", "#": "", "%": "", "&": "",
 })
 
 # Separador de palavra que PRESERVA simbolo de censura: `\w` sozinho quebraria
 # "p*rra" em "p" e "rra" e a censura sumiria antes de ser contada.
 PALAVRA = re.compile(r"[\w" + re.escape("*@#$%&") + r"]+", re.UNICODE)
+
+
+def _sem_acento(palavra: str) -> str:
+    """Minusculas, sem acento -- so isso, sem mexer em simbolo de mascara.
+
+    Base compartilhada por `normalizar` (que ainda reverte homoglifo) e por
+    `casar_censurado` (que precisa dos simbolos de mascara intactos).
+    """
+    return "".join(
+        c
+        for c in unicodedata.normalize("NFD", palavra.lower())
+        if unicodedata.category(c) != "Mn"
+    )
 
 
 def normalizar(palavra: str) -> str:
@@ -78,12 +92,7 @@ def normalizar(palavra: str) -> str:
     Roda DEPOIS de `tem_censura`, nunca antes: ela apaga exatamente a marca que
     a outra funcao precisa ver.
     """
-    sem_acento = "".join(
-        c
-        for c in unicodedata.normalize("NFD", palavra.lower())
-        if unicodedata.category(c) != "Mn"
-    )
-    return sem_acento.translate(HOMOGLIFOS)
+    return _sem_acento(palavra).translate(HOMOGLIFOS)
 
 
 def tem_censura(palavra: str) -> bool:
@@ -102,6 +111,26 @@ def tem_censura(palavra: str) -> bool:
     # Numero sozinho ("2024") nao e: precisa de letra junto ou de nenhum
     # caractere alfanumerico fora dos simbolos.
     return letras > 0 or all(c in SIMBOLOS_CENSURA for c in palavra)
+
+
+def casar_censurado(
+    palavra: str, lexicon: dict[str, tuple[float, bool]]
+) -> tuple[float, bool] | None:
+    """Casa palavra mascarada contra o lexicon tratando cada simbolo como UMA letra qualquer.
+
+    `p*rra` casa `porra`, `c*ralho` casa `caralho`. Mapear o simbolo para uma
+    vogal fixa acertaria o primeiro e erraria o segundo -- e erraria calado,
+    que e pior.
+    """
+    padrao = "".join(
+        "." if c in SIMBOLOS_CENSURA else re.escape(c)
+        for c in _sem_acento(palavra)
+    )
+    regex = re.compile(f"^{padrao}$")
+    for termo, entrada in lexicon.items():
+        if regex.match(termo):
+            return entrada
+    return None
 
 
 # Siglas que sao caixa alta sem serem gritaria. Sem esta lista, "preciso do CPF"
@@ -193,9 +222,14 @@ def features_estilo(conversa: Conversa) -> dict[str, float]:
             alongadas += 1
         # A censura e lida ANTES da normalizacao: `normalizar` apaga os
         # simbolos que sao justamente a evidencia.
-        if tem_censura(palavra):
+        censurada = tem_censura(palavra)
+        if censurada:
             censuradas += 1
-        entrada = lexicon.get(normalizar(palavra))
+        entrada = (
+            casar_censurado(palavra, lexicon)
+            if censurada
+            else lexicon.get(normalizar(palavra))
+        )
         if entrada is not None:
             intensidade, dirigido = entrada
             intensidades.append(intensidade)
