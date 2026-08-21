@@ -197,7 +197,7 @@ def test_feature_liga_na_categoria_que_ela_empurra():
 
 
 def test_sem_fusor_treinado_nao_ha_aresta_de_feature():
-    """Dezesseis fios de peso zero afirmariam que o modelo aprendeu nada disso."""
+    """Um fio de peso zero por feature afirmaria que o modelo aprendeu nada disso."""
     grafo = montar_grafo([(_conversa(), 30.0)], FAIXAS_NPS, eixo=None)
     assert not _nos_por_tipo(grafo, "feature")
 

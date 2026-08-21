@@ -443,8 +443,9 @@ Em ordem, com o detalhe em [Pendências](#pendências):
 
 1. **Retreinar a cabeça de ironia** — o vazamento está medido em
    `tests/test_ironia_dominio.py` e o gerador já foi corrigido; falta rodar
-   `notebooks/04_treino_ironia.ipynb` de novo. **Bloqueia o item 2.**
-2. **Subir o fusor de 16 para 30 features**, colocando emoção e ironia na nota.
+   `notebooks/04_treino_ironia.ipynb` de novo.
+2. ~~Subir o fusor de 16 para 30 features~~ — **resolvido em 21/08/2026**: são
+   35, sete famílias, emoção e ironia entram na nota.
 3. **Fixar a empresa fictícia** do trabalho — ela define volume, canais e o que
    conta como bom tempo de resposta na apresentação.
 4. **Decisões em aberto** — tema claro para projetor de banca, pin do

@@ -88,7 +88,9 @@ export function PesosFeatures({
                 className="size-2 shrink-0 translate-y-px rounded-full"
                 style={{ background: COR_DO_SINAL[grupo.sinal] }}
               />
-              Sinal de {ROTULO_SINAL[grupo.sinal].toLowerCase()}
+              {grupo.sinal === "outros"
+                ? "Fora das sete famílias"
+                : `Sinal de ${ROTULO_SINAL[grupo.sinal].toLowerCase()}`}
               <span className="font-normal text-muted-foreground">
                 {EXPLICACAO_DO_SINAL[grupo.sinal]}
               </span>

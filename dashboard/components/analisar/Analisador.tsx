@@ -527,7 +527,7 @@ function SinaisDeLeitura({
     <details key={String(aberto)} open={aberto} className="group">
       <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 text-xs text-muted-foreground marker:text-muted-foreground">
         <span className="text-[11px] uppercase tracking-wide opacity-70">
-          fora do score
+          leitura por frase
         </span>
         {emocaoTop ? (
           <span>

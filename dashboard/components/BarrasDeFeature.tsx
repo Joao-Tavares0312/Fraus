@@ -42,7 +42,8 @@ const TEXTO_DO_SINAL: Record<string, string> = {
  * distincao que o produto nao pode errar:
  *
  *   `modo="global"`      -> `importancias`: peso do MODELO, sempre positivo,
- *                           colorido pelo tipo de sinal (texto/emoji/tempo).
+ *                           colorido pela familia de sinal (as sete: texto,
+ *                           emoji, tempo, emocao, lexico, ironia, estilo).
  *   `modo="divergente"`  -> `contribuicoes`: o que pesou NAQUELE atendimento,
  *                           COM SINAL, saindo de um eixo central — positivo
  *                           para a direita (empurrou a nota para cima),

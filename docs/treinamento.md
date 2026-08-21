@@ -80,7 +80,7 @@ Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 2. clona este repositorio e instala o pacote `fraus` — a extracao de features usa o MESMO codigo da API (`fraus.fusor.montar_features`), nunca uma reimplementacao;
 3. carrega o B2W-Reviews01 e rotula por `recommend_to_a_friend` (ver abaixo);
 4. costura as frases em conversas sinteticas com `fraus.ingest.simulador.gerar_lote`, deterministico por semente, com latencia log-normal e emoji calibrados por rotulo;
-5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **16**, e sobem quando os notebooks 03 e 04 existirem (ver [Contrato de features](#contrato-de-features));
+5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **35** (ver [Contrato de features](#contrato-de-features));
 6. treina o `Fusor` (`treinar(exemplos, rotulos)`);
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).

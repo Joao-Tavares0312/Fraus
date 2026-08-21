@@ -136,12 +136,15 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
     <section className="flex flex-col gap-3 border-t border-linha pt-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h3 className="text-sm font-medium text-foreground">{nome}</h3>
-        {/* O que separa quem DECIDE a nota de quem so descreve. Sem isto, tres
-            cartoes iguais fariam o leitor concluir que os tres pesam. */}
+        {/* `pontua` existe para o caso deixar de ser unanime de novo -- hoje as
+            tres cabecas valem `true`. Se uma cabeca nova nascer sem entrar no
+            fusor (o estado que emocao e ironia tiveram antes das 35
+            features), esta linha e o que evita tres cartoes iguais escondendo
+            a diferenca. */}
         <span className="text-xs text-muted-foreground">
           {cabeca.pontua
             ? "entra no fusor — é esta cabeça que move a nota"
-            : "fora do score — descreve a fala, não pontua"}
+            : "não entra no fusor — cabeça treinada, mas ainda não pontua"}
         </span>
         {cabeca.classes.length > 0 ? (
           <span className="num text-xs text-muted-foreground opacity-70">

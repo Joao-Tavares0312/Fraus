@@ -141,7 +141,7 @@ lista, ela para de ser lida.
 | arquivo | o que é |
 |---|---|
 | `modelos.py` | modelo canônico: `Conversa`, `Mensagem`. Timestamp **timezone-aware** obrigatório |
-| `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 16 |
+| `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 35 |
 | `resumo.py` | ficha operacional: contagem por autor, latências **separadas** bot/humano, `desfecho` |
 | `indicadores.py` | NPS, CSAT, contenção, série diária |
 | `credencial.py` | chave de fonte (`frs_`): gerar, hash, conferir em tempo constante |
@@ -251,10 +251,12 @@ que anexa a chave de acesso no servidor Next e nunca a deixa chegar ao
 navegador. Ver `README.md` e `docs/hospedagem.md`. Falta só mesclar a branch em
 `main`.
 
-### P1 — Emoção e ironia no fusor
+### Feita — Emoção, léxico, ironia e estilo no fusor
 
-Subir o contrato de 16 para 30 features e retreinar. Só depois do P0 da ironia:
-treinar sobre uma cabeça que erra 6 em 10 injetaria o vazamento dela no score.
+Resolvida em 21/08/2026: o contrato subiu de 16 para 35 features (sete
+famílias) e o fusor foi retreinado. Ver `docs/treinamento.md`, seção
+"Contrato de features". A ironia continua com o P0 aberto abaixo — ela pontua,
+mas com a ressalva medida de `tests/test_ironia_dominio.py` até o retreino.
 
 ### P1 — Hospedagem
 
