@@ -48,7 +48,18 @@ def carregar_palavroes() -> dict[str, tuple[float, bool]]:
 # Simbolos usados para mascarar palavrao. `!` e `?` NAO entram: eles sao
 # enfase, medida por `estilo_pontuacao_enfatica`, e incluir aqui faria "!!!"
 # contar como xingamento censurado.
-SIMBOLOS_CENSURA = set("*@#$%&0134")
+#
+# DIGITO NAO ENTRA, e isso nao e descuido: enquanto `0 1 3 4` moravam aqui,
+# qualquer token feito so de digito ("400", "1043", "10") satisfazia o ramo do
+# simbolo puro, era contado como xingamento mascarado inequivoco e ainda tinha
+# cada caractere curingado ate resolver um termo curto do lexicon -- "400" saia
+# como intensidade PESADA. Numero de pedido, preco, data e protocolo sao os
+# tokens mais comuns de um chat de atendimento, e o simulador nao emite digito
+# nenhum: a feature ficava limpa no treino e suja em producao, com o peso
+# aprendido sobre um significado e aplicado a outro. O lugar do digito e so
+# `HOMOGLIFOS`, onde ele serve para `p0rra` -> `porra`. Nao "conserte" a
+# assimetria acrescentando `5` aqui: isso alarga o bug para "5" e "50%".
+SIMBOLOS_CENSURA = set("*@#$%&")
 
 # Homoglifos: o que o cliente digita -> a letra que ele quis dizer. Sem isso o
 # lexicon erra TODA ocorrencia censurada, que e justamente a mais interessante.
@@ -67,13 +78,11 @@ HOMOGLIFOS = str.maketrans({
     # cada simbolo como curinga de uma letra qualquer -- nao esta funcao.
     "*": "", "#": "", "%": "", "&": "",
 })
-# Nota: `@ 4 0 1 3 $ * # % &` estao TODOS em `SIMBOLOS_CENSURA`. Isso quer
-# dizer que qualquer palavra que os contenha entra pelo ramo do curinga em
-# `features_estilo` (via `tem_censura` + `casar_censurado`) e nunca chega a
-# passar por este `translate`. Na pratica, so o "5" ainda usa o mapeamento
-# no caminho da feature de estilo. O translate continua aqui porque
-# `normalizar` e usado por outros chamadores (ou podera ser) para palavra
-# SEM simbolo de censura, e nesse caminho `5 -> s` ainda importa.
+# Nota: so `* @ # $ % &` estao em `SIMBOLOS_CENSURA`; os digitos `0 1 3 4 5`
+# vivem exclusivamente aqui. Palavra sem simbolo de mascara (`p0rra`) nao passa
+# por `tem_censura` e e resolvida por este `translate`; palavra com simbolo
+# (`c@r@lh0`) vai para `casar_censurado`, que aplica o mesmo mapeamento aos
+# caracteres que NAO sao mascara antes de curingar o resto.
 
 # Separador de palavra que PRESERVA simbolo de censura: `\w` sozinho quebraria
 # "p*rra" em "p" e "rra" e a censura sumiria antes de ser contada.
@@ -114,9 +123,10 @@ def tem_censura(palavra: str) -> bool:
     if simbolos == 0:
         return False
     letras = sum(1 for c in palavra if c.isalpha())
-    # So simbolo (`#@$%`) e censura pura; letra + simbolo (`p*rra`) tambem.
-    # Numero sozinho ("2024") nao e: precisa de letra junto ou de nenhum
-    # caractere alfanumerico fora dos simbolos.
+    # So mascara (`#@$%`) e censura pura; letra + mascara (`p*rra`) tambem.
+    # Numero sozinho ("2024", "400") nao e: nenhum digito e mascara, entao um
+    # token puramente numerico nem chega aqui (fica no `simbolos == 0`), e um
+    # token que misture digito e mascara sem letra ("4*0") cai fora do `all`.
     return letras > 0 or all(c in SIMBOLOS_CENSURA for c in palavra)
 
 
@@ -128,9 +138,13 @@ def casar_censurado(
     `p*rra` casa `porra`, `c*ralho` casa `caralho`. Mapear o simbolo para uma
     vogal fixa acertaria o primeiro e erraria o segundo -- e erraria calado,
     que e pior.
+
+    O caractere que NAO e mascara passa pelo mapeamento de homoglifo antes de
+    virar literal: sem isso `c@r@lh0` geraria o padrao `c.r.lh0`, que nao casa
+    `caralho` porque o `0` continuaria digito.
     """
     padrao = "".join(
-        "." if c in SIMBOLOS_CENSURA else re.escape(c)
+        "." if c in SIMBOLOS_CENSURA else re.escape(c.translate(HOMOGLIFOS))
         for c in _sem_acento(palavra)
     )
     regex = re.compile(f"^{padrao}$")

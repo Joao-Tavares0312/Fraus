@@ -180,3 +180,47 @@ def test_palavrao_censurado_ainda_conta_censura_e_intensidade():
 def test_simbolo_puro_conta_censura_sozinho():
     features = features_estilo(_conversa(["#@$%"]))
     assert features["estilo_frac_censurado"] > 0.0
+
+
+def test_token_so_de_digito_nunca_e_censura():
+    # Numero de pedido, preco, data e protocolo sao os tokens mais comuns de um
+    # chat de atendimento. Enquanto os digitos moravam em `SIMBOLOS_CENSURA`,
+    # "400" entrava pelo ramo do simbolo puro e o curinga o resolvia como
+    # palavrao pesado. O simulador nao emite digito nenhum: a feature ficava
+    # limpa no treino e suja em producao.
+    for token in ["2024", "400", "1043", "10", "0", "100%", "01", "13", "5", "50%"]:
+        assert tem_censura(token) is False, token
+
+
+def test_frase_educada_com_numeros_zera_o_palavrao():
+    features = features_estilo(
+        _conversa(["oi, meu pedido 1043 chegou dia 10 e custou R$ 400, obrigado"])
+    )
+    assert features["estilo_palavrao_intensidade"] == 0.0
+    assert features["estilo_frac_censurado"] == 0.0
+
+
+def test_homoglifo_de_digito_ainda_resolve_o_palavrao():
+    # Tirar digito de `SIMBOLOS_CENSURA` nao pode apagar `p0rra` -> `porra`
+    # nem `c@r@lh0` -> `caralho`, que e o caso misto de simbolo com digito.
+    assert features_estilo(_conversa(["p0rra"]))["estilo_palavrao_intensidade"] > 0.0
+    assert features_estilo(_conversa(["c@r@lh0"]))["estilo_palavrao_intensidade"] > 0.0
+
+
+def test_saquei_nao_e_palavrao():
+    # "saquei" e "entendi" -- token de cliente SATISFEITO, nao xingamento.
+    assert features_estilo(_conversa(["saquei, valeu!"]))["estilo_palavrao_intensidade"] == 0.0
+
+
+def test_interjeicao_neutra_nao_e_palavrao():
+    for texto in ["caramba, que rapido", "eita, chegou", "credo", "oxente"]:
+        features = features_estilo(_conversa([texto]))
+        assert features["estilo_palavrao_intensidade"] == 0.0, texto
+
+
+def test_lexicon_nao_tem_termo_multipalavra_nem_hifen():
+    # A tokenizacao e por palavra (`PALAVRA` nao inclui espaco nem hifen):
+    # termo com separador e linha morta que nunca casa.
+    for termo in carregar_palavroes():
+        assert " " not in termo, termo
+        assert "-" not in termo, termo
