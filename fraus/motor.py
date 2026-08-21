@@ -46,7 +46,7 @@ class Motor:
         o modelo em si e obrigatorio desde o contrato de 35 features, entao o
         unico jeito de nao ter previsao aqui e nao ter fala para prever.
         """
-        if self._emocao is None or not textos:
+        if not textos:
             return None
         previsoes = self._emocao.prever_mensagens(textos)
         return [
@@ -67,7 +67,7 @@ class Motor:
         `None` quando nao ha texto de cliente para classificar (`not textos`) --
         o modelo e obrigatorio desde o contrato de 35 features.
         """
-        if self._ironia is None or not textos:
+        if not textos:
             return None
         return [float(p[IRONICO]) for p in self._ironia.prever_mensagens(textos)]
 
@@ -197,8 +197,9 @@ class Motor:
         """Roda o classificador de texto sobre uma mensagem avulsa, fora do banco.
 
         Usado por `/modelo/simular` para deixar o operador testar frases sem
-        importar CSV. So mexe no classificador de texto (nao ha conversa, nao
-        ha as outras 12 features de tempo/emoji agregadas) -- o classificador
+        importar CSV. So mexe no classificador de texto (nao ha conversa, entao
+        nao ha as outras 31 features -- tempo, emoji, emocao, lexico, ironia e
+        estilo -- que so existem agregadas na conversa) -- o classificador
         e o fusor continuam sem vazar para a rota.
         """
         probabilidades = self._classificador.prever_mensagens([texto])[0]

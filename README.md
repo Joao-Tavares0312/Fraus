@@ -421,7 +421,7 @@ ordem lá é a ordem de importância.
 
 | Frente | Estado | O que existe |
 |---|---|---|
-| **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, sinais de texto, emoji e tempo, e o score 0–100 → nota 0–10 → categoria de NPS |
+| **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as sete famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia e estilo), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
 | **Fusor** | ✅ ⚠️ | o **contrato** é de 35 features, sete famílias (texto, emoji, tempo, emoção, léxico, ironia, estilo), e o código está pronto — `sinais_fora_do_score` continua no payload, mas vem vazio. O **artefato não**: `modelos/fusor.joblib` ainda é o fusor treinado sobre as 16 features antigas, e com ele a API **não sobe** (`vetorizar` levanta `KeyError`). Falta rodar `notebooks/02_treino_fusor.ipynb` — ver pendência 2 |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
