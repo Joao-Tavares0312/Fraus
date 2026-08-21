@@ -114,127 +114,133 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
         // Altura FIXA por breakpoint: gráfico que muda de altura ao trocar de
         // dado causa salto de layout.
         <div className="px-2 pb-2">
-          <div className="h-[300px] sm:h-[340px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={serie}
-              margin={{ top: 8, right: 18, bottom: 22, left: 6 }}
-              onClick={abrirDia}
-              className="cursor-pointer"
-            >
-              {/* As BARRAS DE COMPASSO: um filete por dia, mais fraco que a
-                  regua horizontal. Elas agrupam o tempo sem gastar legenda --
-                  quem varre a linha ve onde um dia termina e o outro comeca. */}
-              <CartesianGrid
-                stroke="var(--border)"
-                strokeWidth={1}
-                vertical={false}
-              />
-              <CartesianGrid
-                stroke="var(--compasso)"
-                strokeWidth={1}
-                horizontal={false}
-              />
-              <XAxis
-                dataKey="rotulo"
-                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                tickLine={false}
-                axisLine={{ stroke: "var(--border)" }}
-                minTickGap={16}
-                label={{
-                  value: "Dia de início do atendimento",
-                  position: "insideBottom",
-                  offset: -14,
-                  style: {
-                    fill: "var(--muted-foreground)",
-                    fontSize: 11,
-                    textAnchor: "middle",
-                  },
-                }}
-              />
-              <YAxis
-                yAxisId="nps"
-                domain={[-100, 100]}
-                ticks={[-100, -50, 0, 50, 100]}
-                width={52}
-                tick={{ fill: "var(--medido-texto)", fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                label={{
-                  value: "NPS inferido (−100 a +100)",
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: 14,
-                  style: {
-                    fill: "var(--medido-texto)",
-                    fontSize: 11,
-                    textAnchor: "middle",
-                  },
-                }}
-              />
-              <YAxis
-                yAxisId="latencia"
-                orientation="right"
-                domain={[0, topoLatencia]}
-                width={58}
-                tick={{ fill: "var(--tempo-texto)", fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(valor: number) => `${Math.round(valor)}s`}
-                label={{
-                  value: "Latência mediana (a partir de 0 s)",
-                  angle: 90,
-                  position: "insideRight",
-                  offset: 14,
-                  style: {
-                    fill: "var(--tempo-texto)",
-                    fontSize: 11,
-                    textAnchor: "middle",
-                  },
-                }}
-              />
-              <ReferenceLine
-                yAxisId="nps"
-                y={0}
-                stroke="var(--border)"
-                strokeWidth={1}
-              />
-              {/* O CURSOR DE LEITURA. E o unico lugar do sistema onde o
-                  dourado da marca toca a area de dado, e ele nao codifica valor
-                  nenhum: marca ONDE VOCE ESTA na linha do tempo, como a barra
-                  de reproducao de um editor de partitura. Nenhuma serie,
-                  categoria ou barra usa esta cor. */}
-              <Tooltip
-                cursor={{ stroke: "var(--primary)", strokeWidth: 1.5 }}
-                content={<Dica />}
-              />
-              <Line
-                yAxisId="nps"
-                type="monotone"
-                dataKey="nps"
-                name="NPS inferido"
-                stroke="var(--medido)"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
-                activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
-                connectNulls={false}
-                isAnimationActive={false}
-              />
-              <Line
-                yAxisId="latencia"
-                type="monotone"
-                dataKey="latenciaMediana"
-                name="Latência mediana"
-                stroke="var(--tempo)"
-                strokeWidth={2}
-                strokeDasharray="5 3"
-                dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
-                activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
-                connectNulls={false}
-                isAnimationActive={false}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
+          {/* O VISOR: superficie SOLIDA embutida no vidro do Painel. Blur atras
+              de uma serie de meio ponto come a serie, e a sobreposicao NPS x
+              latencia e compromisso vinculante do PRODUCT.md -- nao pode
+              perder legibilidade por causa de um efeito de superficie. */}
+          <div className="rounded-md bg-card/80 p-3">
+            <div className="h-[300px] sm:h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={serie}
+                  margin={{ top: 8, right: 18, bottom: 22, left: 6 }}
+                  onClick={abrirDia}
+                  className="cursor-pointer"
+                >
+                  {/* As BARRAS DE COMPASSO: um filete por dia, mais fraco que a
+                      regua horizontal. Elas agrupam o tempo sem gastar legenda --
+                      quem varre a linha ve onde um dia termina e o outro comeca. */}
+                  <CartesianGrid
+                    stroke="var(--border)"
+                    strokeWidth={1}
+                    vertical={false}
+                  />
+                  <CartesianGrid
+                    stroke="var(--compasso)"
+                    strokeWidth={1}
+                    horizontal={false}
+                  />
+                  <XAxis
+                    dataKey="rotulo"
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: "var(--border)" }}
+                    minTickGap={16}
+                    label={{
+                      value: "Dia de início do atendimento",
+                      position: "insideBottom",
+                      offset: -14,
+                      style: {
+                        fill: "var(--muted-foreground)",
+                        fontSize: 11,
+                        textAnchor: "middle",
+                      },
+                    }}
+                  />
+                  <YAxis
+                    yAxisId="nps"
+                    domain={[-100, 100]}
+                    ticks={[-100, -50, 0, 50, 100]}
+                    width={52}
+                    tick={{ fill: "var(--medido-texto)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    label={{
+                      value: "NPS inferido (−100 a +100)",
+                      angle: -90,
+                      position: "insideLeft",
+                      offset: 14,
+                      style: {
+                        fill: "var(--medido-texto)",
+                        fontSize: 11,
+                        textAnchor: "middle",
+                      },
+                    }}
+                  />
+                  <YAxis
+                    yAxisId="latencia"
+                    orientation="right"
+                    domain={[0, topoLatencia]}
+                    width={58}
+                    tick={{ fill: "var(--tempo-texto)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(valor: number) => `${Math.round(valor)}s`}
+                    label={{
+                      value: "Latência mediana (a partir de 0 s)",
+                      angle: 90,
+                      position: "insideRight",
+                      offset: 14,
+                      style: {
+                        fill: "var(--tempo-texto)",
+                        fontSize: 11,
+                        textAnchor: "middle",
+                      },
+                    }}
+                  />
+                  <ReferenceLine
+                    yAxisId="nps"
+                    y={0}
+                    stroke="var(--border)"
+                    strokeWidth={1}
+                  />
+                  {/* O CURSOR DE LEITURA. E o unico lugar do sistema onde o
+                      dourado da marca toca a area de dado, e ele nao codifica valor
+                      nenhum: marca ONDE VOCE ESTA na linha do tempo, como a barra
+                      de reproducao de um editor de partitura. Nenhuma serie,
+                      categoria ou barra usa esta cor. */}
+                  <Tooltip
+                    cursor={{ stroke: "var(--primary)", strokeWidth: 1.5 }}
+                    content={<Dica />}
+                  />
+                  <Line
+                    yAxisId="nps"
+                    type="monotone"
+                    dataKey="nps"
+                    name="NPS inferido"
+                    stroke="var(--medido)"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
+                    activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
+                    connectNulls={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    yAxisId="latencia"
+                    type="monotone"
+                    dataKey="latenciaMediana"
+                    name="Latência mediana"
+                    stroke="var(--tempo)"
+                    strokeWidth={2}
+                    strokeDasharray="5 3"
+                    dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
+                    activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
+                    connectNulls={false}
+                    isAnimationActive={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
           </div>
           <FaixaDePresenca serie={serie} />
         </div>
@@ -328,7 +334,7 @@ function TabelaDaSerie({ id, serie }: { id: string; serie: PontoSerie[] }) {
   return (
     <div id={id} className="max-h-[340px] overflow-auto">
       <Table className="text-xs">
-        <TableHeader className="sticky top-0 z-10 bg-muted">
+        <TableHeader className="sticky top-0 z-10">
           <TableRow>
             <TableHead>Dia</TableHead>
             <TableHead className="text-right">NPS inferido</TableHead>

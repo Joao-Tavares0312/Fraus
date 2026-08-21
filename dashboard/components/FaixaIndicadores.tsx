@@ -1,3 +1,5 @@
+"use client";
+
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
 import {
   CSAT_SAUDAVEL,
@@ -10,6 +12,7 @@ import {
   formatarNumero,
   formatarSegundos,
 } from "@/lib/formato";
+import { useEspecular } from "@/hooks/useEspecular";
 
 /**
  * Os quatro indicadores do periodo.
@@ -98,6 +101,8 @@ export function FaixaIndicadores({
       ? `${indicadores.semSinal} de ${indicadores.total} sem fala do cliente — fora do cálculo, nunca como zero.`
       : undefined;
 
+  const refEspecular = useEspecular<HTMLElement>();
+
   return (
     // A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
     // se rele a cada compasso. Ela mora a ESQUERDA da linha do tempo, entao a
@@ -105,8 +110,9 @@ export function FaixaIndicadores({
     // colunas era o template de metrica-heroi, e ele empurrava a tese da tela
     // para baixo da dobra.
     <section
+      ref={refEspecular}
       aria-label={`Indicadores de ${rotuloDoPeriodo}`}
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1"
+      className="vidro especular grid grid-cols-1 gap-3 rounded-lg p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-1"
     >
       <CartaoIndicador
         rotulo="NPS inferido"
