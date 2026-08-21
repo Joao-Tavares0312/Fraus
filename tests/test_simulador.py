@@ -1,7 +1,9 @@
 import random
+import statistics
 
-from fraus.ingest.simulador import gerar_conversa, gerar_lote
+from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_conversa, gerar_lote
 from fraus.sinais.emoji import features_emoji
+from fraus.sinais.estilo import features_estilo
 from fraus.sinais.tempo import features_tempo
 
 FRASES = {
@@ -119,3 +121,53 @@ def test_gerar_lote_amostra_sem_reposicao(monkeypatch):
     gerar_lote(FRASES, quantidade=10, semente=1)
 
     assert chamada == {"k": 10, "tamanho_populacao": 10**9}
+
+
+CHAVES_ESTILO = [
+    "estilo_frac_caixa_alta",
+    "estilo_pontuacao_enfatica",
+    "estilo_frac_alongamento",
+    "estilo_palavrao_intensidade",
+    "estilo_palavrao_dirigido",
+    "estilo_frac_censurado",
+]
+
+
+def _por_rotulo(quantidade: int = 180) -> dict[int, list[dict]]:
+    agrupado: dict[int, list[dict]] = {0: [], 1: [], 2: []}
+    for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, quantidade, semente=7):
+        agrupado[rotulo].append(features_estilo(conversa))
+    return agrupado
+
+
+def test_estilo_varia_dentro_de_cada_rotulo():
+    """Feature constante no treino nasce com peso zero -- e o bug do emoji na v1."""
+    agrupado = _por_rotulo()
+    for rotulo, linhas in agrupado.items():
+        for chave in CHAVES_ESTILO:
+            valores = [linha[chave] for linha in linhas]
+            assert statistics.pstdev(valores) > 0.0, f"{chave} constante no rotulo {rotulo}"
+
+
+def test_palavrao_aparece_nas_tres_classes():
+    """Palavrao so em detrator seria a latencia disjunta com outra roupa."""
+    agrupado = _por_rotulo()
+    for rotulo, linhas in agrupado.items():
+        com_palavrao = [l for l in linhas if l["estilo_palavrao_intensidade"] > 0]
+        assert com_palavrao, f"nenhum palavrao no rotulo {rotulo}"
+
+
+def test_gritaria_aparece_nas_tres_classes():
+    agrupado = _por_rotulo()
+    for rotulo, linhas in agrupado.items():
+        assert any(l["estilo_frac_caixa_alta"] > 0 for l in linhas), rotulo
+
+
+def test_distribuicoes_de_estilo_se_sobrepoem_entre_rotulos():
+    """As caudas se cruzam: existe satisfeito que grita e detrator que e educado."""
+    agrupado = _por_rotulo()
+    maximo_satisfeito = max(l["estilo_palavrao_intensidade"] for l in agrupado[2])
+    mediana_insatisfeito = statistics.median(
+        l["estilo_palavrao_intensidade"] for l in agrupado[0]
+    )
+    assert maximo_satisfeito >= mediana_insatisfeito
