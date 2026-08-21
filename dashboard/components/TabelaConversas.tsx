@@ -476,10 +476,13 @@ export function TabelaConversas({
         </Button>
       </div>
 
-      {/* Rolagem horizontal PROPRIA: o `body` nunca rola na horizontal. */}
-      <div className="w-full overflow-x-auto">
+      {/* Rolagem horizontal PROPRIA: o `body` nunca rola na horizontal. O corpo
+          fica em superficie SOLIDA -- e dado, e vidro atras de texto longo
+          rolando e o pior lugar para translucidez. So o cabecalho fixo (via
+          TableHeader, Task 6) e a moldura do Painel levam vidro. */}
+      <div className="w-full overflow-x-auto bg-card/80">
         <Table className="min-w-[860px] text-sm">
-          <TableHeader className="sticky top-0 z-10 bg-muted">
+          <TableHeader className="sticky top-0 z-10">
             {tabela.getHeaderGroups().map((grupo) => (
               <TableRow key={grupo.id}>
                 {grupo.headers.map((cabecalho) => {
