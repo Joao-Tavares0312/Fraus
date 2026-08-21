@@ -1047,8 +1047,8 @@ def test_modelo_publica_as_tres_cabecas_marcando_quem_pontua(cliente):
 
     assert set(por_nome) == {"satisfacao", "emocao", "ironia"}
     assert por_nome["satisfacao"]["pontua"] is True
-    assert por_nome["emocao"]["pontua"] is False
-    assert por_nome["ironia"]["pontua"] is False
+    assert por_nome["emocao"]["pontua"] is True
+    assert por_nome["ironia"]["pontua"] is True
 
 
 def test_cabeca_sem_metricas_exportadas_vem_null_e_nao_zerada(cliente, tmp_path, monkeypatch):

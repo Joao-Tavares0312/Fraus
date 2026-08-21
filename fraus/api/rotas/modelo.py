@@ -48,7 +48,8 @@ def modelo(ctx: Contexto = Depends(obter_contexto)) -> dict:
         "classes": ["insatisfeito", "neutro", "satisfeito"],
         # As tres cabecas, cada uma com a metrica que ela de fato mediu e a
         # limitacao que essa metrica esconde. `pontua` separa quem decide a
-        # nota de quem so descreve: hoje so a satisfacao entra no fusor.
+        # nota de quem so descreve -- desde o contrato de 35 features
+        # (21/08/2026) as tres entram no fusor, entao as tres marcam True.
         "cabecas": [
             {
                 "nome": "satisfacao",
@@ -60,13 +61,13 @@ def modelo(ctx: Contexto = Depends(obter_contexto)) -> dict:
                 "nome": "emocao",
                 "classes": [*NOMES_EMOCOES, "desprezo"],
                 "metricas": metricas_de(CAMINHO_METRICAS_EMOCAO),
-                "pontua": False,
+                "pontua": True,
             },
             {
                 "nome": "ironia",
                 "classes": ["nao-ironico", "ironico"],
                 "metricas": metricas_de(CAMINHO_METRICAS_IRONIA),
-                "pontua": False,
+                "pontua": True,
             },
         ],
         "faixas_nps": {

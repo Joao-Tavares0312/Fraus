@@ -40,7 +40,12 @@ class Motor:
         self._ironia = ironia
 
     def _emocao_de(self, textos: list[str]) -> list[dict] | None:
-        """Sete probabilidades mais o desprezo da diade, por texto. None sem modelo."""
+        """Sete probabilidades mais o desprezo da diade, por texto.
+
+        `None` quando nao ha texto de cliente para classificar (`not textos`) --
+        o modelo em si e obrigatorio desde o contrato de 35 features, entao o
+        unico jeito de nao ter previsao aqui e nao ter fala para prever.
+        """
         if self._emocao is None or not textos:
             return None
         previsoes = self._emocao.prever_mensagens(textos)
@@ -57,7 +62,11 @@ class Motor:
         ]
 
     def _ironia_de(self, textos: list[str]) -> list[float] | None:
-        """Probabilidade de ironia por texto. None sem modelo carregado."""
+        """Probabilidade de ironia por texto.
+
+        `None` quando nao ha texto de cliente para classificar (`not textos`) --
+        o modelo e obrigatorio desde o contrato de 35 features.
+        """
         if self._ironia is None or not textos:
             return None
         return [float(p[IRONICO]) for p in self._ironia.prever_mensagens(textos)]
@@ -137,10 +146,15 @@ class Motor:
             "mensagens": mensagens,
             "importancias": self._fusor.importancias(),
             "contribuicoes": contribuicoes,
-            # Bandeira explicita para a interface: emocao e ironia vieram, mas
-            # NAO estao em `contribuicoes` nem no score. Sem isso a tela nao tem
-            # como saber que precisa separar o que descreve do que pontua.
-            "sinais_fora_do_score": ["emocao", "prob_ironia"],
+            # Ate 20/08/2026 esta lista trazia ["emocao", "prob_ironia"]: os dois
+            # vinham na resposta mas nao entravam no score. Desde o contrato de
+            # 35 features (21/08/2026) as duas cabecas ENTRAM em `contribuicoes`
+            # e no score, entao a lista esvaziou. O campo continua existindo --
+            # "sinais que vieram mas nao entram no score" e uma pergunta valida
+            # mesmo com o conjunto vazio hoje, e a interface ja consome o
+            # contrato de tipo (`dashboard/lib/api.ts`); sumir com o campo
+            # trocaria "nao ha nenhum" por "campo ausente", que e outra coisa.
+            "sinais_fora_do_score": [],
         }
 
     def importancias(self) -> dict:
