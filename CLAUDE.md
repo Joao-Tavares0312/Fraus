@@ -23,7 +23,7 @@ CSV / Discord / WhatsApp
   │ BERTimbau         │ lexicon      │ latência
   │ POR MENSAGEM      │ + posição    │ escalação/abandono
   └─────────┬─────────┴──────────────┘
-            ↓  16 features
+            ↓  35 features
       Fusor (LogisticRegression + StandardScaler)
             ↓  score 0–100
    nota 0–10 → categoria NPS → indicadores agregados
@@ -44,8 +44,9 @@ CSV / Discord / WhatsApp
 | `fraus/sinais/emocao.py` | 7 classes de emoção; desprezo derivado da díade raiva+nojo |
 | `fraus/sinais/lexico.py` | SentiLex-PT02 + escopo de negação |
 | `fraus/sinais/ironia.py` | cabeça binária (IDPT 2021) |
+| `fraus/sinais/estilo.py` | caixa alta, pontuação, alongamento, palavrão, censura |
 | `scripts/preparar_sentilex.py` | converte o SentiLex bruto em `fraus/dados/sentilex_pt02.csv` |
-| `fraus/fusor.py` | `NOMES_FEATURES` (16) e o `Fusor` |
+| `fraus/fusor.py` | `NOMES_FEATURES` (35) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
 | `fraus/configuracao.py` | configuração vigente: padrão de fábrica no código, delta no banco |
 | `fraus/db.py` | SQLite, sem ORM |
@@ -90,11 +91,11 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
 8. **A ordem das classes é 0 insatisfeito, 1 neutro, 2 satisfeito** — no notebook,
    no sinal de texto, no fusor e nos indicadores. Inverter não gera erro: faz o
    sistema pontuar ao contrário em silêncio.
-9. **As 16 chaves de feature** produzidas pelos três sinais batem exatamente com
-   `NOMES_FEATURES`. `vetorizar` levanta `KeyError` em falta — nunca zero silencioso.
-   Os sinais de emoção, léxico e ironia existem mas **ainda não entram no vetor**:
-   o contrato só sobe quando os modelos dos notebooks 03 e 04 existirem, senão
-   `montar_features` passa a exigir classificador que ninguém treinou.
+9. **As 35 chaves de feature** produzidas pelos sete sinais batem exatamente com
+   `NOMES_FEATURES`. `vetorizar` levanta `KeyError` em falta — nunca zero
+   silencioso. Emoção, léxico, ironia e estilo entraram no vetor em 21/08/2026:
+   `montar_features` agora exige três classificadores, e a API não sobe sem os
+   três modelos treinados.
 10. **Corpus de treino não pode entregar o rótulo.** Faixa de latência disjunta
     por classe fez o primeiro fusor marcar 99,3% lendo só o relógio, com o
     BERTimbau apagado. Distribuição por rótulo se sobrepõe; feature constante no

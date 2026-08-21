@@ -1039,8 +1039,8 @@ def test_modelo_publica_as_tres_cabecas_marcando_quem_pontua(cliente):
     """`pontua` e o que separa quem decide a nota de quem so descreve.
 
     Sem esse campo a tela mostraria tres cartoes iguais e o leitor concluiria
-    que as tres cabecas pesam na nota -- e o fusor tem dezesseis features, sem
-    nenhuma de emocao ou ironia.
+    que as tres cabecas pesam igual na nota -- e desde as 35 features todas
+    pontuam de fato, satisfacao, emocao e ironia.
     """
     corpo = cliente.get("/modelo").json()
     por_nome = {cabeca["nome"]: cabeca for cabeca in corpo["cabecas"]}
@@ -1101,7 +1101,7 @@ def test_upload_de_csv_analisa_sem_gravar(cliente_com_sinal):
 def test_transcricao_sem_horario_nao_recebe_nota(cliente_com_sinal):
     """Zerar a latencia faria o fusor ler como resposta instantanea.
 
-    Latencia e uma das dezesseis features, com peso aprendido: sem horario o
+    Latencia e uma das 35 features, com peso aprendido: sem horario o
     modelo veria toda resposta como imediata e a nota sairia melhor do que a
     verdade, sem erro nenhum aparecer. A ausencia da nota E a resposta honesta.
     """
