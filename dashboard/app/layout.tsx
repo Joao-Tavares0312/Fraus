@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import { Atelier } from "@/components/shell/Atelier";
 import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className="dark">
       <body className="min-h-svh antialiased">
+        <Atelier />
         {/*
           Atalho para quem navega por teclado: sem ele, chegar ao conteudo
           exige percorrer a navegacao lateral inteira a cada troca de pagina.
