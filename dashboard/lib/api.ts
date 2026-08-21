@@ -182,11 +182,12 @@ export type MensagemAtribuida = {
   prob_satisfeito: number | null;
 
   /**
-   * As duas cabecas de LEITURA. Elas descrevem a fala e NAO entram no score:
-   * o fusor tem dezesseis features e nenhuma vem daqui. A resposta marca isso
-   * em `sinais_fora_do_score`, e a interface tem que manter os dois numeros
-   * visualmente separados da nota -- "ironia 0,99" encostado num score baixo
-   * convida a conclusao de que uma causou a outra.
+   * As duas cabecas de LEITURA POR FRASE. A media delas por conversa entra
+   * nas 35 features do fusor desde 21/08/2026 (`emocao_*`, `ironia_*`) -- o
+   * numero aqui e desta frase, nao a media que pesa na nota. `sinais_fora_do_score`
+   * continua existindo na resposta mas vem vazio, e a interface ainda mantem
+   * os dois numeros visualmente separados da nota -- "ironia 0,99" encostado
+   * num score baixo convida a conclusao de que esta frase causou a nota.
    *
    * `null` quando o servidor subiu sem a cabeca correspondente.
    *
@@ -207,7 +208,7 @@ export type Atribuicao = {
   nota: number | null;
   categoria: Categoria | null;
   mensagens: MensagemAtribuida[];
-  /** Peso absoluto GLOBAL de cada uma das 16 features do fusor -- aprendido
+  /** Peso absoluto GLOBAL de cada uma das 35 features do fusor -- aprendido
    * no treino, nao especifico desta conversa. */
   importancias: Record<string, number>;
   /** Quanto cada feature pesou NESTA conversa: positivo empurrou para
@@ -237,13 +238,14 @@ export type CabecaDeModelo = {
   classes: string[];
   /** `null` antes do notebook exportar. Nunca zero. */
   metricas: MetricasTreino | null;
-  /** Se ela entra no fusor. Hoje so a satisfacao. */
+  /** Se ela entra no fusor. O campo existe para o caso mudar de novo; hoje as
+   * tres cabecas valem `true`. */
   pontua: boolean;
 };
 
 /** Resposta de `GET /modelo` -- a ficha do modelo. */
 export type FichaModelo = {
-  /** Peso GLOBAL de cada uma das 16 features. Nao e especifico de conversa. */
+  /** Peso GLOBAL de cada uma das 35 features. Nao e especifico de conversa. */
   importancias: Record<string, number>;
   /** `null` enquanto o notebook 01 nao exportou metricas.json. NUNCA zero. */
   metricas: MetricasTreino | null;
@@ -251,9 +253,9 @@ export type FichaModelo = {
   /**
    * As tres cabecas fine-tunadas, cada uma com a metrica que ELA mediu.
    *
-   * `pontua` separa quem decide a nota de quem so descreve: hoje so a
-   * satisfacao entra no fusor. Sem esse campo a tela mostraria tres cartoes
-   * iguais e o leitor concluiria que os tres pesam na nota.
+   * `pontua` diz se a cabeca entra no fusor -- hoje as tres valem `true`. O
+   * campo existe para o caso deixar de ser unanime de novo, e nao porque
+   * separa alguma hoje.
    */
   cabecas: CabecaDeModelo[];
   /** Faixas de NPS lidas do SERVIDOR (fonte unica), nao digitadas no front. */
@@ -815,7 +817,7 @@ export type ResultadoAnalise = {
   /**
    * Falso quando o arquivo nao traz horario (tipico de .docx e .pdf).
    *
-   * Sem horario nao ha latencia, e latencia e uma das dezesseis features do
+   * Sem horario nao ha latencia, e latencia e uma das 35 features do
    * fusor -- entao a conversa NAO recebe nota. Nao e falha: e a resposta
    * honesta. Zerar o tempo faria o modelo ler como se toda resposta tivesse
    * sido instantanea e a nota sairia melhor que a verdade.

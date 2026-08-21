@@ -7,18 +7,34 @@ import { cn } from "@/lib/utils";
  *
  * A metafora do produto encaixa direto: o sinal de texto e de emoji sao o que
  * foi DITO (ambar, dois pesos da mesma familia), e o de tempo e o `--tempo`.
- * Nenhum deles e lime -- a marca nao entra em dado.
+ * Emocao, lexico, ironia e estilo entraram no vetor em 21/08/2026 e ganharam
+ * cor propria (nenhuma reciclada) para nao se misturarem visualmente com as
+ * tres famílias antigas. "outros" e o balde explicito de prefixo
+ * desconhecido -- nunca deve aparecer com fusor treinado sobre
+ * `NOMES_FEATURES`, mas existe para nao herdar a cor de uma familia real se o
+ * contrato do backend mudar de novo. Nenhum deles e lime -- a marca nao entra
+ * em dado.
  */
 const COR_DO_SINAL: Record<string, string> = {
   texto: "var(--dito)",
   emoji: "var(--medido)",
   tempo: "var(--tempo)",
+  emocao: "var(--emocao)",
+  lexico: "var(--lexico)",
+  ironia: "var(--ironia)",
+  estilo: "var(--estilo)",
+  outros: "var(--outros-sinal)",
 };
 
 const TEXTO_DO_SINAL: Record<string, string> = {
   texto: "text-dito-texto",
   emoji: "text-medido-texto",
   tempo: "text-tempo-texto",
+  emocao: "text-emocao-texto",
+  lexico: "text-lexico-texto",
+  ironia: "text-ironia-texto",
+  estilo: "text-estilo-texto",
+  outros: "text-outros-sinal-texto",
 };
 
 /**

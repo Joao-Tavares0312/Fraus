@@ -327,7 +327,7 @@ function Analise({
     <div className="flex flex-col gap-4">
       <Painel
         titulo={`Resultado — ${analise.conversa.id}`}
-        legenda="A nota sai do fusor, que aprendeu com dezesseis medidas de texto, emoji e tempo. Emoção e ironia aparecem na transcrição abaixo mas NÃO entram nessa conta: elas descrevem a fala, não pontuam o atendimento."
+        legenda="A nota sai do fusor, que aprendeu com 35 medidas das sete famílias — texto, emoji, tempo, emoção, léxico, ironia e estilo. Emoção e ironia aparecem na transcrição abaixo e também entram nessa conta, desde 21/08/2026."
       >
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-4">
           <div className="flex min-w-0 flex-col gap-1">

@@ -7,17 +7,27 @@ const COR_DO_SINAL: Record<string, string> = {
   texto: "var(--dito)",
   emoji: "var(--medido)",
   tempo: "var(--tempo)",
+  emocao: "var(--emocao)",
+  lexico: "var(--lexico)",
+  ironia: "var(--ironia)",
+  estilo: "var(--estilo)",
+  outros: "var(--outros-sinal)",
 };
 
 const EXPLICACAO_DO_SINAL: Record<string, string> = {
   texto: "BERTimbau, probabilidade por mensagem do cliente",
   emoji: "lexicon do Emoji Sentiment Ranking + posição relativa no texto",
   tempo: "latência, escalação e abandono, derivados dos timestamps",
+  emocao: "sete classes + desprezo derivado da díade raiva + nojo",
+  lexico: "SentiLex-PT02, com escopo de negação",
+  ironia: "cabeça binária, indício e não veredito",
+  estilo: "caixa alta, pontuação, alongamento, palavrão e censura",
+  outros: "prefixo de feature não reconhecido por nenhuma das sete famílias",
 };
 
 /**
- * As 16 features do fusor com o peso GLOBAL de cada uma, agrupadas pelos tres
- * sinais do trabalho.
+ * As 35 features do fusor com o peso GLOBAL de cada uma, agrupadas pelas sete
+ * famílias do trabalho.
  *
  * Este e o peso do MODELO: ele vale para todos os atendimentos e nao explica
  * nenhum em particular. Quem quer saber por que UM atendimento tirou aquela
@@ -41,7 +51,7 @@ export function PesosFeatures({
       <EstadoVazio
         className="m-5"
         titulo="O modelo não devolveu pesos"
-        explicacao="GET /modelo respondeu com o mapa de importâncias vazio. Sem fusor treinado não há coeficiente a exibir, e desenhar 16 barras iguais seria inventar um modelo."
+        explicacao="GET /modelo respondeu com o mapa de importâncias vazio. Sem fusor treinado não há coeficiente a exibir, e desenhar 35 barras iguais seria inventar um modelo."
         etapa="notebook 02 (treino do fusor)"
       />
     );

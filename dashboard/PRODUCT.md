@@ -29,10 +29,12 @@ precisão o que nele é medido e o que é estimado.
 
 ## Positioning
 
-Fusão de **três sinais independentes** calculados por mensagem — texto
-(BERTimbau fine-tunado), emoji (Emoji Sentiment Ranking, com a posição relativa
-na mensagem como feature) e tempo (latência como feature aprendida, não
-penalidade linear) — sem LLM em runtime.
+Fusão de **35 features, sete famílias de sinal** — texto (BERTimbau
+fine-tunado), emoji (Emoji Sentiment Ranking, com a posição relativa na
+mensagem como feature), tempo (latência como feature aprendida, não
+penalidade linear), emoção (sete classes + desprezo derivado), léxico
+(SentiLex-PT02, com negação), ironia (cabeça binária) e estilo (caixa alta,
+pontuação, alongamento, palavrão e censura) — sem LLM em runtime.
 
 O que um produto vizinho não copia honestamente: a **atribuição**. Como o score
 de texto é por mensagem, o produto aponta *quais falas* puxaram a nota, em vez

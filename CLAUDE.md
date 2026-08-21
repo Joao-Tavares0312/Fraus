@@ -18,14 +18,14 @@ CSV / Discord / WhatsApp
         ↓  adapter de ingestão (fraus/ingest/)
    Conversa  ← modelo canônico único (fraus/modelos.py)
         ↓
-  ┌──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
-  │ texto    │ emoji    │ tempo    │ emoção   │ léxico   │ ironia   │ estilo   │
-  │ BERTimbau│ lexicon  │ latência │ 7 clas-  │ SentiLex │ cabeça   │ caixa    │
-  │ por      │ + posi-  │ escala-  │ ses +    │ -PT02 +  │ binária  │ alta,    │
-  │ mensagem │ ção      │ ção      │ desprezo │ negação  │          │ palavrão │
-  └────┬─────┴────┬─────┴────┬─────┴────┬─────┴────┬─────┴────┬─────┴────┬─────┘
-       └──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
-            ↓  35 features
+ ┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+ │texto    │emoji    │tempo    │emoção   │léxico   │ironia   │estilo   │
+ │BERTimbau│lexicon  │latência │7 clas-  │SentiLex │cabeça   │caixa    │
+ │por      │+ posi-  │escala-  │ses +    │-PT02 +  │binária  │         │
+ │mensagem │ção      │ção      │desprezo │negação  │         │palavrão │
+ └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┘
+   └────────────────────────────────────────────────────────────────┘
+                             ↓  35 features
       Fusor (LogisticRegression + StandardScaler)
             ↓  score 0–100
    nota 0–10 → categoria NPS → indicadores agregados

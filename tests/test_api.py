@@ -1036,11 +1036,12 @@ def test_analisar_arquivo_grande_demais_e_recusado_antes_de_rodar_o_modelo(
 
 
 def test_modelo_publica_as_tres_cabecas_marcando_quem_pontua(cliente):
-    """`pontua` e o que separa quem decide a nota de quem so descreve.
+    """`pontua` diz se a cabeca entra no fusor. Hoje as tres valem `True`.
 
-    Sem esse campo a tela mostraria tres cartoes iguais e o leitor concluiria
-    que as tres cabecas pesam igual na nota -- e desde as 35 features todas
-    pontuam de fato, satisfacao, emocao e ironia.
+    O campo continua existindo mesmo que hoje seja unanime: se uma cabeca
+    nova nascer sem entrar no vetor (o mesmo estado que emocao e ironia
+    tiveram antes das 35 features), a tela precisa distinguir na hora, nao
+    descobrir depois.
     """
     corpo = cliente.get("/modelo").json()
     por_nome = {cabeca["nome"]: cabeca for cabeca in corpo["cabecas"]}
