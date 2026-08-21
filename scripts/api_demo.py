@@ -41,7 +41,8 @@ from fraus.api.main import (CAMINHO_FUSOR, CAMINHO_MODELO_EMOCAO,  # noqa: E402
 from fraus.db import Banco  # noqa: E402
 from fraus.fusor import NOMES_FEATURES, Fusor  # noqa: E402
 from fraus.indicadores import categoria_nps  # noqa: E402
-from fraus.ingest.simulador import INICIO, gerar_lote  # noqa: E402
+from fraus.ingest.simulador import (FRASES_POR_ROTULO, INICIO,  # noqa: E402
+                                    gerar_lote)
 from fraus.modelos import Conversa, Mensagem  # noqa: E402
 from fraus.sinais.emocao import ClassificadorEmocao  # noqa: E402
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji  # noqa: E402
@@ -49,33 +50,6 @@ from fraus.sinais.ironia import ClassificadorIronia  # noqa: E402
 from fraus.sinais.tempo import features_tempo  # noqa: E402
 from fraus.sinais.texto import ClassificadorTexto  # noqa: E402
 
-# Frases rotuladas: 0 = insatisfeito, 1 = neutro, 2 = satisfeito.
-FRASES_POR_ROTULO: dict[int, list[str]] = {
-    0: [
-        "ja e a terceira vez que eu explico a mesma coisa e ninguem resolve 😡",
-        "isso nao me ajudou em nada, quero falar com um atendente de verdade",
-        "cancela minha assinatura, perdi a paciencia com esse atendimento",
-        "voces cobraram duas vezes no meu cartao e ninguem me da retorno 😤",
-        "pessimo, fiquei quase uma hora esperando por uma resposta automatica",
-        "nao foi isso que eu perguntei, voce esta lendo o que eu escrevo?",
-    ],
-    1: [
-        "ok, obrigado 🙂",
-        "entendi, vou verificar aqui e retorno depois",
-        "ta bom entao",
-        "certo, e quanto tempo costuma demorar?",
-        "so isso mesmo, valeu",
-        "hmm, acho que da pra tentar assim",
-    ],
-    2: [
-        "perfeito, resolveu na hora, muito obrigado! 😄",
-        "atendimento excelente, voces sao rapidos demais 👏",
-        "era exatamente isso que eu precisava, gratidao ❤️",
-        "otimo, ja consegui acompanhar meu pedido, valeu mesmo",
-        "nossa, que rapidez, adorei o suporte de voces 😍",
-        "resolvido! obrigado pela atencao e paciencia",
-    ],
-}
 
 TERMOS_NEGATIVOS = (
     "pessimo", "nao resolve", "cancela", "terceira vez", "paciencia", "cobraram",
@@ -124,7 +98,7 @@ class MotorDuble:
                     "prob_satisfeito": p[2],
                 }
             )
-        # Pesos ficticios, so para a interface ter as 16 chaves com forma certa.
+        # Pesos ficticios, so para a interface ter as chaves de NOMES_FEATURES com forma certa.
         importancias = {
             nome: round(0.2 + 0.05 * (indice % 7), 3)
             for indice, nome in enumerate(NOMES_FEATURES)
@@ -165,7 +139,7 @@ class MotorDuble:
 
     def importancias(self) -> dict:
         # Mesmos pesos ficticios de `atribuir_conversa`, so para a ficha do
-        # modelo em `/modelo` ter as 16 chaves com forma certa.
+        # modelo em `/modelo` ter as chaves de NOMES_FEATURES com forma certa.
         return {
             nome: round(0.2 + 0.05 * (indice % 7), 3)
             for indice, nome in enumerate(NOMES_FEATURES)
@@ -331,9 +305,18 @@ def montar_motor():
         print("[api_demo] FRAUS_DEMO_DUBLE=1 -- dublê forcado, numeros SINTETICOS.")
         return MotorDuble()
 
-    if not CAMINHO_MODELO_TEXTO.is_dir() or not CAMINHO_FUSOR.is_file():
+    # Os tres modelos sao obrigatorios para o Motor real desde o contrato de 35
+    # features -- sem qualquer um deles montar_features nao fecha o vetor. Falta
+    # de UM dos tres cai no dublê inteiro, nunca num Motor real com cabeca None.
+    if (
+        not CAMINHO_MODELO_TEXTO.is_dir()
+        or not CAMINHO_FUSOR.is_file()
+        or not CAMINHO_MODELO_EMOCAO.is_dir()
+        or not CAMINHO_MODELO_IRONIA.is_dir()
+    ):
         print(
-            f"[api_demo] ATENCAO: motor dublê, sem modelo em {CAMINHO_MODELO_TEXTO}/. "
+            f"[api_demo] ATENCAO: motor dublê, falta modelo em {CAMINHO_MODELO_TEXTO}/, "
+            f"{CAMINHO_MODELO_EMOCAO}/ ou {CAMINHO_MODELO_IRONIA}/. "
             "Numeros SINTETICOS. Nao use em producao."
         )
         return MotorDuble()
@@ -341,11 +324,10 @@ def montar_motor():
     print("[api_demo] carregando os modelos reais (CPU, leva alguns segundos)...")
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)
     fusor = Fusor.carregar(CAMINHO_FUSOR)
-    emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO) if CAMINHO_MODELO_EMOCAO.is_dir() else None
-    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA) if CAMINHO_MODELO_IRONIA.is_dir() else None
-    carregadas = ["satisfacao"] + [n for n, c in (("emocao", emocao), ("ironia", ironia)) if c]
-    print(f"[api_demo] motor REAL. Cabecas carregadas: {', '.join(carregadas)}.")
-    return Motor(classificador, fusor, emocao=emocao, ironia=ironia)
+    emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO)
+    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA)
+    print("[api_demo] motor REAL. Cabecas carregadas: satisfacao, emocao, ironia.")
+    return Motor(classificador, fusor, emocao, ironia)
 
 
 def montar_app():

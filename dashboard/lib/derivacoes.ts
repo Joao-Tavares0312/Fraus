@@ -588,26 +588,71 @@ export function falasDecisivas(
 // Importancia das features do fusor
 // ---------------------------------------------------------------------------
 
-export type SinalDaFeature = "texto" | "emoji" | "tempo";
+export type SinalDaFeature =
+  | "texto"
+  | "emoji"
+  | "tempo"
+  | "emocao"
+  | "lexico"
+  | "ironia"
+  | "estilo"
+  | "outros";
 
+// Tempo NAO tem prefixo unico -- `latencia_`, `duracao_`, `qtd_`, `escalou` e
+// `abandonou` sao os cinco prefixos da familia (ver
+// tests/test_fusor.py::test_contrato_cobre_todos_os_prefixos_esperados no
+// backend). As outras seis familias tem prefixo unico, listadas primeiro.
 const SINAL_POR_PREFIXO: [string, SinalDaFeature][] = [
   ["texto_", "texto"],
   ["emoji_", "emoji"],
+  ["emocao_", "emocao"],
+  ["lexico_", "lexico"],
+  ["ironia_", "ironia"],
+  ["estilo_", "estilo"],
+  ["latencia_", "tempo"],
+  ["duracao_", "tempo"],
+  ["qtd_", "tempo"],
+  ["escalou", "tempo"],
+  ["abandonou", "tempo"],
 ];
 
-/** A qual dos tres sinais a feature pertence -- tempo e o caso restante. */
+/**
+ * A qual das sete familias a feature pertence.
+ *
+ * Prefixo desconhecido vira "outros", NUNCA cai por fallback numa familia
+ * real -- foi exatamente esse bug (tudo que nao fosse texto/emoji caia em
+ * "tempo") que fez as 19 features novas de emocao/lexico/ironia/estilo se
+ * misturarem no balde de tempo no grafico de pesos. Ver `ROTULO_SINAL.outros`.
+ */
 export function sinalDaFeature(nome: string): SinalDaFeature {
   for (const [prefixo, sinal] of SINAL_POR_PREFIXO) {
     if (nome.startsWith(prefixo)) return sinal;
   }
-  return "tempo";
+  return "outros";
 }
 
 export const ROTULO_SINAL: Record<SinalDaFeature, string> = {
   texto: "Texto",
   emoji: "Emoji",
   tempo: "Tempo",
+  emocao: "Emoção",
+  lexico: "Léxico",
+  ironia: "Ironia",
+  estilo: "Estilo",
+  outros: "Outros",
 };
+
+/** Ordem de exibicao das familias -- mesma ordem de `NOMES_FEATURES` no backend. */
+export const ORDEM_SINAIS: SinalDaFeature[] = [
+  "texto",
+  "emoji",
+  "tempo",
+  "emocao",
+  "lexico",
+  "ironia",
+  "estilo",
+  "outros",
+];
 
 export type PesoDoSinal = {
   sinal: SinalDaFeature;
@@ -616,10 +661,14 @@ export type PesoDoSinal = {
 };
 
 /**
- * Agrega as 16 importancias do fusor nos TRES sinais do trabalho.
+ * Agrega as 35 importancias do fusor nas SETE familias do trabalho.
  *
  * O peso e o coeficiente absoluto medio da regressao logistica -- e por isso
  * que o fusor e linear: a pergunta "qual sinal pesou mais" tem resposta.
+ *
+ * "outros" so aparece se `sinalDaFeature` devolver um prefixo desconhecido --
+ * nao esperado num fusor treinado sobre `NOMES_FEATURES`, mas visivel em vez
+ * de mudo se o contrato do backend mudar de novo sem o front acompanhar.
  */
 export function pesoPorSinal(
   importancias: Record<string, number>,
@@ -634,7 +683,9 @@ export function pesoPorSinal(
     total += absoluto;
   }
 
-  return (["texto", "emoji", "tempo"] as SinalDaFeature[]).map((sinal) => ({
+  return ORDEM_SINAIS.filter(
+    (sinal) => sinal !== "outros" || (soma.get(sinal) ?? 0) > 0,
+  ).map((sinal) => ({
     sinal,
     fracao: total === 0 ? 0 : (soma.get(sinal) ?? 0) / total,
   }));
@@ -773,6 +824,25 @@ export const ROTULO_FEATURE: Record<string, string> = {
   qtd_turnos_cliente: "Turnos do cliente",
   escalou: "Escalou para humano",
   abandonou: "Abandonou",
+  emocao_alegria_media: "Alegria média",
+  emocao_tristeza_media: "Tristeza média",
+  emocao_raiva_media: "Raiva média",
+  emocao_medo_media: "Medo médio",
+  emocao_nojo_media: "Nojo médio",
+  emocao_surpresa_media: "Surpresa média",
+  emocao_neutro_media: "Neutro médio",
+  emocao_desprezo_derivado: "Desprezo (derivado de raiva + nojo)",
+  lexico_polaridade_media: "Polaridade média (SentiLex)",
+  lexico_cobertura: "Cobertura do léxico",
+  lexico_frac_negados: "Fração de termos negados",
+  ironia_prob_media: "P(ironia) média",
+  ironia_prob_max: "P(ironia) máxima",
+  estilo_frac_caixa_alta: "Fração em caixa alta",
+  estilo_pontuacao_enfatica: "Pontuação enfática",
+  estilo_frac_alongamento: "Fração com alongamento",
+  estilo_palavrao_intensidade: "Intensidade de palavrão",
+  estilo_palavrao_dirigido: "Palavrão dirigido a pessoa",
+  estilo_frac_censurado: "Fração censurada",
 };
 
 export function rotuloDaFeature(nome: string): string {
@@ -804,12 +874,12 @@ export function ordenarPorMagnitude(
     .sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
 }
 
-/** As mesmas features, agrupadas pelos tres sinais do trabalho. */
+/** As mesmas features, agrupadas pelas sete familias do trabalho. */
 export function agruparPorSinal(
   pesos: Record<string, number>,
 ): { sinal: SinalDaFeature; features: PesoDaFeature[] }[] {
   const ordenadas = ordenarPorMagnitude(pesos);
-  return (["texto", "emoji", "tempo"] as SinalDaFeature[]).map((sinal) => ({
+  return ORDEM_SINAIS.map((sinal) => ({
     sinal,
     features: ordenadas.filter((feature) => feature.sinal === sinal),
   }));

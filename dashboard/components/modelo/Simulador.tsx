@@ -244,15 +244,16 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
 }
 
 /**
- * Emocao e ironia da frase -- as duas cabecas que NAO entram na nota.
+ * Emocao e ironia da frase -- as duas cabecas de LEITURA POR FRASE.
  *
  * O painel em si mora em `CabecasDeLeitura`, compartilhado com a analise de
  * arquivo: as duas telas leem os mesmos campos da mesma API, e manter duas
  * copias faria uma delas envelhecer sem a ressalva que a outra ja tem.
  *
- * Elas entram DEPOIS de uma linha e nunca dentro da barra de classes: o fusor
- * tem dezesseis features e nenhuma vem daqui. Encostar "ironia 99%" na barra
- * de satisfacao convidaria a ler uma como causa da outra.
+ * Elas entram DEPOIS de uma linha e nunca dentro da barra de classes: a media
+ * delas por conversa e que entra nas 35 features do fusor (desde
+ * 21/08/2026), nao o numero desta frase isolada. Encostar "ironia 99%" na
+ * barra de satisfacao convidaria a ler esta frase como causa direta da nota.
  *
  * E aqui que a frase ironica se denuncia ao vivo: "que atendimento
  * maravilhoso, so esperei 3 horas" sai com satisfeito ALTO e ironia ALTA ao

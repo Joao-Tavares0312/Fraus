@@ -1,7 +1,7 @@
 import { formatarNumero } from "@/lib/formato";
 
 /**
- * Emocao e ironia de uma fala -- as duas cabecas que NAO entram na nota.
+ * Emocao e ironia de uma fala -- as duas cabecas de LEITURA POR FRASE.
  *
  * COMPARTILHADO entre o simulador ao vivo e a analise de arquivo de proposito.
  * As duas telas leem os MESMOS campos da mesma API, e cada uma tinha a sua
@@ -13,9 +13,12 @@ import { formatarNumero } from "@/lib/formato";
  * que envelhece e sempre a que ninguem olha, ate alguem citar dela um numero
  * sem a ressalva que a outra tela ja tinha.
  *
- * A separacao visual e a informacao principal: o fusor tem dezesseis features
- * e nenhuma vem daqui. Encostar "ironia 99%" na barra de satisfacao convidaria
- * a ler uma como causa da outra.
+ * Desde 21/08/2026 emocao e ironia TAMBEM pontuam: `emocao_*` e `ironia_*`
+ * entraram nas 35 features do fusor (agregadas por conversa, nao por frase).
+ * O numero exibido AQUI e a leitura desta frase, nao a media que alimenta o
+ * modelo -- por isso a separacao visual continua existindo: encostar
+ * "ironia 99%" na barra de satisfacao convidaria a ler uma frase como causa
+ * direta da nota, quando quem pesa e a media da conversa inteira.
  */
 export function CabecasDeLeitura({
   emocao,
@@ -25,7 +28,7 @@ export function CabecasDeLeitura({
 }: {
   emocao: Record<string, number> | null;
   ironia: number | null;
-  /** Sem o cabeçalho "fora do score" — para quem já o escreveu por fora. */
+  /** Sem o cabeçalho de contexto — para quem já o escreveu por fora. */
   compacto?: boolean;
   /**
    * Mostrar a prosa da díade do desprezo e da limitação da ironia.
@@ -49,11 +52,11 @@ export function CabecasDeLeitura({
       {!compacto ? (
         <p className="text-xs text-muted-foreground">
           <span className="uppercase tracking-wide opacity-70">
-            fora do score
+            leitura por frase
           </span>{" "}
-          — o fusor aprendeu com dezesseis medidas de texto, emoji e tempo, e
-          nenhuma delas vem destas duas cabeças. Elas descrevem a fala; não movem
-          a nota.
+          — a média destes dois sinais por conversa entra nas 35 features do
+          fusor desde 21/08/2026, mas o número aqui é desta frase, não a média
+          que pesa na nota.
         </p>
       ) : null}
 

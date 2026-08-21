@@ -20,8 +20,9 @@ export function NotaMetodologica({ derivados }: { derivados?: string[] }) {
               NPS inferido a partir do texto do atendimento, não de pergunta
               declarada ao cliente. Estimativa.
             </strong>{" "}
-            O valor é derivado da fusão de três sinais — texto, emoji e tempo de
-            resposta — e convertido para a escala 0–10 antes de cair nas faixas
+            O valor é derivado da fusão de sete famílias de sinal — texto,
+            emoji, tempo, emoção, léxico, ironia e estilo — e convertido para
+            a escala 0–10 antes de cair nas faixas
             canônicas, que a interface lê de{" "}
             <code className="num text-foreground">GET /modelo</code>. Todo
             número estimado carrega{" "}

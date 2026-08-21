@@ -80,7 +80,7 @@ Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 2. clona este repositorio e instala o pacote `fraus` — a extracao de features usa o MESMO codigo da API (`fraus.fusor.montar_features`), nunca uma reimplementacao;
 3. carrega o B2W-Reviews01 e rotula por `recommend_to_a_friend` (ver abaixo);
 4. costura as frases em conversas sinteticas com `fraus.ingest.simulador.gerar_lote`, deterministico por semente, com latencia log-normal e emoji calibrados por rotulo;
-5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **16**, e sobem quando os notebooks 03 e 04 existirem (ver [Contrato de features](#contrato-de-features));
+5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **35** (ver [Contrato de features](#contrato-de-features));
 6. treina o `Fusor` (`treinar(exemplos, rotulos)`);
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).
@@ -158,18 +158,22 @@ Nao e falha do treino. O score e `100 * (P(satisfeito) + 0.5 * P(neutro))`, enta
 
 `NOMES_FEATURES`, em `fraus/fusor.py`, e a lista canonica. `vetorizar` levanta `KeyError` se faltar chave — nunca zero silencioso (invariante 9).
 
-Hoje sao **16 features**, dos tres sinais originais. Os modulos dos sinais novos ja existem e estao testados, mas **ainda nao entram no vetor**:
+Hoje sao **35 features**, das sete familias. O contrato subiu de 16 para 35 em
+21/08/2026, quando os notebooks 03 e 04 passaram a existir e a condicao que
+justificava a espera acabou.
 
 | sinal | modulo | features | no vetor? |
 |---|---|---|---|
 | texto | `fraus/sinais/texto.py` | 4 | sim |
 | emoji | `fraus/sinais/emoji.py` | 5 | sim |
 | tempo | `fraus/sinais/tempo.py` | 7 | sim |
-| emocao | `fraus/sinais/emocao.py` | 8 | **nao — falta o modelo** |
-| lexico | `fraus/sinais/lexico.py` | 3 | **nao — falta a expansao** |
-| ironia | `fraus/sinais/ironia.py` | 2 | **nao — falta o modelo** |
+| emocao | `fraus/sinais/emocao.py` | 8 | sim |
+| lexico | `fraus/sinais/lexico.py` | 3 | sim |
+| ironia | `fraus/sinais/ironia.py` | 2 | sim |
+| estilo | `fraus/sinais/estilo.py` | 6 | sim |
 
-**Por que a espera e deliberada.** Expandir `NOMES_FEATURES` faria `montar_features` exigir tres classificadores, e dois deles ainda nao foram treinados. O notebook 02 e a API parariam de funcionar sem nada em troca. A ordem certa e: notebooks 03 e 04 produzem os modelos, dai o contrato sobe e o fusor e retreinado sobre o vetor completo.
+**Consequencia:** `montar_features` exige TRES classificadores, e a API nao sobe
+sem os tres artefatos em `modelos/`. E o comportamento correto da invariante 7.
 
 ## Notebook 03 — classificador de emocao
 
@@ -319,3 +323,19 @@ Nao tem notebook: e recurso pronto, nao treinado.
 **Acento:** o SentiLex e acentuado e cliente de chat nem sempre. Ha indice de reserva sem acento; das 74.443 chaves resultantes, apenas **24** colidem (`incomodo`/`incomodo`, `ingenua`/`ingenua`) e essas ficam zeradas — chute de polaridade errado e pior que termo ausente.
 
 **Limitacao do recurso, a declarar:** o SentiLex e lexicon de **julgamento social** — anota polaridade dirigida a entidades humanas. E forte no adjetivo que julga (`pessimo`, `otimo`, `incompetente`) e **neutro em verbo de afeto do proprio falante**: `gostar`, `adorar` e `odiar` valem 0 nele. Por isso o sinal lexico complementa o BERTimbau e nao o substitui — quem le "adorei o produto" e o transformer.
+
+## Sinal de estilo
+
+Nao tem notebook: e **deterministico**, nao treinado — `fraus/sinais/estilo.py` mede a FORMA da escrita (caixa alta, pontuacao enfatica, alongamento, palavrao com gradacao, censura), nao o conteudo.
+
+**Por que deterministico e nao um classificador.** O BERTimbau nao aprende enfase porque o B2W-Reviews01 — resenha moderada de e-commerce — praticamente nao contem gritaria nem xingamento. Modelo nao aprende fenomeno que o corpus de treino nao tem, e mais epocas sobre o mesmo texto so reproduziriam o mesmo artefato. Regra escrita a mao cobre exatamente o que falta: forma, nao semantica.
+
+**Fonte do lexicon de palavrao:** `fraus/dados/palavroes_ptbr.csv`, curadoria propria, ~172 termos, colunas `termo,intensidade,alvo`. A intensidade e graduada (`leve`/`medio`/`pesado`, mapeada para 0,33/0,66/1,0) porque "que droga" e "vai tomar no cu" nao sao o mesmo evento, e o alvo (`pessoa`/`desabafo`) existe porque xingar o PRODUTO e reclamacao enquanto xingar o ATENDENTE e ruptura da conversa. Nenhuma dependencia externa entrou para isso, e o SentiLex-PT02 tambem nao serve — ele anota polaridade de julgamento, nao gradacao de baixo calao nem alvo do xingamento.
+
+**Ordem censura-antes-de-normalizacao.** `tem_censura` roda sobre a palavra CRUA, com a mascara (`*@#$%&`) ainda intacta, e so depois `normalizar` reverte homoglifo e apaga acento. Inverter a ordem apagaria a marca de censura antes de ela ser vista — "p*rra" perderia o asterisco e viraria uma palavra qualquer, nunca reconhecida como autocensura.
+
+**Casamento por curinga.** `casar_censurado` trata cada simbolo de mascara como uma letra qualquer (regex com `.` no lugar do simbolo), nao como uma letra fixa: `p*rra` casa `porra`, `c*ralho` casa `caralho`. Mapear o simbolo para uma vogal fixa acertaria um caso e erraria o outro em silencio. Quando mais de um termo do lexicon casa o mesmo padrao com curinga, o desempate e pela MAIOR intensidade — deterministico, e nao pela ordem em que a linha aparece no CSV, o que deixaria o resultado dependente de onde alguem inseriu a linha.
+
+**A excecao do `kkkk`.** Alongamento de caractere (`MINIMO_ALONGAMENTO = 3` repeticoes seguidas) e tratado como enfase, exceto para as letras de riso (`k`, `h`): "kkkk" e o marcador POSITIVO mais comum do chat brasileiro, e contar risada junto de "naooooo" inverteria o sentido da feature em boa parte das conversas reais.
+
+**Limitacao a declarar:** o lexicon de palavrao e curadoria propria, nao recurso academico publicado. Diferente do SentiLex-PT02 (Silva, Carvalho e Sarmento, PROPOR 2012) e do Emoji Sentiment Ranking usados pelos outros sinais, `palavroes_ptbr.csv` nao tem paper citavel nem revisao por pares — a cobertura e a gradacao vieram de julgamento proprio, e isso precisa aparecer no relatorio como o que e.

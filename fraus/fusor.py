@@ -1,4 +1,4 @@
-"""Fusor dos tres sinais.
+"""Fusor das sete familias de sinal.
 
 LogisticRegression com padronizacao: interpretavel de proposito -- o trabalho
 precisa defender POR QUE um atendimento recebeu a nota, e coeficiente de
@@ -16,20 +16,34 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from fraus.modelos import Conversa
+from fraus.sinais.emocao import features_emocao
 from fraus.sinais.emoji import features_emoji
+from fraus.sinais.estilo import features_estilo
+from fraus.sinais.ironia import features_ironia
+from fraus.sinais.lexico import features_lexico
 from fraus.sinais.tempo import features_tempo
 from fraus.sinais.texto import features_texto
 
+# Ordem canonica das 35 features, agrupadas por familia de sinal. A ordem
+# importa: `vetorizar` produz o vetor nesta sequencia e o fusor treinado espera
+# exatamente ela. Reordenar sem retreinar troca os pesos de lugar em silencio.
+#
+# Subiu de 16 para 35 em 21/08/2026: emocao, lexico e ironia ja existiam e
+# estavam FORA do vetor esperando os notebooks 03 e 04, que agora existem;
+# estilo nasceu junto. Ver a spec de 21/08/2026.
 NOMES_FEATURES = [
+    # texto (4)
     "texto_prob_insatisfeito_media",
     "texto_prob_satisfeito_media",
     "texto_prob_insatisfeito_max",
     "texto_prob_satisfeito_ultima",
+    # emoji (5)
     "emoji_score_medio",
     "emoji_frac_positivos",
     "emoji_frac_negativos",
     "emoji_contagem",
     "emoji_posicao_relativa_media",
+    # tempo (7)
     "latencia_mediana_s",
     "latencia_p90_s",
     "latencia_primeira_resposta_s",
@@ -37,17 +51,81 @@ NOMES_FEATURES = [
     "qtd_turnos_cliente",
     "escalou",
     "abandonou",
+    # emocao (8)
+    "emocao_alegria_media",
+    "emocao_tristeza_media",
+    "emocao_raiva_media",
+    "emocao_medo_media",
+    "emocao_nojo_media",
+    "emocao_surpresa_media",
+    "emocao_neutro_media",
+    "emocao_desprezo_derivado",
+    # lexico (3)
+    "lexico_polaridade_media",
+    "lexico_cobertura",
+    "lexico_frac_negados",
+    # ironia (2)
+    "ironia_prob_media",
+    "ironia_prob_max",
+    # estilo (6)
+    "estilo_frac_caixa_alta",
+    "estilo_pontuacao_enfatica",
+    "estilo_frac_alongamento",
+    "estilo_palavrao_intensidade",
+    "estilo_palavrao_dirigido",
+    "estilo_frac_censurado",
 ]
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
 
+# Quanto P(neutro) vale no score 0-100. E o que faz a classe neutra do modelo
+# alcancar a faixa neutra do NPS (7-8), e nao ha nada de arbitrario no valor:
+#
+#   classe pura      score              nota   categoria
+#   insatisfeito     0                  0      detrator
+#   neutro           100 * 0.75 = 75    8      neutro
+#   satisfeito       100                10     promotor
+#
+# Com 0.5 -- o valor anterior -- a linha do meio dava score 50, nota 5, e caia
+# em 0-6: DETRATOR. Nao numa borda rara, mas a classe neutra inteira, e num
+# lote equilibrado por construcao isso produzia NPS negativo sem que o modelo
+# tivesse errado nada. Ver `scripts/medir_faixas.py`, que mede as duas reguas.
+#
+# NAO e configuracao, e a diferenca importa: a faixa de NPS pode ser
+# configuravel porque `categoria` e derivada na LEITURA e refatia dado que ja
+# existe; o peso muda o `score` GRAVADO. Um botao aqui deixaria o banco com
+# scores de duas reguas somados no mesmo agregado, e nenhuma leitura
+# conseguiria separa-los. Mudar isto e mudar codigo e repontuar o banco --
+# e e honesto que custe isso.
+#
+# O valor exato depende de arredondamento bancario: `round(7.5)` da 8 porque 8
+# e par. Com 0.65 daria `round(6.5)` = 6, de volta a detrator. A fronteira esta
+# fixada em tests/test_indicadores.py de proposito -- ela e fragil.
+PESO_NEUTRO_NO_SCORE = 0.75
 
-def montar_features(conversa: Conversa, classificador) -> dict[str, float]:
-    """Junta os tres sinais numa linha unica de features."""
+
+def montar_features(
+    conversa: Conversa,
+    classificador,
+    classificador_emocao,
+    classificador_ironia,
+) -> dict[str, float]:
+    """Junta os sete sinais numa linha unica de features.
+
+    Os tres classificadores sao OBRIGATORIOS desde que o contrato subiu para 35:
+    emocao e ironia deixaram de ser leitura decorativa e passaram a mover a
+    nota. Aceitar `None` aqui produziria vetor incompleto, e vetor incompleto
+    vira `KeyError` la em `vetorizar` -- com a diferenca de que o erro apontaria
+    para o lugar errado.
+    """
     return {
         **features_texto(conversa, classificador),
         **features_emoji(conversa),
         **features_tempo(conversa),
+        **features_emocao(conversa, classificador_emocao),
+        **features_lexico(conversa),
+        **features_ironia(conversa, classificador_ironia),
+        **features_estilo(conversa),
     }
 
 
@@ -67,25 +145,26 @@ class Fusor:
         self._pipeline.fit([vetorizar(e) for e in exemplos], rotulos)
 
     def pontuar(self, features: dict[str, float]) -> float:
-        """Score 0-100: P(satisfeito) + metade de P(neutro).
+        """Score 0-100: P(satisfeito) mais P(neutro) pesado por
+        `PESO_NEUTRO_NO_SCORE`.
 
-        CONSEQUENCIA CONHECIDA E ACEITA, nao mexa achando que e bug: com peso
-        0.5, uma conversa classificada com certeza como NEUTRA pontua 50, que
-        vira nota 5, que cai na faixa 0-6 e portanto em DETRATOR. A classe
-        neutra do modelo nunca alcanca a faixa neutra do NPS (7-8), que exigiria
-        P(satisfeito) entre 0.4 e 0.8 -- um empate, nao uma neutralidade
-        confiante.
+        O score e uma PROJECAO das tres probabilidades num eixo, nao uma quarta
+        predicao: o modelo continua o mesmo, treinado do mesmo jeito. O peso do
+        neutro decide onde a classe do meio pousa nesse eixo -- e, por
+        composicao com a faixa de NPS, em qual categoria ela cai. A tabela e o
+        raciocinio estao na constante.
 
-        O efeito medido em 90 conversas do simulador, 30 por classe: 67%
-        detrator, 29% promotor, 4% neutro, com NPS -38 num lote equilibrado por
-        construcao. Subir o peso para 0.75 alinharia as tres classes as tres
-        categorias; a decisao foi manter e declarar. Ver README, "Limitacoes
-        conhecidas".
+        O que este metodo NAO e: um lugar para consertar predicao. Se o modelo
+        confunde as classes, o conserto e treino -- as medianas por classe do
+        `scripts/medir_faixas.py` sao justamente o que separa os dois casos.
         """
         probabilidades = self._pipeline.predict_proba([vetorizar(features)])[0]
         classes = list(self._pipeline.named_steps["modelo"].classes_)
         por_classe = dict(zip(classes, probabilidades))
-        score = 100.0 * (por_classe.get(SATISFEITO, 0.0) + 0.5 * por_classe.get(NEUTRO, 0.0))
+        score = 100.0 * (
+            por_classe.get(SATISFEITO, 0.0)
+            + PESO_NEUTRO_NO_SCORE * por_classe.get(NEUTRO, 0.0)
+        )
         return max(0.0, min(100.0, score))
 
     def prever(self, features: dict[str, float]) -> int:
