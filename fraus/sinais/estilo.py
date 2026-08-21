@@ -17,6 +17,8 @@ import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
+from fraus.modelos import Conversa
+
 CAMINHO_PALAVROES = Path(__file__).parent.parent / "dados" / "palavroes_ptbr.csv"
 
 INTENSIDADE_POR_NOME = {"leve": 0.33, "medio": 0.66, "pesado": 1.0}
@@ -58,7 +60,10 @@ HOMOGLIFOS = str.maketrans({
     "1": "i",
     "3": "e",
     "$": "s", "5": "s",
-    "*": "",
+    # "*" mascara a vogal do meio nos palavroes mais comuns em PT-BR
+    # (p*rra -> porra, c*ralho -> caralho): mapear para "" derrubava a
+    # palavra para "prra"/"crlho", que nunca casa com o lexicon.
+    "*": "o",
     "#": "", "%": "", "&": "",
 })
 
@@ -97,3 +102,117 @@ def tem_censura(palavra: str) -> bool:
     # Numero sozinho ("2024") nao e: precisa de letra junto ou de nenhum
     # caractere alfanumerico fora dos simbolos.
     return letras > 0 or all(c in SIMBOLOS_CENSURA for c in palavra)
+
+
+# Siglas que sao caixa alta sem serem gritaria. Sem esta lista, "preciso do CPF"
+# marcaria enfase que nao existe.
+SIGLAS = {
+    "CPF", "CNPJ", "NF", "NFE", "SAC", "PIX", "CEP", "RG", "ID", "OK",
+    "SP", "RJ", "MG", "PR", "RS", "BA", "PE", "CE", "DF", "GO",
+    "SMS", "PDF", "URL", "APP", "TV", "PC", "USB", "CD", "DVD",
+}
+
+# Piso de comprimento para uma palavra maiuscula contar como grito. Palavra de
+# 1-2 letras em caixa alta e quase sempre sigla ou digitacao apressada.
+MINIMO_CAIXA_ALTA = 3
+
+# Quantas repeticoes seguidas do mesmo caractere marcam alongamento. Duas nao
+# bastam: "carro", "passar" e "nossa" sao grafia normal do portugues.
+MINIMO_ALONGAMENTO = 3
+
+# Riso alongado e o marcador POSITIVO mais comum de chat brasileiro. Contar
+# "kkkk" junto de "naooooo" inverteria o sentido da feature em boa parte das
+# conversas, entao ele tem excecao explicita.
+LETRAS_DE_RISO = set("kh")
+
+PONTUACAO_ENFATICA = re.compile(r"[!?]{2,}")
+
+
+def _e_grito(palavra: str) -> bool:
+    """Palavra em caixa alta que nao e sigla nem palavra curta."""
+    return (
+        len(palavra) >= MINIMO_CAIXA_ALTA
+        and palavra.isupper()
+        and any(c.isalpha() for c in palavra)
+        and palavra not in SIGLAS
+    )
+
+
+def _tem_alongamento(palavra: str) -> bool:
+    """Tres ou mais repeticoes do mesmo caractere, exceto riso."""
+    minuscula = palavra.lower()
+    repeticoes = 1
+    for anterior, atual in zip(minuscula, minuscula[1:]):
+        if atual != anterior:
+            repeticoes = 1
+            continue
+        repeticoes += 1
+        if repeticoes >= MINIMO_ALONGAMENTO and atual not in LETRAS_DE_RISO:
+            return True
+    return False
+
+
+def features_estilo(conversa: Conversa) -> dict[str, float]:
+    """Agrega a FORMA da escrita das mensagens DO CLIENTE.
+
+    Conversa sem fala do cliente devolve as seis features zeradas -- e ausencia
+    de medida, e quem distingue "nao mediu" de "mediu e deu zero" e o
+    `score: None` la em cima, nunca esta funcao (invariante 2).
+    """
+    textos = [m.texto for m in conversa.mensagens_cliente]
+    vazio = {
+        "estilo_frac_caixa_alta": 0.0,
+        "estilo_pontuacao_enfatica": 0.0,
+        "estilo_frac_alongamento": 0.0,
+        "estilo_palavrao_intensidade": 0.0,
+        "estilo_palavrao_dirigido": 0.0,
+        "estilo_frac_censurado": 0.0,
+    }
+    if not textos:
+        return vazio
+
+    lexicon = carregar_palavroes()
+    palavras: list[str] = []
+    for texto in textos:
+        palavras.extend(PALAVRA.findall(texto))
+
+    if not palavras:
+        return vazio
+
+    total = len(palavras)
+    gritos = 0
+    alongadas = 0
+    censuradas = 0
+    intensidades: list[float] = []
+    dirigidos = 0
+
+    for palavra in palavras:
+        if _e_grito(palavra):
+            gritos += 1
+        if _tem_alongamento(palavra):
+            alongadas += 1
+        # A censura e lida ANTES da normalizacao: `normalizar` apaga os
+        # simbolos que sao justamente a evidencia.
+        if tem_censura(palavra):
+            censuradas += 1
+        entrada = lexicon.get(normalizar(palavra))
+        if entrada is not None:
+            intensidade, dirigido = entrada
+            intensidades.append(intensidade)
+            if dirigido:
+                dirigidos += 1
+
+    enfaticas = sum(len(PONTUACAO_ENFATICA.findall(t)) for t in textos)
+
+    return {
+        "estilo_frac_caixa_alta": gritos / total,
+        "estilo_pontuacao_enfatica": enfaticas / len(textos),
+        "estilo_frac_alongamento": alongadas / total,
+        "estilo_palavrao_intensidade": (
+            sum(intensidades) / len(intensidades) if intensidades else 0.0
+        ),
+        "estilo_palavrao_dirigido": (
+            dirigidos / len(intensidades) if intensidades else 0.0
+        ),
+        "estilo_frac_censurado": censuradas / total,
+    }

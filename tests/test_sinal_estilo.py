@@ -1,4 +1,33 @@
-from fraus.sinais.estilo import carregar_palavroes, normalizar, tem_censura
+from datetime import datetime, timezone
+
+from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.estilo import (
+    carregar_palavroes,
+    features_estilo,
+    normalizar,
+    tem_censura,
+)
+
+CHAVES = {
+    "estilo_frac_caixa_alta",
+    "estilo_pontuacao_enfatica",
+    "estilo_frac_alongamento",
+    "estilo_palavrao_intensidade",
+    "estilo_palavrao_dirigido",
+    "estilo_frac_censurado",
+}
+
+
+def _conversa(textos: list[str]) -> Conversa:
+    base = datetime(2026, 8, 21, 10, 0, 0, tzinfo=timezone.utc)
+    return Conversa(
+        id="c1",
+        canal="csv",
+        iniciada_em=base,
+        mensagens=[
+            Mensagem(autor="cliente", texto=t, enviada_em=base) for t in textos
+        ],
+    )
 
 
 def test_lexicon_tem_as_tres_intensidades():
@@ -48,3 +77,73 @@ def test_pontuacao_sozinha_nao_e_censura():
     # "!!!" e enfase, medida por outra feature -- nao e palavrao mascarado.
     assert tem_censura("!!!") is False
     assert tem_censura("???") is False
+
+
+def test_devolve_exatamente_as_seis_chaves():
+    assert set(features_estilo(_conversa(["ola"]))) == CHAVES
+
+
+def test_conversa_sem_fala_do_cliente_zera_sem_estourar():
+    base = datetime(2026, 8, 21, 10, 0, 0, tzinfo=timezone.utc)
+    conversa = Conversa(
+        id="c1",
+        canal="csv",
+        iniciada_em=base,
+        mensagens=[Mensagem(autor="bot", texto="POSSO AJUDAR?!!", enviada_em=base)],
+    )
+    features = features_estilo(conversa)
+    assert set(features) == CHAVES
+    assert all(valor == 0.0 for valor in features.values())
+
+
+def test_gritaria_eleva_a_caixa_alta():
+    gritou = features_estilo(_conversa(["NAO ACREDITO NISSO"]))
+    calmo = features_estilo(_conversa(["nao acredito nisso"]))
+    assert gritou["estilo_frac_caixa_alta"] > 0.9
+    assert calmo["estilo_frac_caixa_alta"] == 0.0
+
+
+def test_sigla_nao_conta_como_gritaria():
+    features = features_estilo(_conversa(["preciso do CPF e da NF do pedido"]))
+    assert features["estilo_frac_caixa_alta"] == 0.0
+
+
+def test_pontuacao_enfatica_conta_repeticao():
+    com = features_estilo(_conversa(["cade minha entrega???"]))
+    sem = features_estilo(_conversa(["cade minha entrega?"]))
+    assert com["estilo_pontuacao_enfatica"] > sem["estilo_pontuacao_enfatica"]
+    assert sem["estilo_pontuacao_enfatica"] == 0.0
+
+
+def test_alongamento_detectado():
+    features = features_estilo(_conversa(["naooooo pfvvvv"]))
+    assert features["estilo_frac_alongamento"] > 0.0
+
+
+def test_riso_nao_conta_como_alongamento():
+    # kkkk e marcador positivo de chat BR, nao arrastar de vogal irritado.
+    assert features_estilo(_conversa(["kkkkkk"]))["estilo_frac_alongamento"] == 0.0
+
+
+def test_intensidade_do_palavrao_e_graduada():
+    leve = features_estilo(_conversa(["que droga de sistema"]))
+    pesado = features_estilo(_conversa(["que caralho de sistema"]))
+    assert 0.0 < leve["estilo_palavrao_intensidade"] < pesado["estilo_palavrao_intensidade"]
+
+
+def test_palavrao_dirigido_separado_de_desabafo():
+    pessoa = features_estilo(_conversa(["voce e um idiota"]))
+    desabafo = features_estilo(_conversa(["que merda de sistema"]))
+    assert pessoa["estilo_palavrao_dirigido"] > 0.0
+    assert desabafo["estilo_palavrao_dirigido"] == 0.0
+
+
+def test_palavrao_censurado_conta_nas_duas_features():
+    features = features_estilo(_conversa(["que p*rra e essa"]))
+    assert features["estilo_frac_censurado"] > 0.0
+    assert features["estilo_palavrao_intensidade"] > 0.0
+
+
+def test_texto_limpo_zera_tudo():
+    features = features_estilo(_conversa(["bom dia, poderia verificar meu pedido?"]))
+    assert all(valor == 0.0 for valor in features.values())
