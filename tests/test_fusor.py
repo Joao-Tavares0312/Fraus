@@ -129,6 +129,37 @@ def test_prever_devolve_uma_das_tres_classes():
     assert fusor.prever(_features(texto_prob_satisfeito_media=0.9)) in (0, 1, 2)
 
 
+def test_contrato_tem_trinta_e_cinco_features():
+    assert len(NOMES_FEATURES) == 35
+
+
+def test_contrato_nao_tem_duplicata():
+    assert len(set(NOMES_FEATURES)) == len(NOMES_FEATURES)
+
+
+def test_contrato_cobre_todos_os_prefixos_esperados():
+    """Onze prefixos, sete familias: tempo sozinho usa cinco deles."""
+    prefixos = {nome.split("_")[0] for nome in NOMES_FEATURES}
+    assert prefixos == {
+        "texto", "emoji", "latencia", "duracao", "qtd", "escalou",
+        "abandonou", "emocao", "lexico", "ironia", "estilo",
+    }
+
+
+def test_vetorizar_estoura_em_feature_de_estilo_faltando():
+    completas = {nome: 0.0 for nome in NOMES_FEATURES}
+    del completas["estilo_frac_caixa_alta"]
+    with pytest.raises(KeyError):
+        vetorizar(completas)
+
+
+def test_vetorizar_estoura_em_feature_de_emocao_faltando():
+    completas = {nome: 0.0 for nome in NOMES_FEATURES}
+    del completas["emocao_raiva_media"]
+    with pytest.raises(KeyError):
+        vetorizar(completas)
+
+
 def test_eixo_global_vazio_sem_treino():
     """Fusor nao treinado nao tem eixo -- e dict vazio, nao dezesseis zeros.
 

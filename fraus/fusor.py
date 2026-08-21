@@ -16,20 +16,34 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from fraus.modelos import Conversa
+from fraus.sinais.emocao import features_emocao
 from fraus.sinais.emoji import features_emoji
+from fraus.sinais.estilo import features_estilo
+from fraus.sinais.ironia import features_ironia
+from fraus.sinais.lexico import features_lexico
 from fraus.sinais.tempo import features_tempo
 from fraus.sinais.texto import features_texto
 
+# Ordem canonica das 35 features, agrupadas por familia de sinal. A ordem
+# importa: `vetorizar` produz o vetor nesta sequencia e o fusor treinado espera
+# exatamente ela. Reordenar sem retreinar troca os pesos de lugar em silencio.
+#
+# Subiu de 16 para 35 em 21/08/2026: emocao, lexico e ironia ja existiam e
+# estavam FORA do vetor esperando os notebooks 03 e 04, que agora existem;
+# estilo nasceu junto. Ver a spec de 21/08/2026.
 NOMES_FEATURES = [
+    # texto (4)
     "texto_prob_insatisfeito_media",
     "texto_prob_satisfeito_media",
     "texto_prob_insatisfeito_max",
     "texto_prob_satisfeito_ultima",
+    # emoji (5)
     "emoji_score_medio",
     "emoji_frac_positivos",
     "emoji_frac_negativos",
     "emoji_contagem",
     "emoji_posicao_relativa_media",
+    # tempo (7)
     "latencia_mediana_s",
     "latencia_p90_s",
     "latencia_primeira_resposta_s",
@@ -37,6 +51,29 @@ NOMES_FEATURES = [
     "qtd_turnos_cliente",
     "escalou",
     "abandonou",
+    # emocao (8)
+    "emocao_alegria_media",
+    "emocao_tristeza_media",
+    "emocao_raiva_media",
+    "emocao_medo_media",
+    "emocao_nojo_media",
+    "emocao_surpresa_media",
+    "emocao_neutro_media",
+    "emocao_desprezo_derivado",
+    # lexico (3)
+    "lexico_polaridade_media",
+    "lexico_cobertura",
+    "lexico_frac_negados",
+    # ironia (2)
+    "ironia_prob_media",
+    "ironia_prob_max",
+    # estilo (6)
+    "estilo_frac_caixa_alta",
+    "estilo_pontuacao_enfatica",
+    "estilo_frac_alongamento",
+    "estilo_palavrao_intensidade",
+    "estilo_palavrao_dirigido",
+    "estilo_frac_censurado",
 ]
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
@@ -67,12 +104,28 @@ INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
 PESO_NEUTRO_NO_SCORE = 0.75
 
 
-def montar_features(conversa: Conversa, classificador) -> dict[str, float]:
-    """Junta os tres sinais numa linha unica de features."""
+def montar_features(
+    conversa: Conversa,
+    classificador,
+    classificador_emocao,
+    classificador_ironia,
+) -> dict[str, float]:
+    """Junta os sete sinais numa linha unica de features.
+
+    Os tres classificadores sao OBRIGATORIOS desde que o contrato subiu para 35:
+    emocao e ironia deixaram de ser leitura decorativa e passaram a mover a
+    nota. Aceitar `None` aqui produziria vetor incompleto, e vetor incompleto
+    vira `KeyError` la em `vetorizar` -- com a diferenca de que o erro apontaria
+    para o lugar errado.
+    """
     return {
         **features_texto(conversa, classificador),
         **features_emoji(conversa),
         **features_tempo(conversa),
+        **features_emocao(conversa, classificador_emocao),
+        **features_lexico(conversa),
+        **features_ironia(conversa, classificador_ironia),
+        **features_estilo(conversa),
     }
 
 
