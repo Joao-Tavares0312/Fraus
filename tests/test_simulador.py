@@ -1,6 +1,8 @@
 import random
 import statistics
 
+import pytest
+
 from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_conversa, gerar_lote
 from fraus.sinais.emoji import features_emoji
 from fraus.sinais.estilo import features_estilo
@@ -133,41 +135,82 @@ CHAVES_ESTILO = [
 ]
 
 
-def _por_rotulo(quantidade: int = 180) -> dict[int, list[dict]]:
+@pytest.fixture(scope="module")
+def agrupado_por_rotulo() -> dict[int, list[dict]]:
+    """Lote de 180 conversas (60 por rotulo), semente fixa -- deterministico.
+
+    `scope="module"` porque os quatro testes de estilo abaixo consultam
+    exatamente o mesmo lote; regenera-lo em cada teste era trabalho repetido
+    com resultado identico por construcao.
+    """
     agrupado: dict[int, list[dict]] = {0: [], 1: [], 2: []}
-    for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, quantidade, semente=7):
+    for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, 180, semente=7):
         agrupado[rotulo].append(features_estilo(conversa))
     return agrupado
 
 
-def test_estilo_varia_dentro_de_cada_rotulo():
-    """Feature constante no treino nasce com peso zero -- e o bug do emoji na v1."""
-    agrupado = _por_rotulo()
-    for rotulo, linhas in agrupado.items():
+def test_estilo_varia_dentro_de_cada_rotulo(agrupado_por_rotulo):
+    """Feature constante no treino nasce com peso zero -- e o bug do emoji na v1.
+
+    Este teste e quebradico por construcao: `estilo_frac_censurado` no rotulo 1,
+    por exemplo, so varia por causa de UMA entrada de `ESTILO_POR_ROTULO`.
+    Reordenar ou editar as listas pode fazer alguma combinacao rotulo/feature
+    voltar a ficar constante para a semente 7. Se isso acontecer, a CURA e
+    acrescentar entrada a `ESTILO_POR_ROTULO` ate a feature variar de novo --
+    NUNCA afrouxar esta asercao, porque afrouxar reintroduz em silencio o
+    mesmo bug de peso zero que ela existe para pegar.
+    """
+    for rotulo, linhas in agrupado_por_rotulo.items():
         for chave in CHAVES_ESTILO:
             valores = [linha[chave] for linha in linhas]
             assert statistics.pstdev(valores) > 0.0, f"{chave} constante no rotulo {rotulo}"
 
 
-def test_palavrao_aparece_nas_tres_classes():
+def test_palavrao_aparece_nas_tres_classes(agrupado_por_rotulo):
     """Palavrao so em detrator seria a latencia disjunta com outra roupa."""
-    agrupado = _por_rotulo()
-    for rotulo, linhas in agrupado.items():
-        com_palavrao = [l for l in linhas if l["estilo_palavrao_intensidade"] > 0]
+    for rotulo, linhas in agrupado_por_rotulo.items():
+        com_palavrao = [linha for linha in linhas if linha["estilo_palavrao_intensidade"] > 0]
         assert com_palavrao, f"nenhum palavrao no rotulo {rotulo}"
 
 
-def test_gritaria_aparece_nas_tres_classes():
-    agrupado = _por_rotulo()
-    for rotulo, linhas in agrupado.items():
-        assert any(l["estilo_frac_caixa_alta"] > 0 for l in linhas), rotulo
+def test_gritaria_aparece_nas_tres_classes(agrupado_por_rotulo):
+    for rotulo, linhas in agrupado_por_rotulo.items():
+        assert any(linha["estilo_frac_caixa_alta"] > 0 for linha in linhas), rotulo
 
 
-def test_distribuicoes_de_estilo_se_sobrepoem_entre_rotulos():
-    """As caudas se cruzam: existe satisfeito que grita e detrator que e educado."""
-    agrupado = _por_rotulo()
-    maximo_satisfeito = max(l["estilo_palavrao_intensidade"] for l in agrupado[2])
-    mediana_insatisfeito = statistics.median(
-        l["estilo_palavrao_intensidade"] for l in agrupado[0]
-    )
-    assert maximo_satisfeito >= mediana_insatisfeito
+def test_distribuicoes_de_estilo_se_sobrepoem_entre_rotulos(agrupado_por_rotulo):
+    """As caudas se cruzam: existe satisfeito que grita e detrator que e educado.
+
+    Segue a forma de `test_faixas_de_latencia_se_sobrepoem_entre_os_rotulos`:
+    sobreposicao BILATERAL (satisfeito alto E insatisfeito baixo), com
+    contagem minima de cada lado -- nao "existe pelo menos um", que passaria
+    ate com as classes completamente separadas (bastava um unico satisfeito
+    com `caralho`, intensidade 1.0, contra a mediana de qualquer coisa <= 1.0).
+
+    A diferenca em relacao ao teste de latencia: latencia e continua e a
+    mediana de cada classe cai no meio da distribuicao. As duas features de
+    estilo aqui sao ZERO-INFLADAS -- a maioria das conversas nao grita nem
+    xinga, entao a MEDIANA de QUALQUER rotulo e 0.0, e "abaixo da mediana"
+    ficaria vazio por construcao (o piso da feature ja e 0). Por isso o corte
+    usado e o QUARTIL SUPERIOR (Q3, 75o percentil) de cada classe, nao a
+    mediana: joga a barra no "quarto mais intenso" de cada distribuicao, que
+    e onde a sobreposicao de verdade importa.
+    """
+    for chave in ("estilo_palavrao_intensidade", "estilo_frac_caixa_alta"):
+        satisfeitos = sorted(linha[chave] for linha in agrupado_por_rotulo[2])
+        insatisfeitos = sorted(linha[chave] for linha in agrupado_por_rotulo[0])
+        q3_satisfeitos = statistics.quantiles(satisfeitos, n=4)[2]
+        q3_insatisfeitos = statistics.quantiles(insatisfeitos, n=4)[2]
+
+        intensos_entre_satisfeitos = [v for v in satisfeitos if v > q3_insatisfeitos]
+        comedidos_entre_insatisfeitos = [v for v in insatisfeitos if v < q3_satisfeitos]
+
+        # Limiares calibrados no lote de 180 (semente 7): a contagem real
+        # observada e 9/43 para palavrao e 10/38 para caixa alta -- as margens
+        # abaixo sao conservadoras, nao o valor exato medido.
+        assert len(intensos_entre_satisfeitos) >= 5, (
+            f"{chave}: poucos satisfeitos no quartil superior do insatisfeito"
+        )
+        assert len(comedidos_entre_insatisfeitos) >= 15, (
+            f"{chave}: poucos insatisfeitos abaixo do quartil superior do satisfeito"
+        )

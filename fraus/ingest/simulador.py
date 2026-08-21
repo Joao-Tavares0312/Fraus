@@ -170,6 +170,18 @@ def _com_estilo(aleatorio: random.Random, texto: str, rotulo: int) -> str:
     """Anexa uma marca de estilo do perfil do rotulo, as vezes.
 
     Ver ESTILO_POR_ROTULO para o motivo do cruzamento entre classes.
+
+    Efeito colateral registrado no sinal de emoji: em `gerar_conversa` esta
+    funcao envolve `_com_emoji` (`_com_estilo(aleatorio, _com_emoji(...),
+    rotulo)`), entao o sufixo de estilo vem DEPOIS do emoji sempre que os dois
+    caem na mesma fala -- em ate PROB_ESTILO * PROB_EMOJI das falas o emoji
+    deixa de ser o ultimo token. Isso muda `emoji_posicao_relativa_media`, que
+    antes desta task era quase constante em ~1.0 (emoji quase sempre no fim) e
+    agora varia de verdade. E MELHORA, nao regressao -- feature quase
+    constante e o mesmo bug de peso zero que matou `emoji_score_medio` no
+    primeiro fusor -- mas e uma mudanca de distribuicao em OUTRA feature que
+    ninguem pediu, por isso o registro aqui. Nao inverta a ordem do
+    aninhamento: ela e proposital.
     """
     if aleatorio.random() >= PROB_ESTILO:
         return texto
