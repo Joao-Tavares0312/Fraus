@@ -12,6 +12,8 @@ e enfase do cliente.
 """
 
 import csv
+import re
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
@@ -39,3 +41,59 @@ def carregar_palavroes() -> dict[str, tuple[float, bool]]:
                 linha["alvo"].strip() == "pessoa",
             )
     return tabela
+
+
+# Simbolos usados para mascarar palavrao. `!` e `?` NAO entram: eles sao
+# enfase, medida por `estilo_pontuacao_enfatica`, e incluir aqui faria "!!!"
+# contar como xingamento censurado.
+SIMBOLOS_CENSURA = set("*@#$%&0134")
+
+# Homoglifos: o que o cliente digita -> a letra que ele quis dizer. Sem isso o
+# lexicon erra TODA ocorrencia censurada, que e justamente a mais interessante.
+HOMOGLIFOS = str.maketrans({
+    "@": "a", "4": "a",
+    "0": "o",
+    # "!" NAO entra aqui: `PALAVRA` nao o inclui, entao ele nunca chega a uma
+    # palavra -- e mapeamento inalcancavel e some numa refatoracao futura.
+    "1": "i",
+    "3": "e",
+    "$": "s", "5": "s",
+    "*": "",
+    "#": "", "%": "", "&": "",
+})
+
+# Separador de palavra que PRESERVA simbolo de censura: `\w` sozinho quebraria
+# "p*rra" em "p" e "rra" e a censura sumiria antes de ser contada.
+PALAVRA = re.compile(r"[\w" + re.escape("*@#$%&") + r"]+", re.UNICODE)
+
+
+def normalizar(palavra: str) -> str:
+    """Minusculas, sem acento, homoglifos revertidos.
+
+    Roda DEPOIS de `tem_censura`, nunca antes: ela apaga exatamente a marca que
+    a outra funcao precisa ver.
+    """
+    sem_acento = "".join(
+        c
+        for c in unicodedata.normalize("NFD", palavra.lower())
+        if unicodedata.category(c) != "Mn"
+    )
+    return sem_acento.translate(HOMOGLIFOS)
+
+
+def tem_censura(palavra: str) -> bool:
+    """A palavra mistura letra e simbolo de mascara, ou e so simbolo.
+
+    Autocensura e raiva COM autocontrole -- estado diferente de raiva crua, e
+    por isso tem feature propria em vez de virar so mais um palavrao.
+    """
+    if not palavra:
+        return False
+    simbolos = sum(1 for c in palavra if c in SIMBOLOS_CENSURA)
+    if simbolos == 0:
+        return False
+    letras = sum(1 for c in palavra if c.isalpha())
+    # So simbolo (`#@$%`) e censura pura; letra + simbolo (`p*rra`) tambem.
+    # Numero sozinho ("2024") nao e: precisa de letra junto ou de nenhum
+    # caractere alfanumerico fora dos simbolos.
+    return letras > 0 or all(c in SIMBOLOS_CENSURA for c in palavra)
