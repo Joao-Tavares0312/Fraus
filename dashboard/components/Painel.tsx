@@ -48,7 +48,7 @@ export function Painel({
     <section
       ref={refEspecular}
       className={cn(
-        "vidro especular quebra-evitar min-w-0 rounded-lg p-4 sm:p-5",
+        "vidro especular quebra-evitar min-w-0 overflow-hidden rounded-lg p-4 sm:p-5",
         className,
       )}
     >

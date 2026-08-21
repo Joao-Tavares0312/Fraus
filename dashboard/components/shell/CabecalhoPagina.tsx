@@ -29,7 +29,7 @@ export function CabecalhoPagina({
   acoes?: ReactNode;
 }) {
   return (
-    <header className="vidro-fino sticky top-0 z-20 rounded-none border-x-0 border-t-0 shadow-none">
+    <header className="vidro-fino vidro-faixa sticky top-0 z-20">
       <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <SidebarTrigger className="sem-impressao -ml-1 mt-0.5 shrink-0" />

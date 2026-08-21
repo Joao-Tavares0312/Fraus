@@ -94,6 +94,13 @@ const textos = [
   "--detrator-texto",
   "--neutro-texto",
   "--promotor-texto",
+  // os cinco abaixo passaram a carregar texto sobre vidro no reskin
+  // "vidro liquido" e o gate estava cego para eles
+  "--secondary-foreground",
+  "--popover-foreground",
+  "--card-foreground",
+  "--sidebar-foreground",
+  "--destructive",
 ];
 
 let falhou = false;

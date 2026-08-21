@@ -118,7 +118,7 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
               de uma serie de meio ponto come a serie, e a sobreposicao NPS x
               latencia e compromisso vinculante do PRODUCT.md -- nao pode
               perder legibilidade por causa de um efeito de superficie. */}
-          <div className="rounded-md bg-card/80 p-3">
+          <div className="rounded-md bg-card p-3">
             <div className="h-[300px] sm:h-[340px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
@@ -332,7 +332,7 @@ function Dica({ active, payload }: DicaProps) {
 /** Mitigacao 3: o mesmo dado sem geometria nenhuma entre as duas grandezas. */
 function TabelaDaSerie({ id, serie }: { id: string; serie: PontoSerie[] }) {
   return (
-    <div id={id} className="max-h-[340px] overflow-auto">
+    <div id={id} className="max-h-[340px] overflow-auto bg-card">
       <Table className="text-xs">
         <TableHeader className="sticky top-0 z-10">
           <TableRow>

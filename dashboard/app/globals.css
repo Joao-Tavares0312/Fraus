@@ -475,6 +475,31 @@
     }
   }
 
+  /* Vidro em FAIXA: colado numa borda da tela (ex.: cabecalho sticky no topo),
+     em vez de bloco solto rodeado de vidro por todos os lados. Faixa colada no
+     topo nao pode ter borda lateral nem sombra penduradas no vazio -- por isso
+     zera o raio, zera as bordas laterais e a de topo, e troca a sombra externa
+     por so a quina inferior.
+
+     Especificidade dupla (0,2,0) e deliberada: `.vidro-fino` e as classes de
+     override (`rounded-none`, `border-x-0` etc) chegam pelo twMerge, que nao
+     enxerga conflito entre `vidro-fino` e essas classes -- as duas convivem no
+     className. No CSS construido, `.vidro-fino` vem DEPOIS das utilities do
+     Tailwind com a MESMA especificidade (0,1,0), entao ele vencia por ordem de
+     arquivo, nao por regra. Aqui a combinacao `.vidro-fino.vidro-faixa` sobe a
+     especificidade para vencer de verdade, independente de onde cada bloco
+     cair no CSS final. */
+  .vidro-fino.vidro-faixa,
+  .vidro.vidro-faixa,
+  .vidro-denso.vidro-faixa {
+    border-radius: 0;
+    border-inline: 0;
+    border-top: 0;
+    box-shadow:
+      inset 0 -1px 0 0 var(--vidro-quina-baixa),
+      0 8px 24px oklch(0 0 0 / 28%);
+  }
+
   /* Vidro real muda de brilho quando voce o inclina: a quina que pega luz
      se desloca e a sombra reage ao movimento. E essa reacao ao toque que
      separa uma superficie viva de um retangulo pintado -- por isso as
@@ -506,9 +531,10 @@
      `useEspecular` escreve no no; sem o hook, o padrao 50%/0% deixa um brilho
      discreto no alto da superficie, que e um repouso plausivel e nao um bug.
 
-     `isolation: isolate` porque o pseudo-elemento usa `overlay`, e sem
-     contexto de empilhamento proprio ele mistura com o que estiver embaixo na
-     pagina, nao com a superficie. */
+     `isolation: isolate` porque o `::after` fica em `z-index: -1`: sem
+     contexto de empilhamento proprio no elemento, esse z-index negativo escapa
+     para tras na pagina em vez de ficar so atras do fundo da propria
+     superficie. */
   .especular {
     position: relative;
     isolation: isolate;
