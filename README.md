@@ -423,7 +423,7 @@ ordem lá é a ordem de importância.
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, sinais de texto, emoji e tempo, e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
-| **Fusor** | ✅ ⚠️ | 16 features (texto, emoji, tempo); emoção e ironia ficam **fora do score**, marcadas em `sinais_fora_do_score` |
+| **Fusor** | ✅ | 35 features, sete famílias (texto, emoji, tempo, emoção, léxico, ironia, estilo); emoção, léxico, ironia e estilo passaram a entrar no vetor em 21/08/2026 — `sinais_fora_do_score` continua no payload, mas vem vazio |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -586,17 +586,12 @@ gargalo dos emojis e da caixa) e ganhou o teste que faltava. Falta rodar
 `modelos/bertimbau-ironia/`. Até lá a probabilidade de ironia é exibida como
 **indício com a ressalva colada**, nunca como veredito.
 
-### 2. As features de emoção e ironia ainda não entram no fusor
+### 2. Resolvido em 21/08/2026: as features de emoção e ironia entram no fusor
 
-O fusor tem **16 features** — texto, emoji e tempo — e nenhuma vem das cabeças
-de emoção e ironia. Elas são **leitura, não julgamento**: descrevem a fala sem
-mover a nota, e toda resposta que as carrega marca isso em
-`sinais_fora_do_score`.
-
-Subir o contrato de 16 para 30 features e **retreinar o fusor** é o passo que
-as coloca na nota — e ele só faz sentido depois da pendência 1, porque treinar
-o fusor sobre uma cabeça de ironia que erra 6 em 10 injetaria o vazamento dela
-no score.
+O fusor tem **35 features**, das sete famílias —
+texto, emoji, tempo, emoção, léxico, ironia e estilo. As quatro últimas
+passaram a entrar no vetor quando os notebooks 03 e 04 ficaram prontos;
+`sinais_fora_do_score` continua existindo no payload, mas vem vazio.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),

@@ -89,7 +89,7 @@ def test_importancias_cobrem_todas_as_features():
     assert set(_fusor_treinado().importancias()) == set(NOMES_FEATURES)
 
 
-def test_contribuicoes_cobrem_as_dezesseis_features():
+def test_contribuicoes_cobrem_todas_as_features():
     fusor = _fusor_treinado()
     contribuicoes = fusor.contribuicoes(_features(emoji_score_medio=0.8))
     assert set(contribuicoes) == set(NOMES_FEATURES)
@@ -161,11 +161,11 @@ def test_vetorizar_estoura_em_feature_de_emocao_faltando():
 
 
 def test_eixo_global_vazio_sem_treino():
-    """Fusor nao treinado nao tem eixo -- e dict vazio, nao dezesseis zeros.
+    """Fusor nao treinado nao tem eixo -- e dict vazio, nao um zero por feature.
 
     Zero e um peso valido ("esta feature nao importa"); ausencia de treino e
     outra coisa. O grafo usa essa diferenca para OMITIR as arestas de feature
-    em vez de desenhar dezesseis fios de peso zero.
+    em vez de desenhar `len(NOMES_FEATURES)` fios de peso zero.
     """
     assert Fusor().eixo_global() == {}
 

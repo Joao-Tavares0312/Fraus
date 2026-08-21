@@ -98,7 +98,7 @@ class MotorDuble:
                     "prob_satisfeito": p[2],
                 }
             )
-        # Pesos ficticios, so para a interface ter as 16 chaves com forma certa.
+        # Pesos ficticios, so para a interface ter as chaves de NOMES_FEATURES com forma certa.
         importancias = {
             nome: round(0.2 + 0.05 * (indice % 7), 3)
             for indice, nome in enumerate(NOMES_FEATURES)
@@ -139,7 +139,7 @@ class MotorDuble:
 
     def importancias(self) -> dict:
         # Mesmos pesos ficticios de `atribuir_conversa`, so para a ficha do
-        # modelo em `/modelo` ter as 16 chaves com forma certa.
+        # modelo em `/modelo` ter as chaves de NOMES_FEATURES com forma certa.
         return {
             nome: round(0.2 + 0.05 * (indice % 7), 3)
             for indice, nome in enumerate(NOMES_FEATURES)

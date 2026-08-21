@@ -86,7 +86,7 @@ sentidos** (`TabelaConversas.ausenciaPorUltimo`).
 
 ### 3.2 Sem horário, sem nota
 
-Latência é uma das 16 features do fusor, com peso aprendido. Uma transcrição de
+Latência é uma das 35 features do fusor, com peso aprendido. Uma transcrição de
 `.docx`/`.pdf` sem relógio não recebe nota, e a tela diz por quê.
 
 Zerar os campos de tempo seria o caminho fácil e **zero não é neutro**: o modelo
@@ -105,13 +105,14 @@ A `nota` é derivada no Python e o front só exibe. Recalcular no JavaScript já
 divergiu nas fronteiras 6/7 e 8/9 (arredondamento bancário contra meio-para-cima)
 e fazia a tabela mostrar nota 7 ao lado de "Detrator".
 
-### 3.4 Emoção e ironia são leitura, não julgamento
+### 3.4 Emoção e ironia também pontuam, desde 21/08/2026
 
-O fusor tem **16 features** e nenhuma vem dessas duas cabeças (confira
-`fraus.fusor.NOMES_FEATURES`). Toda resposta que as carrega marca
-`sinais_fora_do_score`, e a interface as mantém **visualmente separadas** da
-nota — encostar "ironia 99%" na barra de satisfação convida a ler uma como causa
-da outra.
+O fusor tem **35 features** (confira `fraus.fusor.NOMES_FEATURES`), e emoção e
+ironia estão entre elas desde que os notebooks 03 e 04 produziram os modelos —
+`sinais_fora_do_score` continua no payload, mas vem vazio. A interface mantém
+as duas leituras **visualmente separadas** da nota mesmo assim — encostar
+"ironia 99%" na barra de satisfação convida a ler uma como causa da outra, e
+isso vale independente de a feature pontuar ou não.
 
 ### 3.5 O que ficou de fora é relatado
 
