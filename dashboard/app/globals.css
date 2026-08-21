@@ -207,6 +207,44 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.78 0.085 80);
 
+  /* --- A MATERIALIDADE: vidro liquido ---------------------------------
+     Ver DESIGN.md, "A materialidade", e a spec de 2026-08-21.
+
+     Tres espessuras, e nao uma escala continua, porque o custo de
+     `backdrop-filter` e real e cada espessura resolve um problema diferente:
+       fino  -> so sinaliza flutuacao (header, tooltip)
+       medio -> superficie de trabalho (sidebar, painel, controle)
+       denso -> o conteudo atras PRECISA sumir (sheet, popover, select), ou o
+                rotulo da opcao compete com a tabela por tras dele.
+
+     Cada espessura tem um PISO: a cor mais clara que ela pode assumir, com o
+     vidro composto sobre a mancha mais brilhante do atelie. E contra o piso
+     que `scripts/contraste.mjs` verifica o texto -- superficie translucida
+     nao tem cor fixa, e o pior caso e o unico caso honesto de medir.
+
+     Os pisos sao mais ESCUROS que --muted (L 0.274), que ja esta no conjunto
+     verificado ha tempo. Se algum dia um piso passar de 0.274, isso nao e um
+     detalhe: e o sinal de que o vidro clareou a ponto de ameacar o texto, e a
+     espessura correspondente precisa de mais opacidade. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 45%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 62%, transparent);
+  --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
+
+  --vidro-fino-piso: oklch(0.25 0.006 78);
+  --vidro-piso: oklch(0.24 0.006 78);
+  --vidro-denso-piso: oklch(0.23 0.006 78);
+
+  --vidro-blur-fino: 8px;
+  --vidro-blur: 16px;
+  --vidro-blur-denso: 28px;
+
+  /* A QUINA ILUMINADA. E este par -- claro na aresta de cima, escuro na de
+     baixo -- que faz a superficie parecer vidro em vez de plastico fosco.
+     Sem ele, translucidez sozinha le como opacidade mal resolvida. */
+  --vidro-quina: oklch(1 0 0 / 12%);
+  --vidro-quina-baixa: oklch(0 0 0 / 20%);
+  --vidro-sombra: 0 1px 2px oklch(0 0 0 / 20%), 0 8px 24px oklch(0 0 0 / 28%);
+
   /* --- a pauta --- */
 
   /* A REGUA do sistema: o eixo que separa o dito (acima) do medido (abaixo).
@@ -386,6 +424,144 @@
     text-decoration: underline dotted var(--muted-foreground);
     text-underline-offset: 0.3em;
     text-decoration-thickness: 1.5px;
+  }
+
+  /* --- AS TRES ESPESSURAS DE VIDRO ------------------------------------
+     A composicao e sempre a mesma e tem quatro partes:
+       1. fundo semitranslucido    -> deixa a luz do atelie passar
+       2. blur + saturate          -> a saturacao impede que tudo atras vire
+                                      cinzento; blur sozinho dessatura
+       3. a quina iluminada        -> inset claro em cima, escuro embaixo. E
+                                      isto que le como vidro, e nao como
+                                      plastico fosco
+       4. sombra externa           -> separa da camada de baixo
+
+     O fallback nao e detalhe: navegador sem `backdrop-filter` que recebesse
+     so o fundo translucido mostraria texto sobre um retangulo semitransparente
+     -- ilegivel. Ele recebe superficie SOLIDA, e a superficie solida e o
+     proprio piso que o gate de contraste ja verifica. */
+  .vidro-fino,
+  .vidro,
+  .vidro-denso {
+    box-shadow:
+      inset 0 1px 0 0 var(--vidro-quina),
+      inset 0 -1px 0 0 var(--vidro-quina-baixa),
+      var(--vidro-sombra);
+    border: 1px solid var(--border);
+  }
+
+  .vidro-fino {
+    background-color: var(--vidro-fino-fundo);
+    backdrop-filter: blur(var(--vidro-blur-fino)) saturate(1.4);
+  }
+  .vidro {
+    background-color: var(--vidro-fundo);
+    backdrop-filter: blur(var(--vidro-blur)) saturate(1.5);
+  }
+  .vidro-denso {
+    background-color: var(--vidro-denso-fundo);
+    backdrop-filter: blur(var(--vidro-blur-denso)) saturate(1.6);
+  }
+
+  @supports not (backdrop-filter: blur(1px)) {
+    .vidro-fino {
+      background-color: var(--vidro-fino-piso);
+    }
+    .vidro {
+      background-color: var(--vidro-piso);
+    }
+    .vidro-denso {
+      background-color: var(--vidro-denso-piso);
+    }
+  }
+
+  /* Vidro em FAIXA: colado numa borda da tela (ex.: cabecalho sticky no topo),
+     em vez de bloco solto rodeado de vidro por todos os lados. Faixa colada no
+     topo nao pode ter borda lateral nem sombra penduradas no vazio -- por isso
+     zera o raio, zera as bordas laterais e a de topo, e troca a sombra externa
+     por so a quina inferior.
+
+     Especificidade dupla (0,2,0) e deliberada: `.vidro-fino` e as classes de
+     override (`rounded-none`, `border-x-0` etc) chegam pelo twMerge, que nao
+     enxerga conflito entre `vidro-fino` e essas classes -- as duas convivem no
+     className. No CSS construido, `.vidro-fino` vem DEPOIS das utilities do
+     Tailwind com a MESMA especificidade (0,1,0), entao ele vencia por ordem de
+     arquivo, nao por regra. Aqui a combinacao `.vidro-fino.vidro-faixa` sobe a
+     especificidade para vencer de verdade, independente de onde cada bloco
+     cair no CSS final. */
+  .vidro-fino.vidro-faixa,
+  .vidro.vidro-faixa,
+  .vidro-denso.vidro-faixa {
+    border-radius: 0;
+    border-inline: 0;
+    border-top: 0;
+    box-shadow:
+      inset 0 -1px 0 0 var(--vidro-quina-baixa),
+      0 8px 24px oklch(0 0 0 / 28%);
+  }
+
+  /* Vidro real muda de brilho quando voce o inclina: a quina que pega luz
+     se desloca e a sombra reage ao movimento. E essa reacao ao toque que
+     separa uma superficie viva de um retangulo pintado -- por isso as
+     superficies de vidro INTERATIVAS ganham esta classe: a quina superior
+     clareia e a sombra sobe no hover, como se a peca se inclinasse para o
+     ponteiro; no active ela afunda, quina mais fraca e sombra mais curta,
+     como se a peca fosse pressionada para dentro da mesa. */
+  .vidro-toque {
+    transition:
+      box-shadow 150ms var(--ease-fluid),
+      background-color 150ms var(--ease-fluid);
+  }
+  .vidro-toque:hover {
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 20%),
+      inset 0 -1px 0 0 var(--vidro-quina-baixa),
+      0 2px 4px oklch(0 0 0 / 22%),
+      0 12px 32px oklch(0 0 0 / 32%);
+  }
+  .vidro-toque:active {
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 6%),
+      inset 0 -1px 0 0 var(--vidro-quina-baixa),
+      0 1px 1px oklch(0 0 0 / 18%),
+      0 4px 12px oklch(0 0 0 / 24%);
+  }
+
+  /* O realce especular. Posicionado por `--px`/`--py`, que o hook
+     `useEspecular` escreve no no; sem o hook, o padrao 50%/0% deixa um brilho
+     discreto no alto da superficie, que e um repouso plausivel e nao um bug.
+
+     `isolation: isolate` porque o `::after` fica em `z-index: -1`: sem
+     contexto de empilhamento proprio no elemento, esse z-index negativo escapa
+     para tras na pagina em vez de ficar so atras do fundo da propria
+     superficie. */
+  .especular {
+    position: relative;
+    isolation: isolate;
+    --px: 50%;
+    --py: 0%;
+  }
+  .especular::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      35rem circle at var(--px) var(--py),
+      oklch(1 0 0 / 9%),
+      transparent 60%
+    );
+    transition: opacity 200ms var(--ease-fluid);
+  }
+
+  /* Os dois desligamentos, espelhando o hook. Touch nao tem hover: o realce
+     ficaria aceso no ultimo ponto tocado, parado, que le como sujeira na tela. */
+  @media (prefers-reduced-motion: reduce), (pointer: coarse) {
+    .especular::after {
+      display: none;
+    }
   }
 }
 

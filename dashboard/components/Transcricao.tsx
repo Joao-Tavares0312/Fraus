@@ -84,7 +84,7 @@ export function Transcricao({
   );
 
   return (
-    <ol className="divide-y divide-border">
+    <ol className="divide-y divide-border bg-card">
       {conversa.mensagens.map((mensagem, indice) => {
         const doCliente = mensagem.autor === "cliente";
         const latencia = latencias.get(indice);

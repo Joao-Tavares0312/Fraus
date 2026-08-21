@@ -57,6 +57,13 @@ aplicada errado. O modo é **Operate**: expressão nunca obscurece a tarefa.
   empurra a tese da tela para baixo da dobra.
 - **O cartão como estrutura de página.** Painel com borda e fundo próprio deixa
   de ser o agrupador padrão; agrupa-se por **espaço e régua**.
+
+  > **Emenda de 21/08/2026.** O painel voltou a ter fundo e borda próprios ao
+  > adotar o vidro líquido (ver seção 7). A regra original continua valendo no
+  > que ela realmente defendia — a página é uma pilha de sistemas, não uma
+  > grade de cartões, e quem agrupa continua sendo espaço mais régua. O que
+  > mudou é que o sistema agora tem **material**, e material precisa de
+  > superfície. Registrado como custo assumido, não como regra revogada.
 - **O parágrafo explicativo acima de cada painel.** A prosa metodológica não
   some — muda de lugar (ver 4).
 
@@ -239,3 +246,46 @@ estático.
 
 Sem sequência orquestrada de entrada: o analista chega para trabalhar, não para
 assistir a página carregar.
+
+---
+
+## 7. A materialidade
+
+Adotada em 21/08/2026. Ver
+`docs/superpowers/specs/2026-08-21-vidro-liquido-design.md`.
+
+A superfície da interface é **vidro líquido**: quatro camadas com
+responsabilidades disjuntas.
+
+| Camada | O que é | Onde vive |
+|---|---|---|
+| 0 — ateliê | manchas de luz fixas sobre o grafite | `components/shell/Atelier.tsx` |
+| 1 — vidro | superfície translúcida com quina iluminada | `.vidro-fino`, `.vidro`, `.vidro-denso` |
+| 2 — especular | realce que segue o ponteiro | `hooks/useEspecular.ts` + `.especular` |
+| 3 — dado | régua, séries, números — opaco, sem blur | os componentes de dado |
+
+**A camada 0 não é decoração.** Vidro sobre fundo chapado é indistinguível de
+cinza mais claro: sem luz atrás, não há o que refratar. Ela é estática, e essa
+é uma decisão — luz derivada do dado criaria um canal de cor sem rótulo, contra
+a seção 3.4 e contra a regra de que a cor da marca nunca codifica valor.
+
+**Três espessuras, não uma escala.** `backdrop-filter` é o efeito mais caro de
+CSS, e cada espessura resolve um problema distinto: o fino sinaliza flutuação,
+o médio é superfície de trabalho, o denso existe porque num menu suspenso o
+conteúdo atrás **precisa** sumir para o rótulo da opção ser legível.
+
+**A regra dura: nada que carrega dado é translúcido.** Gráfico, tabela,
+transcrição e régua desenham em superfície opaca embutida no vidro — um visor.
+Blur atrás de uma série de meio ponto come a série, e a régua da pauta é meio
+ponto.
+
+**O contraste governa o vidro, não o contrário.** Cada espessura declara um
+`--vidro-<n>-piso`: a cor mais clara que ela pode assumir, com o vidro composto
+sobre a mancha mais brilhante do ateliê. É contra esse pior caso que
+`npm run contraste` verifica o texto. Par que reprova faz a espessura ganhar
+opacidade — o gate nunca é afrouxado. Se um piso passar de `--muted` (L 0.274)
+em claridade, o vidro clareou demais.
+
+**O especular tem dois desligamentos**, e o segundo é o esquecido:
+`prefers-reduced-motion` e **ponteiro grosso**. Toque não tem hover, e o realce
+congelaria no último ponto tocado — pior que não existir.
