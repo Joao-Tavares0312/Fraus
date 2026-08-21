@@ -256,7 +256,9 @@ SIMBOLOS_CENSURA = set("*@#$%&0134")
 HOMOGLIFOS = str.maketrans({
     "@": "a", "4": "a",
     "0": "o",
-    "1": "i", "!": "i",
+    # "!" NAO entra aqui: `PALAVRA` nao o inclui, entao ele nunca chega a uma
+    # palavra -- e mapeamento inalcancavel e some numa refatoracao futura.
+    "1": "i",
     "3": "e",
     "$": "s", "5": "s",
     "*": "",
