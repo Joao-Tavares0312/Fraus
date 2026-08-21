@@ -423,7 +423,7 @@ ordem lá é a ordem de importância.
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, sinais de texto, emoji e tempo, e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
-| **Fusor** | ✅ | 35 features, sete famílias (texto, emoji, tempo, emoção, léxico, ironia, estilo); emoção, léxico, ironia e estilo passaram a entrar no vetor em 21/08/2026 — `sinais_fora_do_score` continua no payload, mas vem vazio |
+| **Fusor** | ✅ ⚠️ | o **contrato** é de 35 features, sete famílias (texto, emoji, tempo, emoção, léxico, ironia, estilo), e o código está pronto — `sinais_fora_do_score` continua no payload, mas vem vazio. O **artefato não**: `modelos/fusor.joblib` ainda é o fusor treinado sobre as 16 features antigas, e com ele a API **não sobe** (`vetorizar` levanta `KeyError`). Falta rodar `notebooks/02_treino_fusor.ipynb` — ver pendência 2 |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -449,8 +449,16 @@ Em ordem, com o detalhe em [Pendências](#pendências):
    erra 6 em 10") deixou de valer como trava e passou a descrever o que
    acontece hoje: o score carrega esse vazamento até este notebook rodar de
    novo.
-2. ~~Subir o fusor de 16 para 30 features~~ — **resolvido em 21/08/2026**: são
-   35, sete famílias, emoção e ironia entram na nota.
+2. **Retreinar o fusor no contrato de 35.** ~~Subir o fusor de 16 para 30
+   features~~ — o **contrato** foi resolvido em 21/08/2026: são 35, sete
+   famílias, emoção e ironia entram na nota. O **retreino não**:
+   `modelos/fusor.joblib` ainda é o artefato de 16 features, `vetorizar`
+   levanta `KeyError` com ele e a API real não sobe. Falta rodar
+   `notebooks/02_treino_fusor.ipynb` no Colab. Vem depois do item 1 na ordem
+   ideal — treinar agora congela nos pesos o vazamento da cabeça de ironia —
+   mas não está travado por ele: a ironia já pontua de qualquer jeito, então
+   retreinar o fusor antes destrava a API ao custo de assumir o vazamento
+   também no treino.
 3. **Fixar a empresa fictícia** do trabalho — ela define volume, canais e o que
    conta como bom tempo de resposta na apresentação.
 4. **Decisões em aberto** — tema claro para projetor de banca, pin do
@@ -602,12 +610,29 @@ atendimento carrega esse vazamento até este notebook rodar de novo. Não é um
 risco resolvido nem neutro — é um risco que já está dentro do número que a
 tela mostra.
 
-### 2. Resolvido em 21/08/2026: as features de emoção e ironia entram no fusor
+### 2. Retreinar o fusor no contrato de 35
 
-O fusor tem **35 features**, das sete famílias —
-texto, emoji, tempo, emoção, léxico, ironia e estilo. As quatro últimas
-passaram a entrar no vetor quando os notebooks 03 e 04 ficaram prontos;
-`sinais_fora_do_score` continua existindo no payload, mas vem vazio.
+São duas coisas distintas, e só uma está feita.
+
+**O contrato subiu — feito em 21/08/2026.** O vetor é de **35 features**, das
+sete famílias — texto, emoji, tempo, emoção, léxico, ironia e estilo. As
+quatro últimas passaram a entrar no vetor quando os notebooks 03 e 04 ficaram
+prontos; `sinais_fora_do_score` continua existindo no payload, mas vem vazio.
+Isso é código: `montar_features`, `vetorizar` e `NOMES_FEATURES`.
+
+**O fusor não foi retreinado.** O retreino é o
+`notebooks/02_treino_fusor.ipynb`, roda no Colab, exige os três artefatos
+fine-tunados, e não rodou. Enquanto ele não rodar, `modelos/fusor.joblib`
+ainda é o fusor treinado sobre as **16 features antigas**, e ele não serve
+mais: `Fusor.pontuar` chama `vetorizar`, que exige as 35 chaves de
+`NOMES_FEATURES` e levanta **`KeyError`** para um artefato de 16. Na prática,
+**a API real não sobe** com o modelo que está em `modelos/` hoje.
+
+Isso **é o comportamento correto**, não um bug a consertar: a invariante 9 do
+projeto proíbe zero silencioso em feature faltante, e a 7 manda tratar modelo
+ausente ou incompatível como falha alta e explícita. Servir predição com um
+fusor que ignora dezenove features seria pior que estar fora do ar. Rodar o
+notebook 02 de novo é o que destrava a API.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),
