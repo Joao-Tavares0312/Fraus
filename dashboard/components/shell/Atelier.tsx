@@ -151,35 +151,61 @@ export function Atelier() {
 
       {/* A GRADE A LASER: o chao da cena.
 
-          A perspectiva e o truque inteiro. Um plano com duas familias de
-          linha -- uma correndo para o fundo, outra atravessando -- rotacionado
-          em `rotateX` com `transformOrigin` no rodape. As linhas que correm
-          para o fundo CONVERGEM sozinhas, porque a projecao em perspectiva faz
-          isso; nao ha gradiente conico nem SVG envolvido.
+          A perspectiva e o truque inteiro, e precisa de DOIS elementos, nao
+          um. Correcao de 24/08/2026: a primeira versao punha `perspective()`
+          dentro da propria funcao `transform` do elemento rotacionado -- e um
+          elemento so, girado 74deg em torno da propria borda de baixo, fica
+          quase de perfil e COLAPSA numa faixa fina colada no rodape em vez de
+          se estender ate um horizonte. Pior: nada recortava a metade do plano
+          que passa do ponto de fuga, e ela se projetava de volta ACIMA do
+          horizonte como uma malha cobrindo a tela inteira -- o artefato
+          classico de `rotateX` alto com `perspective` curta demais.
 
-          `inset-x-[-50%]` e nao `inset-x-0`: rotacionado, o plano encolhe na
-          horizontal perto do horizonte e mostraria borda se tivesse a largura
-          da tela. Sangrar meia tela para cada lado resolve sem custo.
+          A tecnica correta separa CONTEINER de PLANO:
+          - o CONTEINER fica ancorado no rodape, com `perspective` como
+            PROPRIEDADE CSS dele (nao dentro de `transform`) -- e isso que faz
+            o ponto de fuga ser o do conteiner, produzindo convergencia de
+            verdade em vez de um plano so comprimido. `overflow-hidden` no
+            conteiner e OBRIGATORIO: e ele que come a metade espelhada do
+            plano que passaria do horizonte. Tirar o `overflow-hidden` para
+            "simplificar" reintroduz a malha cobrindo a tela.
+          - o PLANO INTERNO e bem mais alto que o conteiner (`h-[200%]`) e e
+            SO ELE que gira em `rotateX`, com `transformOrigin` na propria
+            borda de baixo. As linhas que correm para o fundo CONVERGEM
+            sozinhas, porque a projecao em perspectiva faz isso; nao ha
+            gradiente conico nem SVG envolvido.
 
-          A mascara apaga a grade subindo, para ela virar horizonte em vez de
-          parar numa linha reta -- que leria como o fim de uma textura, e nao
-          como distancia.
+          `inset-x-[-50%]` no plano interno, e nao `inset-x-0`: rotacionado,
+          o plano encolhe na horizontal perto do horizonte e mostraria borda
+          se tivesse a largura da tela. Sangrar meia tela para cada lado
+          resolve sem custo.
+
+          A mascara, no plano interno, apaga a grade subindo, para ela virar
+          horizonte em vez de parar numa linha reta -- que leria como o fim
+          de uma textura, e nao como distancia.
 
           ESTATICA. Ver o comentario da chuva logo abaixo sobre por que. */}
       <div
-        className="absolute inset-x-[-50%] bottom-0 h-[55vh]"
+        className="absolute inset-x-0 bottom-0 h-[45vh] overflow-hidden"
         style={{
-          opacity: "var(--grade-op)",
-          background:
-            "repeating-linear-gradient(to right, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))," +
-            "repeating-linear-gradient(to bottom, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))",
-          transform:
-            "perspective(var(--grade-horizonte)) rotateX(74deg)",
-          transformOrigin: "bottom center",
-          maskImage: "linear-gradient(to top, black 0%, transparent 92%)",
-          WebkitMaskImage: "linear-gradient(to top, black 0%, transparent 92%)",
+          perspective: "var(--grade-horizonte)",
+          perspectiveOrigin: "50% 0%",
         }}
-      />
+      >
+        <div
+          className="absolute inset-x-[-50%] bottom-0 h-[200%]"
+          style={{
+            opacity: "var(--grade-op)",
+            background:
+              "repeating-linear-gradient(to right, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))," +
+              "repeating-linear-gradient(to bottom, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))",
+            transform: "rotateX(68deg)",
+            transformOrigin: "bottom center",
+            maskImage: "linear-gradient(to top, black 0%, transparent 92%)",
+            WebkitMaskImage: "linear-gradient(to top, black 0%, transparent 92%)",
+          }}
+        />
+      </div>
 
       {/* A CHUVA: riscos diagonais finos, ESTATICOS.
           Por que nao cai: a secao 6 do DESIGN.md ja gastou os dois momentos de

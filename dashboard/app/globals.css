@@ -430,6 +430,12 @@
      pautado ja zerou ali. Ver o comentario de `scripts/pisos.mjs` sobre
      alternativas disjuntas.
 
+     `--grade-horizonte` alimenta a `perspective` do CONTEINER em
+     Atelier.tsx, nao a funcao `transform` do plano rotacionado -- ver o
+     comentario la sobre por que a primeira versao (perspective+rotateX no
+     mesmo elemento) colapsava a grade numa faixa fina e vazava uma malha
+     acima do horizonte. Fix de 24/08/2026, fix round 1.
+
      Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. */
   --grade-cor: oklch(0.81 0.1 82);
   --grade-op: 0.1;
