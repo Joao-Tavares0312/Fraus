@@ -1,7 +1,11 @@
+"use client";
+
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { ehFalhaDeConexao } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { TRANSICAO, itemDaPilha } from "@/lib/movimento";
 
 /**
  * Uma faixa de referencia no trilho do indicador.
@@ -76,7 +80,15 @@ export function CartaoIndicador({
     // Sem cartao: na armadura os indicadores se separam por REGUA e espaco, nao
     // por caixa. Cartao aqui produzia quatro caixas de altura igualada pelo
     // flex, com rodape curto sobrando vazio -- bases irregulares.
-    <div
+    // `motion.div` na PROPRIA raiz, e nao um wrapper por fora: os separadores
+    // desta pilha sao `last:border-b-0 last:pb-0`, e um wrapper faria de cada
+    // cartao filho unico do seu proprio pai -- todos passariam a ser "o
+    // ultimo" e a armadura perderia as reguas internas de uma vez.
+    //
+    // As `variants` sao herdadas do container (`pilha`, na FaixaIndicadores),
+    // por isso aqui nao ha `initial` nem `animate`: quem escalona e o pai.
+    <motion.div
+      variants={itemDaPilha}
       className="quebra-evitar flex flex-col gap-1.5 border-b border-compasso pb-3 last:border-b-0 last:pb-0"
       data-slot="indicador"
     >
@@ -146,7 +158,7 @@ export function CartaoIndicador({
           {rodape}
         </p>
       ) : null}
-    </div>
+    </motion.div>
   );
 }
 
@@ -188,13 +200,24 @@ function TrilhoDeReferencia({
           />
         ))}
         {/* O ponteiro do valor: barra de 2px na cor do texto, sempre por cima
-            das faixas -- e o unico elemento do trilho que representa medicao. */}
-        <span
+            das faixas -- e o unico elemento do trilho que representa medicao.
+
+            ELE NASCE ONDE PERTENCE, crescendo na vertical. A alternativa obvia
+            -- deslizar da esquerda ate a posicao final -- foi rejeitada: o
+            olho leria a corrida do zero ate 62 como se o indicador tivesse
+            subido de zero a 62, uma progressao que dado nenhum aqui afirma.
+            Movimento que insinua o que a medicao nao diz e o mesmo erro que
+            plotar ausencia como zero, so em outra dimensao.
+
+            `scaleY` e `opacity` sao transformacoes, entao o
+            `reducedMotion="user"` do MotionConfig as descarta sozinho. */}
+        <motion.span
           aria-hidden
-          className="absolute inset-y-0 w-0.5 rounded-full bg-foreground"
-          style={{
-            left: `calc(${posicao(valor, trilho)}% - 1px)`,
-          }}
+          className="absolute inset-y-0 w-0.5 origin-center rounded-full bg-foreground"
+          style={{ left: `calc(${posicao(valor, trilho)}% - 1px)` }}
+          initial={{ opacity: 0, scaleY: 0.3 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          transition={TRANSICAO.amplo}
         />
       </div>
       <p className="text-[0.6875rem] leading-tight text-muted-foreground">

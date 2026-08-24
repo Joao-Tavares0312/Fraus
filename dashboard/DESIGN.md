@@ -5,7 +5,8 @@ documento. Ele não descreve como as telas estão hoje: descreve como elas devem
 ser.
 
 **Mundo:** *Pauta* — a conversa notada como partitura.
-**Chassi:** shadcn/ui sobre Tailwind v4, tokens em OKLCH, tema escuro único.
+**Chassi:** shadcn/ui sobre Tailwind v4, tokens em OKLCH, **dois temas, ambos
+escuros** — grafite (padrão de fábrica) e chuva de neon (ver seção 8).
 
 ---
 
@@ -85,14 +86,37 @@ direito de um respiro depois. Mais espaço acima de um título do que abaixo.
 
 ## 3. Tokens
 
-Tema escuro único. Tokens em `app/globals.css`; consumo via classes utilitárias.
-Nada de hex solto em componente.
+Tokens em `app/globals.css`; consumo via classes utilitárias. Nada de hex solto
+em componente.
+
+Os valores abaixo são os do tema **grafite**, o padrão de fábrica. O tema chuva
+de neon sobrepõe apenas o chassi e não encosta na camada de dado — ver seção 8.
 
 ### 3.1 O fundo é papel, não vazio
 
 O fundo não é preto: é **papel de ensaio grafite**. Preto puro faz a régua
 flutuar no vácuo e transforma dado em néon. A superfície precisa parecer estoque
 de papel sob luz de escritório — o analista fica horas nela.
+
+> **Emenda de 24/08/2026 — o papel é pautado.** A regra acima dizia papel liso.
+> O fundo passou a carregar **linhas horizontais de ritmo constante**, nos dois
+> temas, por decisão do dono do projeto.
+>
+> O que **não** mudou, e é o que a regra original defendia de verdade: o fundo
+> continua sendo papel e não vazio, continua sem preto puro, e continua sem
+> competir com o dado — as linhas moram no ateliê, a camada que não carrega
+> informação, e passam **por baixo** da luz.
+>
+> **Elas não são um pentagrama.** A §1.1 proíbe desenhar glifo musical e manda a
+> gramática entrar como estrutura e ritmo; agrupar em cincos seria desenhar a
+> pauta, ritmo constante é papel pautado. A régua do sistema (`--linha`) segue
+> sendo a única linha que **afirma** alguma coisa.
+>
+> O custo veio na hora e está pago: a textura levantou o pior caso das
+> superfícies translúcidas nos dois temas. Os pisos foram **remedidos** (o
+> grafite saiu de 0,25/0,24/0,23 para 0,309/0,28/0,246) e o vidro fino da chuva
+> precisou engrossar de novo — 68% → 71% —, porque `--destructive` sobre ele
+> havia caído para 4,46:1. A ordem de sempre: a espessura cede, o portão não.
 
 | Token | Papel |
 |---|---|
@@ -244,8 +268,31 @@ leitura deslizando ao percorrer a linha do tempo. Movimento comunica estado,
 não decora. `prefers-reduced-motion` desliga o deslize e mantém o cursor
 estático.
 
-Sem sequência orquestrada de entrada: o analista chega para trabalhar, não para
-assistir a página carregar.
+**Emenda de 24/08/2026 — a entrada dos sistemas.** A regra original desta seção
+era "sem sequência orquestrada de entrada: o analista chega para trabalhar, não
+para assistir a página carregar". Ela foi afrouxada num ponto e mantida no
+resto, e a distinção é a seguinte:
+
+- **continua proibido** animar na carga da página. Nada anima por ter montado;
+- **passa a ser permitido** um sistema subir 8 px ao **entrar em cena pela
+  rolagem**, uma única vez (`whileInView` + `once`). Isso não é abertura de
+  cortina: é a mesma resposta que o olho já espera de algo que aparece por
+  rolagem, e ela diz *de onde o bloco veio*.
+
+A armadura de indicadores escalona os quatro filhos em 40 ms. O intervalo é
+curto de propósito: os 80–100 ms de praxe fariam o quarto indicador chegar
+quase meio segundo depois do primeiro, e aí o analista **espera** — que é
+exatamente o que a regra original proíbe. 40 ms lê como um gesto só.
+
+O custo declarado: esta é a segunda peça de movimento da interface, e a seção
+dizia "um momento autorado". São dois agora — o cursor de leitura na linha do
+tempo e a entrada dos sistemas. Um terceiro precisa de argumento novo.
+
+O vocabulário (duração, curva, distância) mora em `lib/movimento.ts`, um lugar
+só, pelo mesmo motivo que a cor mora em token. `prefers-reduced-motion` é
+respeitado em duas frentes, porque uma não alcança a outra: o bloco no fim do
+`globals.css` zera transição de CSS, e o `<Movimento>` no layout raiz passa
+`reducedMotion="user"` ao Motion, que anima em JS e não obedeceria ao CSS.
 
 ---
 
@@ -289,3 +336,99 @@ em claridade, o vidro clareou demais.
 **O especular tem dois desligamentos**, e o segundo é o esquecido:
 `prefers-reduced-motion` e **ponteiro grosso**. Toque não tem hover, e o realce
 congelaria no último ponto tocado — pior que não existir.
+
+---
+
+## 8. Os dois temas
+
+**Emenda de 24/08/2026.** Até aqui este documento dizia "tema escuro único, sem
+alternador", e a §3.1 chama o fundo de *papel de ensaio*, com o argumento
+explícito de que preto puro "transforma dado em neon". Passa a haver um segundo
+tema, **chuva de neon**, por decisão do dono do projeto — e ele é exatamente a
+estética que aquele parágrafo recusava.
+
+O grafite continua sendo o **padrão de fábrica** e a posição de projeto. A chuva
+é opção, não substituição.
+
+### 8.1 A tese do tema chuva
+
+Rua molhada à noite: neon frio de fachada refletido no asfalto, e a luz de
+**sódio** do poste — que é âmbar-dourada. É isso que resolve o conflito entre
+vaporwave e a marca: numa cena de chuva noturna, luz quente de poste ao lado de
+neon frio não é contradição, é o retrato. O dourado do monograma deixa de ser um
+metal solto sobre roxo e passa a ser a lâmpada da rua.
+
+### 8.2 O que o tema NÃO toca
+
+Três regras, e elas são o que separa "segundo tema" de "outro produto":
+
+1. **A camada de dado inteira fica como está.** `--dito` continua âmbar,
+   `--medido` continua azul, e as sete famílias de sinal mantêm os matizes. O
+   encoding é compromisso vinculante do `PRODUCT.md`; trocar a pele não pode
+   trocar o significado. O magenta e o violeta do vaporwave vivem **só no
+   ateliê**, que é a única camada que não carrega dado — e é por não carregar
+   dado que ela pode ter croma alto sem inventar canal sem rótulo.
+2. **O dourado continua fora de dado**, só em controle e marca.
+3. **Todo par de texto continua cruzando AA por cálculo**, agora medido nos dois
+   temas.
+
+### 8.3 O gate passou a ser ciente de tema
+
+`scripts/contraste.mjs` mantinha **um mapa único** de tokens para o arquivo
+inteiro. Com dois temas declarando `--background`, o segundo sobrescreveria o
+primeiro e o relatório sairia verde tendo medido um tema só — falha silenciosa,
+que é o modo de falha que este gate existe para evitar.
+
+Ele agora recorta o bloco de cada tema, **sobrepõe à base como a cascata do CSS
+faz** (um tema só declara o que muda) e roda a matriz inteira por tema. Tema
+novo entra sem tocar no script: basta o seletor começar com `.tema-`.
+
+### 8.4 Onde a escolha mora
+
+No `<html>`, como classe, e no `localStorage` — não em contexto de React. Quem
+precisa saber o tema é o CSS, e o CSS já sabe ler classe.
+
+O grafite é a **ausência** de classe, não uma classe própria: ele é o `:root`, e
+um tema padrão que precisasse se declarar para funcionar quebraria em toda tela
+renderizada antes do JavaScript. Um script inline no `<head>` aplica a classe
+antes da primeira pintura; sem ele, quem escolheu a chuva veria a tela pintar em
+grafite e trocar depois da hidratação, a cada navegação.
+
+### 8.5 Onde a chuva pode gritar
+
+O tema foi empurrado para ser chamativo em 24/08/2026, e o empurrão respeita a
+regra de 8.2: **só o que não carrega dado ganhou saturação.**
+
+| Peça | O que faz | Por que pode gritar |
+|---|---|---|
+| **quina do vidro** | ciano na aresta de cima, magenta na de baixo | é tubo de neon: a luz da fachada bate em cima, o reflexo do chão sobe embaixo. Toda superfície tem quina, então acender a aresta acende a interface inteira **sem uma célula de dado mudar de cor** |
+| **sombra** | deixa de ser preta e vira derrame violeta | preto sob um painel apoiado em asfalto molhado lê como buraco; o halo lê como a luz do próprio painel vazando para o chão |
+| **especular** | tingido de magenta | realce branco no meio de uma paleta tingida lê como falha de renderização |
+| **reflexo no asfalto** | faixa de luz subindo do rodapé | é o que separa "fundo roxo com manchas" de "fachada espelhada em chão molhado" |
+| **chuva** | riscos diagonais finos, **estáticos** | dá textura para o vidro refratar sem gastar quadro |
+
+**A chuva não cai**, e isso é decisão: a §6 já gastou os dois momentos de
+movimento que a interface se permite, e chuva animada seria um terceiro que não
+comunica estado nenhum — decoração rodando atrás de tabela e gráfico o tempo
+todo.
+
+As duas peças novas existem no componente nos **dois** temas; o grafite as
+mantém em opacidade zero. Um segundo componente de ateliê só para a variante
+custaria mais do que dois tokens.
+
+### 8.6 O preço: o vidro da chuva é mais grosso
+
+Acender o ateliê levantou o piso das superfícies translúcidas, e o portão
+reprovou três pares — `--destructive` sobre vidro fino caiu para **3,53:1**.
+
+A resolução seguiu a regra da seção 7: **a espessura ganha opacidade até
+passar.** 45% → 68% no fino, 62% → 74% no médio, 82% → 86% no denso. Baixar a
+luz para salvar o contraste teria sido resolver pelo lado errado, ainda mais num
+tema cujo pedido era justamente ficar mais chamativo.
+
+Os pisos deste tema são **medidos, não estimados**: as cinco camadas do ateliê
+compostas no mesmo ponto (pior caso, ainda que geometricamente impossível — a
+mancha da marca fica no alto à esquerda e a fria embaixo à direita), cada
+espessura por cima, e a luminância resultante convertida de volta para OKLCH.
+Piso otimista é pior que piso nenhum: ele faz o portão devolver verde medindo
+uma superfície que não existe.

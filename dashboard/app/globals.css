@@ -230,9 +230,13 @@
   --vidro-fundo: color-mix(in oklch, var(--card) 62%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
-  --vidro-fino-piso: oklch(0.25 0.006 78);
-  --vidro-piso: oklch(0.24 0.006 78);
-  --vidro-denso-piso: oklch(0.23 0.006 78);
+  /* REMEDIDOS em 24/08/2026, ao ligar o papel pautado: a textura entrou no
+     atelie e levantou o pior caso. Eram 0.25/0.24/0.23 com o fundo liso.
+     `--destructive` sobre eles fica em 4.58/5.05/5.61 -- passa, sem precisar
+     engrossar o vidro do grafite. */
+  --vidro-fino-piso: oklch(0.309 0.006 78);
+  --vidro-piso: oklch(0.28 0.006 78);
+  --vidro-denso-piso: oklch(0.246 0.006 78);
 
   --vidro-blur-fino: 8px;
   --vidro-blur: 16px;
@@ -338,6 +342,208 @@
      sinalDaFeature. */
   --outros-sinal: oklch(0.705 0.015 286.067);
   --outros-sinal-texto: oklch(0.78 0.015 286.067);
+
+  /* AS TRES LUZES DO ATELIE.
+     Existem como token proprio porque o atelie estava pegando `--dito` e
+     `--medido` emprestados -- tokens da camada de DADO usados como cor de
+     luz. Funcionava por coincidencia de matiz, mas amarrava o papel de parede
+     ao canal que carrega significado: mexer no ambar do "dito" mexeria na
+     iluminacao da sala. Luz e luz, dado e dado. */
+  --atelie-marca: var(--primary);
+  --atelie-fria: var(--medido);
+  --atelie-quente: var(--dito);
+
+  /* A FORCA de cada mancha. Token e nao numero cravado no componente porque e
+     exatamente aqui que os dois temas discordam: o grafite quer luz que so
+     insinua, e a chuva quer neon. */
+  --atelie-op-marca: 0.13;
+  --atelie-op-fria: 0.11;
+  --atelie-op-quente: 0.07;
+
+  /* AS DUAS PECAS QUE SO A CHUVA ACENDE. Zeradas aqui de proposito: elas
+     existem no componente nos dois temas e o TEMA decide se aparecem, o que
+     evita um segundo componente de atelie so para a variante. */
+  --atelie-asfalto: 0;
+  --atelie-chuva: 0;
+
+  /* A cor do realce especular. Branco puro no grafite: ali ele e reflexo de
+     luz de escritorio, e reflexo nao tem cor propria. */
+  --especular-cor: oklch(1 0 0 / 9%);
+
+  /* --- O PAPEL PAUTADO -------------------------------------------------
+     A textura de fundo: linhas horizontais de ritmo CONSTANTE.
+
+     POR QUE NAO E UM PENTAGRAMA. A secao 1.1 do DESIGN.md e explicita --
+     "nenhum glifo musical e desenhado, sem clave, sem seminima, sem
+     pentagrama de cinco linhas" -- e manda a gramatica entrar como
+     ESTRUTURA E RITMO, nao como fantasia. Agrupar em cincos seria desenhar
+     a pauta; ritmo constante e papel pautado, que e a mesma ideia sem o
+     glifo. A regua do sistema (`--linha`) continua sendo a unica linha que
+     AFIRMA alguma coisa; estas aqui sao papel.
+
+     Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. O fundo deixou de
+     ser papel liso nos DOIS temas, por decisao do dono do projeto. */
+  --pauta-cor: oklch(0.93 0.02 75);
+  --pauta-op: 0.055;
+  --pauta-espaco: 13px;
+  --pauta-peso: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+   TEMA "CHUVA DE NEON" — a segunda opcao de cor.
+
+   EMENDA DECLARADA. O chassi vigente diz, no comentario do `--background`,
+   que o fundo e papel de ensaio e que preto puro "transforma dado em neon".
+   Este tema pede exatamente aquilo, por decisao do dono do projeto em
+   24/08/2026. O grafite continua sendo o PADRAO de fabrica; isto e uma
+   segunda opcao, nunca uma substituicao.
+
+   A TESE, e ela e o que impede o tema de virar fantasia: rua molhada a noite.
+   O neon frio da fachada refletido no asfalto, e a luz de SODIO do poste --
+   que e ambar-dourada. E por isso que o dourado da marca nao briga com o
+   vaporwave: numa cena de chuva noturna, luz quente de poste ao lado de neon
+   frio nao e contradicao, e o retrato. O dourado deixa de ser um metal solto
+   sobre roxo e passa a ser a lampada da rua.
+
+   O QUE ESTE TEMA NAO TOCA, e a regra que o mantem honesto:
+
+   1. A CAMADA DE DADO INTEIRA fica como esta. `--dito` continua ambar,
+      `--medido` continua azul, e as sete familias de sinal mantem os matizes.
+      O encoding e compromisso vinculante do PRODUCT.md -- trocar magenta por
+      ambar aqui seria mudar o significado junto com a pele. O magenta e o
+      violeta do vaporwave vivem SO no atelie, que e a camada que nao carrega
+      dado nenhum;
+   2. o dourado (`--primary`) segue fora de dado, so em controle e marca;
+   3. todo par de texto continua cruzando AA por calculo, agora medido nos
+      dois temas (`npm run contraste`).
+
+   Sobrepoe a base: so declara o que muda. Ver DESIGN.md, "Os dois temas".
+--------------------------------------------------------------------------- */
+
+.tema-chuva {
+  color-scheme: dark;
+
+  /* O ASFALTO. Indigo bem escuro em vez de preto puro -- preto puro faz a
+     regua de meio ponto flutuar no vacuo, e o argumento continua valendo
+     mesmo depois de trocar a paleta. E asfalto molhado tem cor: ele devolve
+     o ceu. */
+  --background: oklch(0.155 0.028 274);
+  --foreground: oklch(0.97 0.008 250);
+  --card: oklch(0.208 0.032 274);
+  --card-foreground: oklch(0.97 0.008 250);
+  --popover: oklch(0.2 0.032 274);
+  --popover-foreground: oklch(0.97 0.008 250);
+
+  /* A LUZ DE SODIO. O mesmo dourado da logo, um passo mais luminoso: sobre
+     terreno frio o ambar perde presenca, e a marca nao pode encolher porque
+     o fundo esfriou. */
+  --primary: oklch(0.81 0.1 82);
+  --primary-foreground: oklch(0.16 0.022 82);
+
+  --secondary: oklch(0.278 0.034 276);
+  --secondary-foreground: oklch(0.97 0.008 250);
+  --muted: oklch(0.278 0.034 276);
+  --muted-foreground: oklch(0.745 0.038 268);
+  --accent: oklch(0.278 0.034 276);
+  --accent-foreground: oklch(0.97 0.008 250);
+
+  --border: oklch(0.83 0.09 255 / 16%);
+  --input: oklch(0.83 0.09 255 / 22%);
+  --ring: oklch(0.81 0.1 82);
+
+  --sidebar: oklch(0.186 0.034 276);
+  --sidebar-foreground: oklch(0.97 0.008 250);
+  --sidebar-primary: oklch(0.81 0.1 82);
+  --sidebar-primary-foreground: oklch(0.16 0.022 82);
+  --sidebar-accent: oklch(0.278 0.034 276);
+  --sidebar-accent-foreground: oklch(0.97 0.008 250);
+  --sidebar-border: oklch(0.83 0.09 255 / 16%);
+  --sidebar-ring: oklch(0.81 0.1 82);
+
+  /* PISOS DE VIDRO do tema. Obrigatorios e opacos: o `--vidro-*-fundo` e
+     color-mix do `--card` e acompanha o tema sozinho, mas o piso e o pior
+     caso pre-calculado que o gate mede, e ele nao se deriva de graca. */
+  /* MEDIDOS, nao estimados: compus as cinco camadas do atelie deste tema no
+     mesmo ponto (o pior caso, ainda que geometricamente impossivel -- a
+     mancha da marca fica no alto a esquerda e a fria embaixo a direita), pus
+     cada espessura de vidro por cima e converti a luminancia resultante de
+     volta para OKLCH. Subiram muito ao acender o atelie: eram 0.246/0.236/
+     0.226 quando a luz era discreta. Piso otimista e pior que piso nenhum --
+     ele faz o portao devolver verde medindo uma superficie que nao existe. */
+  /* O VIDRO DESTE TEMA E MAIS GROSSO, e nao foi escolha de gosto: com o
+     atelie aceso nos valores acima, `--destructive` sobre vidro fino caiu
+     para 3.53:1 e o portao reprovou. A spec do vidro liquido diz como se
+     resolve isso, e a ordem importa: par que reprova faz a ESPESSURA ganhar
+     opacidade -- o portao manda no vidro, o vidro nao afrouxa o portao.
+     Baixar a luz para salvar o contraste teria sido resolver pelo lado
+     errado, ainda mais num tema cujo pedido era ficar mais chamativo.
+     45% -> 68% no fino, 62% -> 74% no medio, 82% -> 86% no denso. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 71%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 75%, transparent);
+  --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
+
+  /* Segunda rodada de engrossamento, e pelo mesmo motivo da primeira: o papel
+     pautado somou luz ao atelie e `--destructive` sobre vidro fino caiu para
+     4.46:1. 68% -> 71% no fino e 74% -> 75% no medio devolvem 4.62 e 4.84. */
+  --vidro-fino-piso: oklch(0.307 0.031 274);
+  --vidro-piso: oklch(0.294 0.031 274);
+  --vidro-denso-piso: oklch(0.257 0.031 274);
+
+  /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
+     superficie de vidro tem quina, entao acender a aresta acende a interface
+     inteira de uma vez -- sem que uma unica celula de dado mude de cor.
+     Ciano em cima e magenta embaixo: e a leitura de tubo de neon (a luz da
+     fachada bate na aresta de cima, o reflexo rosado do chao sobe na de
+     baixo), e e o par canonico do vaporwave posto no unico lugar da interface
+     que pode receber cor saturada sem significar nada. */
+  --vidro-quina: oklch(0.86 0.19 200 / 42%);
+  --vidro-quina-baixa: oklch(0.7 0.24 330 / 32%);
+
+  /* A sombra deixa de ser preta e vira DERRAME: preto embaixo de um painel
+     sobre asfalto molhado le como buraco. O halo violeta le como a luz da
+     propria superficie vazando para o chao. */
+  --vidro-sombra: 0 1px 2px oklch(0.08 0.04 300 / 34%),
+    0 10px 34px oklch(0.42 0.2 315 / 26%);
+
+  /* A regua da pauta ganha um fio de azul pelo mesmo motivo da quina. */
+  --linha: oklch(0.92 0.045 250 / 26%);
+  --compasso: oklch(0.92 0.045 250 / 9%);
+
+  /* AS LUZES. Aqui mora o vaporwave, e SO aqui: o magenta e o ciano tem croma
+     alto de proposito -- eles sao a fachada de neon refletida. Como o atelie
+     nao carrega dado nenhum, cor saturada nesta camada nao inventa canal de
+     significado, que e a razao de o resto do tema ser contido.
+     A luz da marca continua sendo o sodio do poste. */
+  --atelie-marca: oklch(0.81 0.1 82);
+  --atelie-fria: oklch(0.62 0.24 320);
+  --atelie-quente: oklch(0.72 0.16 205);
+
+  /* Bem mais forte que no grafite. Continua sendo LUZ e nao pintura -- o teto
+     e o que o portao de contraste aguenta, e os pisos de vidro abaixo foram
+     recalculados contra estes valores, nao chutados. */
+  --atelie-op-marca: 0.2;
+  --atelie-op-fria: 0.3;
+  --atelie-op-quente: 0.24;
+
+  /* O REFLEXO NO ASFALTO: a faixa de luz que sobe do rodape, como fachada
+     espelhada em chao molhado. E o que faz a cena ser chuva e nao so um fundo
+     roxo. */
+  --atelie-asfalto: 0.26;
+
+  /* A CHUVA. Riscos diagonais estaticos -- ver o comentario em Atelier.tsx
+     sobre por que ela nao cai. */
+  --atelie-chuva: 0.05;
+
+  /* O especular ganha cor: sobre vidro de neon, um realce branco leria como
+     falha de renderizacao no meio da paleta inteira tingida. */
+  --especular-cor: oklch(0.8 0.2 322 / 15%);
+
+  /* O PAPEL PAUTADO da chuva: as linhas viram tubo de neon frio, como o resto
+     da luz deste tema. Mais forte que no grafite porque aqui elas competem
+     com um atelie aceso -- no grafite, 5,5% ja marca presenca sobre grafite
+     liso. */
+  --pauta-cor: oklch(0.85 0.16 205);
+  --pauta-op: 0.13;
 }
 
 @layer base {
@@ -550,7 +756,7 @@
     pointer-events: none;
     background: radial-gradient(
       35rem circle at var(--px) var(--py),
-      oklch(1 0 0 / 9%),
+      var(--especular-cor),
       transparent 60%
     );
     transition: opacity 200ms var(--ease-fluid);

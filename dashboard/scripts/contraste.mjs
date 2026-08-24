@@ -54,11 +54,74 @@ function razao(corA, corB) {
 // --- leitura dos tokens do globals.css -------------------------------------
 
 const css = readFileSync(join(RAIZ, "app", "globals.css"), "utf8");
-const tokens = new Map();
-for (const m of css.matchAll(
-  /^\s*(--[a-z0-9-]+):\s*oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)\)\s*;/gim,
-)) {
-  tokens.set(m[1], [Number(m[2]), Number(m[3]), Number(m[4])]);
+
+/**
+ * Le os tokens `oklch(L C H)` literais de dentro de UM bloco de CSS.
+ *
+ * So captura literal de proposito: um token escrito com `color-mix` seria
+ * ignorado em silencio, e por isso os pisos de vidro sao pre-calculados. Ver
+ * o comentario da lista `fundos`.
+ */
+function lerTokens(bloco) {
+  const mapa = new Map();
+  for (const m of bloco.matchAll(
+    /^\s*(--[a-z0-9-]+):\s*oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)\)\s*;/gim,
+  )) {
+    mapa.set(m[1], [Number(m[2]), Number(m[3]), Number(m[4])]);
+  }
+  return mapa;
+}
+
+/**
+ * Recorta o corpo do bloco que comeca no seletor dado, contando chaves.
+ *
+ * Contagem em vez de regex porque o bloco de tema tem `@supports` e `@media`
+ * aninhados dentro, e `[^}]*` pararia na primeira chave interna.
+ */
+function recortarBloco(fonte, seletor) {
+  // Regex e nao `indexOf`: o arquivo pode estar em CRLF, e um seletor de duas
+  // linhas casado por string literal quebraria so na maquina que usa CRLF --
+  // o tipo de falha que so aparece no computador do outro.
+  const achado = seletor instanceof RegExp ? fonte.match(seletor) : null;
+  const inicio = achado ? achado.index : fonte.indexOf(seletor);
+  if (inicio === -1 || inicio === undefined) return null;
+  const abre = fonte.indexOf("{", inicio);
+  if (abre === -1) return null;
+  let profundidade = 0;
+  for (let i = abre; i < fonte.length; i += 1) {
+    if (fonte[i] === "{") profundidade += 1;
+    else if (fonte[i] === "}") {
+      profundidade -= 1;
+      if (profundidade === 0) return fonte.slice(abre + 1, i);
+    }
+  }
+  return null;
+}
+
+// OS TEMAS. O primeiro e a base; os demais SOBREPOEM a base, exatamente como
+// a cascata do CSS faz -- um tema que so troca o chassi herda a camada de dado
+// inteira e nao precisa redeclarar nada.
+//
+// POR QUE ISTO EXISTE, e e o ponto todo deste arquivo: antes havia um Map
+// unico para o arquivo inteiro, entao o segundo tema a declarar `--background`
+// sobrescrevia o primeiro e o gate passava a medir UM tema achando que media
+// todos. Falha silenciosa: relatorio verde, tema ilegivel em producao.
+const SELETOR_BASE = /:root\s*,\s*\.dark\s*\{/;
+const base = lerTokens(recortarBloco(css, SELETOR_BASE) ?? "");
+if (base.size === 0) {
+  console.error(`nenhum token lido do bloco base (${SELETOR_BASE})`);
+  process.exit(1);
+}
+
+const temas = [{ nome: "grafite (base)", tokens: base }];
+
+for (const m of css.matchAll(/^(\.tema-[a-z0-9-]+)\s*\{/gim)) {
+  const corpo = recortarBloco(css, m[1]);
+  if (!corpo) continue;
+  // Base primeiro, sobreposicao depois: o tema so precisa declarar o que muda.
+  const mapa = new Map(base);
+  for (const [nome, cor] of lerTokens(corpo)) mapa.set(nome, cor);
+  temas.push({ nome: m[1].replace(".tema-", ""), tokens: mapa });
 }
 
 // Os PISOS DE VIDRO entram aqui porque superficie translucida nao tem cor
@@ -103,7 +166,55 @@ const textos = [
   "--destructive",
 ];
 
+// MARCAS: cor que desenha DADO sem carregar texto -- serie do grafico, no do
+// grafo, ponto, barra, cabeca vazada.
+//
+// Elas exigem 3:1 e nao 4.5:1, e a diferenca nao e leniencia: a WCAG separa
+// texto de objeto grafico (1.4.11) porque uma forma de varios pixels de
+// espessura se distingue com menos contraste que a haste de uma letra.
+//
+// POR QUE ISTO FALTAVA: o gate media texto sobre fundo e nada mais, entao
+// nenhuma cor de marcacao foi verificada contra fundo nenhum, em tema nenhum.
+// Passou despercebido enquanto havia um tema so, cujo fundo essas cores
+// acompanharam desde que nasceram. Um tema novo e exatamente o evento que
+// quebraria isso em silencio -- e o gate nao teria dito nada.
+//
+// ATENCAO ao que este numero NAO cobre: ele mede luminancia, nao matiz. Uma
+// serie azul sobre fundo azul pode cruzar 3:1 com folga e ainda assim custar
+// para separar do fundo. Figura contra fundo por MATIZ e julgamento de olho, e
+// nao ha calculo aqui que substitua olhar.
+const marcas = [
+  "--dito",
+  "--medido",
+  "--emocao",
+  "--lexico",
+  "--ironia",
+  "--estilo",
+  "--tempo",
+  "--detrator",
+  "--neutro",
+  "--promotor",
+  "--sem-sinal",
+  "--no-conversa",
+  "--no-termo",
+  "--no-emoji",
+  "--no-feature",
+  "--no-categoria",
+  "--no-canal",
+  "--no-desfecho",
+  "--no-fonte",
+  "--no-importacao",
+];
+
+/** Fundos sobre os quais uma marca chega a ser desenhada. */
+const fundosDeMarca = ["--background", "--card"];
+
+const MINIMO_MARCA = 3;
+
 let falhou = false;
+
+for (const tema of temas) {
+const tokens = tema.tokens;
 const linhas = [];
 
 for (const nomeTexto of textos) {
@@ -159,9 +270,40 @@ for (const [nomeTexto, nomeFundo] of preenchidos) {
   });
 }
 
+for (const nomeMarca of marcas) {
+  const cor = tokens.get(nomeMarca);
+  if (!cor) {
+    console.error(`token ausente no globals.css: ${nomeMarca}`);
+    falhou = true;
+    continue;
+  }
+  for (const nomeFundo of fundosDeMarca) {
+    const fundo = tokens.get(nomeFundo);
+    if (!fundo) continue;
+    const r = razao(cor, fundo);
+    const ok = r >= MINIMO_MARCA;
+    if (!ok) falhou = true;
+    linhas.push({
+      texto: nomeMarca,
+      sobre: nomeFundo,
+      razao: r.toFixed(2),
+      AA: ok ? "PASS" : "FAIL",
+      minimo: `${MINIMO_MARCA}:1 (marca)`,
+    });
+  }
+}
+
+console.log(`\n=== tema: ${tema.nome} ===`);
 console.table(linhas);
+}
+
 if (falhou) {
   console.error("\nFALHOU: ha par abaixo de 4.5:1.");
   process.exit(1);
 }
-console.log("\nTodos os pares de texto cruzam AA (4.5:1).");
+console.log(
+  `\nTexto cruza AA (4.5:1) e marca cruza ${MINIMO_MARCA}:1 nos ` +
+    `${temas.length} tema(s): ${temas.map((t) => t.nome).join(", ")}.` +
+    "\nLembrete: isto mede LUMINANCIA. Figura contra fundo por MATIZ nao tem" +
+    " calculo -- precisa de olho.",
+);

@@ -1,8 +1,11 @@
 "use client";
 
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { entradaDeSistema } from "@/lib/movimento";
 import { useEspecular } from "@/hooks/useEspecular";
+import { Aparato } from "./Aparato";
 
 /**
  * O SISTEMA: a unidade de composicao da interface.
@@ -45,8 +48,21 @@ export function Painel({
   const refEspecular = useEspecular<HTMLElement>();
 
   return (
-    <section
+    <motion.section
       ref={refEspecular}
+      // A ENTRADA. `whileInView` com `once` em vez de `animate` puro: o sistema
+      // sobe quando ENTRA em cena, e nao todos juntos no instante do primeiro
+      // quadro. Numa pagina que rola, isso da o escalonamento de graca, na
+      // ordem em que o olho chega -- sem precisar coordenar indice entre
+      // sistemas que moram em grades diferentes.
+      //
+      // `margin` negativo embaixo: o gatilho dispara pouco ANTES do sistema
+      // aparecer, senao ele entra ja animando e o movimento e visto pela
+      // metade.
+      variants={entradaDeSistema}
+      initial="oculto"
+      whileInView="presente"
+      viewport={{ once: true, margin: "0px 0px -64px 0px" }}
       className={cn(
         "vidro especular quebra-evitar min-w-0 overflow-hidden rounded-lg p-4 sm:p-5",
         className,
@@ -70,22 +86,13 @@ export function Painel({
       </div>
 
       {temAparato ? (
-        <details className="group mt-3 border-t border-compasso pt-2">
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-            <span
-              aria-hidden
-              className="inline-block transition-transform duration-200 group-open:rotate-90"
-            >
-              ›
-            </span>
-            Método e ressalvas
-          </summary>
-          <div className="mt-2 max-w-[72ch] space-y-2 text-xs leading-relaxed text-muted-foreground">
+        <Aparato className="mt-3 border-t border-compasso pt-2">
+          <div className="mt-2 flex max-w-[72ch] flex-col gap-2 text-xs leading-relaxed text-muted-foreground">
             {legenda}
             {rodape}
           </div>
-        </details>
+        </Aparato>
       ) : null}
-    </section>
+    </motion.section>
   );
 }

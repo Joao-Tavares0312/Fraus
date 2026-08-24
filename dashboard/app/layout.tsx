@@ -3,10 +3,12 @@ import { Suspense } from "react";
 import "./globals.css";
 import { Atelier } from "@/components/shell/Atelier";
 import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
+import { Movimento } from "@/components/shell/Movimento";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SCRIPT_ANTI_PISCADA } from "@/lib/tema";
 
 const DESCRICAO =
   "Painel de satisfação inferida a partir do texto, dos emojis e do tempo de resposta dos atendimentos.";
@@ -35,7 +37,19 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className="dark">
+    // `suppressHydrationWarning` no `<html>`: o script abaixo pode adicionar a
+    // classe do tema antes da hidratacao, e o React acusaria a diferenca entre
+    // o HTML que o servidor mandou e o que encontrou no DOM. A divergencia e
+    // intencional e e o ponto do script.
+    <html lang="pt-BR" className="dark" suppressHydrationWarning>
+      <head>
+        {/* ANTES DE TUDO. Ver SCRIPT_ANTI_PISCADA em lib/tema.ts: sem isto,
+            quem escolheu "chuva de neon" ve a tela pintar em grafite e trocar
+            depois da hidratacao, a cada navegacao. */}
+        <script
+          dangerouslySetInnerHTML={{ __html: SCRIPT_ANTI_PISCADA }}
+        />
+      </head>
       <body className="min-h-svh antialiased">
         <Atelier />
         {/*
@@ -49,23 +63,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Pular para o conteúdo
         </a>
-        <TooltipProvider>
-          <SaudeProvider>
-            <SidebarProvider>
-            {/* A navegacao le `useSearchParams` para carregar o periodo entre
-                as secoes, e isso exige limite de Suspense no App Router. */}
-              <Suspense fallback={null}>
-                <NavegacaoLateral />
-              </Suspense>
-              <SidebarInset id="conteudo" className="min-w-0">
-                {/* Acima do conteudo, em TODA tela: sem a API todas quebram
-                    igual, e a instrucao tem que estar onde o Joao ja esta. */}
-                <AvisoApiFora />
-                {children}
-              </SidebarInset>
-            </SidebarProvider>
-          </SaudeProvider>
-        </TooltipProvider>
+        <Movimento>
+          <TooltipProvider>
+            <SaudeProvider>
+              <SidebarProvider>
+                {/* A navegacao le `useSearchParams` para carregar o periodo
+                    entre as secoes, e isso exige limite de Suspense no App
+                    Router. */}
+                <Suspense fallback={null}>
+                  <NavegacaoLateral />
+                </Suspense>
+                <SidebarInset id="conteudo" className="min-w-0">
+                  {/* Acima do conteudo, em TODA tela: sem a API todas quebram
+                      igual, e a instrucao tem que estar onde o Joao ja esta. */}
+                  <AvisoApiFora />
+                  {children}
+                </SidebarInset>
+              </SidebarProvider>
+            </SaudeProvider>
+          </TooltipProvider>
+        </Movimento>
       </body>
     </html>
   );

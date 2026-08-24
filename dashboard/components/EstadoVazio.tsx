@@ -8,6 +8,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
+import { Aparato } from "./Aparato";
 
 /**
  * Estado vazio HONESTO.
@@ -94,15 +95,14 @@ export function EstadoVazio({
         ) : null}
 
         {apiFora && aparato ? (
-          <details className="group mt-1 text-xs text-muted-foreground">
-            <summary className="cursor-pointer list-none hover:text-foreground">
-              <span className="inline-block transition-transform duration-200 group-open:rotate-90">
-                ›
-              </span>{" "}
-              por que esta tela não preenche sozinha
-            </summary>
-            <p className="mt-1.5 max-w-[62ch]">{aparato}</p>
-          </details>
+          <Aparato
+            className="mt-1"
+            rotulo="por que esta tela não preenche sozinha"
+          >
+            <p className="mt-1.5 max-w-[62ch] text-xs text-muted-foreground">
+              {aparato}
+            </p>
+          </Aparato>
         ) : null}
       </EmptyHeader>
     </Empty>

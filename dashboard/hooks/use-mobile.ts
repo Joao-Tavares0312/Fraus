@@ -1,31 +1,27 @@
-import * as React from "react"
+"use client";
 
-const MOBILE_BREAKPOINT = 768
-const CONSULTA = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
+import { useEffect, useState } from "react";
+
+const LARGURA_MOBILE = 768;
 
 /**
- * Versao do hook do shadcn escrita com `useSyncExternalStore`.
+ * Hook padrao do chassi shadcn, exigido por `components/ui/sidebar.tsx` para
+ * decidir entre a barra fixa e a gaveta.
  *
- * O original faz `setState` sincrono dentro de um `useEffect`, o que dispara
- * render em cascata e e erro no lint deste projeto. `useSyncExternalStore` e a
- * forma correta de ler um `matchMedia`: ele tem snapshot proprio para o
- * servidor (sempre `false`, porque nao ha viewport na renderizacao) e assina o
- * evento `change` sem passar por estado do React.
+ * Comeca `false` e nao `undefined` porque o `SidebarProvider` usa o valor no
+ * primeiro render: o servidor nao sabe a largura da janela, entao o desktop e o
+ * palpite que evita renderizar a gaveta e troca-la um frame depois.
  */
-function assinar(aoMudar: () => void) {
-  const mql = window.matchMedia(CONSULTA)
-  mql.addEventListener("change", aoMudar)
-  return () => mql.removeEventListener("change", aoMudar)
-}
-
-function lerNoCliente() {
-  return window.matchMedia(CONSULTA).matches
-}
-
-function lerNoServidor() {
-  return false
-}
-
 export function useIsMobile() {
-  return React.useSyncExternalStore(assinar, lerNoCliente, lerNoServidor)
+  const [ehMobile, setEhMobile] = useState(false);
+
+  useEffect(() => {
+    const consulta = window.matchMedia(`(max-width: ${LARGURA_MOBILE - 1}px)`);
+    const aplicar = () => setEhMobile(consulta.matches);
+    aplicar();
+    consulta.addEventListener("change", aplicar);
+    return () => consulta.removeEventListener("change", aplicar);
+  }, []);
+
+  return ehMobile;
 }
