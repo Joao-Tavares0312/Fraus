@@ -348,6 +348,23 @@
   --atelie-marca: var(--primary);
   --atelie-fria: var(--medido);
   --atelie-quente: var(--dito);
+
+  /* A FORCA de cada mancha. Token e nao numero cravado no componente porque e
+     exatamente aqui que os dois temas discordam: o grafite quer luz que so
+     insinua, e a chuva quer neon. */
+  --atelie-op-marca: 0.13;
+  --atelie-op-fria: 0.11;
+  --atelie-op-quente: 0.07;
+
+  /* AS DUAS PECAS QUE SO A CHUVA ACENDE. Zeradas aqui de proposito: elas
+     existem no componente nos dois temas e o TEMA decide se aparecem, o que
+     evita um segundo componente de atelie so para a variante. */
+  --atelie-asfalto: 0;
+  --atelie-chuva: 0;
+
+  /* A cor do realce especular. Branco puro no grafite: ali ele e reflexo de
+     luz de escritorio, e reflexo nao tem cor propria. */
+  --especular-cor: oklch(1 0 0 / 9%);
 }
 
 /* ---------------------------------------------------------------------------
@@ -424,14 +441,44 @@
   /* PISOS DE VIDRO do tema. Obrigatorios e opacos: o `--vidro-*-fundo` e
      color-mix do `--card` e acompanha o tema sozinho, mas o piso e o pior
      caso pre-calculado que o gate mede, e ele nao se deriva de graca. */
-  --vidro-fino-piso: oklch(0.246 0.031 274);
-  --vidro-piso: oklch(0.236 0.031 274);
-  --vidro-denso-piso: oklch(0.226 0.031 274);
+  /* MEDIDOS, nao estimados: compus as cinco camadas do atelie deste tema no
+     mesmo ponto (o pior caso, ainda que geometricamente impossivel -- a
+     mancha da marca fica no alto a esquerda e a fria embaixo a direita), pus
+     cada espessura de vidro por cima e converti a luminancia resultante de
+     volta para OKLCH. Subiram muito ao acender o atelie: eram 0.246/0.236/
+     0.226 quando a luz era discreta. Piso otimista e pior que piso nenhum --
+     ele faz o portao devolver verde medindo uma superficie que nao existe. */
+  /* O VIDRO DESTE TEMA E MAIS GROSSO, e nao foi escolha de gosto: com o
+     atelie aceso nos valores acima, `--destructive` sobre vidro fino caiu
+     para 3.53:1 e o portao reprovou. A spec do vidro liquido diz como se
+     resolve isso, e a ordem importa: par que reprova faz a ESPESSURA ganhar
+     opacidade -- o portao manda no vidro, o vidro nao afrouxa o portao.
+     Baixar a luz para salvar o contraste teria sido resolver pelo lado
+     errado, ainda mais num tema cujo pedido era ficar mais chamativo.
+     45% -> 68% no fino, 62% -> 74% no medio, 82% -> 86% no denso. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 68%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 74%, transparent);
+  --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
 
-  /* A quina do vidro esfria junto: aresta neutra sobre superficie azulada le
-     como poeira, nao como luz batendo no canto. */
-  --vidro-quina: oklch(0.9 0.06 250 / 15%);
-  --vidro-quina-baixa: oklch(0.08 0.03 274 / 26%);
+  --vidro-fino-piso: oklch(0.308 0.031 274);
+  --vidro-piso: oklch(0.29 0.031 274);
+  --vidro-denso-piso: oklch(0.253 0.031 274);
+
+  /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
+     superficie de vidro tem quina, entao acender a aresta acende a interface
+     inteira de uma vez -- sem que uma unica celula de dado mude de cor.
+     Ciano em cima e magenta embaixo: e a leitura de tubo de neon (a luz da
+     fachada bate na aresta de cima, o reflexo rosado do chao sobe na de
+     baixo), e e o par canonico do vaporwave posto no unico lugar da interface
+     que pode receber cor saturada sem significar nada. */
+  --vidro-quina: oklch(0.86 0.19 200 / 42%);
+  --vidro-quina-baixa: oklch(0.7 0.24 330 / 32%);
+
+  /* A sombra deixa de ser preta e vira DERRAME: preto embaixo de um painel
+     sobre asfalto molhado le como buraco. O halo violeta le como a luz da
+     propria superficie vazando para o chao. */
+  --vidro-sombra: 0 1px 2px oklch(0.08 0.04 300 / 34%),
+    0 10px 34px oklch(0.42 0.2 315 / 26%);
 
   /* A regua da pauta ganha um fio de azul pelo mesmo motivo da quina. */
   --linha: oklch(0.92 0.045 250 / 26%);
@@ -445,6 +492,26 @@
   --atelie-marca: oklch(0.81 0.1 82);
   --atelie-fria: oklch(0.62 0.24 320);
   --atelie-quente: oklch(0.72 0.16 205);
+
+  /* Bem mais forte que no grafite. Continua sendo LUZ e nao pintura -- o teto
+     e o que o portao de contraste aguenta, e os pisos de vidro abaixo foram
+     recalculados contra estes valores, nao chutados. */
+  --atelie-op-marca: 0.2;
+  --atelie-op-fria: 0.3;
+  --atelie-op-quente: 0.24;
+
+  /* O REFLEXO NO ASFALTO: a faixa de luz que sobe do rodape, como fachada
+     espelhada em chao molhado. E o que faz a cena ser chuva e nao so um fundo
+     roxo. */
+  --atelie-asfalto: 0.26;
+
+  /* A CHUVA. Riscos diagonais estaticos -- ver o comentario em Atelier.tsx
+     sobre por que ela nao cai. */
+  --atelie-chuva: 0.05;
+
+  /* O especular ganha cor: sobre vidro de neon, um realce branco leria como
+     falha de renderizacao no meio da paleta inteira tingida. */
+  --especular-cor: oklch(0.8 0.2 322 / 15%);
 }
 
 @layer base {
@@ -657,7 +724,7 @@
     pointer-events: none;
     background: radial-gradient(
       35rem circle at var(--px) var(--py),
-      oklch(1 0 0 / 9%),
+      var(--especular-cor),
       transparent 60%
     );
     transition: opacity 200ms var(--ease-fluid);

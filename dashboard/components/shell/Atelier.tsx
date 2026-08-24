@@ -37,26 +37,60 @@ export function Atelier() {
     >
       {/* dourada -- a marca, alto a esquerda */}
       <div
-        className="absolute -left-[15%] -top-[25%] h-[70vmax] w-[70vmax] rounded-full opacity-[0.13] blur-[80px]"
+        className="absolute -left-[15%] -top-[25%] h-[70vmax] w-[70vmax] rounded-full blur-[80px]"
         style={{
+          opacity: "var(--atelie-op-marca)",
           background:
             "radial-gradient(closest-side, var(--atelie-marca), transparent)",
         }}
       />
       {/* fria -- contrapeso do lado do medido, baixo a direita */}
       <div
-        className="absolute -bottom-[30%] -right-[20%] h-[75vmax] w-[75vmax] rounded-full opacity-[0.11] blur-[90px]"
+        className="absolute -bottom-[30%] -right-[20%] h-[75vmax] w-[75vmax] rounded-full blur-[90px]"
         style={{
+          opacity: "var(--atelie-op-fria)",
           background:
             "radial-gradient(closest-side, var(--atelie-fria), transparent)",
         }}
       />
       {/* quente fraca -- quebra a simetria das outras duas */}
       <div
-        className="absolute left-[45%] top-[55%] h-[45vmax] w-[45vmax] rounded-full opacity-[0.07] blur-[100px]"
+        className="absolute left-[45%] top-[55%] h-[45vmax] w-[45vmax] rounded-full blur-[100px]"
         style={{
+          opacity: "var(--atelie-op-quente)",
           background:
             "radial-gradient(closest-side, var(--atelie-quente), transparent)",
+        }}
+      />
+
+      {/* O REFLEXO NO ASFALTO -- so a chuva acende (no grafite a opacidade e
+          zero). Faixa larga subindo do rodape: e o que transforma "fundo roxo
+          com manchas" em "fachada espelhada no chao molhado". Fica DEPOIS das
+          manchas para se somar a elas, e nao por baixo. */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[45vh] blur-[60px]"
+        style={{
+          opacity: "var(--atelie-asfalto)",
+          background:
+            "linear-gradient(to top, var(--atelie-fria), transparent 78%)",
+        }}
+      />
+
+      {/* A CHUVA: riscos diagonais finos, ESTATICOS.
+          Por que nao cai: a secao 6 do DESIGN.md ja gastou os dois momentos de
+          movimento que a interface se permite, e chuva animada seria um
+          terceiro que nao comunica estado nenhum -- decoracao pela decoracao,
+          rodando atras de tabela e grafico o tempo todo. Estatica ela entrega
+          a TEXTURA (o vidro tem o que refratar) sem cobrar quadro nenhum.
+          `repeating-linear-gradient` e mascara em vez de mil elementos. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: "var(--atelie-chuva)",
+          background:
+            "repeating-linear-gradient(74deg, transparent 0 6px, oklch(0.92 0.08 250) 6px 7px, transparent 7px 19px)",
+          maskImage:
+            "radial-gradient(120% 90% at 50% 0%, black 20%, transparent 75%)",
         }}
       />
     </div>

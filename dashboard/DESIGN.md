@@ -373,3 +373,42 @@ um tema padrão que precisasse se declarar para funcionar quebraria em toda tela
 renderizada antes do JavaScript. Um script inline no `<head>` aplica a classe
 antes da primeira pintura; sem ele, quem escolheu a chuva veria a tela pintar em
 grafite e trocar depois da hidratação, a cada navegação.
+
+### 8.5 Onde a chuva pode gritar
+
+O tema foi empurrado para ser chamativo em 24/08/2026, e o empurrão respeita a
+regra de 8.2: **só o que não carrega dado ganhou saturação.**
+
+| Peça | O que faz | Por que pode gritar |
+|---|---|---|
+| **quina do vidro** | ciano na aresta de cima, magenta na de baixo | é tubo de neon: a luz da fachada bate em cima, o reflexo do chão sobe embaixo. Toda superfície tem quina, então acender a aresta acende a interface inteira **sem uma célula de dado mudar de cor** |
+| **sombra** | deixa de ser preta e vira derrame violeta | preto sob um painel apoiado em asfalto molhado lê como buraco; o halo lê como a luz do próprio painel vazando para o chão |
+| **especular** | tingido de magenta | realce branco no meio de uma paleta tingida lê como falha de renderização |
+| **reflexo no asfalto** | faixa de luz subindo do rodapé | é o que separa "fundo roxo com manchas" de "fachada espelhada em chão molhado" |
+| **chuva** | riscos diagonais finos, **estáticos** | dá textura para o vidro refratar sem gastar quadro |
+
+**A chuva não cai**, e isso é decisão: a §6 já gastou os dois momentos de
+movimento que a interface se permite, e chuva animada seria um terceiro que não
+comunica estado nenhum — decoração rodando atrás de tabela e gráfico o tempo
+todo.
+
+As duas peças novas existem no componente nos **dois** temas; o grafite as
+mantém em opacidade zero. Um segundo componente de ateliê só para a variante
+custaria mais do que dois tokens.
+
+### 8.6 O preço: o vidro da chuva é mais grosso
+
+Acender o ateliê levantou o piso das superfícies translúcidas, e o portão
+reprovou três pares — `--destructive` sobre vidro fino caiu para **3,53:1**.
+
+A resolução seguiu a regra da seção 7: **a espessura ganha opacidade até
+passar.** 45% → 68% no fino, 62% → 74% no médio, 82% → 86% no denso. Baixar a
+luz para salvar o contraste teria sido resolver pelo lado errado, ainda mais num
+tema cujo pedido era justamente ficar mais chamativo.
+
+Os pisos deste tema são **medidos, não estimados**: as cinco camadas do ateliê
+compostas no mesmo ponto (pior caso, ainda que geometricamente impossível — a
+mancha da marca fica no alto à esquerda e a fria embaixo à direita), cada
+espessura por cima, e a luminância resultante convertida de volta para OKLCH.
+Piso otimista é pior que piso nenhum: ele faz o portão devolver verde medindo
+uma superfície que não existe.
