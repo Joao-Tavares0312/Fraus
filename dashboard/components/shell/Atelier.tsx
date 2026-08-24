@@ -118,14 +118,22 @@ export function Atelier() {
       {/* A MARCA NO FUNDO: o monograma sangrando pela quina inferior direita.
 
           E MASCARA, NAO IMAGEM DE FUNDO, e a distincao e o inteiro da peca.
-          `fraus-marca.png` nao carrega cor nenhuma -- e branco puro com o alfa
-          derivado da luminancia do logotipo. Quem pinta e o `background` deste
-          div, entao a mesma marca sai dourada no grafite e ciano/magenta na
-          chuva, sem gerar dois arquivos e sem tema novo pedir asset novo.
-          Usar o PNG original como `background-image` pintaria um quadrado
-          #070707 OPACO por cima do atelie -- que e exatamente o bug que o
-          `SidebarInset` com `bg-background` ja causou, matando a luz de seis
-          das sete telas.
+          `fraus-marca.svg` nao carrega cor nenhuma -- sao as duas letras em
+          branco puro sobre transparente, com o viewBox colado nelas. Quem
+          pinta e o `background` deste div, entao a mesma marca sai dourada no
+          grafite e magenta na chuva, sem gerar dois arquivos e sem tema novo
+          pedir asset novo.
+          Usar `fraus-logo.svg` direto como `background-image` pintaria um
+          quadrado preto OPACO por cima do atelie -- ele tem um `<rect>` de
+          fundo cobrindo os 640x640, e e exatamente o bug que o `SidebarInset`
+          com `bg-background` ja causou, matando a luz de seis das sete telas.
+          `fraus-marca.svg` e o mesmo desenho com esse `<rect>` removido e as
+          duas letras forcadas a branco.
+
+          E VETOR, e a troca importa: o PNG anterior tinha 461px de largura e
+          era esticado para perto de 800px na tela, entao a marca chegava
+          borrada justo na escala em que ela e grande. Mascara em SVG nao tem
+          escala nativa para perder.
 
           O "fade + gradiente" e a SEGUNDA camada de mascara: `mask-composite:
           intersect` corta a marca contra um gradiente radial ancorado na
@@ -137,7 +145,7 @@ export function Atelier() {
           impressa nele e recebe a luz por cima) e ANTES do asfalto e da chuva
           -- chuva cai na FRENTE da fachada, nao atras. */}
       <div
-        className="absolute -bottom-[12%] -right-[10%] h-[115vmin] w-[115vmin]"
+        className="absolute -bottom-[10%] -right-[8%] h-[72vmin] w-[72vmin]"
         style={{
           opacity: "var(--marca-op)",
           background: "var(--marca-cor)",
@@ -145,13 +153,13 @@ export function Atelier() {
           // sem prefixo desde a 15.4, e a versao prefixada nao entende
           // `mask-composite: intersect` -- ela usa `source-in`.
           WebkitMaskImage:
-            "url(/fraus-marca.png), radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)",
+            "url(/fraus-marca.svg), radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)",
           WebkitMaskSize: "contain, cover",
           WebkitMaskRepeat: "no-repeat, no-repeat",
           WebkitMaskPosition: "center, center",
           WebkitMaskComposite: "source-in",
           maskImage:
-            "url(/fraus-marca.png), radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)",
+            "url(/fraus-marca.svg), radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)",
           maskSize: "contain, cover",
           maskRepeat: "no-repeat, no-repeat",
           maskPosition: "center, center",

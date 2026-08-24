@@ -130,14 +130,15 @@ de papel sob luz de escritório — o analista fica horas nela.
 > quina inferior direita, nos dois temas.
 >
 > **É máscara, não imagem de fundo**, e a distinção é o inteiro da peça.
-> `public/fraus-logo.png` é RGB **sem canal alfa** — o monograma sobre um
-> quadrado sólido `#070707` —, e usá-lo como `background-image` pintaria um
-> quadrado quase-preto opaco por cima do ateliê, que é exatamente o bug que o
-> `SidebarInset` com `bg-background` já causou. `public/fraus-marca.png` é o
-> mesmo desenho com o alfa derivado da luminância e **sem cor nenhuma**: quem
-> pinta é o `background` do elemento, via `--marca-cor`. É isso que entrega
-> "a logo com o tema respectivo aplicado" — dourada no grafite, magenta na
-> chuva — sem gerar dois arquivos e sem tema novo pedir asset novo.
+> O arquivo da logo **carrega um fundo opaco** — o PNG era RGB sem canal alfa,
+> e o SVG que o substituiu traz um `<rect>` preto cobrindo os 640×640. Usar
+> qualquer um dos dois como `background-image` pintaria um quadrado opaco por
+> cima do ateliê, que é exatamente o bug que o `SidebarInset` com
+> `bg-background` já causou. `public/fraus-marca.svg` é o mesmo desenho **sem
+> esse fundo** e com as duas letras forçadas a branco: quem pinta é o
+> `background` do elemento, via `--marca-cor`. É isso que entrega "a logo com
+> o tema respectivo aplicado" — dourada no grafite, magenta na chuva — sem
+> gerar dois arquivos e sem tema novo pedir asset novo.
 >
 > O "fade + gradiente" é uma **segunda camada de máscara** cortada por
 > `mask-composite: intersect`: a marca nasce sólida onde sai da tela e se
@@ -221,10 +222,17 @@ não tem como ler.
 
 ### 3.3 A cor da marca: o dourado do monograma
 
-`--primary` é o **dourado do R da logo**, medido do próprio arquivo
-(`public/fraus-logo.png`): a letra vai de `oklch(0.514 0.066 84)` no pé a
-`oklch(0.824 0.079 76)` no topo, e o token é o meio dessa rampa —
-`oklch(0.78 0.085 80)`.
+`--primary` é o **dourado do R da logo**, medido do próprio arquivo: a letra é
+um gradiente, e o token é o meio da rampa dele — `oklch(0.78 0.085 80)`.
+
+> **Nota de 24/08/2026 — a rampa deixou de ser amostrada e passou a ser lida.**
+> A medição original saiu do PNG por amostragem de pixel: `oklch(0.514 0.066 84)`
+> no pé a `oklch(0.824 0.079 76)` no topo. Com a marca vetorial
+> (`public/fraus-logo.svg`), a rampa vem das próprias paradas do gradiente e é
+> exata: `oklch(0.642 0.084 76)` a `oklch(0.832 0.071 78)`. **O token não
+> mudou** — `0.78 0.085 80` já caía dentro dela, e o argumento do croma fosco
+> (0,085 contra os 0,15 do âmbar do "dito") sobrevive intacto. Registrado
+> porque a fonte da verdade mudou de arquivo, não porque a cor mudou.
 
 **Por que deixou de ser lime.** O `--primary` era `oklch(0.843 0.179 134)`,
 herdado do chassi. Nenhum pixel da logo é verde: a identidade é um monograma

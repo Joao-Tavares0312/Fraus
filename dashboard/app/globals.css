@@ -153,9 +153,15 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  /* O DOURADO DO MONOGRAMA. Medido do proprio arquivo da logo
-     (public/fraus-logo.png): o R vai de oklch(0.514 0.066 84) no pe a
-     oklch(0.824 0.079 76) no topo, e este valor e o meio dessa rampa.
+  /* O DOURADO DO MONOGRAMA. Medido do proprio arquivo da logo: o R e um
+     gradiente, e este valor e o meio da rampa dele.
+
+     A medicao original saiu do PNG (oklch 0.514 0.066 84 no pe a 0.824 0.079
+     76 no topo) -- amostragem de pixel, com o ruido que isso tem. Em
+     24/08/2026 a marca passou a ser vetorial e a rampa virou EXATA, lida das
+     paradas do gradiente de `public/fraus-logo.svg`: oklch(0.642 0.084 76) no
+     pe a oklch(0.832 0.071 78) no topo. O token nao mudou, e nao precisou:
+     0.78 0.085 80 cai dentro dessa rampa. A fonte da verdade agora e o SVG. */
 
      O lime que estava aqui (oklch 0.843 0.179 134) nao vinha da marca --
      nenhum pixel da logo e verde. Era heranca do chassi, e uma dashboard cuja

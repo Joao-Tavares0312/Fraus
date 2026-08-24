@@ -121,12 +121,18 @@ export function NavegacaoLateral() {
           aria-label="Fraus — voltar para a visão geral"
           className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none transition-colors duration-150 ease-fluid hover:bg-sidebar-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
         >
+          {/* `unoptimized` porque o alvo e SVG: o otimizador do next/image
+              nao processa SVG e serviria o arquivo cru de qualquer jeito --
+              declarar isso evita o aviso e deixa explicito que o vetor vai
+              inteiro para o navegador, que e o que faz o monograma ficar
+              nitido em qualquer densidade de tela. */}
           <Image
-            src="/fraus-logo.png"
+            src="/fraus-logo.svg"
             alt=""
             width={28}
             height={28}
             className="size-7 shrink-0 rounded-md"
+            unoptimized
             priority
           />
           <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">

@@ -30,10 +30,17 @@ export const metadata: Metadata = {
 /**
  * Casca do aplicativo.
  *
- * `className="dark"` no `<html>` e fixo: o Fraus tem TEMA ESCURO UNICO, como o
- * chassi de onde ele vem. Nao existe alternador -- um contrato de contraste
- * verificado por calculo vale para uma paleta, e manter duas dobraria a
- * superficie a verificar sem ganho para quem opera o produto.
+ * `className="dark"` no `<html>` e fixo, e continua fixo: os DOIS temas do
+ * Fraus sao escuros, entao o `dark` do chassi vale para os dois e nao ha
+ * modo claro a alternar.
+ *
+ * O que MUDOU, e este comentario dizia o contrario ate 24/08/2026: existe
+ * alternador. Ele nao troca `dark` por `light` -- poe (ou tira) a classe
+ * `.tema-chuva` no mesmo `<html>`, e o tema sobrepoe so o chassi. O argumento
+ * antigo ("um contrato de contraste verificado por calculo vale para uma
+ * paleta") nao caiu: `scripts/contraste.mjs` passou a ser CIENTE DE TEMA e
+ * roda a matriz inteira por tema, entao as duas paletas sao verificadas, nao
+ * uma. Ver DESIGN.md, seccao 8.
  */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
