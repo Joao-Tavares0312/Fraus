@@ -161,7 +161,7 @@
      24/08/2026 a marca passou a ser vetorial e a rampa virou EXATA, lida das
      paradas do gradiente de `public/fraus-logo.svg`: oklch(0.642 0.084 76) no
      pe a oklch(0.832 0.071 78) no topo. O token nao mudou, e nao precisou:
-     0.78 0.085 80 cai dentro dessa rampa. A fonte da verdade agora e o SVG. */
+     0.78 0.085 80 cai dentro dessa rampa. A fonte da verdade agora e o SVG.
 
      O lime que estava aqui (oklch 0.843 0.179 134) nao vinha da marca --
      nenhum pixel da logo e verde. Era heranca do chassi, e uma dashboard cuja
