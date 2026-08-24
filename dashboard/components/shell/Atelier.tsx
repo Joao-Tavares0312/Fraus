@@ -149,6 +149,38 @@ export function Atelier() {
         }}
       />
 
+      {/* A GRADE A LASER: o chao da cena.
+
+          A perspectiva e o truque inteiro. Um plano com duas familias de
+          linha -- uma correndo para o fundo, outra atravessando -- rotacionado
+          em `rotateX` com `transformOrigin` no rodape. As linhas que correm
+          para o fundo CONVERGEM sozinhas, porque a projecao em perspectiva faz
+          isso; nao ha gradiente conico nem SVG envolvido.
+
+          `inset-x-[-50%]` e nao `inset-x-0`: rotacionado, o plano encolhe na
+          horizontal perto do horizonte e mostraria borda se tivesse a largura
+          da tela. Sangrar meia tela para cada lado resolve sem custo.
+
+          A mascara apaga a grade subindo, para ela virar horizonte em vez de
+          parar numa linha reta -- que leria como o fim de uma textura, e nao
+          como distancia.
+
+          ESTATICA. Ver o comentario da chuva logo abaixo sobre por que. */}
+      <div
+        className="absolute inset-x-[-50%] bottom-0 h-[55vh]"
+        style={{
+          opacity: "var(--grade-op)",
+          background:
+            "repeating-linear-gradient(to right, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))," +
+            "repeating-linear-gradient(to bottom, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))",
+          transform:
+            "perspective(var(--grade-horizonte)) rotateX(74deg)",
+          transformOrigin: "bottom center",
+          maskImage: "linear-gradient(to top, black 0%, transparent 92%)",
+          WebkitMaskImage: "linear-gradient(to top, black 0%, transparent 92%)",
+        }}
+      />
+
       {/* A CHUVA: riscos diagonais finos, ESTATICOS.
           Por que nao cai: a secao 6 do DESIGN.md ja gastou os dois momentos de
           movimento que a interface se permite, e chuva animada seria um

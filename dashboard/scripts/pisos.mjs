@@ -199,13 +199,15 @@ for (const tema of temas) {
 
   // A ORDEM E A DO DOM em Atelier.tsx. Trocar a ordem muda o resultado --
   // sobreposicao alfa nao e comutativa.
-  // PAUTA e MARCA sao ALTERNATIVAS, nao somam, e isto foi lido das mascaras e
-  // nao escolhido por conveniencia: a mascara do papel e
+  // PAUTA, MARCA e GRADE sao ALTERNATIVAS, nao somam, e isto foi lido das
+  // mascaras e nao escolhido por conveniencia: a mascara do papel e
   // `radial-gradient(140% 100% at 50% -10%, black 15%, transparent 70%)`, que
   // zera por volta de 60% da altura da tela; a marca mora colada na quina
   // inferior direita e a propria mascara dela
   // (`radial-gradient(120% 120% at 100% 100%, ..., transparent 72%)`) so deixa
-  // massa no terco de baixo. Onde uma tem forca a outra ja acabou.
+  // massa no terco de baixo; a grade mora no mesmo terco de baixo, mascarada
+  // por `linear-gradient(to top, black 0%, transparent 92%)`. Onde uma tem
+  // forca as outras ja acabaram ou ainda nao comecaram.
   //
   // Somar as duas seria empilhar luz que nao existe em pixel nenhum, e o custo
   // disso e concreto: medido assim, o vidro medio da chuva precisaria de 93%
@@ -214,11 +216,12 @@ for (const tema of temas) {
   // caso continua impossivel de proposito (as tres manchas somadas no mesmo
   // ponto), porque ali a impossibilidade e barata.
   // A alternativa vencedora e a que resulta MAIS CLARA, e nao a de maior
-  // opacidade: as duas tem cor diferente (ouro palido contra magenta), e mais
+  // opacidade: as tres tem cor diferente (ouro palido, magenta, ciano), e mais
   // alfa de uma cor escura pode clarear menos que menos alfa de uma clara.
   const alternativas = [
     ["papel pautado", cor("--pauta-cor"), op("--pauta-op")],
     ["marca impressa", cor("--marca-cor"), op("--marca-op")],
+    ["grade a laser", cor("--grade-cor"), op("--grade-op")],
   ];
 
   const compor = (escolhida) => {

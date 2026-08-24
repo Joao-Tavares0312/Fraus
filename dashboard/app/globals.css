@@ -415,6 +415,26 @@
      Emenda de 24/08/2026 as secoes 3.1 e 8 -- ver DESIGN.md. */
   --marca-cor: var(--atelie-marca);
   --marca-op: 0.15;
+
+  /* --- A GRADE A LASER ---------------------------------------------------
+     O chao da cena: linhas fugindo ao ponto de fuga mais linhas horizontais
+     comprimindo com a distancia. E o elemento mais reconhecivel do
+     vocabulario synthwave, e e CSS puro -- dois `repeating-linear-gradient`
+     num plano rotacionado, nao mil elementos.
+
+     ESTATICA, pelo mesmo motivo que a chuva nao cai: a secao 6 do DESIGN.md
+     ja gastou os dois momentos de movimento da interface, e grade animada
+     seria um terceiro que nao comunica estado nenhum.
+
+     Mora no TERCO DE BAIXO, e isso e o que a torna barata: a mascara do papel
+     pautado ja zerou ali. Ver o comentario de `scripts/pisos.mjs` sobre
+     alternativas disjuntas.
+
+     Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. */
+  --grade-cor: oklch(0.81 0.1 82);
+  --grade-op: 0.1;
+  --grade-espaco: 44px;
+  --grade-horizonte: 320px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -584,6 +604,12 @@
      todas as outras luzes deste tema: aqui ela compete com um atelie aceso. */
   --marca-cor: oklch(0.7 0.24 330);
   --marca-op: 0.22;
+
+  /* A GRADE vira tubo de ciano, o par do magenta da marca. Mais forte que no
+     grafite pelo mesmo motivo de todas as luzes deste tema: ela compete com
+     um atelie aceso. */
+  --grade-cor: oklch(0.85 0.16 205);
+  --grade-op: 0.2;
 }
 
 @layer base {
