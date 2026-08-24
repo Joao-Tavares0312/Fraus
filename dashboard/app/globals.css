@@ -241,11 +241,14 @@
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
   /* MEDIDOS por `node scripts/pisos.mjs`, nao estimados. Eram 0.25/0.24/0.23
-     com o fundo liso, 0.309/0.28/0.246 ao ligar o papel pautado, e estes
-     agora, com o papel forte e a marca impressa. */
-  --vidro-fino-piso: oklch(0.31 0.006 78);
-  --vidro-piso: oklch(0.274 0.006 78);
-  --vidro-denso-piso: oklch(0.253 0.006 78);
+     com o fundo liso, 0.309/0.28/0.246 ao ligar o papel pautado, 0.31/0.274/0.253
+     com a marca impressa, e estes agora, remedidos ao acender o sol listrado
+     (Task 2) -- o sol e camada somada e mais clara que a mancha quente que
+     substituiu, entao o composto do atelie clareou e o piso antigo ficou
+     otimista. */
+  --vidro-fino-piso: oklch(0.336 0.006 78);
+  --vidro-piso: oklch(0.291 0.006 78);
+  --vidro-denso-piso: oklch(0.264 0.006 78);
 
   --vidro-blur-fino: 8px;
   --vidro-blur: 16px;
@@ -561,10 +564,14 @@
      as camadas do tema completas, o vidro fino dava 0.333 e nao 0.307. O
      portao vinha medindo uma superficie mais escura do que a que existe, ou
      seja, devolvendo verde com folga que nao havia. Este e exatamente o modo
-     de falha que o comentario acima descreve, e ele aconteceu aqui. */
-  --vidro-fino-piso: oklch(0.295 0.031 274);
-  --vidro-piso: oklch(0.277 0.031 274);
-  --vidro-denso-piso: oklch(0.273 0.031 274);
+     de falha que o comentario acima descreve, e ele aconteceu aqui.
+     Remedidos de novo ao acender o sol listrado (Task 2): eram
+     0.295/0.277/0.273, e o sol e camada somada mais clara que a mancha
+     quente que substituiu, entao o composto clareou e o piso ficou
+     otimista outra vez. */
+  --vidro-fino-piso: oklch(0.299 0.031 274);
+  --vidro-piso: oklch(0.281 0.031 274);
+  --vidro-denso-piso: oklch(0.276 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
      superficie de vidro tem quina, entao acender a aresta acende a interface
