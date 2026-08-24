@@ -128,6 +128,24 @@ function lerCores(bloco) {
  * Sem isto o alias sumiria em silencio do calculo, que e o modo de falha que
  * `contraste.mjs` documenta na lista `fundos`.
  */
+/**
+ * ARMADILHA PAGA (24/08/2026): a chamada original resolvia os aliases da BASE
+ * depois de já ter mesclado os literais do tema no mesmo mapa
+ * (`resolverAliases(new Map([...base, ...tema]), corpoBase)`), com o mapa
+ * mesclado sendo mutado in-place. Como o bloco base declara
+ * `--atelie-fria: var(--medido)`, essa resolucao SOBRESCREVIA o literal que o
+ * tema chuva ja tinha declarado para `--atelie-fria` (magenta,
+ * `oklch(0.62 0.24 320)`) com o azul de `--medido` da base. O script media
+ * mais claro que a realidade -- erro pessimista, mas ainda erro: engordava o
+ * vidro da chuva sem necessidade.
+ *
+ * A ordem importa porque `mapa.set` nao sabe qual bloco "ganhou" um valor --
+ * ele so ve o mapa final. Por isso a resolucao de alias de um bloco tem que
+ * rodar ANTES de aquele bloco ser sobreposto por um de maior precedencia: um
+ * token declarado literalmente nunca pode ser sobrescrito por um alias de um
+ * bloco de precedencia menor. Ver o uso abaixo: a base resolve sozinha
+ * primeiro, so depois o tema é mesclado por cima (e resolvido por ultimo).
+ */
 function resolverAliases(mapa, bloco) {
   const alias = new Map();
   for (const m of bloco.matchAll(
@@ -186,11 +204,13 @@ const ESPESSURAS = [
 
 for (const tema of temas) {
   // Base primeiro, tema por cima: o tema so declara o que muda.
+  // A base resolve os proprios aliases SOZINHA, com o proprio mapa -- so
+  // depois os literais do tema entram por cima, e so entao os aliases do
+  // tema resolvem. Assim um literal do tema nunca perde para um alias da
+  // base (ver a armadilha documentada em `resolverAliases`).
+  const coresBase = resolverAliases(lerCores(corpoBase), corpoBase);
   const cores = resolverAliases(
-    resolverAliases(
-      new Map([...lerCores(corpoBase), ...lerCores(tema.corpo)]),
-      corpoBase,
-    ),
+    new Map([...coresBase, ...lerCores(tema.corpo)]),
     tema.corpo,
   );
   const nums = new Map([...lerNumeros(corpoBase), ...lerNumeros(tema.corpo)]);

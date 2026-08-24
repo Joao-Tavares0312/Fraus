@@ -248,7 +248,12 @@
      e 62% -> 72% no medio. O portao manda no vidro; o vidro nao afrouxa o
      portao, e baixar a luz para salvar contraste seria resolver pelo lado
      errado num pedido cujo enunciado era ficar mais chamativo. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 55%, transparent);
+  /* Task 8, mesmo dia: com os pisos remedidos (piso honesto, ver comentario
+     abaixo), `--destructive` sobre vidro fino reprovava em 4.13 (minimo
+     4.5). O fino subiu de 2 em 2 pontos, remedindo o piso a cada passo --
+     55% -> 57% (4.21) -> 59% (4.29) -> 61% (4.37) -> 63% (4.47) -> 65%
+     (passa). Medio e denso nao mudaram. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 65%, transparent);
   --vidro-fundo: color-mix(in oklch, var(--card) 72%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
@@ -258,7 +263,11 @@
      (Task 2) -- o sol e camada somada e mais clara que a mancha quente que
      substituiu, entao o composto do atelie clareou e o piso antigo ficou
      otimista. */
-  --vidro-fino-piso: oklch(0.336 0.006 78);
+  /* REMEDIDOS de novo (Task 8) ao engrossar o vidro fino para fechar o par
+     `--destructive` x `--vidro-fino-piso`: 55%->65% de fundo baixa o piso
+     fino de 0.336 para 0.310 (mais card opaco, menos atelie por baixo).
+     Medio e denso ficaram identicos ao medido -- nenhuma mudanca. */
+  --vidro-fino-piso: oklch(0.310 0.006 78);
   --vidro-piso: oklch(0.291 0.006 78);
   --vidro-denso-piso: oklch(0.264 0.006 78);
 
@@ -581,6 +590,12 @@
   /* TERCEIRA rodada de engrossamento, mesmo motivo das duas primeiras: a marca
      impressa e o papel mais forte somaram luz. 71% -> 81% no fino, 75% -> 85%
      no medio. */
+  /* Task 8 (24/08/2026): so o piso mudou aqui, nao a espessura -- o bug de
+     `pisos.mjs` (ver `resolverAliases`) fazia o script medir com o azul da
+     base em vez do magenta deste tema, entao o piso saia PESSIMISTA (mais
+     claro que a realidade). Com o piso honesto (mais baixo), o portao ja
+     passava sem engrossar o vidro; os tres `--vidro-*-fundo` abaixo ficam
+     como estavam. */
   --vidro-fino-fundo: color-mix(in oklch, var(--card) 81%, transparent);
   --vidro-fundo: color-mix(in oklch, var(--card) 85%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
@@ -594,10 +609,18 @@
      Remedidos de novo ao acender o sol listrado (Task 2): eram
      0.295/0.277/0.273, e o sol e camada somada mais clara que a mancha
      quente que substituiu, entao o composto clareou e o piso ficou
-     otimista outra vez. */
-  --vidro-fino-piso: oklch(0.299 0.031 274);
-  --vidro-piso: oklch(0.281 0.031 274);
-  --vidro-denso-piso: oklch(0.276 0.031 274);
+     otimista outra vez.
+     REMEDIDOS em 24/08/2026 (Task 8) apos consertar um bug de `pisos.mjs`:
+     `resolverAliases` resolvia os aliases da BASE depois de ja ter mesclado
+     o literal do tema no mesmo mapa, entao o alias `--atelie-fria: var(--medido)`
+     da base sobrescrevia o literal magenta que este tema declara para
+     `--atelie-fria`. O script vinha medindo com o azul da base em vez do
+     magenta da chuva -- mais claro que a realidade --, entao os pisos
+     saiam altos demais. Eram 0.299/0.281/0.276; com o alias consertado
+     (o literal do tema agora vence), caem para os valores abaixo. */
+  --vidro-fino-piso: oklch(0.285 0.031 274);
+  --vidro-piso: oklch(0.269 0.031 274);
+  --vidro-denso-piso: oklch(0.265 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
      superficie de vidro tem quina, entao acender a aresta acende a interface
