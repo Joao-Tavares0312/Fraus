@@ -118,6 +118,58 @@ de papel sob luz de escritório — o analista fica horas nela.
 > precisou engrossar de novo — 68% → 71% —, porque `--destructive` sobre ele
 > havia caído para 4,46:1. A ordem de sempre: a espessura cede, o portão não.
 
+> **Emenda de 24/08/2026 (segunda) — a marca é impressa no papel, e o papel
+> ficou forte.** A emenda anterior autorizou o papel pautado, mas a
+> implementação entregou grafite a 5,5% de opacidade: 1px a cada 13px, a 5,5%,
+> sobre fundo escuro, **não chega a ser visto**. A peça existia no código e não
+> na tela. A contenção já tinha sido negociada e perdida; foi a implementação
+> que continuou protegendo o contrato antigo. Corrigido: **0,055 → 0,12** no
+> grafite e **0,13 → 0,22** na chuva.
+>
+> O fundo passou também a carregar o **monograma da marca**, sangrando pela
+> quina inferior direita, nos dois temas.
+>
+> **É máscara, não imagem de fundo**, e a distinção é o inteiro da peça.
+> O arquivo da logo **carrega um fundo opaco** — o PNG era RGB sem canal alfa,
+> e o SVG que o substituiu traz um `<rect>` preto cobrindo os 640×640. Usar
+> qualquer um dos dois como `background-image` pintaria um quadrado opaco por
+> cima do ateliê, que é exatamente o bug que o `SidebarInset` com
+> `bg-background` já causou. `public/fraus-marca.svg` é o mesmo desenho **sem
+> esse fundo** e com as duas letras forçadas a branco: quem pinta é o
+> `background` do elemento, via `--marca-cor`. É isso que entrega "a logo com
+> o tema respectivo aplicado" — dourada no grafite, magenta na chuva — sem
+> gerar dois arquivos e sem tema novo pedir asset novo.
+>
+> O "fade + gradiente" é uma **segunda camada de máscara** cortada por
+> `mask-composite: intersect`: a marca nasce sólida onde sai da tela e se
+> dissolve subindo. Sem isso ela leria como adesivo colado.
+>
+> O que **não** mudou: nada disso carrega dado. É a mesma camada do ateliê, o
+> único lugar onde cor saturada não inventa canal de significado, e a §1.1
+> continua valendo — o monograma é a marca, não um glifo musical.
+>
+> O custo, de novo pago na hora: `--muted-foreground` e `--destructive` sobre
+> vidro fino caíram para 4,25 e 3,86. A espessura cedeu — 45% → 55% no fino e
+> 62% → 72% no médio no grafite, 71% → 81% e 75% → 85% na chuva. Ver §8.6.
+
+> **Emenda de 24/08/2026 (terceira) — o fundo ganha grade e sol.** O fundo
+> passou a carregar uma **grade em perspectiva** (linhas convergindo para um
+> horizonte a 320px, espaçadas a 44px, `--grade-op` em 0,1 no grafite e 0,2 na
+> chuva) e um **sol listrado** no horizonte (`--sol-op` em 0,16 no grafite e
+> 0,3 na chuva), nos dois temas.
+>
+> O que **não** mudou: as duas peças moram no ateliê, a mesma camada do papel
+> pautado e da marca impressa, não carregam dado, e passam **por baixo** da
+> luz — a mesma garantia das duas emendas acima, agora estendida a mais duas
+> peças.
+>
+> O custo, de novo em pisos e espessura de vidro: o vidro fino da chuva foi
+> de 71% para **74%**, e o vidro médio da chuva **recuou** de 75% para 74% —
+> ele havia subido para 81%/85% no meio do trabalho da Task 8 e voltou quando
+> um bug de medição foi corrigido. O saldo desta sessão contra o início dela:
+> fino subiu 3 pontos, médio caiu 1. No grafite, o vidro fino foi de 55% para
+> **64%**; médio (72%) e denso (82%) da chuva (86%) ficaram como estavam.
+
 | Token | Papel |
 |---|---|
 | `--background` | estoque de papel; grafite neutro, nunca `#000` |
@@ -170,10 +222,17 @@ não tem como ler.
 
 ### 3.3 A cor da marca: o dourado do monograma
 
-`--primary` é o **dourado do R da logo**, medido do próprio arquivo
-(`public/fraus-logo.png`): a letra vai de `oklch(0.514 0.066 84)` no pé a
-`oklch(0.824 0.079 76)` no topo, e o token é o meio dessa rampa —
-`oklch(0.78 0.085 80)`.
+`--primary` é o **dourado do R da logo**, medido do próprio arquivo: a letra é
+um gradiente, e o token é o meio da rampa dele — `oklch(0.78 0.085 80)`.
+
+> **Nota de 24/08/2026 — a rampa deixou de ser amostrada e passou a ser lida.**
+> A medição original saiu do PNG por amostragem de pixel: `oklch(0.514 0.066 84)`
+> no pé a `oklch(0.824 0.079 76)` no topo. Com a marca vetorial
+> (`public/fraus-logo.svg`), a rampa vem das próprias paradas do gradiente e é
+> exata: `oklch(0.642 0.084 76)` a `oklch(0.832 0.071 78)`. **O token não
+> mudou** — `0.78 0.085 80` já caía dentro dela, e o argumento do croma fosco
+> (0,085 contra os 0,15 do âmbar do "dito") sobrevive intacto. Registrado
+> porque a fonte da verdade mudou de arquivo, não porque a cor mudou.
 
 **Por que deixou de ser lime.** O `--primary` era `oklch(0.843 0.179 134)`,
 herdado do chassi. Nenhum pixel da logo é verde: a identidade é um monograma
@@ -202,11 +261,22 @@ que precisa ser repensado primeiro.
 
 ### 3.3.1 O raio acompanha os cortes do monograma
 
-`--radius` é `0.375rem`, e era `0.625rem`. O F e o R são chanfrados a 45° e
-não têm uma curva de canto sequer; o raio antigo arredondava o controle a
-ponto de ele não ter parentesco nenhum com a marca. Não vai a zero porque
-botão e campo totalmente quadrados brigariam com o chassi inteiro — cartão,
-popover, sheet — por causa de um detalhe.
+`--radius` era `0.375rem`, e antes disso `0.625rem`. O F e o R são chanfrados a
+45° e não têm uma curva de canto sequer; o raio de 0,625rem arredondava o
+controle a ponto de ele não ter parentesco nenhum com a marca. Em 0,375rem não
+ia a zero porque botão e campo totalmente quadrados brigariam com o chassi
+inteiro — cartão, popover, sheet — por causa de um detalhe.
+
+> **Emenda de 24/08/2026 — o chassi endureceu, e a objeção caiu.**
+> `--radius` foi de `0.375rem` para **0.125rem** (2px), por decisão do dono do
+> projeto. O argumento que segurava o raio em 0,375rem era o chassi arredondado
+> ao redor — cartão, popover, sheet, sidebar; era essa vizinhança que um botão
+> quase quadrado brigaria com. Essa vizinhança não existe mais: os painéis
+> grandes (`Painel.tsx`, `FaixaIndicadores.tsx`) passaram a ser chanfrados a
+> 45° via `clip-path`, no mesmo desenho do F e do R, e a sombra migrou de
+> `box-shadow` para `filter: drop-shadow()` porque `clip-path` descarta
+> `box-shadow`. Com o chassi cortado a 45° em vez de arredondado, um raio quase
+> reto deixou de ser a peça fora do lugar — passou a ser a única consistente.
 
 ### 3.3.2 O rótulo dentro do botão é verificado
 
@@ -360,17 +430,40 @@ metal solto sobre roxo e passa a ser a lâmpada da rua.
 
 ### 8.2 O que o tema NÃO toca
 
-Três regras, e elas são o que separa "segundo tema" de "outro produto":
+Três regras, e elas eram o que separava "segundo tema" de "outro produto":
 
 1. **A camada de dado inteira fica como está.** `--dito` continua âmbar,
    `--medido` continua azul, e as sete famílias de sinal mantêm os matizes. O
-   encoding é compromisso vinculante do `PRODUCT.md`; trocar a pele não pode
-   trocar o significado. O magenta e o violeta do vaporwave vivem **só no
-   ateliê**, que é a única camada que não carrega dado — e é por não carregar
-   dado que ela pode ter croma alto sem inventar canal sem rótulo.
+   magenta e o violeta do vaporwave vivem **só no ateliê**, que é a única
+   camada que não carrega dado — e é por não carregar dado que ela pode ter
+   croma alto sem inventar canal sem rótulo.
 2. **O dourado continua fora de dado**, só em controle e marca.
 3. **Todo par de texto continua cruzando AA por cálculo**, agora medido nos dois
    temas.
+
+> **Emenda de 24/08/2026 — a regra 1 deixa de valer, e a atribuição dela
+> estava errada.** A regra 1 acima ("a camada de dado inteira fica como
+> está") deixou de valer por decisão do dono do projeto: as sete famílias de
+> sinal, as três categorias de NPS e os oito nós coloridos do grafo subiram
+> croma e claridade.
+>
+> **O que continua de pé:** o matiz de cada família ficou **congelado** — só
+> saturação e claridade mudaram, e o matiz é o canal que carrega o encoding;
+> saturação nunca carregou significado nenhum. `--no-importacao` continua
+> cinza. `--primary` continua fora de dado, regra 2 intacta. Categoria
+> continua nunca comunicada só por cor, sempre com rótulo textual — regra 3
+> intacta.
+>
+> **A correção de rota, e é a parte que importa:** o texto acima chamava essa
+> regra de "compromisso vinculante do `PRODUCT.md`". **Não é, e nunca foi.**
+> Fomos reler o `PRODUCT.md`: ele exige duas coisas, e só duas — que todo par
+> de cor que carrega texto cruze AA por cálculo, e que categoria nunca seja
+> comunicada só por cor. Ambas continuam valendo e não foram violadas por
+> esta emenda. "A camada de dado inteira fica como está" nunca esteve no
+> `PRODUCT.md`; era decisão de design tomada pelo dono do projeto, e foi o
+> mesmo dono do projeto que a revogou agora. Atribuir a um documento de
+> produto uma regra que era decisão de design é o tipo de erro que este
+> projeto não pode se dar ao luxo de deixar impresso.
 
 ### 8.3 O gate passou a ser ciente de tema
 
@@ -399,6 +492,16 @@ grafite e trocar depois da hidratação, a cada navegação.
 O tema foi empurrado para ser chamativo em 24/08/2026, e o empurrão respeita a
 regra de 8.2: **só o que não carrega dado ganhou saturação.**
 
+> **Nota de 24/08/2026 — a tabela vale para os dois temas.** O título desta
+> seção pressupõe um tema só, e não é bem assim: a decisão de 24/08/2026 foi
+> **estrutura igual nos dois temas** — cada peça abaixo existe no componente
+> tanto no grafite quanto na chuva, e é o tema, não o componente, quem decide
+> cor e intensidade. No grafite **só asfalto e chuva ficam em zero**; as
+> outras seis estão acesas, apenas contidas — marca impressa em 0,15, grade
+> a laser em 0,1, sol listrado em 0,16, papel pautado em 0,12, e quina e
+> sombra ativas com suas próprias cores. É a chuva que grita, não o grafite
+> que apaga.
+
 | Peça | O que faz | Por que pode gritar |
 |---|---|---|
 | **quina do vidro** | ciano na aresta de cima, magenta na de baixo | é tubo de neon: a luz da fachada bate em cima, o reflexo do chão sobe embaixo. Toda superfície tem quina, então acender a aresta acende a interface inteira **sem uma célula de dado mudar de cor** |
@@ -406,6 +509,9 @@ regra de 8.2: **só o que não carrega dado ganhou saturação.**
 | **especular** | tingido de magenta | realce branco no meio de uma paleta tingida lê como falha de renderização |
 | **reflexo no asfalto** | faixa de luz subindo do rodapé | é o que separa "fundo roxo com manchas" de "fachada espelhada em chão molhado" |
 | **chuva** | riscos diagonais finos, **estáticos** | dá textura para o vidro refratar sem gastar quadro |
+| **marca impressa** | o monograma sangrando pela quina inferior direita, em magenta | é máscara pintada pelo tema, não imagem: mora no ateliê, não codifica valor nenhum, e o magenta é o mesmo par de néon da quina do vidro |
+| **grade a laser** | grade em perspectiva convergindo para um horizonte | é o piso do vaporwave clássico: converte o ateliê em cenário de fuga, sem tocar dado |
+| **sol listrado** | sol com faixas horizontais no horizonte | a segunda peça do mesmo cenário; nos dois temas, com intensidade decidida por tema |
 
 **A chuva não cai**, e isso é decisão: a §6 já gastou os dois momentos de
 movimento que a interface se permite, e chuva animada seria um terceiro que não
@@ -426,9 +532,172 @@ passar.** 45% → 68% no fino, 62% → 74% no médio, 82% → 86% no denso. Baix
 luz para salvar o contraste teria sido resolver pelo lado errado, ainda mais num
 tema cujo pedido era justamente ficar mais chamativo.
 
-Os pisos deste tema são **medidos, não estimados**: as cinco camadas do ateliê
+Os pisos deste tema são **medidos, não estimados**: as camadas do ateliê
 compostas no mesmo ponto (pior caso, ainda que geometricamente impossível — a
 mancha da marca fica no alto à esquerda e a fria embaixo à direita), cada
 espessura por cima, e a luminância resultante convertida de volta para OKLCH.
 Piso otimista é pior que piso nenhum: ele faz o portão devolver verde medindo
 uma superfície que não existe.
+
+> **Emenda de 24/08/2026 — a medição virou script, e ela estava errada.**
+>
+> Esta conta já tinha sido feita três vezes à mão, e nas duas primeiras morreu
+> num scratchpad. Agora é `dashboard/scripts/pisos.mjs` (`npm run pisos`): ele
+> lê o `globals.css`, compõe o ateliê, aplica cada espessura e imprime o piso
+> que cada uma deveria ter. Medição sem instrumento versionado vira chute na
+> terceira rodada — e virou.
+>
+> Refeita a conta com o script, os pisos da chuva registrados aqui
+> (0,307/0,294/0,257) eram **otimistas mesmo para o ateliê daquela época**: o
+> vidro fino dava 0,333. O portão vinha medindo uma superfície mais escura que
+> a real, ou seja, devolvendo verde com folga que não existia. É exatamente o
+> modo de falha que o parágrafo acima descreve, e ele aconteceu aqui. Os
+> valores vigentes estão no `globals.css` e batem com o script.
+>
+> **Um pessimismo a menos, e ele é lido da geometria.** O papel pautado **não
+> soma** com as peças do rodapé: a máscara dele
+> (`radial-gradient(140% 100% at 50% -10%, black 15%, transparent 70%)`) zera
+> por volta de 60% da altura da tela, então onde ele tem força as outras ainda
+> não começaram. O script disputa "papel pautado" contra "marca impressa +
+> grade a laser" e fica com a composição mais clara. O resto do pior caso segue
+> impossível de propósito (as manchas de luz no mesmo ponto), porque ali a
+> impossibilidade é barata.
+>
+> **Correção da revisão final (24/08/2026) — a marca e a grade NÃO eram
+> disjuntas, e esta emenda afirmava que eram.** A versão anterior deste
+> parágrafo dava como prova a máscara antiga da marca
+> (`radial-gradient(120% 120% at 100% 100%, ..., transparent 72%)`), estreita o
+> bastante para deixar massa só num raio pequeno. Essa máscara foi **alargada
+> depois**, de propósito, para a marca ficar visível: hoje é
+> `radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)` num
+> elemento de 115vmin ancorado na quina inferior direita — e a grade ocupa a
+> faixa `bottom-0 h-[45vh]` de largura total, mais forte justamente colada no
+> rodapé. O pixel "linha da grade sobre traço do monograma" existe. O modelo de
+> medição não acompanhou a mudança de geometria, e por isso os seis pisos
+> ficaram otimistas. Corrigido: **marca e grade somam**; só o papel pautado
+> continua disjunto. Premissa de disjunção é afirmação sobre geometria — quem
+> mexer numa máscara do `Atelier.tsx` reconfere a lista em `pisos.mjs`.
+>
+> **O que continua sendo julgamento de olho.** O ateliê só aparece nas calhas
+> entre painéis e **através** do vidro; numa tela cheia, engrossar o vidro
+> apaga a luz que a emenda acabou de acender. A intensidade da marca foi posta
+> no teto em que ela ainda **não** é a camada que manda no piso — 0,15 no
+> grafite, 0,22 na chuva —, e a presença dela veio de **escala** (115vmin), que
+> é de graça: o pior caso já assume a cor da marca em algum pixel, então o
+> tamanho não custa contraste nenhum.
+
+> **Emenda de 24/08/2026 (segunda) — os números finais, e um par sem folga
+> nenhuma.** A grade, o sol e a marca impressa (0,12/0,22) levantaram o piso
+> de novo, e a resolução foi a mesma de sempre: a espessura cede. Vidro fino
+> do grafite foi de 55% para **64%**; médio (72%) e denso (82%) do grafite
+> ficaram como estavam. Na chuva, vidro fino foi de 71% para **74%** e vidro
+> médio **recuou** de 75% para **74%** — ele chegou a subir para 81%/85% no
+> meio do caminho e voltou quando um bug de medição foi corrigido; denso
+> (86%) não mudou. Contra o início desta sessão, o saldo da chuva é: fino
+> subiu 3 pontos, médio caiu 1.
+>
+> **Um par ficou exatamente no fio.** `--destructive` sobre o piso do vidro
+> fino do grafite fecha em **4,50:1** — o limiar do WCAG AA, não um número
+> acima dele. Zero folga: qualquer luz nova no ateliê do grafite — mais uma
+> peça, mais opacidade em alguma das que já existem — derruba esse par sem
+> precisar de erro nenhum no cálculo. Fica registrado como o candidato mais
+> provável a reprovar na próxima rodada.
+>
+> **As nove cores que carregam texto foram convertidas de `hsl()` para
+> `oklch()`.** É conversão matematicamente equivalente, não repintura — o
+> motivo foi o portão: `scripts/contraste.mjs` precisava enxergá-las para
+> medir, e três delas nunca tinham sido medidas em tema nenhum antes desta
+> sessão. As nove passam AA nos dois temas, incluindo essas três.
+
+> **Emenda de 24/08/2026 (terceira) — os números depois de consertar a
+> disjunção.** Com marca e grade somadas (ver a correção acima), os seis pisos
+> ficaram otimistas e o portão reprovou: `--destructive` × vidro fino caiu para
+> **4,29** no grafite e **4,39** no fino e no médio da chuva. A regra de sempre:
+> a espessura cede, a luz não. Vidro fino do grafite subiu de 1 em 1 —
+> 64% → 65% → 66% → 67% → 68% → **69%** —, remedindo o piso a cada passo; médio
+> (72%) e denso (82%) do grafite não mudaram. Na chuva, fino e médio subiram
+> juntos de 74% para **76%**; denso (86%) não mudou.
+>
+> O par crítico deixou o fio: `--destructive` × piso do vidro fino fecha em
+> **4,54** no grafite e **4,52** na chuva. Continua sendo o par mais apertado
+> da interface e o primeiro candidato a reprovar se o ateliê ganhar luz nova.
+
+> **Emenda de 24/08/2026 (quarta) — o vidro afina, e o vermelho de erro paga
+> a conta.** Por decisão do dono do projeto: *"vamos diminuir a opacidade dos
+> liquid glass para que eu consiga ver o fundo"*.
+>
+> **A folga era zero.** Medido antes de mexer: dois pontos a menos em qualquer
+> espessura já levavam `--destructive` × vidro fino de 4,52 para 4,44. O par
+> que a emenda anterior deixou "no fio" era literalmente o teto.
+>
+> **E o teto não é o vidro, é o texto** — esta é a parte que vale registrar,
+> porque ela contraria a intuição. O que se enxerga do ateliê *através* de uma
+> superfície translúcida **é** a claridade do piso dela. Pedir "mais fundo
+> visível" é pedir piso mais claro, e piso mais claro exige texto mais claro.
+> Não adianta afinar o vidro e escurecer o ateliê para compensar: as duas
+> coisas são a mesma grandeza, e o portão mede exatamente ela. **A única
+> alavanca que compra fundo é subir a cor do texto que fica por cima.**
+>
+> Isso **não afrouxa o portão** — conserta a cor do texto, que é o outro lado
+> da mesma regra da §7. O portão continua em 4,5 e mede tudo que media antes.
+>
+> `--destructive` foi de `oklch(0.704 0.191 22.216)` para
+> `oklch(0.79 0.121 22.216)`. **O matiz não se moveu**: vermelho continua sendo
+> erro. É seguro porque `bg-destructive` cheio só pinta bolinha de status — o
+> botão e o badge usam `/10` e `/20` com `text-destructive` por cima, então
+> clarear melhora os dois usos e não há rótulo sobre preenchimento sólido.
+>
+> **O croma caiu de propósito.** O valor antigo estava **fora do gamut sRGB**
+> (R = 1,013) e o navegador já o cortava; subir a claridade mantendo 0,191
+> pioraria isso (R = 1,319). 0,121 é o croma máximo dentro do gamut nessa
+> claridade — `rgb(255,83,79)` —, então o token passa a declarar a cor que de
+> fato renderiza, e ainda rende um pouco mais de contraste que a versão
+> cortada. Token que declara cor que o navegador corta é a mesma classe de
+> defeito de documento que afirma o que o código não faz.
+>
+> **O que isso comprou:** oito pontos de vidro nas duas espessuras que o
+> usuário enxerga. Grafite fino **69% → 61%**, médio **72% → 64%**. Chuva fino
+> e médio **76% → 68%**. Denso não mudou em tema nenhum — ele existe para o
+> conteúdo atrás sumir, e afiná-lo tem custo funcional, não só de contraste.
+>
+> **O gargalo trocou de dono, e o novo tem outro nome.** O par mais apertado
+> agora é `--detrator-texto` × piso do vidro fino, em **4,54** na chuva e
+> **4,72** no grafite. `--detrator-texto` é **cor de dado** — a categoria de
+> NPS —, não cromo. Afinar mais exigiria mexer na camada de dado, e isso é
+> decisão de outra ordem: fica registrado aqui como a fronteira, não como
+> pendência.
+
+---
+
+## 9. O ciclo de verificação, e o que cada gate NÃO vê
+
+Cinco comandos verificam este sistema de design. Eles não se substituem, e a
+seção existe porque **quatro deles já devolveram verde com o build quebrado**.
+
+| Comando | O que ele vê | O que ele **não** vê |
+|---|---|---|
+| `npm run pisos` | se o piso gravado no CSS bate com o pior caso medido do ateliê | qualquer coisa fora dos tokens que ele casa por regex |
+| `npm run contraste` | todo par de cor que carrega texto ou marca, nos dois temas | cor escrita em notação que o parser não lê; matiz; a tela |
+| `npx tsc --noEmit` | tipos do TypeScript | CSS, imagem, qualquer asset |
+| `npm run lint` | as regras do ESLint | CSS, imagem, qualquer asset |
+| `npm run build` | **compila o CSS e processa os assets de verdade** | a tela |
+
+**`npm run build` faz parte do ciclo, não só da conferência final.** Em
+24/08/2026 ele pegou duas quebras no mesmo dia que os outros quatro deixaram
+passar em verde:
+
+- um `favicon.ico` gerado a partir de imagem **RGB** — o processador do Next
+  exige RGBA e falha com `The PNG is not in RGBA format!`;
+- um `*/` que fechou um comentário do `globals.css` cedo demais, deixando o
+  resto do texto como CSS solto (`Unknown word lime`).
+
+Nos dois casos `pisos`, `contraste`, `tsc` e `lint` passaram limpos. Os dois
+primeiros só casam token por expressão regular; os dois últimos não leem CSS
+nem imagem. **Nenhum dos quatro compila coisa alguma.**
+
+**E nenhum dos cinco vê a tela.** Uma peça de fundo pode estar geometricamente
+quebrada, invisível por opacidade baixa demais, ou ilegível por figura contra
+fundo de mesmo matiz, com os cinco verdes. Foi assim que o papel pautado saiu
+invisível a 5,5%, que a grade a laser colapsou numa faixa de 30px, e que o
+portão passou a medir uma superfície que não existe. **Trabalho visual se
+confere olhando**, nos dois temas, numa tela cheia e numa vazia.

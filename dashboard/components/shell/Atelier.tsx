@@ -6,17 +6,22 @@
  * para refratar -- `backdrop-filter` borra o que esta atras, e atras de um
  * grafite uniforme so ha mais grafite.
  *
- * Tres manchas radiais sobre o `--background`: a da marca, a fria que a
- * contrapesa, e uma terceira fraca que quebra a simetria das duas -- que
- * sozinhas leriam como gradiente de template.
+ * Duas manchas radiais sobre o `--background`: a da marca e a fria que a
+ * contrapesa. O sol listrado herdou o posto da terceira mancha, fraca, que
+ * quebrava a simetria das duas -- que sozinhas leriam como gradiente de
+ * template.
  *
- * As cores vem de `--atelie-marca` / `--atelie-fria` / `--atelie-quente`, e
- * NAO dos tokens de dado. O atelie usava `--dito` e `--medido` emprestados, o
- * que amarrava a iluminacao da sala ao canal que carrega significado. Sao
- * token proprio desde 24/08/2026, o que tambem e o que permite ao tema
- * "chuva de neon" trocar a luz sem encostar no encoding.
+ * As cores vem de `--atelie-marca` / `--atelie-fria`, e o desacoplamento dos
+ * tokens de dado E PARCIAL -- vale dizer qual metade, porque o oposto ja foi
+ * escrito aqui e era falso. No tema "chuva de neon" os dois sao literais e
+ * independentes do encoding, e e isso que permite trocar a luz sem encostar
+ * na camada de dado. No GRAFITE nao: `--atelie-fria` continua sendo
+ * `var(--medido)`, ou seja, a propria cor do canal de dado usada como luz. A
+ * consequencia e real e ja foi paga: repintar o dado move a luz do grafite
+ * junto, e os pisos de vidro precisam ser remedidos quando isso acontece.
+ * `--atelie-marca` e `var(--primary)` no grafite -- cor de marca, nao de dado.
  *
- * No tema grafite as tres tem croma BAIXO: elas iluminam, nao pintam. No tema
+ * No tema grafite as duas tem croma BAIXO: elas iluminam, nao pintam. No tema
  * chuva o croma sobe, e pode subir justamente porque esta camada nao carrega
  * dado nenhum -- cor saturada aqui nao inventa canal de significado.
  *
@@ -82,13 +87,83 @@ export function Atelier() {
             "radial-gradient(closest-side, var(--atelie-fria), transparent)",
         }}
       />
-      {/* quente fraca -- quebra a simetria das outras duas */}
+      {/* O SOL LISTRADO: o retrosun, nascendo no horizonte da grade.
+
+          Herda o posto da antiga "mancha quente fraca", e de propósito: a
+          função dela era quebrar a simetria das outras duas manchas, e um
+          disco fora do eixo faz isso melhor que um borrão. Peça nova somaria
+          luz ao pior caso das superfícies translúcidas; esta apenas troca de
+          forma.
+
+          As faixas são `repeating-linear-gradient` sobre o gradiente do
+          disco, cortadas pelo `rounded-full` -- o disco é a máscara, as
+          faixas são o preenchimento. Elas ENGROSSAM descendo porque é assim
+          que o retrosun se lê: sol se pondo, não bola listrada.
+
+          Fica ATRÁS da grade na ordem do DOM: o sol se põe no horizonte, e o
+          chão está na frente dele. */}
       <div
-        className="absolute left-[45%] top-[55%] h-[45vmax] w-[45vmax] rounded-full blur-[100px]"
+        className="absolute bottom-[26vh] left-[52%] h-[38vmin] w-[38vmin] -translate-x-1/2 rounded-full blur-[2px]"
         style={{
-          opacity: "var(--atelie-op-quente)",
+          opacity: "var(--sol-op)",
           background:
-            "radial-gradient(closest-side, var(--atelie-quente), transparent)",
+            "repeating-linear-gradient(to bottom, transparent 0 var(--sol-faixa), oklch(0 0 0 / 0.85) var(--sol-faixa) calc(var(--sol-faixa) * 1.5))," +
+            "linear-gradient(to bottom, var(--sol-cor-alta), var(--sol-cor-baixa))",
+          maskImage: "linear-gradient(to bottom, black 55%, transparent 96%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, black 55%, transparent 96%)",
+        }}
+      />
+
+      {/* A MARCA NO FUNDO: o monograma sangrando pela quina inferior direita.
+
+          E MASCARA, NAO IMAGEM DE FUNDO, e a distincao e o inteiro da peca.
+          `fraus-marca.svg` nao carrega cor nenhuma -- sao as duas letras em
+          branco puro sobre transparente, com o viewBox colado nelas. Quem
+          pinta e o `background` deste div, entao a mesma marca sai dourada no
+          grafite e magenta na chuva, sem gerar dois arquivos e sem tema novo
+          pedir asset novo.
+          Usar `fraus-logo.svg` direto como `background-image` pintaria um
+          quadrado preto OPACO por cima do atelie -- ele tem um `<rect>` de
+          fundo cobrindo os 640x640, e e exatamente o bug que o `SidebarInset`
+          com `bg-background` ja causou, matando a luz de seis das sete telas.
+          `fraus-marca.svg` e o mesmo desenho com esse `<rect>` removido e as
+          duas letras forcadas a branco.
+
+          E VETOR, e a troca importa: o PNG anterior tinha 461px de largura e
+          era esticado para perto de 800px na tela, entao a marca chegava
+          borrada justo na escala em que ela e grande. Mascara em SVG nao tem
+          escala nativa para perder.
+
+          O "fade + gradiente" e a SEGUNDA camada de mascara: `mask-composite:
+          intersect` corta a marca contra um gradiente radial ancorado na
+          quina, entao ela nasce solida onde sai da tela e se dissolve subindo
+          para o centro. Sem isso ela leria como adesivo colado; com isso, como
+          marca d'agua impressa no papel.
+
+          Fica DEPOIS das manchas de luz (a sala ilumina o papel, a marca esta
+          impressa nele e recebe a luz por cima) e ANTES do asfalto e da chuva
+          -- chuva cai na FRENTE da fachada, nao atras. */}
+      <div
+        className="absolute -bottom-[10%] -right-[8%] h-[72vmin] w-[72vmin]"
+        style={{
+          opacity: "var(--marca-op)",
+          background: "var(--marca-cor)",
+          // O `-webkit-` continua obrigatorio: o Safari so implementa `mask`
+          // sem prefixo desde a 15.4, e a versao prefixada nao entende
+          // `mask-composite: intersect` -- ela usa `source-in`.
+          WebkitMaskImage:
+            "url(/fraus-marca.svg), radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)",
+          WebkitMaskSize: "contain, cover",
+          WebkitMaskRepeat: "no-repeat, no-repeat",
+          WebkitMaskPosition: "center, center",
+          WebkitMaskComposite: "source-in",
+          maskImage:
+            "url(/fraus-marca.svg), radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)",
+          maskSize: "contain, cover",
+          maskRepeat: "no-repeat, no-repeat",
+          maskPosition: "center, center",
+          maskComposite: "intersect",
         }}
       />
 
@@ -104,6 +179,64 @@ export function Atelier() {
             "linear-gradient(to top, var(--atelie-fria), transparent 78%)",
         }}
       />
+
+      {/* A GRADE A LASER: o chao da cena.
+
+          A perspectiva e o truque inteiro, e precisa de DOIS elementos, nao
+          um. Correcao de 24/08/2026: a primeira versao punha `perspective()`
+          dentro da propria funcao `transform` do elemento rotacionado -- e um
+          elemento so, girado 74deg em torno da propria borda de baixo, fica
+          quase de perfil e COLAPSA numa faixa fina colada no rodape em vez de
+          se estender ate um horizonte. Pior: nada recortava a metade do plano
+          que passa do ponto de fuga, e ela se projetava de volta ACIMA do
+          horizonte como uma malha cobrindo a tela inteira -- o artefato
+          classico de `rotateX` alto com `perspective` curta demais.
+
+          A tecnica correta separa CONTEINER de PLANO:
+          - o CONTEINER fica ancorado no rodape, com `perspective` como
+            PROPRIEDADE CSS dele (nao dentro de `transform`) -- e isso que faz
+            o ponto de fuga ser o do conteiner, produzindo convergencia de
+            verdade em vez de um plano so comprimido. `overflow-hidden` no
+            conteiner e OBRIGATORIO: e ele que come a metade espelhada do
+            plano que passaria do horizonte. Tirar o `overflow-hidden` para
+            "simplificar" reintroduz a malha cobrindo a tela.
+          - o PLANO INTERNO e bem mais alto que o conteiner (`h-[200%]`) e e
+            SO ELE que gira em `rotateX`, com `transformOrigin` na propria
+            borda de baixo. As linhas que correm para o fundo CONVERGEM
+            sozinhas, porque a projecao em perspectiva faz isso; nao ha
+            gradiente conico nem SVG envolvido.
+
+          `inset-x-[-50%]` no plano interno, e nao `inset-x-0`: rotacionado,
+          o plano encolhe na horizontal perto do horizonte e mostraria borda
+          se tivesse a largura da tela. Sangrar meia tela para cada lado
+          resolve sem custo.
+
+          A mascara, no plano interno, apaga a grade subindo, para ela virar
+          horizonte em vez de parar numa linha reta -- que leria como o fim
+          de uma textura, e nao como distancia.
+
+          ESTATICA. Ver o comentario da chuva logo abaixo sobre por que. */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[45vh] overflow-hidden"
+        style={{
+          perspective: "var(--grade-horizonte)",
+          perspectiveOrigin: "50% 0%",
+        }}
+      >
+        <div
+          className="absolute inset-x-[-50%] bottom-0 h-[200%]"
+          style={{
+            opacity: "var(--grade-op)",
+            background:
+              "repeating-linear-gradient(to right, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))," +
+              "repeating-linear-gradient(to bottom, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))",
+            transform: "rotateX(68deg)",
+            transformOrigin: "bottom center",
+            maskImage: "linear-gradient(to top, black 0%, transparent 92%)",
+            WebkitMaskImage: "linear-gradient(to top, black 0%, transparent 92%)",
+          }}
+        />
+      </div>
 
       {/* A CHUVA: riscos diagonais finos, ESTATICOS.
           Por que nao cai: a secao 6 do DESIGN.md ja gastou os dois momentos de

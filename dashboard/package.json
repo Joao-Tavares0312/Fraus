@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "contraste": "node scripts/contraste.mjs"
+    "contraste": "node scripts/contraste.mjs",
+    "pisos": "node scripts/pisos.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

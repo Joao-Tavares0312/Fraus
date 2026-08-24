@@ -64,7 +64,7 @@ export function Painel({
       whileInView="presente"
       viewport={{ once: true, margin: "0px 0px -64px 0px" }}
       className={cn(
-        "vidro especular quebra-evitar min-w-0 overflow-hidden rounded-lg p-4 sm:p-5",
+        "vidro especular chanfro quebra-evitar min-w-0 overflow-hidden rounded-lg p-4 sm:p-5",
         className,
       )}
     >

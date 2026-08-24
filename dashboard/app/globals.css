@@ -153,9 +153,15 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  /* O DOURADO DO MONOGRAMA. Medido do proprio arquivo da logo
-     (public/fraus-logo.png): o R vai de oklch(0.514 0.066 84) no pe a
-     oklch(0.824 0.079 76) no topo, e este valor e o meio dessa rampa.
+  /* O DOURADO DO MONOGRAMA. Medido do proprio arquivo da logo: o R e um
+     gradiente, e este valor e o meio da rampa dele.
+
+     A medicao original saiu do PNG (oklch 0.514 0.066 84 no pe a 0.824 0.079
+     76 no topo) -- amostragem de pixel, com o ruido que isso tem. Em
+     24/08/2026 a marca passou a ser vetorial e a rampa virou EXATA, lida das
+     paradas do gradiente de `public/fraus-logo.svg`: oklch(0.642 0.084 76) no
+     pe a oklch(0.832 0.071 78) no topo. O token nao mudou, e nao precisou:
+     0.78 0.085 80 cai dentro dessa rampa. A fonte da verdade agora e o SVG.
 
      O lime que estava aqui (oklch 0.843 0.179 134) nao vinha da marca --
      nenhum pixel da logo e verde. Era heranca do chassi, e uma dashboard cuja
@@ -174,29 +180,62 @@
   --muted-foreground: oklch(0.705 0.015 286.067);
   --accent: oklch(0.274 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  /* O VERMELHO DE ERRO CLAREOU PARA O VIDRO PODER AFINAR (24/08/2026).
+     Era oklch(0.704 0.191 22.216), e ele era o gargalo da interface inteira:
+     sobre o piso do vidro fino ele fechava em 4,52:1 contra o minimo de 4,5,
+     entao NENHUMA espessura de vidro podia afinar sem derrubar o portao. Dois
+     pontos a menos ja levavam o par para 4,44.
+
+     Clarea-lo e a unica alavanca que compra fundo visivel sem tocar em dado:
+     o que se ve do atelie atraves do vidro E a claridade do piso, entao pedir
+     "mais fundo" e pedir piso mais claro, e piso mais claro exige texto mais
+     claro. Nao e afrouxar o portao -- e consertar a cor do texto.
+
+     E SEGURO porque `bg-destructive` cheio so pinta BOLINHA de status; o botao
+     e o badge usam `/10` e `/20` com `text-destructive` por cima, entao clarear
+     melhora os dois usos e nao ha rotulo sobre preenchimento solido.
+
+     O CROMA CAIU DE PROPOSITO, de 0.191 para 0.121. O valor antigo estava FORA
+     DO GAMUT sRGB (R = 1,013) e o navegador ja o cortava; subir a claridade
+     mantendo 0.191 pioraria isso (R = 1,319). 0.121 e o croma maximo dentro do
+     gamut nesta claridade -- rgb(255,83,79) --, entao o token passa a declarar
+     a cor que de fato renderiza, e de quebra rende um pouco mais de contraste
+     que a versao cortada. O MATIZ nao se moveu: vermelho continua sendo erro. */
+  --destructive: oklch(0.79 0.121 22.216);
   --success: oklch(0.78 0.16 150);
   --warning: oklch(0.8 0.14 80);
 
-  --destructive-rich: hsl(358 76% 10%);
-  --destructive-rich-border: hsl(357 89% 16%);
-  --destructive-rich-text: hsl(358 100% 81%);
-  --success-rich: hsl(150 100% 6%);
-  --success-rich-border: hsl(147 100% 12%);
-  --success-rich-text: hsl(150 86% 65%);
-  --warning-rich: hsl(64 100% 6%);
-  --warning-rich-border: hsl(60 100% 9%);
-  --warning-rich-text: hsl(46 87% 65%);
+  /* CONVERTIDOS de hsl() para oklch() em 24/08/2026, e a conversão é
+     matematicamente equivalente -- mesma cor, outra notação.
+
+     O motivo não é estético: `scripts/contraste.mjs` só faz parse de
+     `oklch()` literal, de propósito (ver o comentário de `lerTokens`), então
+     estes nove eram INVISÍVEIS para o portão. Três deles carregam texto e
+     nunca foram medidos, em tema nenhum -- e o rosa de
+     `--destructive-rich-text` sobre o índigo do tema chuva foi confirmado
+     ilegível numa captura de tela. Convertidos, o gate passa a enxergá-los
+     sem uma linha de mudança no script. */
+  --destructive-rich: oklch(0.199 0.064 23);
+  --destructive-rich-border: oklch(0.27 0.103 25.5);
+  --destructive-rich-text: oklch(0.799 0.116 17.8);
+  --success-rich: oklch(0.209 0.049 158.3);
+  --success-rich-border: oklch(0.316 0.083 152.3);
+  --success-rich-text: oklch(0.862 0.169 157.8);
+  --warning-rich: oklch(0.228 0.051 113.3);
+  --warning-rich-border: oklch(0.291 0.063 109.8);
+  --warning-rich-text: oklch(0.864 0.142 92.2);
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.78 0.085 80);
-  /* O monograma e feito de cortes retos: o F e o R sao chanfrados a 45 graus,
-     sem nenhuma curva de canto. 0.625rem arredondava o controle a ponto de ele
-     nao ter parentesco nenhum com a marca; 0.375rem mantem o canto legivel
-     como canto. Nao vai a zero porque campo e botao totalmente quadrados
-     brigariam com o chassi inteiro (cartao, popover, sheet) por um detalhe. */
-  --radius: 0.375rem;
+  /* 2px, e não zero. A seção 3.3.1 já argumentava nesta direção -- o F e o R
+     são chanfrados a 45° e não têm uma curva de canto sequer -- e só parou em
+     0.375rem para o controle não brigar com um chassi arredondado. Com o
+     chassi inteiro endurecendo, a objeção deixa de existir.
+     Não vai a zero porque canto absolutamente vivo serrilha em tela não-HiDPI
+     e o chanfro da marca é um corte, não uma quina. Emenda de 24/08/2026 à
+     seção 3.3.1 -- ver DESIGN.md. */
+  --radius: 0.125rem;
 
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
@@ -222,21 +261,62 @@
      que `scripts/contraste.mjs` verifica o texto -- superficie translucida
      nao tem cor fixa, e o pior caso e o unico caso honesto de medir.
 
-     Os pisos sao mais ESCUROS que --muted (L 0.274), que ja esta no conjunto
-     verificado ha tempo. Se algum dia um piso passar de 0.274, isso nao e um
-     detalhe: e o sinal de que o vidro clareou a ponto de ameacar o texto, e a
-     espessura correspondente precisa de mais opacidade. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 45%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 62%, transparent);
+     Os pisos nasceram mais ESCUROS que --muted (L 0.274), que ja estava no
+     conjunto verificado ha tempo, e por um tempo isso serviu de alarme barato:
+     piso acima de 0.274 significava vidro clareando a ponto de ameacar o
+     texto. NAO SERVE MAIS, e vale dizer por que em vez de deixar a frase
+     bonita no arquivo: com o atelie aceso, o vidro fino ja passa de 0.274 nos
+     dois temas e ainda assim cruza AA. O alarme virou falso positivo, e quem
+     manda hoje e a medicao -- `node scripts/pisos.mjs` recalcula os pisos e
+     `node scripts/contraste.mjs` diz se passam. */
+  /* REMEDIDOS em 24/08/2026 ao imprimir a marca no fundo e engrossar o papel
+     pautado. `--muted-foreground` e `--destructive` sobre vidro fino cairam
+     para 4.25 e 3.86, entao a ESPESSURA ganhou opacidade -- 45% -> 55% no fino
+     e 62% -> 72% no medio. O portao manda no vidro; o vidro nao afrouxa o
+     portao, e baixar a luz para salvar contraste seria resolver pelo lado
+     errado num pedido cujo enunciado era ficar mais chamativo. */
+  /* Task 8, mesmo dia: com os pisos remedidos (piso honesto, ver comentario
+     abaixo), `--destructive` sobre vidro fino reprovava em 4.13 (minimo
+     4.5). O fino subiu de 2 em 2 pontos, remedindo o piso a cada passo --
+     55% -> 57% (4.21) -> 59% (4.29) -> 61% (4.37) -> 63% (4.47) -> 65%
+     (passa). Medio e denso nao mudaram. */
+  /* Task 8, exercicio de recuperacao (mesmo dia, depois): descido de 1 em 1
+     para achar o minimo que ainda passa. 65% -> 64% (razao 4.50, no limite
+     exato) -> 63% (4.47, reprova). Ficou em 64%: 1 ponto de folga
+     recuperado, e SO 1 -- este par nasceu do proprio engrossamento acima e
+     nao tinha margem para dar. Nao tente descer mais sem antes engrossar
+     outra coisa. */
+  /* Revisao final da branch (24/08/2026): `pisos.mjs` tratava marca impressa e
+     grade a laser como ALTERNATIVAS mutuamente exclusivas, premissa que morreu
+     quando a mascara da marca foi alargada (de `120% 120% ... transparent 72%`
+     para `150% 150% ... black 34%, transparent 96%`) e ela passou a se
+     sobrepor a grade na quina inferior direita. Com as duas SOMADAS -- o
+     modelo honesto --, os seis pisos ficaram otimistas e `--destructive` x
+     `--vidro-fino-piso` caiu para 4.29. O fino subiu de 1 em 1, remedindo o
+     piso a cada passo: 64% (4.29) -> 65% (4.34) -> 66% (4.39) -> 67% (4.44)
+     -> 68% (4.49) -> 69% (passa). Medio e denso nao precisaram mudar. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 61%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 64%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
-  /* REMEDIDOS em 24/08/2026, ao ligar o papel pautado: a textura entrou no
-     atelie e levantou o pior caso. Eram 0.25/0.24/0.23 com o fundo liso.
-     `--destructive` sobre eles fica em 4.58/5.05/5.61 -- passa, sem precisar
-     engrossar o vidro do grafite. */
-  --vidro-fino-piso: oklch(0.309 0.006 78);
-  --vidro-piso: oklch(0.28 0.006 78);
-  --vidro-denso-piso: oklch(0.246 0.006 78);
+  /* MEDIDOS por `node scripts/pisos.mjs`, nao estimados. Eram 0.25/0.24/0.23
+     com o fundo liso, 0.309/0.28/0.246 ao ligar o papel pautado, 0.31/0.274/0.253
+     com a marca impressa, e estes agora, remedidos ao acender o sol listrado
+     (Task 2) -- o sol e camada somada e mais clara que a mancha quente que
+     substituiu, entao o composto do atelie clareou e o piso antigo ficou
+     otimista. */
+  /* REMEDIDOS de novo (Task 8) ao engrossar o vidro fino para fechar o par
+     `--destructive` x `--vidro-fino-piso`: 55%->65% de fundo baixa o piso
+     fino de 0.336 para 0.310 (mais card opaco, menos atelie por baixo).
+     Medio e denso ficaram identicos ao medido -- nenhuma mudanca. */
+  /* REMEDIDO mais uma vez ao afinar o fino de volta para 64% (recuperacao de
+     espessura, mesmo dia): 0.310 -> 0.313. */
+  /* REMEDIDOS na revisao final, com marca+grade somadas (ver acima): eram
+     0.313/0.291/0.264 com o modelo antigo. Medio e denso subiram sozinhos
+     (0.302/0.271); o fino fechou em 0.311 porque a espessura dele engordou. */
+  --vidro-fino-piso: oklch(0.335 0.006 78);
+  --vidro-piso: oklch(0.326 0.006 78);
+  --vidro-denso-piso: oklch(0.271 0.006 78);
 
   --vidro-blur-fino: 8px;
   --vidro-blur: 16px;
@@ -245,50 +325,64 @@
   /* A QUINA ILUMINADA. E este par -- claro na aresta de cima, escuro na de
      baixo -- que faz a superficie parecer vidro em vez de plastico fosco.
      Sem ele, translucidez sozinha le como opacidade mal resolvida. */
-  --vidro-quina: oklch(1 0 0 / 12%);
-  --vidro-quina-baixa: oklch(0 0 0 / 20%);
-  --vidro-sombra: 0 1px 2px oklch(0 0 0 / 20%), 0 8px 24px oklch(0 0 0 / 28%);
+  /* A quina sobe junto com o resto: e ela que faz a superficie parecer vidro
+     em vez de plastico fosco, e acender a aresta acende a interface inteira
+     sem uma celula de dado mudar de cor. Continua BRANCA no grafite -- aqui
+     ela e reflexo de luz de escritorio, e reflexo nao tem cor propria. */
+  --vidro-quina: oklch(1 0 0 / 20%);
+  --vidro-quina-baixa: oklch(0 0 0 / 26%);
+  /* GLOW, nao buraco. Sombra preta sob um painel que flutua sobre a luz do
+     ateliê lê como recorte no papel; um halo quente lê como a luz da própria
+     superfície vazando para baixo. É a mesma ideia que o tema chuva já
+     aplicou em violeta, agora na cor deste tema -- ouro FOSCO, croma 0.06,
+     porque aqui ele é luz de escritório e não neon de fachada. */
+  --vidro-sombra: 0 1px 2px oklch(0.12 0.02 80 / 28%),
+    0 8px 26px oklch(0.42 0.06 80 / 22%);
 
   /* --- a pauta --- */
 
   /* A REGUA do sistema: o eixo que separa o dito (acima) do medido (abaixo).
      Precisa estar sempre visivel e nunca dominar -- meio ponto de tinta. */
-  --linha: oklch(1 0 0 / 24%);
+  /* A régua sobe junto com a quina. Ela continua sendo a única linha que
+     AFIRMA alguma coisa -- o papel pautado do ateliê é papel, esta é medida --
+     e por isso ela tem que continuar mais forte que o papel, que subiu para
+     0.12 em 24/08/2026. Era 24% e 8%. */
+  --linha: oklch(1 0 0 / 34%);
   /* A BARRA DE COMPASSO: virada de dia. Mais fraca que a regua de proposito;
      ela agrupa o tempo sem pedir atencao. */
-  --compasso: oklch(1 0 0 / 8%);
+  --compasso: oklch(1 0 0 / 12%);
 
   /* --- camada de dado (Fraus) — substitui --chart-1..5 do Kronos --- */
 
   /* ambar: o que foi DITO */
-  --dito: oklch(0.8 0.15 60);
+  --dito: oklch(0.83 0.19 60);
   --dito-fraco: color-mix(in oklch, var(--dito) 18%, transparent);
-  --dito-texto: oklch(0.85 0.13 60); /* AA sobre card e muted */
+  --dito-texto: oklch(0.87 0.17 60); /* AA sobre card e muted */
 
   /* azul: o que foi MEDIDO */
-  --medido: oklch(0.7 0.15 265);
+  --medido: oklch(0.74 0.2 265);
   --medido-fraco: color-mix(in oklch, var(--medido) 18%, transparent);
-  --medido-texto: oklch(0.78 0.13 265);
+  --medido-texto: oklch(0.81 0.18 265);
 
   /* --- as quatro familias que entraram no fusor em 21/08/2026 ---
      texto, emoji e tempo ja tinham cor (dito/medido/tempo); emocao, lexico,
      ironia e estilo sao NOVAS, sem reciclar hue de nenhuma existente -- ver
      PesosFeatures.tsx e BarrasDeFeature.tsx, que agora tem sete familias. */
-  --emocao: oklch(0.72 0.16 10); /* vermelho: as sete emocoes + desprezo */
+  --emocao: oklch(0.75 0.21 10); /* vermelho: as sete emocoes + desprezo */
   --emocao-fraco: color-mix(in oklch, var(--emocao) 18%, transparent);
-  --emocao-texto: oklch(0.8 0.14 10);
+  --emocao-texto: oklch(0.82 0.19 10);
 
-  --lexico: oklch(0.75 0.14 140); /* verde: SentiLex-PT02 */
+  --lexico: oklch(0.79 0.19 140); /* verde: SentiLex-PT02 */
   --lexico-fraco: color-mix(in oklch, var(--lexico) 18%, transparent);
-  --lexico-texto: oklch(0.82 0.12 140);
+  --lexico-texto: oklch(0.85 0.17 140);
 
-  --ironia: oklch(0.72 0.15 230); /* azul-arroxeado: cabeca binaria */
+  --ironia: oklch(0.75 0.19 230); /* azul-arroxeado: cabeca binaria */
   --ironia-fraco: color-mix(in oklch, var(--ironia) 18%, transparent);
-  --ironia-texto: oklch(0.8 0.13 230);
+  --ironia-texto: oklch(0.83 0.17 230);
 
-  --estilo: oklch(0.75 0.14 170); /* teal: forma da escrita */
+  --estilo: oklch(0.79 0.19 170); /* teal: forma da escrita */
   --estilo-fraco: color-mix(in oklch, var(--estilo) 18%, transparent);
-  --estilo-texto: oklch(0.82 0.12 170);
+  --estilo-texto: oklch(0.85 0.17 170);
 
   /* --- os tipos de no do GRAFO DA MEMORIA ---
 
@@ -309,28 +403,28 @@
      outro. `--no-importacao` e a unica excecao, e ela e semantica: importacao
      e um no SOLTO, cuja origem o schema nao rastreia, e cinza e a ausencia de
      afirmacao. Ver DESIGN.md, "O grafo da memoria". */
-  --no-conversa: oklch(0.75 0.14 60); /* ambar: a espinha, e fala */
-  --no-termo: oklch(0.75 0.14 95); /* amarelo: palavra do lexico */
-  --no-emoji: oklch(0.75 0.14 30); /* laranja: fala sem letra */
-  --no-feature: oklch(0.75 0.14 265); /* azul: o que o fusor mede */
-  --no-categoria: oklch(0.75 0.14 305); /* roxo: promotor/detrator/neutro */
-  --no-canal: oklch(0.75 0.14 195); /* ciano: por onde entrou */
-  --no-desfecho: oklch(0.75 0.14 340); /* rosa: como terminou */
-  --no-fonte: oklch(0.75 0.14 150); /* verde: de onde veio */
+  --no-conversa: oklch(0.79 0.19 60); /* ambar: a espinha, e fala */
+  --no-termo: oklch(0.79 0.19 95); /* amarelo: palavra do lexico */
+  --no-emoji: oklch(0.79 0.19 30); /* laranja: fala sem letra */
+  --no-feature: oklch(0.79 0.19 265); /* azul: o que o fusor mede */
+  --no-categoria: oklch(0.79 0.19 305); /* roxo: promotor/detrator/neutro */
+  --no-canal: oklch(0.79 0.19 195); /* ciano: por onde entrou */
+  --no-desfecho: oklch(0.79 0.19 340); /* rosa: como terminou */
+  --no-fonte: oklch(0.79 0.19 150); /* verde: de onde veio */
   --no-importacao: oklch(0.7 0 0); /* cinza: origem nao rastreavel */
 
   /* magenta: tempo — a serie e SEMPRE tracejada, cor nunca e o unico canal */
-  --tempo: oklch(0.72 0.13 320);
+  --tempo: oklch(0.76 0.19 320);
   --tempo-fraco: color-mix(in oklch, var(--tempo) 18%, transparent);
-  --tempo-texto: oklch(0.8 0.12 320);
+  --tempo-texto: oklch(0.83 0.17 320);
 
   /* escala divergente de NPS: 0-6 detrator, 7-8 neutro, 9-10 promotor */
-  --detrator: oklch(0.65 0.2 22);
-  --detrator-texto: oklch(0.76 0.16 22);
-  --neutro: oklch(0.74 0.1 90);
-  --neutro-texto: oklch(0.82 0.1 90);
-  --promotor: oklch(0.75 0.13 190);
-  --promotor-texto: oklch(0.82 0.11 190);
+  --detrator: oklch(0.67 0.24 22);
+  --detrator-texto: oklch(0.78 0.2 22);
+  --neutro: oklch(0.78 0.15 90);
+  --neutro-texto: oklch(0.85 0.14 90);
+  --promotor: oklch(0.79 0.18 190);
+  --promotor-texto: oklch(0.85 0.16 190);
 
   /* ausencia de dado NAO pertence a escala de satisfacao: e cinza de proposito. */
   --sem-sinal: oklch(0.705 0.015 286.067);
@@ -343,22 +437,23 @@
   --outros-sinal: oklch(0.705 0.015 286.067);
   --outros-sinal-texto: oklch(0.78 0.015 286.067);
 
-  /* AS TRES LUZES DO ATELIE.
-     Existem como token proprio porque o atelie estava pegando `--dito` e
-     `--medido` emprestados -- tokens da camada de DADO usados como cor de
-     luz. Funcionava por coincidencia de matiz, mas amarrava o papel de parede
-     ao canal que carrega significado: mexer no ambar do "dito" mexeria na
-     iluminacao da sala. Luz e luz, dado e dado. */
+  /* AS DUAS LUZES DO ATELIE.
+     No tema chuva (ver bloco da chuva mais abaixo) as duas sao literais e
+     independentes da camada de dado. Aqui no grafite NAO: --atelie-fria
+     continua alias de --medido, token da
+     camada de DADO usado como cor de luz. Isso nao e livre de custo --
+     repintar o dado desta sessao (Task 6) moveu a luz do ateliê grafite
+     junto, e os pisos de vidro precisaram ser remedidos por causa disso. O
+     desacoplamento completo (dar token proprio tambem ao grafite) ficou
+     como decisao para outro dia, nao foi feito aqui. */
   --atelie-marca: var(--primary);
   --atelie-fria: var(--medido);
-  --atelie-quente: var(--dito);
 
   /* A FORCA de cada mancha. Token e nao numero cravado no componente porque e
      exatamente aqui que os dois temas discordam: o grafite quer luz que so
      insinua, e a chuva quer neon. */
   --atelie-op-marca: 0.13;
   --atelie-op-fria: 0.11;
-  --atelie-op-quente: 0.07;
 
   /* AS DUAS PECAS QUE SO A CHUVA ACENDE. Zeradas aqui de proposito: elas
      existem no componente nos dois temas e o TEMA decide se aparecem, o que
@@ -383,10 +478,72 @@
 
      Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. O fundo deixou de
      ser papel liso nos DOIS temas, por decisao do dono do projeto. */
+  /* A OPACIDADE subiu de 0.055 para 0.12 em 24/08/2026, por reclamacao do dono
+     do projeto -- "continua a mesma coisa". A 5,5%, 1px a cada 13px sobre
+     grafite escuro nao chega a ser visto, entao a peca existia no codigo e nao
+     na tela. A contencao da secao 3.1 ja tinha sido negociada e emendada; a
+     implementacao e que continuou protegendo o contrato antigo. */
   --pauta-cor: oklch(0.93 0.02 75);
-  --pauta-op: 0.055;
+  --pauta-op: 0.12;
   --pauta-espaco: 13px;
   --pauta-peso: 1px;
+
+  /* --- A MARCA IMPRESSA NO PAPEL ---------------------------------------
+     O monograma sangrando pela quina inferior direita, pintado por MASCARA
+     (ver Atelier.tsx). A cor e token porque e exatamente onde os dois temas
+     discordam: no grafite a marca e o ouro do proprio `--primary`, e na chuva
+     ela vira o magenta do neon -- "a logo no fundo com o tema respectivo
+     aplicado", que foi o pedido.
+
+     Nao carrega dado nenhum: e a mesma camada do atelie, o unico lugar onde
+     cor saturada nao inventa canal de significado.
+
+     Emenda de 24/08/2026 as secoes 3.1 e 8 -- ver DESIGN.md. */
+  --marca-cor: var(--atelie-marca);
+  --marca-op: 0.15;
+
+  /* --- A GRADE A LASER ---------------------------------------------------
+     O chao da cena: linhas fugindo ao ponto de fuga mais linhas horizontais
+     comprimindo com a distancia. E o elemento mais reconhecivel do
+     vocabulario synthwave, e e CSS puro -- dois `repeating-linear-gradient`
+     num plano rotacionado, nao mil elementos.
+
+     ESTATICA, pelo mesmo motivo que a chuva nao cai: a secao 6 do DESIGN.md
+     ja gastou os dois momentos de movimento da interface, e grade animada
+     seria um terceiro que nao comunica estado nenhum.
+
+     Mora no TERCO DE BAIXO, e isso e o que a torna barata: a mascara do papel
+     pautado ja zerou ali. Ver o comentario de `scripts/pisos.mjs` sobre
+     alternativas disjuntas.
+
+     `--grade-horizonte` alimenta a `perspective` do CONTEINER em
+     Atelier.tsx, nao a funcao `transform` do plano rotacionado -- ver o
+     comentario la sobre por que a primeira versao (perspective+rotateX no
+     mesmo elemento) colapsava a grade numa faixa fina e vazava uma malha
+     acima do horizonte. Fix de 24/08/2026, fix round 1.
+
+     Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. */
+  --grade-cor: oklch(0.81 0.1 82);
+  --grade-op: 0.1;
+  --grade-espaco: 44px;
+  --grade-horizonte: 320px;
+
+  /* --- O SOL LISTRADO ----------------------------------------------------
+     O retrosun: disco com faixas horizontais, nascendo na linha do horizonte
+     da grade.
+
+     NÃO É PEÇA NOVA. É a "mancha quente fraca" que já existia no ateliê --
+     cuja função declarada era quebrar a simetria das outras duas manchas --
+     ganhando borda e faixas. A função antiga sobrevive; o que muda é a forma.
+     Peça nova somaria luz ao pior caso; esta não soma.
+
+     No grafite ele é a lâmpada de SÓDIO do poste, que a seção 8.1 já
+     estabeleceu como a leitura que reconcilia o dourado da marca com o neon
+     frio -- e é por isso que ele é âmbar aqui e magenta na chuva. */
+  --sol-cor-alta: oklch(0.86 0.11 88);
+  --sol-cor-baixa: oklch(0.7 0.13 52);
+  --sol-op: 0.16;
+  --sol-faixa: 9px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -478,16 +635,62 @@
      Baixar a luz para salvar o contraste teria sido resolver pelo lado
      errado, ainda mais num tema cujo pedido era ficar mais chamativo.
      45% -> 68% no fino, 62% -> 74% no medio, 82% -> 86% no denso. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 71%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 75%, transparent);
+  /* TERCEIRA rodada de engrossamento, mesmo motivo das duas primeiras: a marca
+     impressa e o papel mais forte somaram luz. 71% -> 81% no fino, 75% -> 85%
+     no medio. */
+  /* Task 8 (24/08/2026), primeiro passo: so o piso mudou aqui, nao a
+     espessura -- o bug de `pisos.mjs` (ver `resolverAliases`) fazia o script
+     medir com o azul da base em vez do magenta deste tema, entao o piso
+     saia PESSIMISTA (mais claro que a realidade). Com o piso honesto (mais
+     baixo), o portao ja passava sem engrossar o vidro; os tres
+     `--vidro-*-fundo` ficaram como estavam (81/85/86) neste primeiro passo. */
+  /* Task 8, exercicio de recuperacao (mesmo dia, depois): parte do
+     engrossamento das rodadas anteriores foi pago contra pisos inflados
+     pelo mesmo bug -- vidro grosso demais apaga o atelie que as tasks
+     anteriores acenderam. Descido de 1 em 1, remedindo o piso a cada passo,
+     ate reprovar: fino 81%->...->74% (razao 4.53) ->73% (4.47, reprova);
+     medio 85%->...->74% (mesma razao, mesmo par critico -- a formula do
+     piso so depende do percentual de --card, nao do nome do token) ->73%
+     reprova. Os dois fecharam em 74%: 7 pontos recuperados no fino, 11 no
+     medio. Denso nao foi mexido -- ele existe para o conteudo atras sumir,
+     entao afina-lo tem custo funcional alem do contraste. */
+  /* Revisao final da branch (24/08/2026), mesmo motivo do bloco base: com
+     marca impressa e grade a laser SOMADAS em `pisos.mjs` (elas se sobrepoem
+     na quina inferior direita, e a premissa de disjuncao morreu quando a
+     mascara da marca foi alargada), os pisos subiram e `--destructive` x
+     vidro fino/medio caiu para 4.39. Fino e medio subiram juntos de 1 em 1,
+     remedindo o piso a cada passo: 74% (4.39) -> 75% (4.45) -> 76% (passa).
+     Denso nao precisou mudar. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 68%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 68%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
 
-  /* Segunda rodada de engrossamento, e pelo mesmo motivo da primeira: o papel
-     pautado somou luz ao atelie e `--destructive` sobre vidro fino caiu para
-     4.46:1. 68% -> 71% no fino e 74% -> 75% no medio devolvem 4.62 e 4.84. */
-  --vidro-fino-piso: oklch(0.307 0.031 274);
-  --vidro-piso: oklch(0.294 0.031 274);
-  --vidro-denso-piso: oklch(0.257 0.031 274);
+  /* MEDIDOS por `node scripts/pisos.mjs`. Os valores anteriores (0.307/0.294/
+     0.257) eram OTIMISTAS mesmo para o atelie da epoca -- refeita a conta com
+     as camadas do tema completas, o vidro fino dava 0.333 e nao 0.307. O
+     portao vinha medindo uma superficie mais escura do que a que existe, ou
+     seja, devolvendo verde com folga que nao havia. Este e exatamente o modo
+     de falha que o comentario acima descreve, e ele aconteceu aqui.
+     Remedidos de novo ao acender o sol listrado (Task 2): eram
+     0.295/0.277/0.273, e o sol e camada somada mais clara que a mancha
+     quente que substituiu, entao o composto clareou e o piso ficou
+     otimista outra vez.
+     REMEDIDOS em 24/08/2026 (Task 8) apos consertar um bug de `pisos.mjs`:
+     `resolverAliases` resolvia os aliases da BASE depois de ja ter mesclado
+     o literal do tema no mesmo mapa, entao o alias `--atelie-fria: var(--medido)`
+     da base sobrescrevia o literal magenta que este tema declara para
+     `--atelie-fria`. O script vinha medindo com o azul da base em vez do
+     magenta da chuva -- mais claro que a realidade --, entao os pisos
+     saiam altos demais. Eram 0.299/0.281/0.276; com o alias consertado
+     (o literal do tema agora vence), caiam para 0.285/0.269/0.265.
+     REMEDIDOS mais uma vez no mesmo dia, exercicio de recuperacao de
+     espessura: com o fino e o medio afinados de 81%/85% para 74%, o piso de
+     ambos sobe para 0.312 (denso, nao mexido, continua 0.265).
+     REMEDIDOS na revisao final, com marca+grade somadas: 0.313/0.313/0.270
+     (fino e medio ja com a espessura em 76%). */
+  --vidro-fino-piso: oklch(0.346 0.031 274);
+  --vidro-piso: oklch(0.346 0.031 274);
+  --vidro-denso-piso: oklch(0.270 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
      superficie de vidro tem quina, entao acender a aresta acende a interface
@@ -516,14 +719,12 @@
      A luz da marca continua sendo o sodio do poste. */
   --atelie-marca: oklch(0.81 0.1 82);
   --atelie-fria: oklch(0.62 0.24 320);
-  --atelie-quente: oklch(0.72 0.16 205);
 
   /* Bem mais forte que no grafite. Continua sendo LUZ e nao pintura -- o teto
      e o que o portao de contraste aguenta, e os pisos de vidro abaixo foram
      recalculados contra estes valores, nao chutados. */
   --atelie-op-marca: 0.2;
   --atelie-op-fria: 0.3;
-  --atelie-op-quente: 0.24;
 
   /* O REFLEXO NO ASFALTO: a faixa de luz que sobe do rodape, como fachada
      espelhada em chao molhado. E o que faz a cena ser chuva e nao so um fundo
@@ -543,7 +744,24 @@
      com um atelie aceso -- no grafite, 5,5% ja marca presenca sobre grafite
      liso. */
   --pauta-cor: oklch(0.85 0.16 205);
-  --pauta-op: 0.13;
+  --pauta-op: 0.22;
+
+  /* A MARCA vira tubo de MAGENTA -- o par do ciano da pauta, e o mesmo magenta
+     da quina baixa do vidro. Mais forte que no grafite pelo mesmo motivo de
+     todas as outras luzes deste tema: aqui ela compete com um atelie aceso. */
+  --marca-cor: oklch(0.7 0.24 330);
+  --marca-op: 0.22;
+
+  /* A GRADE vira tubo de ciano, o par do magenta da marca. Mais forte que no
+     grafite pelo mesmo motivo de todas as luzes deste tema: ela compete com
+     um atelie aceso. */
+  --grade-cor: oklch(0.85 0.16 205);
+  --grade-op: 0.2;
+
+  /* O RETROSUN canônico: amarelo-coral em cima, magenta embaixo. */
+  --sol-cor-alta: oklch(0.85 0.17 75);
+  --sol-cor-baixa: oklch(0.66 0.25 350);
+  --sol-op: 0.3;
 }
 
 @layer base {
@@ -667,6 +885,42 @@
   .vidro-denso {
     background-color: var(--vidro-denso-fundo);
     backdrop-filter: blur(var(--vidro-blur-denso)) saturate(1.6);
+  }
+
+  /* O CHANFRO A 45°, recortado do monograma.
+
+     Por que `clip-path` e nao `border-radius`: raio e curva, e o F e o R nao
+     tem uma curva de canto sequer (secao 3.3.1). Chanfro e corte reto, que e
+     a geometria da marca.
+
+     ARMADILHA PAGA: `clip-path` DESCARTA `box-shadow` -- o recorte come o
+     elemento inteiro, sombra inclusive. Por isso a sombra sai de `box-shadow`
+     e vira `drop-shadow`, que segue o recorte. `drop-shadow` aceita uma
+     sombra por funcao, entao as duas camadas do `--vidro-sombra` viram duas
+     funcoes encadeadas, e os valores estao repetidos aqui de proposito: o
+     token e uma lista de `box-shadow` e nao pode ser interpolado dentro de
+     `drop-shadow()`.
+
+     So nas superficies GRANDES. Chanfro em badge de 18px de altura come o
+     rotulo. */
+  .chanfro {
+    --chanfro: 10px;
+    clip-path: polygon(
+      var(--chanfro) 0,
+      100% 0,
+      100% calc(100% - var(--chanfro)),
+      calc(100% - var(--chanfro)) 100%,
+      0 100%,
+      0 var(--chanfro)
+    );
+    box-shadow: none;
+    filter: drop-shadow(0 1px 2px oklch(0.12 0.02 80 / 28%))
+      drop-shadow(0 8px 26px oklch(0.42 0.06 80 / 22%));
+  }
+
+  .tema-chuva .chanfro {
+    filter: drop-shadow(0 1px 2px oklch(0.08 0.04 300 / 34%))
+      drop-shadow(0 10px 34px oklch(0.42 0.2 315 / 26%));
   }
 
   @supports not (backdrop-filter: blur(1px)) {

@@ -146,7 +146,47 @@ O mesmo teste de sanidade que expos o vazamento — mesmo texto, so mudando o re
 
 **O criterio, entao, nao e o numero sozinho.** Diante de acuracia alta, olhe os PESOS: se as features que lideram forem as que carregam o conteudo (texto, emoji), o modelo aprendeu; se forem as circunstanciais (tempo, contagem de turnos), procure o vazamento.
 
-### Consequencia no NPS: a classe neutra cai em detrator
+### O fusor de 35 features — 24/08/2026
+
+O contrato subiu de 16 para 35 features em 21/08 (emocao, lexico, ironia e estilo entraram no vetor) e o **artefato ficou tres dias para tras**. Nesse intervalo a API real nao subia: o `StandardScaler` de 16 rejeitava o vetor de 35 na carga. Falha alta e explicita, que e o comportamento que as invariantes 7 e 9 pedem — mas ainda assim tres dias de API parada por artefato desatualizado.
+
+O notebook 02 rodou de novo e o artefato vigente tem `n_features_in_ = 35`, na ordem exata de `NOMES_FEATURES`.
+
+**A acuracia caiu de 0,96 para 0,93, e a queda e o resultado saudavel.** O fusor de 16 features media um problema mais facil. Dezenove features novas entraram, tres delas vindas de uma cabeca de ironia com vazamento de corpus conhecido e nao consertado — um numero MENOR e o esperado. Pela regra desta secao, o que decide nao e o numero e sim onde os pesos foram parar:
+
+| feature | fusor de 16 | fusor de 35 |
+|---|---|---|
+| `texto_prob_satisfeito_media` | 1,6026 (2º) | **1,6572 (1º)** |
+| `texto_prob_insatisfeito_media` | 1,4722 (3º) | 1,3867 (2º) |
+| `emoji_score_medio` | **1,6662 (1º)** | 1,3354 (3º) |
+| `emoji_frac_positivos` | 0,8430 | 0,8098 |
+| `emocao_surpresa_media` | — | 0,6655 |
+| `emocao_desprezo_derivado` | — | 0,4757 |
+| `latencia_mediana_s` | 0,1621 | 0,1200 |
+| `latencia_p90_s` | 0,0674 | 0,1419 |
+| `duracao_total_s` | 0,4964 | 0,3397 |
+
+O topo continua sendo **texto e emoji**, e as features de tempo continuam no rodape, onde devem estar. As de emocao entram no meio da tabela com peso real sem deslocar o conteudo — `desprezo_derivado`, que e a diade calculada e nao uma classe do modelo, puxa 0,48. Nao ha sinal de vazamento novo.
+
+**A divida que este fusor assume.** Ele foi treinado com a cabeca de ironia vazando (ver a pendencia 1 do README: 6 em 10 frases sinceras saem marcadas como ironicas). `ironia_prob_media` e `ironia_prob_max` pesam 0,30 e 0,31 — nao e desprezivel. **Retreinar a ironia obriga a retreinar o fusor de novo**, e essa ordem esta registrada aqui para nao se perder.
+
+**Teste de sanidade ponta a ponta**, com os tres BERTimbau carregados, sobre conversas do simulador: rotulo insatisfeito pontua ~0, neutro ~73–75, satisfeito ~99, e as tres categorias de NPS saem certas em 9 de 9. **Isso nao e evidencia de qualidade** — sao conversas do proprio gerador sintetico, o dominio em que o fusor foi treinado. O numero honesto continua sendo 0,93 no conjunto de teste separado, e a ressalva do topo desta secao continua valendo: as metricas do notebook 02 medem fusao no dominio sintetico, nao acerto em atendimento real.
+
+### Consequencia no NPS: a classe neutra cai em detrator — HISTORICO (fusor de 16 features, ate 24/08/2026)
+
+**Esta secao mede o fusor de 16 features, NAO o vigente.** Ela ficou aqui sem
+data enquanto o artefato foi trocado, e passou a ler como se descrevesse o
+fusor atual — que e o defeito mais caro deste projeto. Fica registrada porque o
+raciocinio sobre o score continua valendo, e porque a medicao dela e o
+contraponto do que o fusor de 35 features entrega.
+
+**A consequencia DEIXOU de valer com o fusor de 35 features.** Base: o teste de
+sanidade ponta a ponta da secao anterior, com os tres BERTimbau carregados —
+rotulo neutro pontua **~73–75**, cai na faixa 7–8 e as tres categorias de NPS
+saem certas em 9 de 9. Ou seja, o neutro nao cai mais em detrator. Ressalva do
+mesmo tamanho: aquele teste corre sobre conversas do proprio simulador, o
+dominio em que o fusor foi treinado, entao ele desmente a medicao abaixo no
+dominio sintetico e nao promete nada sobre atendimento real.
 
 Medido em 90 conversas do simulador, 30 por classe, o fusor corrigido separa bem — medianas **0,11 / 50,99 / 99,03** por rotulo verdadeiro. Mas a categoria de NPS derivada sai **67% detrator · 29% promotor · 4% neutro**, com **NPS -38** num lote equilibrado por construcao.
 
