@@ -253,7 +253,13 @@
      4.5). O fino subiu de 2 em 2 pontos, remedindo o piso a cada passo --
      55% -> 57% (4.21) -> 59% (4.29) -> 61% (4.37) -> 63% (4.47) -> 65%
      (passa). Medio e denso nao mudaram. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 65%, transparent);
+  /* Task 8, exercicio de recuperacao (mesmo dia, depois): descido de 1 em 1
+     para achar o minimo que ainda passa. 65% -> 64% (razao 4.50, no limite
+     exato) -> 63% (4.47, reprova). Ficou em 64%: 1 ponto de folga
+     recuperado, e SO 1 -- este par nasceu do proprio engrossamento acima e
+     nao tinha margem para dar. Nao tente descer mais sem antes engrossar
+     outra coisa. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 64%, transparent);
   --vidro-fundo: color-mix(in oklch, var(--card) 72%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
@@ -267,7 +273,9 @@
      `--destructive` x `--vidro-fino-piso`: 55%->65% de fundo baixa o piso
      fino de 0.336 para 0.310 (mais card opaco, menos atelie por baixo).
      Medio e denso ficaram identicos ao medido -- nenhuma mudanca. */
-  --vidro-fino-piso: oklch(0.310 0.006 78);
+  /* REMEDIDO mais uma vez ao afinar o fino de volta para 64% (recuperacao de
+     espessura, mesmo dia): 0.310 -> 0.313. */
+  --vidro-fino-piso: oklch(0.313 0.006 78);
   --vidro-piso: oklch(0.291 0.006 78);
   --vidro-denso-piso: oklch(0.264 0.006 78);
 
@@ -590,14 +598,24 @@
   /* TERCEIRA rodada de engrossamento, mesmo motivo das duas primeiras: a marca
      impressa e o papel mais forte somaram luz. 71% -> 81% no fino, 75% -> 85%
      no medio. */
-  /* Task 8 (24/08/2026): so o piso mudou aqui, nao a espessura -- o bug de
-     `pisos.mjs` (ver `resolverAliases`) fazia o script medir com o azul da
-     base em vez do magenta deste tema, entao o piso saia PESSIMISTA (mais
-     claro que a realidade). Com o piso honesto (mais baixo), o portao ja
-     passava sem engrossar o vidro; os tres `--vidro-*-fundo` abaixo ficam
-     como estavam. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 81%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 85%, transparent);
+  /* Task 8 (24/08/2026), primeiro passo: so o piso mudou aqui, nao a
+     espessura -- o bug de `pisos.mjs` (ver `resolverAliases`) fazia o script
+     medir com o azul da base em vez do magenta deste tema, entao o piso
+     saia PESSIMISTA (mais claro que a realidade). Com o piso honesto (mais
+     baixo), o portao ja passava sem engrossar o vidro; os tres
+     `--vidro-*-fundo` ficaram como estavam (81/85/86) neste primeiro passo. */
+  /* Task 8, exercicio de recuperacao (mesmo dia, depois): parte do
+     engrossamento das rodadas anteriores foi pago contra pisos inflados
+     pelo mesmo bug -- vidro grosso demais apaga o atelie que as tasks
+     anteriores acenderam. Descido de 1 em 1, remedindo o piso a cada passo,
+     ate reprovar: fino 81%->...->74% (razao 4.53) ->73% (4.47, reprova);
+     medio 85%->...->74% (mesma razao, mesmo par critico -- a formula do
+     piso so depende do percentual de --card, nao do nome do token) ->73%
+     reprova. Os dois fecharam em 74%: 7 pontos recuperados no fino, 11 no
+     medio. Denso nao foi mexido -- ele existe para o conteudo atras sumir,
+     entao afina-lo tem custo funcional alem do contraste. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 74%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 74%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
 
   /* MEDIDOS por `node scripts/pisos.mjs`. Os valores anteriores (0.307/0.294/
@@ -617,9 +635,12 @@
      `--atelie-fria`. O script vinha medindo com o azul da base em vez do
      magenta da chuva -- mais claro que a realidade --, entao os pisos
      saiam altos demais. Eram 0.299/0.281/0.276; com o alias consertado
-     (o literal do tema agora vence), caem para os valores abaixo. */
-  --vidro-fino-piso: oklch(0.285 0.031 274);
-  --vidro-piso: oklch(0.269 0.031 274);
+     (o literal do tema agora vence), caiam para 0.285/0.269/0.265.
+     REMEDIDOS mais uma vez no mesmo dia, exercicio de recuperacao de
+     espessura: com o fino e o medio afinados de 81%/85% para 74%, o piso de
+     ambos sobe para 0.312 (denso, nao mexido, continua 0.265). */
+  --vidro-fino-piso: oklch(0.312 0.031 274);
+  --vidro-piso: oklch(0.312 0.031 274);
   --vidro-denso-piso: oklch(0.265 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
