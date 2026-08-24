@@ -178,15 +178,25 @@
   --success: oklch(0.78 0.16 150);
   --warning: oklch(0.8 0.14 80);
 
-  --destructive-rich: hsl(358 76% 10%);
-  --destructive-rich-border: hsl(357 89% 16%);
-  --destructive-rich-text: hsl(358 100% 81%);
-  --success-rich: hsl(150 100% 6%);
-  --success-rich-border: hsl(147 100% 12%);
-  --success-rich-text: hsl(150 86% 65%);
-  --warning-rich: hsl(64 100% 6%);
-  --warning-rich-border: hsl(60 100% 9%);
-  --warning-rich-text: hsl(46 87% 65%);
+  /* CONVERTIDOS de hsl() para oklch() em 24/08/2026, e a conversão é
+     matematicamente equivalente -- mesma cor, outra notação.
+
+     O motivo não é estético: `scripts/contraste.mjs` só faz parse de
+     `oklch()` literal, de propósito (ver o comentário de `lerTokens`), então
+     estes nove eram INVISÍVEIS para o portão. Três deles carregam texto e
+     nunca foram medidos, em tema nenhum -- e o rosa de
+     `--destructive-rich-text` sobre o índigo do tema chuva foi confirmado
+     ilegível numa captura de tela. Convertidos, o gate passa a enxergá-los
+     sem uma linha de mudança no script. */
+  --destructive-rich: oklch(0.199 0.064 23);
+  --destructive-rich-border: oklch(0.27 0.103 25.5);
+  --destructive-rich-text: oklch(0.799 0.116 17.8);
+  --success-rich: oklch(0.209 0.049 158.3);
+  --success-rich-border: oklch(0.316 0.083 152.3);
+  --success-rich-text: oklch(0.862 0.169 157.8);
+  --warning-rich: oklch(0.228 0.051 113.3);
+  --warning-rich-border: oklch(0.291 0.063 109.8);
+  --warning-rich-text: oklch(0.864 0.142 92.2);
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);

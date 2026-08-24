@@ -164,6 +164,13 @@ const textos = [
   "--card-foreground",
   "--sidebar-foreground",
   "--destructive",
+  // Os tres `-rich-text` estavam CEGOS para este gate ate 24/08/2026: eram
+  // escritos em `hsl()` e o parser so le `oklch()` literal. Carregam texto em
+  // AvisoApiFora, EstadoSaude, TextoComPesos, MetricasTreino, ReguaDeCamadas
+  // e Analisador -- e nunca foram medidos, em tema nenhum.
+  "--destructive-rich-text",
+  "--success-rich-text",
+  "--warning-rich-text",
 ];
 
 // MARCAS: cor que desenha DADO sem carregar texto -- serie do grafico, no do
