@@ -51,6 +51,52 @@ const RAIZ = resolve(process.cwd(), "..");
  * ou recriado -- foi o que aconteceu nesta maquina. `-m` chama o modulo pelo
  * interpretador e nao depende de shim nenhum.
  */
+/**
+ * HOST E PORTA VEM DO `FRAUS_API_URL`, e nao cravados aqui.
+ *
+ * Eram `127.0.0.1:8000` fixos enquanto a linha 36 ja lia a variavel para saber
+ * ONDE falar com a API. Os dois lados podiam discordar em silencio: quem
+ * apontasse o `FRAUS_API_URL` para outra porta veria o botao subir a API na
+ * 8000 e a dashboard procurar noutro lugar -- "iniciei e continua fora do ar",
+ * sem nenhuma pista de por que.
+ *
+ * Aconteceu de verdade nesta maquina: a 8000 ja estava tomada por outro
+ * processo e o uvicorn morria com `winerror 10013` DEPOIS de "startup
+ * complete", entao o log parecia o de uma API sadia.
+ *
+ * NAO ENFRAQUECE A TRAVA 2: o valor vem do ambiente do servidor, que e o mesmo
+ * nivel de confianca do codigo -- nunca do corpo nem dos cabecalhos da
+ * requisicao. Ainda assim a porta e validada como inteiro em faixa antes de
+ * virar argumento, porque variavel de ambiente torta deve falhar aqui e nao
+ * dentro do uvicorn.
+ */
+function enderecoDeEscuta(): { host: string; porta: string } {
+  const padrao = { host: "127.0.0.1", porta: "8000" };
+  let url: URL;
+  try {
+    url = new URL(API);
+  } catch {
+    return padrao;
+  }
+  const porta = Number(url.port || (url.protocol === "https:" ? 443 : 80));
+  if (!Number.isInteger(porta) || porta < 1 || porta > 65535) return padrao;
+  // `localhost` vira 127.0.0.1: em Windows com pilha dupla o uvicorn ligado a
+  // `localhost` pode escutar so em IPv6, e o fetch do Next chega por IPv4.
+  const host =
+    url.hostname === "localhost" || url.hostname === "::1"
+      ? "127.0.0.1"
+      : url.hostname;
+  return { host, porta: String(porta) };
+}
+
+const { host: HOST_ESCUTA, porta: PORTA_ESCUTA } = enderecoDeEscuta();
+
+/**
+ * `python -m uvicorn` e nao `uv run uvicorn`: o segundo depende do trampolim
+ * que o uv instala para o `uvicorn.exe` do .venv, e esse trampolim quebra
+ * ("uv trampoline failed to canonicalize script path") quando o venv e movido
+ * ou recriado -- foi o que aconteceu nesta maquina.
+ */
 const COMANDO = "uv";
 const ARGUMENTOS = [
   "run",
@@ -59,9 +105,9 @@ const ARGUMENTOS = [
   "uvicorn",
   "fraus.api.main:app",
   "--host",
-  "127.0.0.1",
+  HOST_ESCUTA,
   "--port",
-  "8000",
+  PORTA_ESCUTA,
 ];
 
 /** Os argumentos do uvicorn, sem quem o executa. */
@@ -242,6 +288,45 @@ async function apiResponde(): Promise<boolean> {
   }
 }
 
+/**
+ * A ULTIMA LINHA DE FALHA DO LOG, para a tela mostrar o que aconteceu de
+ * verdade em vez de adivinhar.
+ *
+ * POR QUE ISTO EXISTE: o aviso dizia "o motivo mais comum e modelo ausente em
+ * modelos/". Num caso real o modelo estava no lugar e o uvicorn morria com
+ * `winerror 10013` -- porta ja tomada por outro processo --, DEPOIS de
+ * "startup complete", entao nem o log lido por cima denunciava. A tela
+ * afirmava com seguranca uma causa errada e mandava o Joao procurar no lugar
+ * errado.
+ *
+ * Numa ferramenta batizada com o nome do daemon do engano, palpite apresentado
+ * como diagnostico e o pior defeito possivel. O principio de produto ja
+ * mandava: onde falta dado, a tela NOMEIA o que falta -- nao preenche com o
+ * plausivel.
+ *
+ * Devolve `null` quando nao ha log ou nao ha falha nele: sem linha de erro, a
+ * tela volta a dizer so o que sabe.
+ */
+function ultimaFalhaDoLog(): string | null {
+  try {
+    if (!existsSync(LOG)) return null;
+    const linhas = readFileSync(LOG, "utf8").split(/\r?\n/);
+    for (let i = linhas.length - 1; i >= 0; i -= 1) {
+      const linha = linhas[i].trim();
+      if (!linha) continue;
+      if (/^(ERROR|CRITICAL)/.test(linha) || /Error:|Exception:/.test(linha)) {
+        // Teto de tamanho: traceback inteiro nao cabe numa faixa de aviso, e a
+        // ultima linha e a que diz o que falhou.
+        return linha.length > 300 ? `${linha.slice(0, 300)}…` : linha;
+      }
+    }
+    return null;
+  } catch {
+    // Log ilegivel nao pode derrubar a rota que existe para diagnosticar.
+    return null;
+  }
+}
+
 /** A tela pergunta ANTES de desenhar o botão: sem isto ela ofereceria um 404. */
 export async function GET(): Promise<Response> {
   const motivo = indisponivel();
@@ -264,6 +349,8 @@ export async function GET(): Promise<Response> {
     // serve a ele.
     comando: `${COMANDO} ${ARGUMENTOS.join(" ")}`,
     log: LOG,
+    // A ULTIMA FALHA REAL, e nao um palpite. Ver `ultimaFalhaDoLog`.
+    ultimaFalha: ultimaFalhaDoLog(),
   });
 }
 

@@ -12,7 +12,26 @@ type ModoLocal = {
   motivo: string | null;
   comando: string;
   log: string;
+  /** A ultima linha de falha do log, lida no servidor. `null` se nao houver. */
+  ultimaFalha?: string | null;
 };
+
+/**
+ * Reconsulta o log DEPOIS da espera, e nao reusa o `modo` que a tela carregou.
+ *
+ * O `modo` foi buscado antes de a API tentar subir; a falha que interessa
+ * aconteceu durante a espera e so existe numa leitura nova.
+ */
+async function falhaDoLog(): Promise<string | null> {
+  try {
+    const resposta = await fetch("/api/fraus/iniciar", { cache: "no-store" });
+    if (!resposta.ok) return null;
+    const dado: ModoLocal = await resposta.json();
+    return dado.ultimaFalha ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /** Teto da espera pela subida. A API real carrega três BERTimbau do disco. */
 const TETO_MS = 90_000;
@@ -57,7 +76,7 @@ export function AvisoApiFora() {
         if (vivo) setModo(dado);
       })
       .catch(() => {
-        if (vivo) setModo({ disponivel: false, motivo: null, comando: "", log: "" });
+        if (vivo) setModo({ disponivel: false, motivo: null, comando: "", log: "", ultimaFalha: null });
       });
     return () => {
       vivo = false;
@@ -91,8 +110,16 @@ export function AvisoApiFora() {
       }
     }
     setSubindo(false);
+    // O QUE O LOG DIZ, e não o que costuma ser. Esta mensagem afirmava
+    // "o motivo mais comum é modelo ausente em modelos/" -- e num caso real o
+    // modelo estava no lugar e o uvicorn morria por porta já tomada, o que
+    // mandou procurar no lugar errado. A tela nomeia o que sabe; quando não
+    // sabe, diz que não sabe e aponta o log.
+    const doLog = await falhaDoLog();
     setErro(
-      `a API não respondeu em ${TETO_MS / 1000}s — o log está em ${modo?.log ?? ".fraus-api.log"}. O motivo mais comum é modelo ausente em modelos/, que derruba o boot por design.`,
+      doLog
+        ? `a API não respondeu em ${TETO_MS / 1000}s. A última falha no log foi: ${doLog} — log completo em ${modo?.log ?? ".fraus-api.log"}.`
+        : `a API não respondeu em ${TETO_MS / 1000}s e o log não registrou falha — veja ${modo?.log ?? ".fraus-api.log"}.`,
     );
   }, [reconsultar, router, modo]);
 
