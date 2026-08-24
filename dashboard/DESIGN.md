@@ -621,3 +621,38 @@ uma superfície que não existe.
 > O par crítico deixou o fio: `--destructive` × piso do vidro fino fecha em
 > **4,54** no grafite e **4,52** na chuva. Continua sendo o par mais apertado
 > da interface e o primeiro candidato a reprovar se o ateliê ganhar luz nova.
+
+---
+
+## 9. O ciclo de verificação, e o que cada gate NÃO vê
+
+Cinco comandos verificam este sistema de design. Eles não se substituem, e a
+seção existe porque **quatro deles já devolveram verde com o build quebrado**.
+
+| Comando | O que ele vê | O que ele **não** vê |
+|---|---|---|
+| `npm run pisos` | se o piso gravado no CSS bate com o pior caso medido do ateliê | qualquer coisa fora dos tokens que ele casa por regex |
+| `npm run contraste` | todo par de cor que carrega texto ou marca, nos dois temas | cor escrita em notação que o parser não lê; matiz; a tela |
+| `npx tsc --noEmit` | tipos do TypeScript | CSS, imagem, qualquer asset |
+| `npm run lint` | as regras do ESLint | CSS, imagem, qualquer asset |
+| `npm run build` | **compila o CSS e processa os assets de verdade** | a tela |
+
+**`npm run build` faz parte do ciclo, não só da conferência final.** Em
+24/08/2026 ele pegou duas quebras no mesmo dia que os outros quatro deixaram
+passar em verde:
+
+- um `favicon.ico` gerado a partir de imagem **RGB** — o processador do Next
+  exige RGBA e falha com `The PNG is not in RGBA format!`;
+- um `*/` que fechou um comentário do `globals.css` cedo demais, deixando o
+  resto do texto como CSS solto (`Unknown word lime`).
+
+Nos dois casos `pisos`, `contraste`, `tsc` e `lint` passaram limpos. Os dois
+primeiros só casam token por expressão regular; os dois últimos não leem CSS
+nem imagem. **Nenhum dos quatro compila coisa alguma.**
+
+**E nenhum dos cinco vê a tela.** Uma peça de fundo pode estar geometricamente
+quebrada, invisível por opacidade baixa demais, ou ilegível por figura contra
+fundo de mesmo matiz, com os cinco verdes. Foi assim que o papel pautado saiu
+invisível a 5,5%, que a grade a laser colapsou numa faixa de 30px, e que o
+portão passou a medir uma superfície que não existe. **Trabalho visual se
+confere olhando**, nos dois temas, numa tela cheia e numa vazia.
