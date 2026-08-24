@@ -441,6 +441,23 @@
   --grade-op: 0.1;
   --grade-espaco: 44px;
   --grade-horizonte: 320px;
+
+  /* --- O SOL LISTRADO ----------------------------------------------------
+     O retrosun: disco com faixas horizontais, nascendo na linha do horizonte
+     da grade.
+
+     NÃO É PEÇA NOVA. É a "mancha quente fraca" que já existia no ateliê --
+     cuja função declarada era quebrar a simetria das outras duas manchas --
+     ganhando borda e faixas. A função antiga sobrevive; o que muda é a forma.
+     Peça nova somaria luz ao pior caso; esta não soma.
+
+     No grafite ele é a lâmpada de SÓDIO do poste, que a seção 8.1 já
+     estabeleceu como a leitura que reconcilia o dourado da marca com o neon
+     frio -- e é por isso que ele é âmbar aqui e magenta na chuva. */
+  --sol-cor-alta: oklch(0.86 0.11 88);
+  --sol-cor-baixa: oklch(0.7 0.13 52);
+  --sol-op: 0.16;
+  --sol-faixa: 9px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -616,6 +633,11 @@
      um atelie aceso. */
   --grade-cor: oklch(0.85 0.16 205);
   --grade-op: 0.2;
+
+  /* O RETROSUN canônico: amarelo-coral em cima, magenta embaixo. */
+  --sol-cor-alta: oklch(0.85 0.17 75);
+  --sol-cor-baixa: oklch(0.66 0.25 350);
+  --sol-op: 0.3;
 }
 
 @layer base {

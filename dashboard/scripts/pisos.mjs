@@ -229,7 +229,10 @@ for (const tema of temas) {
       escolhida,
       ["mancha da marca", cor("--atelie-marca"), op("--atelie-op-marca")],
       ["mancha fria", cor("--atelie-fria"), op("--atelie-op-fria")],
-      ["mancha quente", cor("--atelie-quente"), op("--atelie-op-quente")],
+      // O sol listrado herdou o posto da mancha quente (ver Atelier.tsx). A
+      // cor medida e a ALTA do gradiente: e a mais clara das duas, e piso
+      // otimista e pior que piso nenhum.
+      ["sol listrado", cor("--sol-cor-alta"), op("--sol-op")],
       ["reflexo no asfalto", cor("--atelie-fria"), op("--atelie-asfalto")],
       ["chuva", COR_CHUVA, op("--atelie-chuva")],
     ];

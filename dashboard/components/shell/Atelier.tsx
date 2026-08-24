@@ -82,13 +82,31 @@ export function Atelier() {
             "radial-gradient(closest-side, var(--atelie-fria), transparent)",
         }}
       />
-      {/* quente fraca -- quebra a simetria das outras duas */}
+      {/* O SOL LISTRADO: o retrosun, nascendo no horizonte da grade.
+
+          Herda o posto da antiga "mancha quente fraca", e de propósito: a
+          função dela era quebrar a simetria das outras duas manchas, e um
+          disco fora do eixo faz isso melhor que um borrão. Peça nova somaria
+          luz ao pior caso das superfícies translúcidas; esta apenas troca de
+          forma.
+
+          As faixas são `repeating-linear-gradient` sobre o gradiente do
+          disco, cortadas pelo `rounded-full` -- o disco é a máscara, as
+          faixas são o preenchimento. Elas ENGROSSAM descendo porque é assim
+          que o retrosun se lê: sol se pondo, não bola listrada.
+
+          Fica ATRÁS da grade na ordem do DOM: o sol se põe no horizonte, e o
+          chão está na frente dele. */}
       <div
-        className="absolute left-[45%] top-[55%] h-[45vmax] w-[45vmax] rounded-full blur-[100px]"
+        className="absolute bottom-[26vh] left-[52%] h-[38vmin] w-[38vmin] -translate-x-1/2 rounded-full blur-[2px]"
         style={{
-          opacity: "var(--atelie-op-quente)",
+          opacity: "var(--sol-op)",
           background:
-            "radial-gradient(closest-side, var(--atelie-quente), transparent)",
+            "repeating-linear-gradient(to bottom, transparent 0 var(--sol-faixa), oklch(0 0 0 / 0.85) var(--sol-faixa) calc(var(--sol-faixa) * 1.5))," +
+            "linear-gradient(to bottom, var(--sol-cor-alta), var(--sol-cor-baixa))",
+          maskImage: "linear-gradient(to bottom, black 55%, transparent 96%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, black 55%, transparent 96%)",
         }}
       />
 
