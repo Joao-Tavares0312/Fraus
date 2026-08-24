@@ -35,6 +35,35 @@ export function Atelier() {
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background"
     >
+      {/* O PAPEL PAUTADO: linhas horizontais de ritmo constante, nos DOIS
+          temas.
+
+          NAO E UM PENTAGRAMA, e a distincao nao e preciosismo: a secao 1.1 do
+          DESIGN.md proibe desenhar glifo musical e manda a gramatica entrar
+          como estrutura e ritmo. Agrupar em cincos seria desenhar a pauta;
+          ritmo constante e papel pautado. A regua do sistema (`--linha`)
+          continua sendo a unica linha que AFIRMA algo -- estas sao papel, e
+          por isso moram aqui, na camada que nao carrega dado.
+
+          VEM ANTES das manchas de luz, de proposito: o papel esta EMBAIXO da
+          iluminacao da sala, entao a luz passa por cima dele e o realca de um
+          lado. Desenhado por cima, ele leria como grade sobreposta.
+
+          A mascara faz o fade duplo -- as linhas nascem no topo e se apagam
+          descendo, e tambem se apagam para as bordas laterais. Sem ela a
+          textura ladrilharia a tela inteira com peso igual, que e a diferenca
+          entre papel e papel de parede. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: "var(--pauta-op)",
+          background:
+            "repeating-linear-gradient(to bottom, var(--pauta-cor) 0 var(--pauta-peso), transparent var(--pauta-peso) var(--pauta-espaco))",
+          maskImage:
+            "radial-gradient(140% 100% at 50% -10%, black 15%, transparent 70%)",
+        }}
+      />
+
       {/* dourada -- a marca, alto a esquerda */}
       <div
         className="absolute -left-[15%] -top-[25%] h-[70vmax] w-[70vmax] rounded-full blur-[80px]"

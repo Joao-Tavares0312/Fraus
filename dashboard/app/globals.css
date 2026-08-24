@@ -230,9 +230,13 @@
   --vidro-fundo: color-mix(in oklch, var(--card) 62%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
-  --vidro-fino-piso: oklch(0.25 0.006 78);
-  --vidro-piso: oklch(0.24 0.006 78);
-  --vidro-denso-piso: oklch(0.23 0.006 78);
+  /* REMEDIDOS em 24/08/2026, ao ligar o papel pautado: a textura entrou no
+     atelie e levantou o pior caso. Eram 0.25/0.24/0.23 com o fundo liso.
+     `--destructive` sobre eles fica em 4.58/5.05/5.61 -- passa, sem precisar
+     engrossar o vidro do grafite. */
+  --vidro-fino-piso: oklch(0.309 0.006 78);
+  --vidro-piso: oklch(0.28 0.006 78);
+  --vidro-denso-piso: oklch(0.246 0.006 78);
 
   --vidro-blur-fino: 8px;
   --vidro-blur: 16px;
@@ -365,6 +369,24 @@
   /* A cor do realce especular. Branco puro no grafite: ali ele e reflexo de
      luz de escritorio, e reflexo nao tem cor propria. */
   --especular-cor: oklch(1 0 0 / 9%);
+
+  /* --- O PAPEL PAUTADO -------------------------------------------------
+     A textura de fundo: linhas horizontais de ritmo CONSTANTE.
+
+     POR QUE NAO E UM PENTAGRAMA. A secao 1.1 do DESIGN.md e explicita --
+     "nenhum glifo musical e desenhado, sem clave, sem seminima, sem
+     pentagrama de cinco linhas" -- e manda a gramatica entrar como
+     ESTRUTURA E RITMO, nao como fantasia. Agrupar em cincos seria desenhar
+     a pauta; ritmo constante e papel pautado, que e a mesma ideia sem o
+     glifo. A regua do sistema (`--linha`) continua sendo a unica linha que
+     AFIRMA alguma coisa; estas aqui sao papel.
+
+     Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. O fundo deixou de
+     ser papel liso nos DOIS temas, por decisao do dono do projeto. */
+  --pauta-cor: oklch(0.93 0.02 75);
+  --pauta-op: 0.055;
+  --pauta-espaco: 13px;
+  --pauta-peso: 1px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -456,13 +478,16 @@
      Baixar a luz para salvar o contraste teria sido resolver pelo lado
      errado, ainda mais num tema cujo pedido era ficar mais chamativo.
      45% -> 68% no fino, 62% -> 74% no medio, 82% -> 86% no denso. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 68%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 74%, transparent);
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 71%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 75%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
 
-  --vidro-fino-piso: oklch(0.308 0.031 274);
-  --vidro-piso: oklch(0.29 0.031 274);
-  --vidro-denso-piso: oklch(0.253 0.031 274);
+  /* Segunda rodada de engrossamento, e pelo mesmo motivo da primeira: o papel
+     pautado somou luz ao atelie e `--destructive` sobre vidro fino caiu para
+     4.46:1. 68% -> 71% no fino e 74% -> 75% no medio devolvem 4.62 e 4.84. */
+  --vidro-fino-piso: oklch(0.307 0.031 274);
+  --vidro-piso: oklch(0.294 0.031 274);
+  --vidro-denso-piso: oklch(0.257 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
      superficie de vidro tem quina, entao acender a aresta acende a interface
@@ -512,6 +537,13 @@
   /* O especular ganha cor: sobre vidro de neon, um realce branco leria como
      falha de renderizacao no meio da paleta inteira tingida. */
   --especular-cor: oklch(0.8 0.2 322 / 15%);
+
+  /* O PAPEL PAUTADO da chuva: as linhas viram tubo de neon frio, como o resto
+     da luz deste tema. Mais forte que no grafite porque aqui elas competem
+     com um atelie aceso -- no grafite, 5,5% ja marca presenca sobre grafite
+     liso. */
+  --pauta-cor: oklch(0.85 0.16 205);
+  --pauta-op: 0.13;
 }
 
 @layer base {

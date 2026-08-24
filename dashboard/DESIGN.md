@@ -98,6 +98,26 @@ O fundo não é preto: é **papel de ensaio grafite**. Preto puro faz a régua
 flutuar no vácuo e transforma dado em néon. A superfície precisa parecer estoque
 de papel sob luz de escritório — o analista fica horas nela.
 
+> **Emenda de 24/08/2026 — o papel é pautado.** A regra acima dizia papel liso.
+> O fundo passou a carregar **linhas horizontais de ritmo constante**, nos dois
+> temas, por decisão do dono do projeto.
+>
+> O que **não** mudou, e é o que a regra original defendia de verdade: o fundo
+> continua sendo papel e não vazio, continua sem preto puro, e continua sem
+> competir com o dado — as linhas moram no ateliê, a camada que não carrega
+> informação, e passam **por baixo** da luz.
+>
+> **Elas não são um pentagrama.** A §1.1 proíbe desenhar glifo musical e manda a
+> gramática entrar como estrutura e ritmo; agrupar em cincos seria desenhar a
+> pauta, ritmo constante é papel pautado. A régua do sistema (`--linha`) segue
+> sendo a única linha que **afirma** alguma coisa.
+>
+> O custo veio na hora e está pago: a textura levantou o pior caso das
+> superfícies translúcidas nos dois temas. Os pisos foram **remedidos** (o
+> grafite saiu de 0,25/0,24/0,23 para 0,309/0,28/0,246) e o vidro fino da chuva
+> precisou engrossar de novo — 68% → 71% —, porque `--destructive` sobre ele
+> havia caído para 4,46:1. A ordem de sempre: a espessura cede, o portão não.
+
 | Token | Papel |
 |---|---|
 | `--background` | estoque de papel; grafite neutro, nunca `#000` |
