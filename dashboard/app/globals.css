@@ -191,12 +191,14 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.78 0.085 80);
-  /* O monograma e feito de cortes retos: o F e o R sao chanfrados a 45 graus,
-     sem nenhuma curva de canto. 0.625rem arredondava o controle a ponto de ele
-     nao ter parentesco nenhum com a marca; 0.375rem mantem o canto legivel
-     como canto. Nao vai a zero porque campo e botao totalmente quadrados
-     brigariam com o chassi inteiro (cartao, popover, sheet) por um detalhe. */
-  --radius: 0.375rem;
+  /* 2px, e não zero. A seção 3.3.1 já argumentava nesta direção -- o F e o R
+     são chanfrados a 45° e não têm uma curva de canto sequer -- e só parou em
+     0.375rem para o controle não brigar com um chassi arredondado. Com o
+     chassi inteiro endurecendo, a objeção deixa de existir.
+     Não vai a zero porque canto absolutamente vivo serrilha em tela não-HiDPI
+     e o chanfro da marca é um corte, não uma quina. Emenda de 24/08/2026 à
+     seção 3.3.1 -- ver DESIGN.md. */
+  --radius: 0.125rem;
 
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
