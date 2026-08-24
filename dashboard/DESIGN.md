@@ -244,8 +244,31 @@ leitura deslizando ao percorrer a linha do tempo. Movimento comunica estado,
 não decora. `prefers-reduced-motion` desliga o deslize e mantém o cursor
 estático.
 
-Sem sequência orquestrada de entrada: o analista chega para trabalhar, não para
-assistir a página carregar.
+**Emenda de 24/08/2026 — a entrada dos sistemas.** A regra original desta seção
+era "sem sequência orquestrada de entrada: o analista chega para trabalhar, não
+para assistir a página carregar". Ela foi afrouxada num ponto e mantida no
+resto, e a distinção é a seguinte:
+
+- **continua proibido** animar na carga da página. Nada anima por ter montado;
+- **passa a ser permitido** um sistema subir 8 px ao **entrar em cena pela
+  rolagem**, uma única vez (`whileInView` + `once`). Isso não é abertura de
+  cortina: é a mesma resposta que o olho já espera de algo que aparece por
+  rolagem, e ela diz *de onde o bloco veio*.
+
+A armadura de indicadores escalona os quatro filhos em 40 ms. O intervalo é
+curto de propósito: os 80–100 ms de praxe fariam o quarto indicador chegar
+quase meio segundo depois do primeiro, e aí o analista **espera** — que é
+exatamente o que a regra original proíbe. 40 ms lê como um gesto só.
+
+O custo declarado: esta é a segunda peça de movimento da interface, e a seção
+dizia "um momento autorado". São dois agora — o cursor de leitura na linha do
+tempo e a entrada dos sistemas. Um terceiro precisa de argumento novo.
+
+O vocabulário (duração, curva, distância) mora em `lib/movimento.ts`, um lugar
+só, pelo mesmo motivo que a cor mora em token. `prefers-reduced-motion` é
+respeitado em duas frentes, porque uma não alcança a outra: o bloco no fim do
+`globals.css` zera transição de CSS, e o `<Movimento>` no layout raiz passa
+`reducedMotion="user"` ao Motion, que anima em JS e não obedeceria ao CSS.
 
 ---
 

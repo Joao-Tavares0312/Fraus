@@ -3,69 +3,84 @@
 import { useEffect, useRef } from "react";
 
 /**
- * O REALCE ESPECULAR: o brilho que acompanha o ponteiro sobre o vidro.
+ * A CAMADA 2 do vidro liquido: o realce que segue o ponteiro.
  *
- * Devolve uma ref para pendurar no elemento que tem a classe `.especular`. O
- * hook escreve `--px` e `--py` (a posicao do ponteiro dentro do elemento, em
- * porcentagem) DIRETO no `style` do no, dentro de um `requestAnimationFrame`.
+ * Escreve `--px`/`--py` no proprio no, que e o que `.especular::after` le para
+ * posicionar o gradiente radial. Ver DESIGN.md, secao 7, e o bloco `.especular`
+ * em globals.css -- o CSS ja define o repouso (50%/0%), entao um no sem hook
+ * montado mostra um brilho discreto no alto em vez de nada.
  *
- * POR QUE NAO `useState`: um estado por `pointermove` repintaria a arvore
- * inteira da dashboard a cada movimento do mouse, com Recharts e o canvas do
- * grafo montados. O realce e puramente visual e nao pertence ao estado do
- * React -- escrever no no e a implementacao correta, nao um atalho.
+ * POR QUE ESCREVER NO ESTILO E NAO EM ESTADO REACT: o ponteiro dispara dezenas
+ * de eventos por segundo, e cada um viraria render da arvore inteira do sistema
+ * -- em `Painel` isso re-renderizaria grafico e tabela a cada pixel do mouse.
+ * `setProperty` toca so a variavel CSS, sem passar pelo React.
  *
- * OS DOIS DESLIGAMENTOS, e o segundo e o que costuma ser esquecido:
- *   - `prefers-reduced-motion: reduce` -- o realce some, o vidro fica;
- *   - `pointer: coarse` -- toque nao tem hover, entao o realce congelaria no
- *     ultimo ponto tocado, o que e pior do que nao existir.
- * Ambos sao consultados aqui E no CSS: aqui para nao pendurar listener a toa,
- * no CSS para que o pseudo-elemento nao exista.
+ * OS DOIS DESLIGAMENTOS espelham exatamente as media queries do CSS:
+ *
+ *   - `prefers-reduced-motion` -- o realce e movimento, e a secao 6 manda
+ *     desliga-lo;
+ *   - `pointer: coarse` -- touch nao tem hover. Sem isto o realce ficaria aceso
+ *     e PARADO no ultimo ponto tocado, que le como sujeira na tela.
+ *
+ * Em ambos os casos o listener nem e registrado: nao adianta esconder o efeito
+ * no CSS e seguir pagando o custo do evento em JS.
  */
-export function useEspecular<T extends HTMLElement = HTMLDivElement>() {
-  const ref = useRef<T | null>(null);
+export function useEspecular<T extends HTMLElement>() {
+  const referencia = useRef<T>(null);
 
   useEffect(() => {
-    const no = ref.current;
+    const no = referencia.current;
     if (!no) return;
 
+    // `matchMedia` em vez de checar `ontouchstart`: cobre o hibrido (notebook
+    // com tela de toque continua com ponteiro fino e ganha o realce).
     const semMovimento = window.matchMedia("(prefers-reduced-motion: reduce)");
     const ponteiroGrosso = window.matchMedia("(pointer: coarse)");
     if (semMovimento.matches || ponteiroGrosso.matches) return;
 
-    let quadro = 0;
+    let agendado = 0;
 
-    function aoMover(evento: PointerEvent) {
-      if (quadro) return;
-      quadro = requestAnimationFrame(() => {
-        quadro = 0;
-        const alvo = ref.current;
-        if (!alvo) return;
-        const caixa = alvo.getBoundingClientRect();
+    const mover = (evento: PointerEvent) => {
+      // Uma escrita por frame. Sem isto, um mouse de 1000 Hz forcaria
+      // recalculo de estilo mais vezes do que a tela sabe desenhar.
+      if (agendado) return;
+      agendado = requestAnimationFrame(() => {
+        agendado = 0;
+        const caixa = no.getBoundingClientRect();
+        // Caixa de dimensao zero (sistema recolhido, aba oculta) dividiria por
+        // zero e escreveria `NaN%` na variavel -- valor invalido, que o CSS
+        // descarta deixando o realce preso onde estava.
         if (caixa.width === 0 || caixa.height === 0) return;
-        const x = ((evento.clientX - caixa.left) / caixa.width) * 100;
-        const y = ((evento.clientY - caixa.top) / caixa.height) * 100;
-        alvo.style.setProperty("--px", `${x.toFixed(2)}%`);
-        alvo.style.setProperty("--py", `${y.toFixed(2)}%`);
+        no.style.setProperty(
+          "--px",
+          `${((evento.clientX - caixa.left) / caixa.width) * 100}%`,
+        );
+        no.style.setProperty(
+          "--py",
+          `${((evento.clientY - caixa.top) / caixa.height) * 100}%`,
+        );
       });
-    }
+    };
 
-    function aoSair() {
-      const alvo = ref.current;
-      if (!alvo) return;
-      // Volta ao repouso em vez de congelar o brilho na ultima posicao: vidro
-      // parado com um realce aceso fora do ponteiro parece defeito.
-      alvo.style.removeProperty("--px");
-      alvo.style.removeProperty("--py");
-    }
+    // Ao sair, o realce VOLTA AO REPOUSO em vez de congelar onde o ponteiro
+    // deixou: brilho parado no meio da superficie nao e um estado plausivel de
+    // luz e o olho registra como artefato.
+    const sair = () => {
+      if (agendado) cancelAnimationFrame(agendado);
+      agendado = 0;
+      no.style.setProperty("--px", "50%");
+      no.style.setProperty("--py", "0%");
+    };
 
-    no.addEventListener("pointermove", aoMover);
-    no.addEventListener("pointerleave", aoSair);
+    no.addEventListener("pointermove", mover);
+    no.addEventListener("pointerleave", sair);
+
     return () => {
-      if (quadro) cancelAnimationFrame(quadro);
-      no.removeEventListener("pointermove", aoMover);
-      no.removeEventListener("pointerleave", aoSair);
+      if (agendado) cancelAnimationFrame(agendado);
+      no.removeEventListener("pointermove", mover);
+      no.removeEventListener("pointerleave", sair);
     };
   }, []);
 
-  return ref;
+  return referencia;
 }

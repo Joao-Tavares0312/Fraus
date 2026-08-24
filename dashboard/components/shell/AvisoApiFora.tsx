@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Copy, Play, RotateCcw } from "lucide-react";
+import { Check, Copy, Play, RotateCcw } from "lucide-react";
 import { useSaude } from "./SaudeProvider";
+import { Aparato } from "@/components/Aparato";
 import { Button } from "@/components/ui/button";
 
 type ModoLocal = {
@@ -190,15 +191,13 @@ export function AvisoApiFora() {
             fechada porque o botão ao lado resolve o caso normal -- e continua
             existindo porque nem todo caso é o normal. */}
         {modo?.comando ? (
-          <details className="group min-w-0 text-xs text-muted-foreground">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-1 hover:text-foreground">
-              <ChevronRight
-                aria-hidden
-                className="size-3 transition-transform duration-200 group-open:rotate-90"
-              />
-              {modo.disponivel ? "subir pelo terminal" : "como subir no terminal"}
-            </summary>
-            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+          <Aparato
+            className="min-w-0"
+            rotulo={
+              modo.disponivel ? "subir pelo terminal" : "como subir no terminal"
+            }
+          >
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <code className="num min-w-0 flex-1 overflow-x-auto rounded-sm bg-muted px-2 py-1.5 text-foreground">
                 {modo.comando}
               </code>
@@ -208,11 +207,11 @@ export function AvisoApiFora() {
               </Button>
             </div>
             {modo.motivo ? (
-              <p className="mt-2">
+              <p className="mt-2 text-xs text-muted-foreground">
                 O botão não aparece porque {modo.motivo}.
               </p>
             ) : null}
-          </details>
+          </Aparato>
         ) : null}
       </div>
     </div>

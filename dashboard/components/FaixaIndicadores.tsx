@@ -1,6 +1,9 @@
 "use client";
 
+import { motion } from "motion/react";
+import { Aparato } from "./Aparato";
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
+import { pilha } from "@/lib/movimento";
 import {
   CSAT_SAUDAVEL,
   emMinutos,
@@ -109,9 +112,17 @@ export function FaixaIndicadores({
     // pilha vertical e a forma certa em tela larga -- a fileira de quatro
     // colunas era o template de metrica-heroi, e ele empurrava a tese da tela
     // para baixo da dobra.
-    <section
+    <motion.section
       ref={refEspecular}
       aria-label={`Indicadores de ${rotuloDoPeriodo}`}
+      // A ARMADURA e o container da pilha: ela escalona os quatro indicadores
+      // em 40ms, e cada `CartaoIndicador` herda a variante daqui. Escalonar
+      // aqui, e nao no `Painel`, e o que da a leitura de cima para baixo --
+      // que e a ordem em que a armadura de clave se le.
+      variants={pilha}
+      initial="oculto"
+      whileInView="presente"
+      viewport={{ once: true, margin: "0px 0px -64px 0px" }}
       className="vidro especular grid grid-cols-1 gap-3 rounded-lg p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-1"
     >
       <CartaoIndicador
@@ -187,16 +198,7 @@ export function FaixaIndicadores({
         colado ao numero e DADO do recorte — a contagem de "com sinal" do NPS e
         a legenda de cortes do trilho — porque muda com o filtro.
       */}
-      <details className="group sm:col-span-2 xl:col-span-1">
-        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-          <span
-            aria-hidden
-            className="inline-block transition-transform duration-200 group-open:rotate-90"
-          >
-            ›
-          </span>
-          Método e ressalvas
-        </summary>
+      <Aparato className="sm:col-span-2 xl:col-span-1">
         <dl className="mt-2 flex max-w-[52ch] flex-col gap-1.5 text-[0.6875rem] leading-snug text-muted-foreground">
           <div>
             <dt className="inline font-medium">CSAT inferido:</dt>{" "}
@@ -222,7 +224,7 @@ export function FaixaIndicadores({
             </dd>
           </div>
         </dl>
-      </details>
-    </section>
+      </Aparato>
+    </motion.section>
   );
 }

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import { Atelier } from "@/components/shell/Atelier";
 import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
+import { Movimento } from "@/components/shell/Movimento";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -49,23 +50,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Pular para o conteúdo
         </a>
-        <TooltipProvider>
-          <SaudeProvider>
-            <SidebarProvider>
-            {/* A navegacao le `useSearchParams` para carregar o periodo entre
-                as secoes, e isso exige limite de Suspense no App Router. */}
-              <Suspense fallback={null}>
-                <NavegacaoLateral />
-              </Suspense>
-              <SidebarInset id="conteudo" className="min-w-0">
-                {/* Acima do conteudo, em TODA tela: sem a API todas quebram
-                    igual, e a instrucao tem que estar onde o Joao ja esta. */}
-                <AvisoApiFora />
-                {children}
-              </SidebarInset>
-            </SidebarProvider>
-          </SaudeProvider>
-        </TooltipProvider>
+        <Movimento>
+          <TooltipProvider>
+            <SaudeProvider>
+              <SidebarProvider>
+                {/* A navegacao le `useSearchParams` para carregar o periodo
+                    entre as secoes, e isso exige limite de Suspense no App
+                    Router. */}
+                <Suspense fallback={null}>
+                  <NavegacaoLateral />
+                </Suspense>
+                <SidebarInset id="conteudo" className="min-w-0">
+                  {/* Acima do conteudo, em TODA tela: sem a API todas quebram
+                      igual, e a instrucao tem que estar onde o Joao ja esta. */}
+                  <AvisoApiFora />
+                  {children}
+                </SidebarInset>
+              </SidebarProvider>
+            </SaudeProvider>
+          </TooltipProvider>
+        </Movimento>
       </body>
     </html>
   );
