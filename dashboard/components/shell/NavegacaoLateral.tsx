@@ -25,6 +25,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { EstadoSaude } from "./EstadoSaude";
+import { SeletorTema } from "./SeletorTema";
 
 /**
  * Navegacao do aplicativo.
@@ -156,6 +157,11 @@ export function NavegacaoLateral() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SeletorTema />
+          </SidebarMenuItem>
+        </SidebarMenu>
         <EstadoSaude />
       </SidebarFooter>
     </Sidebar>

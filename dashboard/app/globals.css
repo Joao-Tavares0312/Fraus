@@ -338,6 +338,113 @@
      sinalDaFeature. */
   --outros-sinal: oklch(0.705 0.015 286.067);
   --outros-sinal-texto: oklch(0.78 0.015 286.067);
+
+  /* AS TRES LUZES DO ATELIE.
+     Existem como token proprio porque o atelie estava pegando `--dito` e
+     `--medido` emprestados -- tokens da camada de DADO usados como cor de
+     luz. Funcionava por coincidencia de matiz, mas amarrava o papel de parede
+     ao canal que carrega significado: mexer no ambar do "dito" mexeria na
+     iluminacao da sala. Luz e luz, dado e dado. */
+  --atelie-marca: var(--primary);
+  --atelie-fria: var(--medido);
+  --atelie-quente: var(--dito);
+}
+
+/* ---------------------------------------------------------------------------
+   TEMA "CHUVA DE NEON" — a segunda opcao de cor.
+
+   EMENDA DECLARADA. O chassi vigente diz, no comentario do `--background`,
+   que o fundo e papel de ensaio e que preto puro "transforma dado em neon".
+   Este tema pede exatamente aquilo, por decisao do dono do projeto em
+   24/08/2026. O grafite continua sendo o PADRAO de fabrica; isto e uma
+   segunda opcao, nunca uma substituicao.
+
+   A TESE, e ela e o que impede o tema de virar fantasia: rua molhada a noite.
+   O neon frio da fachada refletido no asfalto, e a luz de SODIO do poste --
+   que e ambar-dourada. E por isso que o dourado da marca nao briga com o
+   vaporwave: numa cena de chuva noturna, luz quente de poste ao lado de neon
+   frio nao e contradicao, e o retrato. O dourado deixa de ser um metal solto
+   sobre roxo e passa a ser a lampada da rua.
+
+   O QUE ESTE TEMA NAO TOCA, e a regra que o mantem honesto:
+
+   1. A CAMADA DE DADO INTEIRA fica como esta. `--dito` continua ambar,
+      `--medido` continua azul, e as sete familias de sinal mantem os matizes.
+      O encoding e compromisso vinculante do PRODUCT.md -- trocar magenta por
+      ambar aqui seria mudar o significado junto com a pele. O magenta e o
+      violeta do vaporwave vivem SO no atelie, que e a camada que nao carrega
+      dado nenhum;
+   2. o dourado (`--primary`) segue fora de dado, so em controle e marca;
+   3. todo par de texto continua cruzando AA por calculo, agora medido nos
+      dois temas (`npm run contraste`).
+
+   Sobrepoe a base: so declara o que muda. Ver DESIGN.md, "Os dois temas".
+--------------------------------------------------------------------------- */
+
+.tema-chuva {
+  color-scheme: dark;
+
+  /* O ASFALTO. Indigo bem escuro em vez de preto puro -- preto puro faz a
+     regua de meio ponto flutuar no vacuo, e o argumento continua valendo
+     mesmo depois de trocar a paleta. E asfalto molhado tem cor: ele devolve
+     o ceu. */
+  --background: oklch(0.155 0.028 274);
+  --foreground: oklch(0.97 0.008 250);
+  --card: oklch(0.208 0.032 274);
+  --card-foreground: oklch(0.97 0.008 250);
+  --popover: oklch(0.2 0.032 274);
+  --popover-foreground: oklch(0.97 0.008 250);
+
+  /* A LUZ DE SODIO. O mesmo dourado da logo, um passo mais luminoso: sobre
+     terreno frio o ambar perde presenca, e a marca nao pode encolher porque
+     o fundo esfriou. */
+  --primary: oklch(0.81 0.1 82);
+  --primary-foreground: oklch(0.16 0.022 82);
+
+  --secondary: oklch(0.278 0.034 276);
+  --secondary-foreground: oklch(0.97 0.008 250);
+  --muted: oklch(0.278 0.034 276);
+  --muted-foreground: oklch(0.745 0.038 268);
+  --accent: oklch(0.278 0.034 276);
+  --accent-foreground: oklch(0.97 0.008 250);
+
+  --border: oklch(0.83 0.09 255 / 16%);
+  --input: oklch(0.83 0.09 255 / 22%);
+  --ring: oklch(0.81 0.1 82);
+
+  --sidebar: oklch(0.186 0.034 276);
+  --sidebar-foreground: oklch(0.97 0.008 250);
+  --sidebar-primary: oklch(0.81 0.1 82);
+  --sidebar-primary-foreground: oklch(0.16 0.022 82);
+  --sidebar-accent: oklch(0.278 0.034 276);
+  --sidebar-accent-foreground: oklch(0.97 0.008 250);
+  --sidebar-border: oklch(0.83 0.09 255 / 16%);
+  --sidebar-ring: oklch(0.81 0.1 82);
+
+  /* PISOS DE VIDRO do tema. Obrigatorios e opacos: o `--vidro-*-fundo` e
+     color-mix do `--card` e acompanha o tema sozinho, mas o piso e o pior
+     caso pre-calculado que o gate mede, e ele nao se deriva de graca. */
+  --vidro-fino-piso: oklch(0.246 0.031 274);
+  --vidro-piso: oklch(0.236 0.031 274);
+  --vidro-denso-piso: oklch(0.226 0.031 274);
+
+  /* A quina do vidro esfria junto: aresta neutra sobre superficie azulada le
+     como poeira, nao como luz batendo no canto. */
+  --vidro-quina: oklch(0.9 0.06 250 / 15%);
+  --vidro-quina-baixa: oklch(0.08 0.03 274 / 26%);
+
+  /* A regua da pauta ganha um fio de azul pelo mesmo motivo da quina. */
+  --linha: oklch(0.92 0.045 250 / 26%);
+  --compasso: oklch(0.92 0.045 250 / 9%);
+
+  /* AS LUZES. Aqui mora o vaporwave, e SO aqui: o magenta e o ciano tem croma
+     alto de proposito -- eles sao a fachada de neon refletida. Como o atelie
+     nao carrega dado nenhum, cor saturada nesta camada nao inventa canal de
+     significado, que e a razao de o resto do tema ser contido.
+     A luz da marca continua sendo o sodio do poste. */
+  --atelie-marca: oklch(0.81 0.1 82);
+  --atelie-fria: oklch(0.62 0.24 320);
+  --atelie-quente: oklch(0.72 0.16 205);
 }
 
 @layer base {

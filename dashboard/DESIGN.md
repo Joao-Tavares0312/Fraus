@@ -5,7 +5,8 @@ documento. Ele não descreve como as telas estão hoje: descreve como elas devem
 ser.
 
 **Mundo:** *Pauta* — a conversa notada como partitura.
-**Chassi:** shadcn/ui sobre Tailwind v4, tokens em OKLCH, tema escuro único.
+**Chassi:** shadcn/ui sobre Tailwind v4, tokens em OKLCH, **dois temas, ambos
+escuros** — grafite (padrão de fábrica) e chuva de neon (ver seção 8).
 
 ---
 
@@ -85,8 +86,11 @@ direito de um respiro depois. Mais espaço acima de um título do que abaixo.
 
 ## 3. Tokens
 
-Tema escuro único. Tokens em `app/globals.css`; consumo via classes utilitárias.
-Nada de hex solto em componente.
+Tokens em `app/globals.css`; consumo via classes utilitárias. Nada de hex solto
+em componente.
+
+Os valores abaixo são os do tema **grafite**, o padrão de fábrica. O tema chuva
+de neon sobrepõe apenas o chassi e não encosta na camada de dado — ver seção 8.
 
 ### 3.1 O fundo é papel, não vazio
 
@@ -312,3 +316,60 @@ em claridade, o vidro clareou demais.
 **O especular tem dois desligamentos**, e o segundo é o esquecido:
 `prefers-reduced-motion` e **ponteiro grosso**. Toque não tem hover, e o realce
 congelaria no último ponto tocado — pior que não existir.
+
+---
+
+## 8. Os dois temas
+
+**Emenda de 24/08/2026.** Até aqui este documento dizia "tema escuro único, sem
+alternador", e a §3.1 chama o fundo de *papel de ensaio*, com o argumento
+explícito de que preto puro "transforma dado em neon". Passa a haver um segundo
+tema, **chuva de neon**, por decisão do dono do projeto — e ele é exatamente a
+estética que aquele parágrafo recusava.
+
+O grafite continua sendo o **padrão de fábrica** e a posição de projeto. A chuva
+é opção, não substituição.
+
+### 8.1 A tese do tema chuva
+
+Rua molhada à noite: neon frio de fachada refletido no asfalto, e a luz de
+**sódio** do poste — que é âmbar-dourada. É isso que resolve o conflito entre
+vaporwave e a marca: numa cena de chuva noturna, luz quente de poste ao lado de
+neon frio não é contradição, é o retrato. O dourado do monograma deixa de ser um
+metal solto sobre roxo e passa a ser a lâmpada da rua.
+
+### 8.2 O que o tema NÃO toca
+
+Três regras, e elas são o que separa "segundo tema" de "outro produto":
+
+1. **A camada de dado inteira fica como está.** `--dito` continua âmbar,
+   `--medido` continua azul, e as sete famílias de sinal mantêm os matizes. O
+   encoding é compromisso vinculante do `PRODUCT.md`; trocar a pele não pode
+   trocar o significado. O magenta e o violeta do vaporwave vivem **só no
+   ateliê**, que é a única camada que não carrega dado — e é por não carregar
+   dado que ela pode ter croma alto sem inventar canal sem rótulo.
+2. **O dourado continua fora de dado**, só em controle e marca.
+3. **Todo par de texto continua cruzando AA por cálculo**, agora medido nos dois
+   temas.
+
+### 8.3 O gate passou a ser ciente de tema
+
+`scripts/contraste.mjs` mantinha **um mapa único** de tokens para o arquivo
+inteiro. Com dois temas declarando `--background`, o segundo sobrescreveria o
+primeiro e o relatório sairia verde tendo medido um tema só — falha silenciosa,
+que é o modo de falha que este gate existe para evitar.
+
+Ele agora recorta o bloco de cada tema, **sobrepõe à base como a cascata do CSS
+faz** (um tema só declara o que muda) e roda a matriz inteira por tema. Tema
+novo entra sem tocar no script: basta o seletor começar com `.tema-`.
+
+### 8.4 Onde a escolha mora
+
+No `<html>`, como classe, e no `localStorage` — não em contexto de React. Quem
+precisa saber o tema é o CSS, e o CSS já sabe ler classe.
+
+O grafite é a **ausência** de classe, não uma classe própria: ele é o `:root`, e
+um tema padrão que precisasse se declarar para funcionar quebraria em toda tela
+renderizada antes do JavaScript. Um script inline no `<head>` aplica a classe
+antes da primeira pintura; sem ele, quem escolheu a chuva veria a tela pintar em
+grafite e trocar depois da hidratação, a cada navegação.
