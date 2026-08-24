@@ -123,7 +123,7 @@ export function FaixaIndicadores({
       initial="oculto"
       whileInView="presente"
       viewport={{ once: true, margin: "0px 0px -64px 0px" }}
-      className="vidro especular grid grid-cols-1 gap-3 rounded-lg p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-1"
+      className="vidro especular chanfro grid grid-cols-1 gap-3 rounded-lg p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-1"
     >
       <CartaoIndicador
         rotulo="NPS inferido"

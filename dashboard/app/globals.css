@@ -786,6 +786,42 @@
     backdrop-filter: blur(var(--vidro-blur-denso)) saturate(1.6);
   }
 
+  /* O CHANFRO A 45°, recortado do monograma.
+
+     Por que `clip-path` e nao `border-radius`: raio e curva, e o F e o R nao
+     tem uma curva de canto sequer (secao 3.3.1). Chanfro e corte reto, que e
+     a geometria da marca.
+
+     ARMADILHA PAGA: `clip-path` DESCARTA `box-shadow` -- o recorte come o
+     elemento inteiro, sombra inclusive. Por isso a sombra sai de `box-shadow`
+     e vira `drop-shadow`, que segue o recorte. `drop-shadow` aceita uma
+     sombra por funcao, entao as duas camadas do `--vidro-sombra` viram duas
+     funcoes encadeadas, e os valores estao repetidos aqui de proposito: o
+     token e uma lista de `box-shadow` e nao pode ser interpolado dentro de
+     `drop-shadow()`.
+
+     So nas superficies GRANDES. Chanfro em badge de 18px de altura come o
+     rotulo. */
+  .chanfro {
+    --chanfro: 10px;
+    clip-path: polygon(
+      var(--chanfro) 0,
+      100% 0,
+      100% calc(100% - var(--chanfro)),
+      calc(100% - var(--chanfro)) 100%,
+      0 100%,
+      0 var(--chanfro)
+    );
+    box-shadow: none;
+    filter: drop-shadow(0 1px 2px oklch(0.12 0.02 80 / 28%))
+      drop-shadow(0 8px 26px oklch(0.42 0.06 80 / 22%));
+  }
+
+  .tema-chuva .chanfro {
+    filter: drop-shadow(0 1px 2px oklch(0.08 0.04 300 / 34%))
+      drop-shadow(0 10px 34px oklch(0.42 0.2 315 / 26%));
+  }
+
   @supports not (backdrop-filter: blur(1px)) {
     .vidro-fino {
       background-color: var(--vidro-fino-piso);
