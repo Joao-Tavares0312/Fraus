@@ -6,17 +6,22 @@
  * para refratar -- `backdrop-filter` borra o que esta atras, e atras de um
  * grafite uniforme so ha mais grafite.
  *
- * Tres manchas radiais sobre o `--background`: a da marca, a fria que a
- * contrapesa, e uma terceira fraca que quebra a simetria das duas -- que
- * sozinhas leriam como gradiente de template.
+ * Duas manchas radiais sobre o `--background`: a da marca e a fria que a
+ * contrapesa. O sol listrado herdou o posto da terceira mancha, fraca, que
+ * quebrava a simetria das duas -- que sozinhas leriam como gradiente de
+ * template.
  *
- * As cores vem de `--atelie-marca` / `--atelie-fria` / `--atelie-quente`, e
- * NAO dos tokens de dado. O atelie usava `--dito` e `--medido` emprestados, o
- * que amarrava a iluminacao da sala ao canal que carrega significado. Sao
- * token proprio desde 24/08/2026, o que tambem e o que permite ao tema
- * "chuva de neon" trocar a luz sem encostar no encoding.
+ * As cores vem de `--atelie-marca` / `--atelie-fria`, e o desacoplamento dos
+ * tokens de dado E PARCIAL -- vale dizer qual metade, porque o oposto ja foi
+ * escrito aqui e era falso. No tema "chuva de neon" os dois sao literais e
+ * independentes do encoding, e e isso que permite trocar a luz sem encostar
+ * na camada de dado. No GRAFITE nao: `--atelie-fria` continua sendo
+ * `var(--medido)`, ou seja, a propria cor do canal de dado usada como luz. A
+ * consequencia e real e ja foi paga: repintar o dado move a luz do grafite
+ * junto, e os pisos de vidro precisam ser remedidos quando isso acontece.
+ * `--atelie-marca` e `var(--primary)` no grafite -- cor de marca, nao de dado.
  *
- * No tema grafite as tres tem croma BAIXO: elas iluminam, nao pintam. No tema
+ * No tema grafite as duas tem croma BAIXO: elas iluminam, nao pintam. No tema
  * chuva o croma sobe, e pode subir justamente porque esta camada nao carrega
  * dado nenhum -- cor saturada aqui nao inventa canal de significado.
  *

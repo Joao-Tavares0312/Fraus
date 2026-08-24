@@ -488,8 +488,11 @@ regra de 8.2: **só o que não carrega dado ganhou saturação.**
 > seção pressupõe um tema só, e não é bem assim: a decisão de 24/08/2026 foi
 > **estrutura igual nos dois temas** — cada peça abaixo existe no componente
 > tanto no grafite quanto na chuva, e é o tema, não o componente, quem decide
-> cor e intensidade. No grafite a maioria delas fica em opacidade zero ou
-> quase; é a chuva que grita.
+> cor e intensidade. No grafite **só asfalto e chuva ficam em zero**; as
+> outras seis estão acesas, apenas contidas — marca impressa em 0,15, grade
+> a laser em 0,1, sol listrado em 0,16, papel pautado em 0,12, e quina e
+> sombra ativas com suas próprias cores. É a chuva que grita, não o grafite
+> que apaga.
 
 | Peça | O que faz | Por que pode gritar |
 |---|---|---|
@@ -543,15 +546,29 @@ uma superfície que não existe.
 > modo de falha que o parágrafo acima descreve, e ele aconteceu aqui. Os
 > valores vigentes estão no `globals.css` e batem com o script.
 >
-> **Uma pessimismo a menos, e ele é lido da geometria.** O papel pautado e a
-> marca impressa **não somam**: a máscara do papel zera por volta de 60% da
-> altura da tela e a máscara da marca só deixa massa no terço de baixo. Onde
-> uma tem força a outra já acabou, e o script compõe a mais clara das duas, não
-> as duas. Somadas, o vidro médio da chuva precisaria de **93%** de opacidade
-> para o portão passar — e vidro a 93% não é vidro: o reskin inteiro morreria
-> para proteger uma superfície imaginária. O resto do pior caso segue
-> impossível de propósito (as três manchas no mesmo ponto), porque ali a
+> **Um pessimismo a menos, e ele é lido da geometria.** O papel pautado **não
+> soma** com as peças do rodapé: a máscara dele
+> (`radial-gradient(140% 100% at 50% -10%, black 15%, transparent 70%)`) zera
+> por volta de 60% da altura da tela, então onde ele tem força as outras ainda
+> não começaram. O script disputa "papel pautado" contra "marca impressa +
+> grade a laser" e fica com a composição mais clara. O resto do pior caso segue
+> impossível de propósito (as manchas de luz no mesmo ponto), porque ali a
 > impossibilidade é barata.
+>
+> **Correção da revisão final (24/08/2026) — a marca e a grade NÃO eram
+> disjuntas, e esta emenda afirmava que eram.** A versão anterior deste
+> parágrafo dava como prova a máscara antiga da marca
+> (`radial-gradient(120% 120% at 100% 100%, ..., transparent 72%)`), estreita o
+> bastante para deixar massa só num raio pequeno. Essa máscara foi **alargada
+> depois**, de propósito, para a marca ficar visível: hoje é
+> `radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)` num
+> elemento de 115vmin ancorado na quina inferior direita — e a grade ocupa a
+> faixa `bottom-0 h-[45vh]` de largura total, mais forte justamente colada no
+> rodapé. O pixel "linha da grade sobre traço do monograma" existe. O modelo de
+> medição não acompanhou a mudança de geometria, e por isso os seis pisos
+> ficaram otimistas. Corrigido: **marca e grade somam**; só o papel pautado
+> continua disjunto. Premissa de disjunção é afirmação sobre geometria — quem
+> mexer numa máscara do `Atelier.tsx` reconfere a lista em `pisos.mjs`.
 >
 > **O que continua sendo julgamento de olho.** O ateliê só aparece nas calhas
 > entre painéis e **através** do vidro; numa tela cheia, engrossar o vidro
@@ -583,3 +600,16 @@ uma superfície que não existe.
 > motivo foi o portão: `scripts/contraste.mjs` precisava enxergá-las para
 > medir, e três delas nunca tinham sido medidas em tema nenhum antes desta
 > sessão. As nove passam AA nos dois temas, incluindo essas três.
+
+> **Emenda de 24/08/2026 (terceira) — os números depois de consertar a
+> disjunção.** Com marca e grade somadas (ver a correção acima), os seis pisos
+> ficaram otimistas e o portão reprovou: `--destructive` × vidro fino caiu para
+> **4,29** no grafite e **4,39** no fino e no médio da chuva. A regra de sempre:
+> a espessura cede, a luz não. Vidro fino do grafite subiu de 1 em 1 —
+> 64% → 65% → 66% → 67% → 68% → **69%** —, remedindo o piso a cada passo; médio
+> (72%) e denso (82%) do grafite não mudaram. Na chuva, fino e médio subiram
+> juntos de 74% para **76%**; denso (86%) não mudou.
+>
+> O par crítico deixou o fio: `--destructive` × piso do vidro fino fecha em
+> **4,54** no grafite e **4,52** na chuva. Continua sendo o par mais apertado
+> da interface e o primeiro candidato a reprovar se o ateliê ganhar luz nova.

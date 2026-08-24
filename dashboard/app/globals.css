@@ -259,7 +259,16 @@
      recuperado, e SO 1 -- este par nasceu do proprio engrossamento acima e
      nao tinha margem para dar. Nao tente descer mais sem antes engrossar
      outra coisa. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 64%, transparent);
+  /* Revisao final da branch (24/08/2026): `pisos.mjs` tratava marca impressa e
+     grade a laser como ALTERNATIVAS mutuamente exclusivas, premissa que morreu
+     quando a mascara da marca foi alargada (de `120% 120% ... transparent 72%`
+     para `150% 150% ... black 34%, transparent 96%`) e ela passou a se
+     sobrepor a grade na quina inferior direita. Com as duas SOMADAS -- o
+     modelo honesto --, os seis pisos ficaram otimistas e `--destructive` x
+     `--vidro-fino-piso` caiu para 4.29. O fino subiu de 1 em 1, remedindo o
+     piso a cada passo: 64% (4.29) -> 65% (4.34) -> 66% (4.39) -> 67% (4.44)
+     -> 68% (4.49) -> 69% (passa). Medio e denso nao precisaram mudar. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 69%, transparent);
   --vidro-fundo: color-mix(in oklch, var(--card) 72%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
@@ -275,9 +284,12 @@
      Medio e denso ficaram identicos ao medido -- nenhuma mudanca. */
   /* REMEDIDO mais uma vez ao afinar o fino de volta para 64% (recuperacao de
      espessura, mesmo dia): 0.310 -> 0.313. */
-  --vidro-fino-piso: oklch(0.313 0.006 78);
-  --vidro-piso: oklch(0.291 0.006 78);
-  --vidro-denso-piso: oklch(0.264 0.006 78);
+  /* REMEDIDOS na revisao final, com marca+grade somadas (ver acima): eram
+     0.313/0.291/0.264 com o modelo antigo. Medio e denso subiram sozinhos
+     (0.302/0.271); o fino fechou em 0.311 porque a espessura dele engordou. */
+  --vidro-fino-piso: oklch(0.311 0.006 78);
+  --vidro-piso: oklch(0.302 0.006 78);
+  --vidro-denso-piso: oklch(0.271 0.006 78);
 
   --vidro-blur-fino: 8px;
   --vidro-blur: 16px;
@@ -398,25 +410,23 @@
   --outros-sinal: oklch(0.705 0.015 286.067);
   --outros-sinal-texto: oklch(0.78 0.015 286.067);
 
-  /* AS TRES LUZES DO ATELIE.
-     No tema chuva (ver bloco da chuva mais abaixo) os tres sao literais e
-     independentes da camada de dado. Aqui no grafite NAO sao: --atelie-fria
-     e --atelie-quente continuam alias de --medido e --dito, tokens da
-     camada de DADO usados como cor de luz. Isso nao e livre de custo --
+  /* AS DUAS LUZES DO ATELIE.
+     No tema chuva (ver bloco da chuva mais abaixo) as duas sao literais e
+     independentes da camada de dado. Aqui no grafite NAO: --atelie-fria
+     continua alias de --medido, token da
+     camada de DADO usado como cor de luz. Isso nao e livre de custo --
      repintar o dado desta sessao (Task 6) moveu a luz do ateliê grafite
      junto, e os pisos de vidro precisaram ser remedidos por causa disso. O
      desacoplamento completo (dar token proprio tambem ao grafite) ficou
      como decisao para outro dia, nao foi feito aqui. */
   --atelie-marca: var(--primary);
   --atelie-fria: var(--medido);
-  --atelie-quente: var(--dito);
 
   /* A FORCA de cada mancha. Token e nao numero cravado no componente porque e
      exatamente aqui que os dois temas discordam: o grafite quer luz que so
      insinua, e a chuva quer neon. */
   --atelie-op-marca: 0.13;
   --atelie-op-fria: 0.11;
-  --atelie-op-quente: 0.07;
 
   /* AS DUAS PECAS QUE SO A CHUVA ACENDE. Zeradas aqui de proposito: elas
      existem no componente nos dois temas e o TEMA decide se aparecem, o que
@@ -617,8 +627,15 @@
      reprova. Os dois fecharam em 74%: 7 pontos recuperados no fino, 11 no
      medio. Denso nao foi mexido -- ele existe para o conteudo atras sumir,
      entao afina-lo tem custo funcional alem do contraste. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 74%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 74%, transparent);
+  /* Revisao final da branch (24/08/2026), mesmo motivo do bloco base: com
+     marca impressa e grade a laser SOMADAS em `pisos.mjs` (elas se sobrepoem
+     na quina inferior direita, e a premissa de disjuncao morreu quando a
+     mascara da marca foi alargada), os pisos subiram e `--destructive` x
+     vidro fino/medio caiu para 4.39. Fino e medio subiram juntos de 1 em 1,
+     remedindo o piso a cada passo: 74% (4.39) -> 75% (4.45) -> 76% (passa).
+     Denso nao precisou mudar. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 76%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 76%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
 
   /* MEDIDOS por `node scripts/pisos.mjs`. Os valores anteriores (0.307/0.294/
@@ -641,10 +658,12 @@
      (o literal do tema agora vence), caiam para 0.285/0.269/0.265.
      REMEDIDOS mais uma vez no mesmo dia, exercicio de recuperacao de
      espessura: com o fino e o medio afinados de 81%/85% para 74%, o piso de
-     ambos sobe para 0.312 (denso, nao mexido, continua 0.265). */
-  --vidro-fino-piso: oklch(0.312 0.031 274);
-  --vidro-piso: oklch(0.312 0.031 274);
-  --vidro-denso-piso: oklch(0.265 0.031 274);
+     ambos sobe para 0.312 (denso, nao mexido, continua 0.265).
+     REMEDIDOS na revisao final, com marca+grade somadas: 0.313/0.313/0.270
+     (fino e medio ja com a espessura em 76%). */
+  --vidro-fino-piso: oklch(0.313 0.031 274);
+  --vidro-piso: oklch(0.313 0.031 274);
+  --vidro-denso-piso: oklch(0.270 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
      superficie de vidro tem quina, entao acender a aresta acende a interface
@@ -673,14 +692,12 @@
      A luz da marca continua sendo o sodio do poste. */
   --atelie-marca: oklch(0.81 0.1 82);
   --atelie-fria: oklch(0.62 0.24 320);
-  --atelie-quente: oklch(0.72 0.16 205);
 
   /* Bem mais forte que no grafite. Continua sendo LUZ e nao pintura -- o teto
      e o que o portao de contraste aguenta, e os pisos de vidro abaixo foram
      recalculados contra estes valores, nao chutados. */
   --atelie-op-marca: 0.2;
   --atelie-op-fria: 0.3;
-  --atelie-op-quente: 0.24;
 
   /* O REFLEXO NO ASFALTO: a faixa de luz que sobe do rodape, como fachada
      espelhada em chao molhado. E o que faz a cena ser chuva e nao so um fundo

@@ -219,54 +219,71 @@ for (const tema of temas) {
 
   // A ORDEM E A DO DOM em Atelier.tsx. Trocar a ordem muda o resultado --
   // sobreposicao alfa nao e comutativa.
-  // PAUTA, MARCA e GRADE sao ALTERNATIVAS, nao somam, e isto foi lido das
-  // mascaras e nao escolhido por conveniencia: a mascara do papel e
-  // `radial-gradient(140% 100% at 50% -10%, black 15%, transparent 70%)`, que
-  // zera por volta de 60% da altura da tela; a marca mora colada na quina
-  // inferior direita e a propria mascara dela
-  // (`radial-gradient(120% 120% at 100% 100%, ..., transparent 72%)`) so deixa
-  // massa no terco de baixo; a grade mora no mesmo terco de baixo, mascarada
-  // por `linear-gradient(to top, black 0%, transparent 92%)`. Onde uma tem
-  // forca as outras ja acabaram ou ainda nao comecaram.
+  // DUAS ALTERNATIVAS, e so uma disjuncao continua sendo verdade: o PAPEL
+  // PAUTADO contra MARCA+GRADE SOMADAS.
   //
-  // Somar as duas seria empilhar luz que nao existe em pixel nenhum, e o custo
-  // disso e concreto: medido assim, o vidro medio da chuva precisaria de 93%
-  // de opacidade para o portao passar -- vidro a 93% nao e vidro, e o reskin
-  // inteiro morreria para proteger uma superficie imaginaria. O resto do pior
-  // caso continua impossivel de proposito (as tres manchas somadas no mesmo
-  // ponto), porque ali a impossibilidade e barata.
+  // O papel e disjunto dos outros dois porque a mascara dele e
+  // `radial-gradient(140% 100% at 50% -10%, black 15%, transparent 70%)`, que
+  // zera por volta de 60% da altura da tela -- ele nao tem massa nenhuma no
+  // terco de baixo, onde as outras duas moram.
+  //
+  // MARCA E GRADE SOMAM porque se SOBREPOEM na quina inferior direita: a marca
+  // e `-bottom-[12%] -right-[10%] h-[115vmin] w-[115vmin]` com segunda mascara
+  // `radial-gradient(150% 150% at 100% 100%, black 34%, transparent 96%)` --
+  // solida num raio grande a partir da quina --, e a grade e `bottom-0
+  // h-[45vh]` de largura total, mais forte justamente colada no rodape. O pixel
+  // "linha da grade sobre traco do monograma" existe de verdade.
+  //
+  // ARMADILHA PAGA (24/08/2026): ate esta correcao as tres eram alternativas
+  // entre si, e o comentario citava como prova a mascara ANTIGA da marca
+  // (`radial-gradient(120% 120% at 100% 100%, ..., transparent 72%)`), que so
+  // deixava massa num raio estreito. Essa mascara foi ALARGADA depois, de
+  // proposito e a pedido do dono do projeto, para a marca ficar visivel -- e o
+  // modelo de medicao nao acompanhou. Resultado: os seis pisos ficaram
+  // OTIMISTAS e o portao devolvia verde medindo uma superficie que nao existe
+  // (`--destructive` x `--vidro-fino-piso` caia para 4,29 no grafite e 4,44 na
+  // chuva). Premissa de disjuncao e afirmacao sobre GEOMETRIA: quem mexer numa
+  // mascara do `Atelier.tsx` tem que reconferir esta lista.
+  //
   // A alternativa vencedora e a que resulta MAIS CLARA, e nao a de maior
-  // opacidade: as tres tem cor diferente (ouro palido, magenta, ciano), e mais
-  // alfa de uma cor escura pode clarear menos que menos alfa de uma clara.
+  // opacidade: as camadas tem cor diferente (ouro palido, magenta, ciano), e
+  // mais alfa de uma cor escura pode clarear menos que menos alfa de uma clara.
   const alternativas = [
-    ["papel pautado", cor("--pauta-cor"), op("--pauta-op")],
-    ["marca impressa", cor("--marca-cor"), op("--marca-op")],
-    ["grade a laser", cor("--grade-cor"), op("--grade-op")],
+    ["papel pautado", ["papel pautado"]],
+    ["marca + grade", ["marca impressa", "grade a laser"]],
   ];
 
-  const compor = (escolhida) => {
+  // A lista abaixo esta na ORDEM DO DOM em `Atelier.tsx`, incluindo as camadas
+  // opcionais -- e por isso que a escolha entra como filtro e nao como item
+  // prefixado: sobreposicao alfa nao e comutativa, e a marca impressa vem
+  // DEPOIS das manchas de luz, a grade DEPOIS do asfalto.
+  const compor = (ligadas) => {
     const camadas = [
-      escolhida,
+      ["papel pautado", cor("--pauta-cor"), op("--pauta-op")],
       ["mancha da marca", cor("--atelie-marca"), op("--atelie-op-marca")],
       ["mancha fria", cor("--atelie-fria"), op("--atelie-op-fria")],
       // O sol listrado herdou o posto da mancha quente (ver Atelier.tsx). A
       // cor medida e a ALTA do gradiente: e a mais clara das duas, e piso
       // otimista e pior que piso nenhum.
       ["sol listrado", cor("--sol-cor-alta"), op("--sol-op")],
+      ["marca impressa", cor("--marca-cor"), op("--marca-op")],
       ["reflexo no asfalto", cor("--atelie-fria"), op("--atelie-asfalto")],
+      ["grade a laser", cor("--grade-cor"), op("--grade-op")],
       ["chuva", COR_CHUVA, op("--atelie-chuva")],
     ];
+    const opcionais = new Set(["papel pautado", "marca impressa", "grade a laser"]);
     let acc = oklchParaGama(...cor("--background"));
-    for (const [, c, a] of camadas) {
+    for (const [nome, c, a] of camadas) {
+      if (opcionais.has(nome) && !ligadas.includes(nome)) continue;
       if (!c || !a) continue;
       acc = sobrepor(acc, oklchParaGama(...c), a);
     }
     return acc;
   };
 
-  const candidatos = alternativas.map((alt) => ({
-    nome: alt[0],
-    cor: compor(alt),
+  const candidatos = alternativas.map(([nome, ligadas]) => ({
+    nome,
+    cor: compor(ligadas),
   }));
   candidatos.sort(
     (a, b) => luminanciaDeGama(b.cor) - luminanciaDeGama(a.cor),

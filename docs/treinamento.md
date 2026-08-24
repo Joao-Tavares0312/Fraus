@@ -172,7 +172,21 @@ O topo continua sendo **texto e emoji**, e as features de tempo continuam no rod
 
 **Teste de sanidade ponta a ponta**, com os tres BERTimbau carregados, sobre conversas do simulador: rotulo insatisfeito pontua ~0, neutro ~73–75, satisfeito ~99, e as tres categorias de NPS saem certas em 9 de 9. **Isso nao e evidencia de qualidade** — sao conversas do proprio gerador sintetico, o dominio em que o fusor foi treinado. O numero honesto continua sendo 0,93 no conjunto de teste separado, e a ressalva do topo desta secao continua valendo: as metricas do notebook 02 medem fusao no dominio sintetico, nao acerto em atendimento real.
 
-### Consequencia no NPS: a classe neutra cai em detrator
+### Consequencia no NPS: a classe neutra cai em detrator — HISTORICO (fusor de 16 features, ate 24/08/2026)
+
+**Esta secao mede o fusor de 16 features, NAO o vigente.** Ela ficou aqui sem
+data enquanto o artefato foi trocado, e passou a ler como se descrevesse o
+fusor atual — que e o defeito mais caro deste projeto. Fica registrada porque o
+raciocinio sobre o score continua valendo, e porque a medicao dela e o
+contraponto do que o fusor de 35 features entrega.
+
+**A consequencia DEIXOU de valer com o fusor de 35 features.** Base: o teste de
+sanidade ponta a ponta da secao anterior, com os tres BERTimbau carregados —
+rotulo neutro pontua **~73–75**, cai na faixa 7–8 e as tres categorias de NPS
+saem certas em 9 de 9. Ou seja, o neutro nao cai mais em detrator. Ressalva do
+mesmo tamanho: aquele teste corre sobre conversas do proprio simulador, o
+dominio em que o fusor foi treinado, entao ele desmente a medicao abaixo no
+dominio sintetico e nao promete nada sobre atendimento real.
 
 Medido em 90 conversas do simulador, 30 por classe, o fusor corrigido separa bem — medianas **0,11 / 50,99 / 99,03** por rotulo verdadeiro. Mas a categoria de NPS derivada sai **67% detrator · 29% promotor · 4% neutro**, com **NPS -38** num lote equilibrado por construcao.
 
