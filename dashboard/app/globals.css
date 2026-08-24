@@ -399,11 +399,14 @@
   --outros-sinal-texto: oklch(0.78 0.015 286.067);
 
   /* AS TRES LUZES DO ATELIE.
-     Existem como token proprio porque o atelie estava pegando `--dito` e
-     `--medido` emprestados -- tokens da camada de DADO usados como cor de
-     luz. Funcionava por coincidencia de matiz, mas amarrava o papel de parede
-     ao canal que carrega significado: mexer no ambar do "dito" mexeria na
-     iluminacao da sala. Luz e luz, dado e dado. */
+     No tema chuva (ver bloco da chuva mais abaixo) os tres sao literais e
+     independentes da camada de dado. Aqui no grafite NAO sao: --atelie-fria
+     e --atelie-quente continuam alias de --medido e --dito, tokens da
+     camada de DADO usados como cor de luz. Isso nao e livre de custo --
+     repintar o dado desta sessao (Task 6) moveu a luz do ateliê grafite
+     junto, e os pisos de vidro precisaram ser remedidos por causa disso. O
+     desacoplamento completo (dar token proprio tambem ao grafite) ficou
+     como decisao para outro dia, nao foi feito aqui. */
   --atelie-marca: var(--primary);
   --atelie-fria: var(--medido);
   --atelie-quente: var(--dito);

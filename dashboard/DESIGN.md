@@ -151,6 +151,24 @@ de papel sob luz de escritório — o analista fica horas nela.
 > vidro fino caíram para 4,25 e 3,86. A espessura cedeu — 45% → 55% no fino e
 > 62% → 72% no médio no grafite, 71% → 81% e 75% → 85% na chuva. Ver §8.6.
 
+> **Emenda de 24/08/2026 (terceira) — o fundo ganha grade e sol.** O fundo
+> passou a carregar uma **grade em perspectiva** (linhas convergindo para um
+> horizonte a 320px, espaçadas a 44px, `--grade-op` em 0,1 no grafite e 0,2 na
+> chuva) e um **sol listrado** no horizonte (`--sol-op` em 0,16 no grafite e
+> 0,3 na chuva), nos dois temas.
+>
+> O que **não** mudou: as duas peças moram no ateliê, a mesma camada do papel
+> pautado e da marca impressa, não carregam dado, e passam **por baixo** da
+> luz — a mesma garantia das duas emendas acima, agora estendida a mais duas
+> peças.
+>
+> O custo, de novo em pisos e espessura de vidro: o vidro fino da chuva foi
+> de 71% para **74%**, e o vidro médio da chuva **recuou** de 75% para 74% —
+> ele havia subido para 81%/85% no meio do trabalho da Task 8 e voltou quando
+> um bug de medição foi corrigido. O saldo desta sessão contra o início dela:
+> fino subiu 3 pontos, médio caiu 1. No grafite, o vidro fino foi de 55% para
+> **64%**; médio (72%) e denso (82%) da chuva (86%) ficaram como estavam.
+
 | Token | Papel |
 |---|---|
 | `--background` | estoque de papel; grafite neutro, nunca `#000` |
@@ -235,11 +253,22 @@ que precisa ser repensado primeiro.
 
 ### 3.3.1 O raio acompanha os cortes do monograma
 
-`--radius` é `0.375rem`, e era `0.625rem`. O F e o R são chanfrados a 45° e
-não têm uma curva de canto sequer; o raio antigo arredondava o controle a
-ponto de ele não ter parentesco nenhum com a marca. Não vai a zero porque
-botão e campo totalmente quadrados brigariam com o chassi inteiro — cartão,
-popover, sheet — por causa de um detalhe.
+`--radius` era `0.375rem`, e antes disso `0.625rem`. O F e o R são chanfrados a
+45° e não têm uma curva de canto sequer; o raio de 0,625rem arredondava o
+controle a ponto de ele não ter parentesco nenhum com a marca. Em 0,375rem não
+ia a zero porque botão e campo totalmente quadrados brigariam com o chassi
+inteiro — cartão, popover, sheet — por causa de um detalhe.
+
+> **Emenda de 24/08/2026 — o chassi endureceu, e a objeção caiu.**
+> `--radius` foi de `0.375rem` para **0.125rem** (2px), por decisão do dono do
+> projeto. O argumento que segurava o raio em 0,375rem era o chassi arredondado
+> ao redor — cartão, popover, sheet, sidebar; era essa vizinhança que um botão
+> quase quadrado brigaria com. Essa vizinhança não existe mais: os painéis
+> grandes (`Painel.tsx`, `FaixaIndicadores.tsx`) passaram a ser chanfrados a
+> 45° via `clip-path`, no mesmo desenho do F e do R, e a sombra migrou de
+> `box-shadow` para `filter: drop-shadow()` porque `clip-path` descarta
+> `box-shadow`. Com o chassi cortado a 45° em vez de arredondado, um raio quase
+> reto deixou de ser a peça fora do lugar — passou a ser a única consistente.
 
 ### 3.3.2 O rótulo dentro do botão é verificado
 
@@ -393,17 +422,40 @@ metal solto sobre roxo e passa a ser a lâmpada da rua.
 
 ### 8.2 O que o tema NÃO toca
 
-Três regras, e elas são o que separa "segundo tema" de "outro produto":
+Três regras, e elas eram o que separava "segundo tema" de "outro produto":
 
 1. **A camada de dado inteira fica como está.** `--dito` continua âmbar,
    `--medido` continua azul, e as sete famílias de sinal mantêm os matizes. O
-   encoding é compromisso vinculante do `PRODUCT.md`; trocar a pele não pode
-   trocar o significado. O magenta e o violeta do vaporwave vivem **só no
-   ateliê**, que é a única camada que não carrega dado — e é por não carregar
-   dado que ela pode ter croma alto sem inventar canal sem rótulo.
+   magenta e o violeta do vaporwave vivem **só no ateliê**, que é a única
+   camada que não carrega dado — e é por não carregar dado que ela pode ter
+   croma alto sem inventar canal sem rótulo.
 2. **O dourado continua fora de dado**, só em controle e marca.
 3. **Todo par de texto continua cruzando AA por cálculo**, agora medido nos dois
    temas.
+
+> **Emenda de 24/08/2026 — a regra 1 deixa de valer, e a atribuição dela
+> estava errada.** A regra 1 acima ("a camada de dado inteira fica como
+> está") deixou de valer por decisão do dono do projeto: as sete famílias de
+> sinal, as três categorias de NPS e os oito nós coloridos do grafo subiram
+> croma e claridade.
+>
+> **O que continua de pé:** o matiz de cada família ficou **congelado** — só
+> saturação e claridade mudaram, e o matiz é o canal que carrega o encoding;
+> saturação nunca carregou significado nenhum. `--no-importacao` continua
+> cinza. `--primary` continua fora de dado, regra 2 intacta. Categoria
+> continua nunca comunicada só por cor, sempre com rótulo textual — regra 3
+> intacta.
+>
+> **A correção de rota, e é a parte que importa:** o texto acima chamava essa
+> regra de "compromisso vinculante do `PRODUCT.md`". **Não é, e nunca foi.**
+> Fomos reler o `PRODUCT.md`: ele exige duas coisas, e só duas — que todo par
+> de cor que carrega texto cruze AA por cálculo, e que categoria nunca seja
+> comunicada só por cor. Ambas continuam valendo e não foram violadas por
+> esta emenda. "A camada de dado inteira fica como está" nunca esteve no
+> `PRODUCT.md`; era decisão de design tomada pelo dono do projeto, e foi o
+> mesmo dono do projeto que a revogou agora. Atribuir a um documento de
+> produto uma regra que era decisão de design é o tipo de erro que este
+> projeto não pode se dar ao luxo de deixar impresso.
 
 ### 8.3 O gate passou a ser ciente de tema
 
@@ -432,6 +484,13 @@ grafite e trocar depois da hidratação, a cada navegação.
 O tema foi empurrado para ser chamativo em 24/08/2026, e o empurrão respeita a
 regra de 8.2: **só o que não carrega dado ganhou saturação.**
 
+> **Nota de 24/08/2026 — a tabela vale para os dois temas.** O título desta
+> seção pressupõe um tema só, e não é bem assim: a decisão de 24/08/2026 foi
+> **estrutura igual nos dois temas** — cada peça abaixo existe no componente
+> tanto no grafite quanto na chuva, e é o tema, não o componente, quem decide
+> cor e intensidade. No grafite a maioria delas fica em opacidade zero ou
+> quase; é a chuva que grita.
+
 | Peça | O que faz | Por que pode gritar |
 |---|---|---|
 | **quina do vidro** | ciano na aresta de cima, magenta na de baixo | é tubo de neon: a luz da fachada bate em cima, o reflexo do chão sobe embaixo. Toda superfície tem quina, então acender a aresta acende a interface inteira **sem uma célula de dado mudar de cor** |
@@ -440,6 +499,8 @@ regra de 8.2: **só o que não carrega dado ganhou saturação.**
 | **reflexo no asfalto** | faixa de luz subindo do rodapé | é o que separa "fundo roxo com manchas" de "fachada espelhada em chão molhado" |
 | **chuva** | riscos diagonais finos, **estáticos** | dá textura para o vidro refratar sem gastar quadro |
 | **marca impressa** | o monograma sangrando pela quina inferior direita, em magenta | é máscara pintada pelo tema, não imagem: mora no ateliê, não codifica valor nenhum, e o magenta é o mesmo par de néon da quina do vidro |
+| **grade a laser** | grade em perspectiva convergindo para um horizonte | é o piso do vaporwave clássico: converte o ateliê em cenário de fuga, sem tocar dado |
+| **sol listrado** | sol com faixas horizontais no horizonte | a segunda peça do mesmo cenário; nos dois temas, com intensidade decidida por tema |
 
 **A chuva não cai**, e isso é decisão: a §6 já gastou os dois momentos de
 movimento que a interface se permite, e chuva animada seria um terceiro que não
@@ -499,3 +560,26 @@ uma superfície que não existe.
 > grafite, 0,22 na chuva —, e a presença dela veio de **escala** (115vmin), que
 > é de graça: o pior caso já assume a cor da marca em algum pixel, então o
 > tamanho não custa contraste nenhum.
+
+> **Emenda de 24/08/2026 (segunda) — os números finais, e um par sem folga
+> nenhuma.** A grade, o sol e a marca impressa (0,12/0,22) levantaram o piso
+> de novo, e a resolução foi a mesma de sempre: a espessura cede. Vidro fino
+> do grafite foi de 55% para **64%**; médio (72%) e denso (82%) do grafite
+> ficaram como estavam. Na chuva, vidro fino foi de 71% para **74%** e vidro
+> médio **recuou** de 75% para **74%** — ele chegou a subir para 81%/85% no
+> meio do caminho e voltou quando um bug de medição foi corrigido; denso
+> (86%) não mudou. Contra o início desta sessão, o saldo da chuva é: fino
+> subiu 3 pontos, médio caiu 1.
+>
+> **Um par ficou exatamente no fio.** `--destructive` sobre o piso do vidro
+> fino do grafite fecha em **4,50:1** — o limiar do WCAG AA, não um número
+> acima dele. Zero folga: qualquer luz nova no ateliê do grafite — mais uma
+> peça, mais opacidade em alguma das que já existem — derruba esse par sem
+> precisar de erro nenhum no cálculo. Fica registrado como o candidato mais
+> provável a reprovar na próxima rodada.
+>
+> **As nove cores que carregam texto foram convertidas de `hsl()` para
+> `oklch()`.** É conversão matematicamente equivalente, não repintura — o
+> motivo foi o portão: `scripts/contraste.mjs` precisava enxergá-las para
+> medir, e três delas nunca tinham sido medidas em tema nenhum antes desta
+> sessão. As nove passam AA nos dois temas, incluindo essas três.
