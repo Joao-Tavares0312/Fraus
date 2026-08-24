@@ -622,6 +622,51 @@ uma superfície que não existe.
 > **4,54** no grafite e **4,52** na chuva. Continua sendo o par mais apertado
 > da interface e o primeiro candidato a reprovar se o ateliê ganhar luz nova.
 
+> **Emenda de 24/08/2026 (quarta) — o vidro afina, e o vermelho de erro paga
+> a conta.** Por decisão do dono do projeto: *"vamos diminuir a opacidade dos
+> liquid glass para que eu consiga ver o fundo"*.
+>
+> **A folga era zero.** Medido antes de mexer: dois pontos a menos em qualquer
+> espessura já levavam `--destructive` × vidro fino de 4,52 para 4,44. O par
+> que a emenda anterior deixou "no fio" era literalmente o teto.
+>
+> **E o teto não é o vidro, é o texto** — esta é a parte que vale registrar,
+> porque ela contraria a intuição. O que se enxerga do ateliê *através* de uma
+> superfície translúcida **é** a claridade do piso dela. Pedir "mais fundo
+> visível" é pedir piso mais claro, e piso mais claro exige texto mais claro.
+> Não adianta afinar o vidro e escurecer o ateliê para compensar: as duas
+> coisas são a mesma grandeza, e o portão mede exatamente ela. **A única
+> alavanca que compra fundo é subir a cor do texto que fica por cima.**
+>
+> Isso **não afrouxa o portão** — conserta a cor do texto, que é o outro lado
+> da mesma regra da §7. O portão continua em 4,5 e mede tudo que media antes.
+>
+> `--destructive` foi de `oklch(0.704 0.191 22.216)` para
+> `oklch(0.79 0.121 22.216)`. **O matiz não se moveu**: vermelho continua sendo
+> erro. É seguro porque `bg-destructive` cheio só pinta bolinha de status — o
+> botão e o badge usam `/10` e `/20` com `text-destructive` por cima, então
+> clarear melhora os dois usos e não há rótulo sobre preenchimento sólido.
+>
+> **O croma caiu de propósito.** O valor antigo estava **fora do gamut sRGB**
+> (R = 1,013) e o navegador já o cortava; subir a claridade mantendo 0,191
+> pioraria isso (R = 1,319). 0,121 é o croma máximo dentro do gamut nessa
+> claridade — `rgb(255,83,79)` —, então o token passa a declarar a cor que de
+> fato renderiza, e ainda rende um pouco mais de contraste que a versão
+> cortada. Token que declara cor que o navegador corta é a mesma classe de
+> defeito de documento que afirma o que o código não faz.
+>
+> **O que isso comprou:** oito pontos de vidro nas duas espessuras que o
+> usuário enxerga. Grafite fino **69% → 61%**, médio **72% → 64%**. Chuva fino
+> e médio **76% → 68%**. Denso não mudou em tema nenhum — ele existe para o
+> conteúdo atrás sumir, e afiná-lo tem custo funcional, não só de contraste.
+>
+> **O gargalo trocou de dono, e o novo tem outro nome.** O par mais apertado
+> agora é `--detrator-texto` × piso do vidro fino, em **4,54** na chuva e
+> **4,72** no grafite. `--detrator-texto` é **cor de dado** — a categoria de
+> NPS —, não cromo. Afinar mais exigiria mexer na camada de dado, e isso é
+> decisão de outra ordem: fica registrado aqui como a fronteira, não como
+> pendência.
+
 ---
 
 ## 9. O ciclo de verificação, e o que cada gate NÃO vê

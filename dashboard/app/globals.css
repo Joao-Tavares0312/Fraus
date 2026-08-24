@@ -180,7 +180,28 @@
   --muted-foreground: oklch(0.705 0.015 286.067);
   --accent: oklch(0.274 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  /* O VERMELHO DE ERRO CLAREOU PARA O VIDRO PODER AFINAR (24/08/2026).
+     Era oklch(0.704 0.191 22.216), e ele era o gargalo da interface inteira:
+     sobre o piso do vidro fino ele fechava em 4,52:1 contra o minimo de 4,5,
+     entao NENHUMA espessura de vidro podia afinar sem derrubar o portao. Dois
+     pontos a menos ja levavam o par para 4,44.
+
+     Clarea-lo e a unica alavanca que compra fundo visivel sem tocar em dado:
+     o que se ve do atelie atraves do vidro E a claridade do piso, entao pedir
+     "mais fundo" e pedir piso mais claro, e piso mais claro exige texto mais
+     claro. Nao e afrouxar o portao -- e consertar a cor do texto.
+
+     E SEGURO porque `bg-destructive` cheio so pinta BOLINHA de status; o botao
+     e o badge usam `/10` e `/20` com `text-destructive` por cima, entao clarear
+     melhora os dois usos e nao ha rotulo sobre preenchimento solido.
+
+     O CROMA CAIU DE PROPOSITO, de 0.191 para 0.121. O valor antigo estava FORA
+     DO GAMUT sRGB (R = 1,013) e o navegador ja o cortava; subir a claridade
+     mantendo 0.191 pioraria isso (R = 1,319). 0.121 e o croma maximo dentro do
+     gamut nesta claridade -- rgb(255,83,79) --, entao o token passa a declarar
+     a cor que de fato renderiza, e de quebra rende um pouco mais de contraste
+     que a versao cortada. O MATIZ nao se moveu: vermelho continua sendo erro. */
+  --destructive: oklch(0.79 0.121 22.216);
   --success: oklch(0.78 0.16 150);
   --warning: oklch(0.8 0.14 80);
 
@@ -274,8 +295,8 @@
      `--vidro-fino-piso` caiu para 4.29. O fino subiu de 1 em 1, remedindo o
      piso a cada passo: 64% (4.29) -> 65% (4.34) -> 66% (4.39) -> 67% (4.44)
      -> 68% (4.49) -> 69% (passa). Medio e denso nao precisaram mudar. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 69%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 72%, transparent);
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 61%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 64%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
   /* MEDIDOS por `node scripts/pisos.mjs`, nao estimados. Eram 0.25/0.24/0.23
@@ -293,8 +314,8 @@
   /* REMEDIDOS na revisao final, com marca+grade somadas (ver acima): eram
      0.313/0.291/0.264 com o modelo antigo. Medio e denso subiram sozinhos
      (0.302/0.271); o fino fechou em 0.311 porque a espessura dele engordou. */
-  --vidro-fino-piso: oklch(0.311 0.006 78);
-  --vidro-piso: oklch(0.302 0.006 78);
+  --vidro-fino-piso: oklch(0.335 0.006 78);
+  --vidro-piso: oklch(0.326 0.006 78);
   --vidro-denso-piso: oklch(0.271 0.006 78);
 
   --vidro-blur-fino: 8px;
@@ -640,8 +661,8 @@
      vidro fino/medio caiu para 4.39. Fino e medio subiram juntos de 1 em 1,
      remedindo o piso a cada passo: 74% (4.39) -> 75% (4.45) -> 76% (passa).
      Denso nao precisou mudar. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 76%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 76%, transparent);
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 68%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 68%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
 
   /* MEDIDOS por `node scripts/pisos.mjs`. Os valores anteriores (0.307/0.294/
@@ -667,8 +688,8 @@
      ambos sobe para 0.312 (denso, nao mexido, continua 0.265).
      REMEDIDOS na revisao final, com marca+grade somadas: 0.313/0.313/0.270
      (fino e medio ja com a espessura em 76%). */
-  --vidro-fino-piso: oklch(0.313 0.031 274);
-  --vidro-piso: oklch(0.313 0.031 274);
+  --vidro-fino-piso: oklch(0.346 0.031 274);
+  --vidro-piso: oklch(0.346 0.031 274);
   --vidro-denso-piso: oklch(0.270 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
