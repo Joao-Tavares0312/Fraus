@@ -166,6 +166,51 @@ const textos = [
   "--destructive",
 ];
 
+// MARCAS: cor que desenha DADO sem carregar texto -- serie do grafico, no do
+// grafo, ponto, barra, cabeca vazada.
+//
+// Elas exigem 3:1 e nao 4.5:1, e a diferenca nao e leniencia: a WCAG separa
+// texto de objeto grafico (1.4.11) porque uma forma de varios pixels de
+// espessura se distingue com menos contraste que a haste de uma letra.
+//
+// POR QUE ISTO FALTAVA: o gate media texto sobre fundo e nada mais, entao
+// nenhuma cor de marcacao foi verificada contra fundo nenhum, em tema nenhum.
+// Passou despercebido enquanto havia um tema so, cujo fundo essas cores
+// acompanharam desde que nasceram. Um tema novo e exatamente o evento que
+// quebraria isso em silencio -- e o gate nao teria dito nada.
+//
+// ATENCAO ao que este numero NAO cobre: ele mede luminancia, nao matiz. Uma
+// serie azul sobre fundo azul pode cruzar 3:1 com folga e ainda assim custar
+// para separar do fundo. Figura contra fundo por MATIZ e julgamento de olho, e
+// nao ha calculo aqui que substitua olhar.
+const marcas = [
+  "--dito",
+  "--medido",
+  "--emocao",
+  "--lexico",
+  "--ironia",
+  "--estilo",
+  "--tempo",
+  "--detrator",
+  "--neutro",
+  "--promotor",
+  "--sem-sinal",
+  "--no-conversa",
+  "--no-termo",
+  "--no-emoji",
+  "--no-feature",
+  "--no-categoria",
+  "--no-canal",
+  "--no-desfecho",
+  "--no-fonte",
+  "--no-importacao",
+];
+
+/** Fundos sobre os quais uma marca chega a ser desenhada. */
+const fundosDeMarca = ["--background", "--card"];
+
+const MINIMO_MARCA = 3;
+
 let falhou = false;
 
 for (const tema of temas) {
@@ -225,6 +270,29 @@ for (const [nomeTexto, nomeFundo] of preenchidos) {
   });
 }
 
+for (const nomeMarca of marcas) {
+  const cor = tokens.get(nomeMarca);
+  if (!cor) {
+    console.error(`token ausente no globals.css: ${nomeMarca}`);
+    falhou = true;
+    continue;
+  }
+  for (const nomeFundo of fundosDeMarca) {
+    const fundo = tokens.get(nomeFundo);
+    if (!fundo) continue;
+    const r = razao(cor, fundo);
+    const ok = r >= MINIMO_MARCA;
+    if (!ok) falhou = true;
+    linhas.push({
+      texto: nomeMarca,
+      sobre: nomeFundo,
+      razao: r.toFixed(2),
+      AA: ok ? "PASS" : "FAIL",
+      minimo: `${MINIMO_MARCA}:1 (marca)`,
+    });
+  }
+}
+
 console.log(`\n=== tema: ${tema.nome} ===`);
 console.table(linhas);
 }
@@ -234,6 +302,8 @@ if (falhou) {
   process.exit(1);
 }
 console.log(
-  `\nTodos os pares de texto cruzam AA (4.5:1) nos ${temas.length} tema(s): ` +
-    `${temas.map((t) => t.nome).join(", ")}.`,
+  `\nTexto cruza AA (4.5:1) e marca cruza ${MINIMO_MARCA}:1 nos ` +
+    `${temas.length} tema(s): ${temas.map((t) => t.nome).join(", ")}.` +
+    "\nLembrete: isto mede LUMINANCIA. Figura contra fundo por MATIZ nao tem" +
+    " calculo -- precisa de olho.",
 );
