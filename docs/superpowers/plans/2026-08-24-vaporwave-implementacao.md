@@ -345,95 +345,7 @@ git commit -m "feat(chassi): o canto endurece para 2px, como os cortes do monogr
 
 ---
 
-### Task 4: O chanfro a 45° no vidro
-
-**Files:**
-- Modify: `dashboard/app/globals.css` (o bloco `@layer components` das classes `.vidro-*`)
-
-**Interfaces:**
-- Consumes: da Task 3, o `--radius` já reduzido (o chanfro convive com raio pequeno, brigaria com raio grande).
-- Produces: nada que outras tarefas consumam.
-
-**Contexto e o risco real:** `clip-path` **descarta `box-shadow`** — o navegador recorta o elemento inteiro, sombra inclusive. Como o glow do vidro é `box-shadow` (`--vidro-sombra`), aplicar chanfro ingenuamente **apaga o glow**, que é justamente o que a Task 5 vai reforçar. A saída é mover a sombra para `filter: drop-shadow()` no mesmo elemento, que segue o recorte. `drop-shadow` só aceita UMA sombra por função, então as duas camadas de `--vidro-sombra` viram duas funções encadeadas.
-
-**Esta tarefa é a mais rejeitável do plano.** Se o resultado visual não convencer no Step 4, **descarte-a inteira** — a Task 3 sozinha já entrega o canto duro, e o chanfro é o requinte.
-
-- [ ] **Step 1: Localizar o bloco das classes de vidro**
-
-Run: `grep -n "\.vidro-fino," dashboard/app/globals.css`
-
-Você vai cair no `@layer components` onde `.vidro-fino`, `.vidro` e `.vidro-denso` são definidas, com `background-color`, `backdrop-filter` e `box-shadow: var(--vidro-sombra)`.
-
-- [ ] **Step 2: Adicionar a classe do chanfro**
-
-Logo **depois** das três definições de vidro, no mesmo `@layer components`:
-
-```css
-  /* O CHANFRO A 45°, recortado do monograma.
-
-     Por que `clip-path` e não `border-radius`: raio é curva, e o F e o R não
-     têm uma curva de canto sequer (seção 3.3.1). Chanfro é corte reto, que é
-     a geometria da marca.
-
-     ARMADILHA PAGA: `clip-path` DESCARTA `box-shadow` -- o recorte come o
-     elemento inteiro, sombra inclusive. Por isso a sombra sai de `box-shadow`
-     e vira `drop-shadow`, que segue o recorte. `drop-shadow` aceita uma
-     sombra por função, então as duas camadas do `--vidro-sombra` viram duas
-     funções encadeadas, e os valores estão repetidos aqui de propósito: o
-     token é uma lista de `box-shadow` e não pode ser interpolado dentro de
-     `drop-shadow()`.
-
-     Só nas superfícies GRANDES. Chanfro em badge de 18px de altura come o
-     rótulo. */
-  .chanfro {
-    --chanfro: 10px;
-    clip-path: polygon(
-      var(--chanfro) 0,
-      100% 0,
-      100% calc(100% - var(--chanfro)),
-      calc(100% - var(--chanfro)) 100%,
-      0 100%,
-      0 var(--chanfro)
-    );
-    box-shadow: none;
-    filter: drop-shadow(0 1px 2px oklch(0 0 0 / 20%))
-      drop-shadow(0 8px 24px oklch(0 0 0 / 28%));
-  }
-
-  .tema-chuva .chanfro {
-    filter: drop-shadow(0 1px 2px oklch(0.08 0.04 300 / 34%))
-      drop-shadow(0 10px 34px oklch(0.42 0.2 315 / 26%));
-  }
-```
-
-- [ ] **Step 3: Aplicar nas superfícies grandes**
-
-Run: `grep -rn "vidro-denso\|className=\"vidro\b" dashboard/components --include=*.tsx | head -20`
-
-Adicione `chanfro` ao `className` **apenas** de painéis e cartões de página inteira (os que usam `vidro` ou `vidro-denso`). **Não** aplique em: badge, botão, campo de formulário, célula de tabela, nem em nada com `vidro-fino`.
-
-- [ ] **Step 4: Ver no navegador — e este é o gate desta tarefa**
-
-Abra `/` e `/configuracoes` nos dois temas. Confira **as duas coisas**:
-1. o chanfro aparece nas quinas superior-esquerda e inferior-direita dos painéis;
-2. **o glow embaixo dos painéis continua lá.** Se sumiu, o `drop-shadow` não pegou — revise o Step 2.
-
-Se o resultado ficar ruidoso (muitos cantos cortados competindo), **descarte esta tarefa** com `git checkout` e siga para a Task 5. O plano segue de pé sem ela.
-
-- [ ] **Step 5: Rodar o ciclo**
-
-Run: `npm run pisos && npm run contraste && npx tsc --noEmit && npm run lint`
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add dashboard/app/globals.css dashboard/components
-git commit -m "feat(chassi): o chanfro a 45 graus recorta os paineis de vidro"
-```
-
----
-
-### Task 5: O glow no grafite, e as réguas acesas
+### Task 4: O glow no grafite, e as réguas acesas
 
 **Files:**
 - Modify: `dashboard/app/globals.css` (bloco `:root, .dark`: `--vidro-sombra`, `--linha`, `--compasso`, `--vidro-quina`, `--vidro-quina-baixa`)
@@ -519,6 +431,96 @@ No grafite, os painéis têm que ganhar um halo quente perceptível embaixo. Com
 ```bash
 git add dashboard/app/globals.css
 git commit -m "feat(chassi): o grafite troca sombra preta por glow e acende as reguas"
+```
+
+---
+
+### Task 5: O chanfro a 45° no vidro
+
+**Files:**
+- Modify: `dashboard/app/globals.css` (o bloco `@layer components` das classes `.vidro-*`)
+
+**Interfaces:**
+- Consumes: da Task 3, o `--radius` já reduzido (o chanfro convive com raio pequeno, brigaria com raio grande). Da Task 4, os valores finais de `--vidro-sombra` nos dois temas — **é por isso que esta tarefa vem depois dela**: os `drop-shadow()` abaixo repetem esses valores à mão, e se a Task 4 ainda não tivesse rodado eles congelariam a sombra preta antiga, deixando painel com chanfro preto ao lado de painel sem chanfro dourado.
+- Produces: nada que outras tarefas consumam.
+
+**Antes de colar o CSS abaixo, confira** que `--vidro-sombra` no bloco `:root, .dark` e no bloco `.tema-chuva` bate com os valores repetidos nos `drop-shadow()`. Se a Task 4 tiver ajustado a sombra para outro valor, use o que está no CSS — o arquivo manda, não este plano.
+
+**Contexto e o risco real:** `clip-path` **descarta `box-shadow`** — o navegador recorta o elemento inteiro, sombra inclusive. Como o glow do vidro é `box-shadow` (`--vidro-sombra`), aplicar chanfro ingenuamente **apaga o glow**, que é justamente o que a Task 5 vai reforçar. A saída é mover a sombra para `filter: drop-shadow()` no mesmo elemento, que segue o recorte. `drop-shadow` só aceita UMA sombra por função, então as duas camadas de `--vidro-sombra` viram duas funções encadeadas.
+
+**Esta tarefa é a mais rejeitável do plano.** Se o resultado visual não convencer no Step 4, **descarte-a inteira** — a Task 3 sozinha já entrega o canto duro, e o chanfro é o requinte.
+
+- [ ] **Step 1: Localizar o bloco das classes de vidro**
+
+Run: `grep -n "\.vidro-fino," dashboard/app/globals.css`
+
+Você vai cair no `@layer components` onde `.vidro-fino`, `.vidro` e `.vidro-denso` são definidas, com `background-color`, `backdrop-filter` e `box-shadow: var(--vidro-sombra)`.
+
+- [ ] **Step 2: Adicionar a classe do chanfro**
+
+Logo **depois** das três definições de vidro, no mesmo `@layer components`:
+
+```css
+  /* O CHANFRO A 45°, recortado do monograma.
+
+     Por que `clip-path` e não `border-radius`: raio é curva, e o F e o R não
+     têm uma curva de canto sequer (seção 3.3.1). Chanfro é corte reto, que é
+     a geometria da marca.
+
+     ARMADILHA PAGA: `clip-path` DESCARTA `box-shadow` -- o recorte come o
+     elemento inteiro, sombra inclusive. Por isso a sombra sai de `box-shadow`
+     e vira `drop-shadow`, que segue o recorte. `drop-shadow` aceita uma
+     sombra por função, então as duas camadas do `--vidro-sombra` viram duas
+     funções encadeadas, e os valores estão repetidos aqui de propósito: o
+     token é uma lista de `box-shadow` e não pode ser interpolado dentro de
+     `drop-shadow()`.
+
+     Só nas superfícies GRANDES. Chanfro em badge de 18px de altura come o
+     rótulo. */
+  .chanfro {
+    --chanfro: 10px;
+    clip-path: polygon(
+      var(--chanfro) 0,
+      100% 0,
+      100% calc(100% - var(--chanfro)),
+      calc(100% - var(--chanfro)) 100%,
+      0 100%,
+      0 var(--chanfro)
+    );
+    box-shadow: none;
+    filter: drop-shadow(0 1px 2px oklch(0.12 0.02 80 / 28%))
+      drop-shadow(0 8px 26px oklch(0.42 0.06 80 / 22%));
+  }
+
+  .tema-chuva .chanfro {
+    filter: drop-shadow(0 1px 2px oklch(0.08 0.04 300 / 34%))
+      drop-shadow(0 10px 34px oklch(0.42 0.2 315 / 26%));
+  }
+```
+
+- [ ] **Step 3: Aplicar nas superfícies grandes**
+
+Run: `grep -rn "vidro-denso\|className=\"vidro\b" dashboard/components --include=*.tsx | head -20`
+
+Adicione `chanfro` ao `className` **apenas** de painéis e cartões de página inteira (os que usam `vidro` ou `vidro-denso`). **Não** aplique em: badge, botão, campo de formulário, célula de tabela, nem em nada com `vidro-fino`.
+
+- [ ] **Step 4: Ver no navegador — e este é o gate desta tarefa**
+
+Abra `/` e `/configuracoes` nos dois temas. Confira **as duas coisas**:
+1. o chanfro aparece nas quinas superior-esquerda e inferior-direita dos painéis;
+2. **o glow embaixo dos painéis continua lá.** Se sumiu, o `drop-shadow` não pegou — revise o Step 2.
+
+Se o resultado ficar ruidoso (muitos cantos cortados competindo), **descarte esta tarefa** com `git checkout` e siga para a Task 5. O plano segue de pé sem ela.
+
+- [ ] **Step 5: Rodar o ciclo**
+
+Run: `npm run pisos && npm run contraste && npx tsc --noEmit && npm run lint`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add dashboard/app/globals.css dashboard/components
+git commit -m "feat(chassi): o chanfro a 45 graus recorta os paineis de vidro"
 ```
 
 ---
