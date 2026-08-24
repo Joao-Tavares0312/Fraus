@@ -259,18 +259,32 @@
   /* A QUINA ILUMINADA. E este par -- claro na aresta de cima, escuro na de
      baixo -- que faz a superficie parecer vidro em vez de plastico fosco.
      Sem ele, translucidez sozinha le como opacidade mal resolvida. */
-  --vidro-quina: oklch(1 0 0 / 12%);
-  --vidro-quina-baixa: oklch(0 0 0 / 20%);
-  --vidro-sombra: 0 1px 2px oklch(0 0 0 / 20%), 0 8px 24px oklch(0 0 0 / 28%);
+  /* A quina sobe junto com o resto: e ela que faz a superficie parecer vidro
+     em vez de plastico fosco, e acender a aresta acende a interface inteira
+     sem uma celula de dado mudar de cor. Continua BRANCA no grafite -- aqui
+     ela e reflexo de luz de escritorio, e reflexo nao tem cor propria. */
+  --vidro-quina: oklch(1 0 0 / 20%);
+  --vidro-quina-baixa: oklch(0 0 0 / 26%);
+  /* GLOW, nao buraco. Sombra preta sob um painel que flutua sobre a luz do
+     ateliê lê como recorte no papel; um halo quente lê como a luz da própria
+     superfície vazando para baixo. É a mesma ideia que o tema chuva já
+     aplicou em violeta, agora na cor deste tema -- ouro FOSCO, croma 0.06,
+     porque aqui ele é luz de escritório e não neon de fachada. */
+  --vidro-sombra: 0 1px 2px oklch(0.12 0.02 80 / 28%),
+    0 8px 26px oklch(0.42 0.06 80 / 22%);
 
   /* --- a pauta --- */
 
   /* A REGUA do sistema: o eixo que separa o dito (acima) do medido (abaixo).
      Precisa estar sempre visivel e nunca dominar -- meio ponto de tinta. */
-  --linha: oklch(1 0 0 / 24%);
+  /* A régua sobe junto com a quina. Ela continua sendo a única linha que
+     AFIRMA alguma coisa -- o papel pautado do ateliê é papel, esta é medida --
+     e por isso ela tem que continuar mais forte que o papel, que subiu para
+     0.12 em 24/08/2026. Era 24% e 8%. */
+  --linha: oklch(1 0 0 / 34%);
   /* A BARRA DE COMPASSO: virada de dia. Mais fraca que a regua de proposito;
      ela agrupa o tempo sem pedir atencao. */
-  --compasso: oklch(1 0 0 / 8%);
+  --compasso: oklch(1 0 0 / 12%);
 
   /* --- camada de dado (Fraus) — substitui --chart-1..5 do Kronos --- */
 
