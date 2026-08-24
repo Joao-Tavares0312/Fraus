@@ -118,6 +118,39 @@ de papel sob luz de escritório — o analista fica horas nela.
 > precisou engrossar de novo — 68% → 71% —, porque `--destructive` sobre ele
 > havia caído para 4,46:1. A ordem de sempre: a espessura cede, o portão não.
 
+> **Emenda de 24/08/2026 (segunda) — a marca é impressa no papel, e o papel
+> ficou forte.** A emenda anterior autorizou o papel pautado, mas a
+> implementação entregou grafite a 5,5% de opacidade: 1px a cada 13px, a 5,5%,
+> sobre fundo escuro, **não chega a ser visto**. A peça existia no código e não
+> na tela. A contenção já tinha sido negociada e perdida; foi a implementação
+> que continuou protegendo o contrato antigo. Corrigido: **0,055 → 0,12** no
+> grafite e **0,13 → 0,22** na chuva.
+>
+> O fundo passou também a carregar o **monograma da marca**, sangrando pela
+> quina inferior direita, nos dois temas.
+>
+> **É máscara, não imagem de fundo**, e a distinção é o inteiro da peça.
+> `public/fraus-logo.png` é RGB **sem canal alfa** — o monograma sobre um
+> quadrado sólido `#070707` —, e usá-lo como `background-image` pintaria um
+> quadrado quase-preto opaco por cima do ateliê, que é exatamente o bug que o
+> `SidebarInset` com `bg-background` já causou. `public/fraus-marca.png` é o
+> mesmo desenho com o alfa derivado da luminância e **sem cor nenhuma**: quem
+> pinta é o `background` do elemento, via `--marca-cor`. É isso que entrega
+> "a logo com o tema respectivo aplicado" — dourada no grafite, magenta na
+> chuva — sem gerar dois arquivos e sem tema novo pedir asset novo.
+>
+> O "fade + gradiente" é uma **segunda camada de máscara** cortada por
+> `mask-composite: intersect`: a marca nasce sólida onde sai da tela e se
+> dissolve subindo. Sem isso ela leria como adesivo colado.
+>
+> O que **não** mudou: nada disso carrega dado. É a mesma camada do ateliê, o
+> único lugar onde cor saturada não inventa canal de significado, e a §1.1
+> continua valendo — o monograma é a marca, não um glifo musical.
+>
+> O custo, de novo pago na hora: `--muted-foreground` e `--destructive` sobre
+> vidro fino caíram para 4,25 e 3,86. A espessura cedeu — 45% → 55% no fino e
+> 62% → 72% no médio no grafite, 71% → 81% e 75% → 85% na chuva. Ver §8.6.
+
 | Token | Papel |
 |---|---|
 | `--background` | estoque de papel; grafite neutro, nunca `#000` |
@@ -406,6 +439,7 @@ regra de 8.2: **só o que não carrega dado ganhou saturação.**
 | **especular** | tingido de magenta | realce branco no meio de uma paleta tingida lê como falha de renderização |
 | **reflexo no asfalto** | faixa de luz subindo do rodapé | é o que separa "fundo roxo com manchas" de "fachada espelhada em chão molhado" |
 | **chuva** | riscos diagonais finos, **estáticos** | dá textura para o vidro refratar sem gastar quadro |
+| **marca impressa** | o monograma sangrando pela quina inferior direita, em magenta | é máscara pintada pelo tema, não imagem: mora no ateliê, não codifica valor nenhum, e o magenta é o mesmo par de néon da quina do vidro |
 
 **A chuva não cai**, e isso é decisão: a §6 já gastou os dois momentos de
 movimento que a interface se permite, e chuva animada seria um terceiro que não
@@ -426,9 +460,42 @@ passar.** 45% → 68% no fino, 62% → 74% no médio, 82% → 86% no denso. Baix
 luz para salvar o contraste teria sido resolver pelo lado errado, ainda mais num
 tema cujo pedido era justamente ficar mais chamativo.
 
-Os pisos deste tema são **medidos, não estimados**: as cinco camadas do ateliê
+Os pisos deste tema são **medidos, não estimados**: as camadas do ateliê
 compostas no mesmo ponto (pior caso, ainda que geometricamente impossível — a
 mancha da marca fica no alto à esquerda e a fria embaixo à direita), cada
 espessura por cima, e a luminância resultante convertida de volta para OKLCH.
 Piso otimista é pior que piso nenhum: ele faz o portão devolver verde medindo
 uma superfície que não existe.
+
+> **Emenda de 24/08/2026 — a medição virou script, e ela estava errada.**
+>
+> Esta conta já tinha sido feita três vezes à mão, e nas duas primeiras morreu
+> num scratchpad. Agora é `dashboard/scripts/pisos.mjs` (`npm run pisos`): ele
+> lê o `globals.css`, compõe o ateliê, aplica cada espessura e imprime o piso
+> que cada uma deveria ter. Medição sem instrumento versionado vira chute na
+> terceira rodada — e virou.
+>
+> Refeita a conta com o script, os pisos da chuva registrados aqui
+> (0,307/0,294/0,257) eram **otimistas mesmo para o ateliê daquela época**: o
+> vidro fino dava 0,333. O portão vinha medindo uma superfície mais escura que
+> a real, ou seja, devolvendo verde com folga que não existia. É exatamente o
+> modo de falha que o parágrafo acima descreve, e ele aconteceu aqui. Os
+> valores vigentes estão no `globals.css` e batem com o script.
+>
+> **Uma pessimismo a menos, e ele é lido da geometria.** O papel pautado e a
+> marca impressa **não somam**: a máscara do papel zera por volta de 60% da
+> altura da tela e a máscara da marca só deixa massa no terço de baixo. Onde
+> uma tem força a outra já acabou, e o script compõe a mais clara das duas, não
+> as duas. Somadas, o vidro médio da chuva precisaria de **93%** de opacidade
+> para o portão passar — e vidro a 93% não é vidro: o reskin inteiro morreria
+> para proteger uma superfície imaginária. O resto do pior caso segue
+> impossível de propósito (as três manchas no mesmo ponto), porque ali a
+> impossibilidade é barata.
+>
+> **O que continua sendo julgamento de olho.** O ateliê só aparece nas calhas
+> entre painéis e **através** do vidro; numa tela cheia, engrossar o vidro
+> apaga a luz que a emenda acabou de acender. A intensidade da marca foi posta
+> no teto em que ela ainda **não** é a camada que manda no piso — 0,15 no
+> grafite, 0,22 na chuva —, e a presença dela veio de **escala** (115vmin), que
+> é de graça: o pior caso já assume a cor da marca em algum pixel, então o
+> tamanho não custa contraste nenhum.

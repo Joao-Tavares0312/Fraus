@@ -222,21 +222,30 @@
      que `scripts/contraste.mjs` verifica o texto -- superficie translucida
      nao tem cor fixa, e o pior caso e o unico caso honesto de medir.
 
-     Os pisos sao mais ESCUROS que --muted (L 0.274), que ja esta no conjunto
-     verificado ha tempo. Se algum dia um piso passar de 0.274, isso nao e um
-     detalhe: e o sinal de que o vidro clareou a ponto de ameacar o texto, e a
-     espessura correspondente precisa de mais opacidade. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 45%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 62%, transparent);
+     Os pisos nasceram mais ESCUROS que --muted (L 0.274), que ja estava no
+     conjunto verificado ha tempo, e por um tempo isso serviu de alarme barato:
+     piso acima de 0.274 significava vidro clareando a ponto de ameacar o
+     texto. NAO SERVE MAIS, e vale dizer por que em vez de deixar a frase
+     bonita no arquivo: com o atelie aceso, o vidro fino ja passa de 0.274 nos
+     dois temas e ainda assim cruza AA. O alarme virou falso positivo, e quem
+     manda hoje e a medicao -- `node scripts/pisos.mjs` recalcula os pisos e
+     `node scripts/contraste.mjs` diz se passam. */
+  /* REMEDIDOS em 24/08/2026 ao imprimir a marca no fundo e engrossar o papel
+     pautado. `--muted-foreground` e `--destructive` sobre vidro fino cairam
+     para 4.25 e 3.86, entao a ESPESSURA ganhou opacidade -- 45% -> 55% no fino
+     e 62% -> 72% no medio. O portao manda no vidro; o vidro nao afrouxa o
+     portao, e baixar a luz para salvar contraste seria resolver pelo lado
+     errado num pedido cujo enunciado era ficar mais chamativo. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 55%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 72%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 82%, transparent);
 
-  /* REMEDIDOS em 24/08/2026, ao ligar o papel pautado: a textura entrou no
-     atelie e levantou o pior caso. Eram 0.25/0.24/0.23 com o fundo liso.
-     `--destructive` sobre eles fica em 4.58/5.05/5.61 -- passa, sem precisar
-     engrossar o vidro do grafite. */
-  --vidro-fino-piso: oklch(0.309 0.006 78);
-  --vidro-piso: oklch(0.28 0.006 78);
-  --vidro-denso-piso: oklch(0.246 0.006 78);
+  /* MEDIDOS por `node scripts/pisos.mjs`, nao estimados. Eram 0.25/0.24/0.23
+     com o fundo liso, 0.309/0.28/0.246 ao ligar o papel pautado, e estes
+     agora, com o papel forte e a marca impressa. */
+  --vidro-fino-piso: oklch(0.31 0.006 78);
+  --vidro-piso: oklch(0.274 0.006 78);
+  --vidro-denso-piso: oklch(0.253 0.006 78);
 
   --vidro-blur-fino: 8px;
   --vidro-blur: 16px;
@@ -383,10 +392,29 @@
 
      Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. O fundo deixou de
      ser papel liso nos DOIS temas, por decisao do dono do projeto. */
+  /* A OPACIDADE subiu de 0.055 para 0.12 em 24/08/2026, por reclamacao do dono
+     do projeto -- "continua a mesma coisa". A 5,5%, 1px a cada 13px sobre
+     grafite escuro nao chega a ser visto, entao a peca existia no codigo e nao
+     na tela. A contencao da secao 3.1 ja tinha sido negociada e emendada; a
+     implementacao e que continuou protegendo o contrato antigo. */
   --pauta-cor: oklch(0.93 0.02 75);
-  --pauta-op: 0.055;
+  --pauta-op: 0.12;
   --pauta-espaco: 13px;
   --pauta-peso: 1px;
+
+  /* --- A MARCA IMPRESSA NO PAPEL ---------------------------------------
+     O monograma sangrando pela quina inferior direita, pintado por MASCARA
+     (ver Atelier.tsx). A cor e token porque e exatamente onde os dois temas
+     discordam: no grafite a marca e o ouro do proprio `--primary`, e na chuva
+     ela vira o magenta do neon -- "a logo no fundo com o tema respectivo
+     aplicado", que foi o pedido.
+
+     Nao carrega dado nenhum: e a mesma camada do atelie, o unico lugar onde
+     cor saturada nao inventa canal de significado.
+
+     Emenda de 24/08/2026 as secoes 3.1 e 8 -- ver DESIGN.md. */
+  --marca-cor: var(--atelie-marca);
+  --marca-op: 0.15;
 }
 
 /* ---------------------------------------------------------------------------
@@ -478,16 +506,22 @@
      Baixar a luz para salvar o contraste teria sido resolver pelo lado
      errado, ainda mais num tema cujo pedido era ficar mais chamativo.
      45% -> 68% no fino, 62% -> 74% no medio, 82% -> 86% no denso. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 71%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 75%, transparent);
+  /* TERCEIRA rodada de engrossamento, mesmo motivo das duas primeiras: a marca
+     impressa e o papel mais forte somaram luz. 71% -> 81% no fino, 75% -> 85%
+     no medio. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 81%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 85%, transparent);
   --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
 
-  /* Segunda rodada de engrossamento, e pelo mesmo motivo da primeira: o papel
-     pautado somou luz ao atelie e `--destructive` sobre vidro fino caiu para
-     4.46:1. 68% -> 71% no fino e 74% -> 75% no medio devolvem 4.62 e 4.84. */
-  --vidro-fino-piso: oklch(0.307 0.031 274);
-  --vidro-piso: oklch(0.294 0.031 274);
-  --vidro-denso-piso: oklch(0.257 0.031 274);
+  /* MEDIDOS por `node scripts/pisos.mjs`. Os valores anteriores (0.307/0.294/
+     0.257) eram OTIMISTAS mesmo para o atelie da epoca -- refeita a conta com
+     as camadas do tema completas, o vidro fino dava 0.333 e nao 0.307. O
+     portao vinha medindo uma superficie mais escura do que a que existe, ou
+     seja, devolvendo verde com folga que nao havia. Este e exatamente o modo
+     de falha que o comentario acima descreve, e ele aconteceu aqui. */
+  --vidro-fino-piso: oklch(0.295 0.031 274);
+  --vidro-piso: oklch(0.277 0.031 274);
+  --vidro-denso-piso: oklch(0.273 0.031 274);
 
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
      superficie de vidro tem quina, entao acender a aresta acende a interface
@@ -543,7 +577,13 @@
      com um atelie aceso -- no grafite, 5,5% ja marca presenca sobre grafite
      liso. */
   --pauta-cor: oklch(0.85 0.16 205);
-  --pauta-op: 0.13;
+  --pauta-op: 0.22;
+
+  /* A MARCA vira tubo de MAGENTA -- o par do ciano da pauta, e o mesmo magenta
+     da quina baixa do vidro. Mais forte que no grafite pelo mesmo motivo de
+     todas as outras luzes deste tema: aqui ela compete com um atelie aceso. */
+  --marca-cor: oklch(0.7 0.24 330);
+  --marca-op: 0.22;
 }
 
 @layer base {
