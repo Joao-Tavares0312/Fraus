@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useReducedMotion } from "motion/react";
 import {
   CONTADOR_ZERADO,
@@ -10,170 +9,8 @@ import {
   registrarClique,
 } from "@/lib/contadorSegredo";
 import { useMentira } from "@/lib/mentira";
-import {
-  type LeituraDeCliques,
-  lerCliques,
-  vereditoDe,
-} from "@/lib/pontuarCliques";
-import { cn } from "@/lib/utils";
-
-/**
- * O QUE A FENDA REVELA: Fraus lendo QUEM clicou.
- *
- * A versao anterior deste painel era um cartao com uma citacao -- trivia, e por
- * isso paia: contava um fato em vez de provocar a sensacao que e a tese do
- * produto. Agora os cinco cliques, que tem timestamps, sao lidos como a conversa
- * que eles de fato sao, e o desfecho e a acusacao: voce diria outra coisa se
- * perguntassem.
- *
- * A HONESTIDADE FICA VISIVEL NA TELA, e nao so no comentario: o painel declara
- * que a leitura sai SO do sinal de tempo. O front nao carrega BERTimbau, e
- * chamar isto de "score do Fraus" seria o projeto mentindo sobre a propria
- * metodologia dentro de uma piada.
- *
- * A fonte da citacao e Cicero, `De Natura Deorum` III.17, e nao a `Eneida` VI:
- * Fraus NAO esta na lista do vestibulo do Orco (la estao Luctus, Curae, Morbi,
- * Senectus, Metus, Fames, Egestas, Letum, Labos, Sopor, Bellum, as Eumenides e
- * Discordia). Cicero e quem a nomeia, e da a genealogia junto -- inclusive o
- * irmao Dolus, que e o nome antigo deste projeto.
- */
-function Revelacao({
-  leitura,
-  aoFechar,
-}: {
-  leitura: LeituraDeCliques | null;
-  aoFechar: () => void;
-}) {
-  const painel = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    painel.current?.focus();
-    const encerra = setTimeout(aoFechar, 8_000);
-    function aoTeclar(evento: KeyboardEvent) {
-      if (evento.key === "Escape") aoFechar();
-    }
-    document.addEventListener("keydown", aoTeclar);
-    return () => {
-      clearTimeout(encerra);
-      document.removeEventListener("keydown", aoTeclar);
-    };
-  }, [aoFechar]);
-
-  // Sem guarda de montagem, e ela nao faz falta: este componente so e
-  // renderizado quando o contador chega a cinco, o que exige cinco cliques --
-  // ou seja, ele NUNCA existe no render do servidor, e `document` sempre esta
-  // la quando esta linha roda.
-  //
-  // POR PORTAL, DIRETO NO <body>, e isto e conserto de bug observado: a marca
-  // mora dentro da barra lateral, e a barra usa `transform` para recolher.
-  // Ancestral com `transform` vira o bloco de contencao de qualquer descendente
-  // `position: fixed` -- entao o painel e o selo, que se creem colados na
-  // viewport, apareciam grudados na coluna da esquerda, por cima dos itens de
-  // navegacao. No `<body>` nao ha transform no caminho, e `fixed` volta a
-  // significar viewport.
-  return createPortal(
-    // O fundo e clicavel para fechar, e por isso NAO carrega papel de botao: quem
-    // navega por teclado fecha com Esc, que o efeito acima escuta. Um `onClick`
-    // em div de fundo sem par de teclado seria armadilha; aqui o par existe.
-    //
-    // `bg-background/80` e nao opaco: os indicadores mentindo precisam ficar
-    // VISIVEIS atras do painel, senao a metade mais interessante da encenacao
-    // acontece onde ninguem ve.
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-[2px]"
-      onClick={aoFechar}
-    >
-      {/* TRAVA 3: o selo e INESCAPAVEL. Enquanto a tela mente ele fica no mesmo
-          quadro dos numeros -- nao existe captura de tela da dashboard mentindo
-          sem este aviso dentro dela. */}
-      <p
-        role="alert"
-        className="fixed top-4 left-1/2 -translate-x-1/2 rounded-sm border border-destructive bg-destructive/15 px-3 py-1.5 text-xs font-semibold tracking-[0.15em] text-destructive uppercase"
-      >
-        Fraus está mentindo nesta tela
-      </p>
-
-      <div
-        ref={painel}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Fraus leu os seus cliques"
-        tabIndex={-1}
-        onClick={(evento) => evento.stopPropagation()}
-        className="max-w-md rounded-lg border border-border bg-card p-7 outline-none"
-      >
-        <p className="text-center text-3xl font-semibold tracking-[0.2em] text-primary">
-          FRAVS
-        </p>
-
-        {leitura ? (
-          <>
-            <p className="mt-6 text-xs text-muted-foreground">
-              Os seus cinco cliques têm horário. São uma conversa:
-            </p>
-
-            {/* As latencias, com a hesitacao apontada. `num` e a classe
-                monoespacada tabular do sistema -- numero que se compara nao
-                pode dancar de largura. */}
-            <ul className="mt-2 flex flex-wrap gap-2">
-              {leitura.latenciasMs.map((ms, i) => (
-                <li
-                  key={i}
-                  className={cn(
-                    "num rounded-sm border px-2 py-1 text-xs",
-                    i === leitura.indiceDaHesitacao
-                      ? "border-destructive text-destructive"
-                      : "border-border text-muted-foreground",
-                  )}
-                >
-                  {ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`}
-                  {i === leitura.indiceDaHesitacao ? " ←" : ""}
-                </li>
-              ))}
-            </ul>
-
-            <p className="mt-5 flex items-baseline gap-2">
-              <span className="num text-4xl leading-none font-semibold text-foreground">
-                {leitura.leitura}
-              </span>
-              <span className="text-sm text-muted-foreground">/ 100</span>
-            </p>
-
-            {/* A RESSALVA, em texto visivel e sem eufemismo. Ela nao e nota de
-                rodape: e o que separa uma piada honesta de o projeto mentindo
-                sobre a propria metodologia. */}
-            <p className="mt-2 text-[0.6875rem] leading-snug text-muted-foreground">
-              Só o <strong>sinal de tempo</strong> — sem texto, sem emoji, sem
-              modelo. Não é o score do Fraus, e não vira nota nem categoria.
-            </p>
-
-            <p className="mt-5 border-t border-compasso pt-4 text-sm text-foreground">
-              {vereditoDe(leitura)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              E o que você diria, se eu perguntasse? Que gostou.
-            </p>
-          </>
-        ) : (
-          // Sem latencia nao ha leitura, e leitura sem dado seria numero
-          // inventado -- a invariante 2 vale inclusive dentro do easter egg.
-          <p className="mt-6 text-sm text-muted-foreground">
-            Não consegui medir o seu ritmo. Sem dado, não invento número — nem
-            aqui.
-          </p>
-        )}
-
-        <p className="mt-6 text-xs text-muted-foreground">
-          <em>Erebo et Nocte nata</em> — filha do Escuro e da Noite, irmã de{" "}
-          <strong className="text-foreground">Dolus</strong> e de{" "}
-          <strong className="text-foreground">Metus</strong>. Cícero,{" "}
-          <em>De Natura Deorum</em> III.17
-        </p>
-      </div>
-    </div>,
-    document.body,
-  );
-}
+import { type LeituraDeCliques, lerCliques } from "@/lib/pontuarCliques";
+import { RevelacaoFraus } from "./RevelacaoFraus";
 
 /**
  * A MARCA, e o unico gesto que ela responde.
@@ -336,7 +173,7 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
         />
       </svg>
 
-      {aberta && <Revelacao leitura={leitura} aoFechar={fechar} />}
+      {aberta && <RevelacaoFraus leitura={leitura} aoFechar={fechar} />}
     </>
   );
 }
