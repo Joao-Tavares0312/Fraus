@@ -133,8 +133,11 @@ export function RevelacaoFraus({
 
       {/* A GRADE A LASER fugindo ao horizonte, e o sol atras dela. Sao fundo:
           `aria-hidden`, sem conteudo, e nao roubam foco nem leitura. */}
-      <div className="fenda-ceu" aria-hidden />
-      <div className="fenda-sol" aria-hidden />
+      {/* O sol vive DENTRO do ceu, e o ceu termina no horizonte: e o recorte
+          do ceu que faz o sol se POR em vez de flutuar inteiro. */}
+      <div className="fenda-ceu" aria-hidden>
+        <div className="fenda-sol" />
+      </div>
       <div className="fenda-horizonte" aria-hidden />
       <div className="fenda-grade" aria-hidden />
       <div className="fenda-scanlines" aria-hidden />
@@ -260,6 +263,11 @@ export function RevelacaoFraus({
  * segredo que dura segundos, e deixa-las no `globals.css` as ofereceria como
  * vocabulario reutilizavel -- que e exatamente o que elas nao sao. Some o
  * componente, some o estilo.
+ *
+ * ATENCAO AO EDITAR: o CSS abaixo mora dentro de um TEMPLATE LITERAL. Uma crase
+ * num comentario de CSS ali fecha a string e o arquivo inteiro para de
+ * compilar, com um "'}' expected" apontando para a linha errada. Ja aconteceu
+ * tres vezes nesta mesma sessao. Cite nome de propriedade sem crase.
  */
 function EstiloDaCena() {
   return (
@@ -288,21 +296,30 @@ function EstiloDaCena() {
       .fenda-sol {
         position: absolute;
         left: 50%;
-        bottom: 22%;
+        /* NEGATIVO de proposito: o disco desce ABAIXO da base do ceu, e como o
+           ceu recorta, a parte que passa do horizonte simplesmente nao existe.
+           E isto -- e so isto -- que separa um sol se pondo de uma bola
+           listrada flutuando no ar, que foi o que a primeira versao entregou. */
+        bottom: -34%;
         width: min(46rem, 92vw);
         aspect-ratio: 1;
         translate: -50% 0;
         border-radius: 50%;
         background: linear-gradient(180deg, oklch(0.9 0.19 80) 0%, oklch(0.76 0.25 35) 42%, oklch(0.62 0.29 350) 78%, oklch(0.45 0.26 320) 100%);
+        /* SOLIDO EM CIMA, ABERTO EMBAIXO -- as duas mascaras se SOMAM (union),
+           nao se cortam. A primeira preserva o topo inteiro; a segunda abre as
+           faixas, e como ela vale para o disco todo, o efeito visivel e listra
+           so onde o topo solido acabou. Faixas uniformes de alto a baixo leem
+           como persiana; e a assimetria que le como sol. */
         -webkit-mask-image:
-          repeating-linear-gradient(180deg, #000 0 14px, transparent 14px 20px),
-          linear-gradient(180deg, transparent 0%, #000 26%);
-        -webkit-mask-composite: source-in;
+          linear-gradient(180deg, #000 0 38%, transparent 38%),
+          repeating-linear-gradient(180deg, #000 0 9px, transparent 9px 17px);
+        -webkit-mask-composite: source-over;
         mask-image:
-          repeating-linear-gradient(180deg, #000 0 14px, transparent 14px 20px),
-          linear-gradient(180deg, transparent 0%, #000 26%);
-        mask-composite: intersect;
-        opacity: 0.72;
+          linear-gradient(180deg, #000 0 38%, transparent 38%),
+          repeating-linear-gradient(180deg, #000 0 9px, transparent 9px 17px);
+        mask-composite: add;
+        opacity: 0.8;
       }
 
       /* A LINHA DO HORIZONTE acesa, onde o sol encontra a grade. Sem ela as
@@ -318,9 +335,14 @@ function EstiloDaCena() {
       }
 
       /* O CEU acima do horizonte, para o sol nao encostar direto no degrade. */
+      /* O CEU e o RECORTE do sol: ele termina exatamente no horizonte, e o
+         overflow: hidden e o que corta o disco ali. Sem este container o sol
+         precisaria de uma mascara propria para se por, e mascara sobre mascara
+         (as faixas ja usam duas) nao compoe em todos os navegadores. */
       .fenda-ceu {
         position: absolute;
         inset: 0 0 26% 0;
+        overflow: hidden;
         background: radial-gradient(80% 100% at 50% 100%, oklch(0.5 0.2 340 / 0.35), transparent 70%);
       }
 
@@ -339,16 +361,21 @@ function EstiloDaCena() {
            ele lia como defeito de render, nao como grade. Fazer a grade nascer
            JA a alguma distancia resolve na raiz: um chao real tambem nao mostra
            detalhe no infinito. */
-        -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 8%, #000 34%, #000 100%);
-        mask-image: linear-gradient(180deg, transparent 0%, transparent 8%, #000 34%, #000 100%);
+        -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 14%, #000 46%, #000 100%);
+        mask-image: linear-gradient(180deg, transparent 0%, transparent 14%, #000 46%, #000 100%);
       }
       .fenda-grade::before {
         content: "";
         position: absolute;
         inset: -60% -60% -20% -60%;
-        transform: rotateX(74deg);
+        /* 68 graus e nao 74: quanto mais rasante a inclinacao, mais longe fica
+           o ponto de fuga e mais as linhas verticais se comprimem umas nas
+           outras perto dele -- que era a origem do risco solido no centro.
+           Levantar a camera afasta as linhas e o risco deixa de se formar, em
+           vez de ser mascarado depois. */
+        transform: rotateX(68deg);
         background:
-          repeating-linear-gradient(90deg, oklch(0.82 0.18 200 / 0.5) 0 1px, transparent 1px 4.5rem),
+          repeating-linear-gradient(90deg, oklch(0.82 0.18 200 / 0.5) 0 1px, transparent 1px 5.5rem),
           repeating-linear-gradient(0deg, oklch(0.72 0.24 330 / 0.55) 0 1px, transparent 1px 3rem);
         animation: fenda-avanco 2.6s linear infinite;
       }
