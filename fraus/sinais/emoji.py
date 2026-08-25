@@ -15,6 +15,7 @@ from pathlib import Path
 import emoji as lib_emoji
 
 from fraus.modelos import Conversa
+from fraus.sinais.curadoria import CURADORIA_VAZIA, Curadoria
 
 CAMINHO_LEXICON = Path(__file__).parent.parent / "dados" / "emoji_sentiment_ranking.csv"
 LIMIAR_POLARIDADE = 0.1
@@ -35,8 +36,17 @@ def _lexicon() -> dict[str, float]:
     return tabela
 
 
-def score_do_emoji(caractere: str) -> float:
-    """Polaridade em [-1, 1]. Emoji fora do lexicon vale 0."""
+def score_do_emoji(caractere: str, curadoria: Curadoria | None = None) -> float:
+    """Polaridade em [-1, 1]. Emoji fora do lexicon e nao curado vale 0.
+
+    A CURADORIA VEM PRIMEIRO. O Emoji Sentiment Ranking anotou 751 emojis em
+    2015: tudo que o Unicode acrescentou depois vale 0 aqui, e e exatamente esse
+    buraco que o analista preenche. Vencer o ranking, e nao so complementa-lo,
+    tambem permite corrigir um emoji cuja leitura mudou de uso desde 2015.
+    """
+    curado = (curadoria or CURADORIA_VAZIA).score_de(caractere)
+    if curado is not None:
+        return curado
     return _lexicon().get(caractere, 0.0)
 
 
@@ -77,7 +87,9 @@ def linhas_lexicon() -> list[dict]:
     return linhas
 
 
-def features_emoji(conversa: Conversa) -> dict[str, float]:
+def features_emoji(
+    conversa: Conversa, curadoria: Curadoria | None = None
+) -> dict[str, float]:
     """Agrega os emojis das mensagens DO CLIENTE numa linha de features."""
     pares: list[tuple[str, float]] = []
     for mensagem in conversa.mensagens_cliente:
@@ -92,7 +104,7 @@ def features_emoji(conversa: Conversa) -> dict[str, float]:
             "emoji_posicao_relativa_media": 0.0,
         }
 
-    scores = [score_do_emoji(caractere) for caractere, _ in pares]
+    scores = [score_do_emoji(caractere, curadoria) for caractere, _ in pares]
     posicoes = [posicao for _, posicao in pares]
     total = len(scores)
 
