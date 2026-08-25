@@ -192,3 +192,83 @@ def test_contribuicoes_seguem_iguais_depois_da_extracao():
 
     assert set(contribuicoes) == set(NOMES_FEATURES)
     assert contribuicoes["escalou"] != 0.0
+
+
+# --- A CURADORIA CHEGA AO SCORE --------------------------------------------
+
+from datetime import datetime, timezone  # noqa: E402
+
+from fraus.fusor import montar_features  # noqa: E402
+from fraus.modelos import Conversa, Mensagem  # noqa: E402
+from fraus.sinais.curadoria import Curadoria  # noqa: E402
+from fraus.sinais.emocao import NOMES_EMOCOES  # noqa: E402
+
+
+class _TextoDuble:
+    """Tres probabilidades por mensagem, na ordem 0/1/2 da invariante 8."""
+
+    def prever_mensagens(self, textos):
+        return [[0.2, 0.3, 0.5] for _ in textos]
+
+
+class _EmocaoDuble:
+    def prever_mensagens(self, textos):
+        uniforme = 1.0 / len(NOMES_EMOCOES)
+        return [[uniforme] * len(NOMES_EMOCOES) for _ in textos]
+
+
+class _IroniaDuble:
+    def prever_mensagens(self, textos):
+        return [[0.9, 0.1] for _ in textos]
+
+
+def _conversa_com(texto: str) -> Conversa:
+    base = datetime(2026, 8, 25, 10, 0, 0, tzinfo=timezone.utc)
+    return Conversa(
+        id="c1",
+        canal="csv",
+        iniciada_em=base,
+        mensagens=[Mensagem(autor="cliente", texto=texto, enviada_em=base)],
+    )
+
+
+def test_curadoria_atravessa_montar_features():
+    """O elo que faltava: sem passar aqui, curar palavra nao moveria o score.
+
+    As 35 chaves continuam as mesmas (invariante 9) -- o que muda e o VALOR de
+    `lexico_polaridade_media`, nunca o conjunto de features.
+    """
+    conversa = _conversa_com("o app ta lentissimo")
+    curadoria = Curadoria(palavras={"lentissimo": -1})
+
+    sem = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble())
+    com = montar_features(
+        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble(), curadoria
+    )
+
+    assert set(sem) == set(com) == set(NOMES_FEATURES)
+    assert sem["lexico_polaridade_media"] == 0.0
+    assert com["lexico_polaridade_media"] == -1.0
+    assert com["lexico_cobertura"] > sem["lexico_cobertura"]
+
+
+def test_curadoria_de_emoji_atravessa_montar_features():
+    conversa = _conversa_com("acabou assim \N{MELTING FACE}")
+    curadoria = Curadoria(emojis={"\N{MELTING FACE}": -0.8})
+
+    sem = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble())
+    com = montar_features(
+        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble(), curadoria
+    )
+
+    assert sem["emoji_score_medio"] == 0.0
+    assert com["emoji_score_medio"] == -0.8
+
+
+def test_sem_curadoria_o_vetor_e_o_de_antes():
+    conversa = _conversa_com("o atendimento foi otimo")
+    assert montar_features(
+        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble()
+    ) == montar_features(
+        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble(), None
+    )
