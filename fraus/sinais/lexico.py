@@ -30,6 +30,8 @@ from functools import lru_cache
 from pathlib import Path
 
 from fraus.modelos import Conversa
+from fraus.sinais.curadoria import CURADORIA_VAZIA, Curadoria
+from fraus.sinais.normalizacao import sem_acento
 
 CAMINHO_LEXICON = Path(__file__).parent.parent / "dados" / "sentilex_pt02.csv"
 
@@ -64,10 +66,16 @@ def _lexicon() -> dict[str, int]:
     return tabela
 
 
-def sem_acento(texto: str) -> str:
-    return "".join(
-        c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn"
-    )
+# Reexportado: `sem_acento` mudou de casa para `fraus/sinais/normalizacao.py`
+# quando a curadoria passou a precisar dele tambem -- importar dali para ca
+# faria ciclo, porque este modulo ja importa a curadoria. Quem importava daqui
+# continua importando daqui.
+__all__ = [
+    "sem_acento",
+    "polaridade_do_termo",
+    "anotar_texto",
+    "features_lexico",
+]
 
 
 @lru_cache(maxsize=1)
@@ -91,17 +99,31 @@ def _lexicon_sem_acento() -> dict[str, int]:
     return tabela
 
 
-def _polaridade(termo: str) -> int | None:
-    """Busca exata primeiro; sem acento como reserva. None se nao existe."""
+def _polaridade(termo: str, curadoria: Curadoria = CURADORIA_VAZIA) -> int | None:
+    """Busca a polaridade. A CURADORIA VEM PRIMEIRO; sem acento como reserva.
+
+    A ordem e o inteiro da regra: o que o analista curou vence as 79.189 formas
+    do SentiLex, senao a feature so serviria para preencher buraco e nao para
+    corrigir polaridade errada de dominio.
+
+    UMA consulta so a curadoria: ela tem o proprio indice sem acento e resolve
+    as duas formas por dentro. Quem possui a chave possui o indice dela --
+    pedir a este modulo que varresse os termos curados a cada token trocaria um
+    dicionario pronto por um laco.
+    """
+    curado = curadoria.polaridade_de(termo)
+    if curado is not None:
+        return curado
+
     exato = _lexicon().get(termo)
     if exato is not None:
         return exato
     return _lexicon_sem_acento().get(sem_acento(termo))
 
 
-def polaridade_do_termo(termo: str) -> int:
-    """Polaridade em -1/0/1. Termo fora do lexicon vale 0."""
-    resultado = _polaridade(termo.lower())
+def polaridade_do_termo(termo: str, curadoria: Curadoria | None = None) -> int:
+    """Polaridade em -1/0/1. Termo fora do lexicon e nao curado vale 0."""
+    resultado = _polaridade(termo.lower(), curadoria or CURADORIA_VAZIA)
     return 0 if resultado is None else resultado
 
 
@@ -110,7 +132,9 @@ def _segmentos(texto: str) -> list[str]:
     return [t for t in _FRONTEIRA.split(texto.lower()) if t.strip()]
 
 
-def anotar_texto(texto: str) -> list[tuple[str, int, bool]]:
+def anotar_texto(
+    texto: str, curadoria: Curadoria | None = None
+) -> list[tuple[str, int, bool]]:
     """Termos do lexicon achados em `texto`: (termo, polaridade final, negado).
 
     A polaridade final ja vem com a negacao aplicada. `negado` diz se ela foi
@@ -131,7 +155,7 @@ def anotar_texto(texto: str) -> list[tuple[str, int, bool]]:
             # Maior n-grama primeiro: o idioma vence o token solto que o compoe.
             for tamanho in range(min(MAIOR_NGRAMA, len(tokens) - indice), 0, -1):
                 termo = " ".join(tokens[indice:indice + tamanho])
-                polaridade = _polaridade(termo)
+                polaridade = _polaridade(termo, curadoria or CURADORIA_VAZIA)
                 if polaridade is None:
                     continue
                 negado = indice <= negacao_ate
@@ -143,7 +167,9 @@ def anotar_texto(texto: str) -> list[tuple[str, int, bool]]:
     return achados
 
 
-def features_lexico(conversa: Conversa) -> dict[str, float]:
+def features_lexico(
+    conversa: Conversa, curadoria: Curadoria | None = None
+) -> dict[str, float]:
     """Tres features do lexicon sobre as falas do cliente.
 
     `lexico_cobertura` existe para o fusor saber QUANTA evidencia lexical
@@ -158,7 +184,7 @@ def features_lexico(conversa: Conversa) -> dict[str, float]:
             "lexico_cobertura": 0.0,
         }
 
-    achados = [a for texto in textos for a in anotar_texto(texto)]
+    achados = [a for texto in textos for a in anotar_texto(texto, curadoria)]
     total_tokens = sum(len(_TOKEN.findall(texto.lower())) for texto in textos)
 
     if not achados:

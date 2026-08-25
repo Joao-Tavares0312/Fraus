@@ -12,16 +12,22 @@ continua sendo o fusor treinado -- o analista conserta o dicionario, nao a nota.
 Um ajuste por cima do numero do modelo criaria uma SEGUNDA REGUA, que e a dor
 que o README ja documenta com `PESO_NEUTRO_NO_SCORE`.
 
-E UM DICIONARIO BURRO, DE PROPOSITO: nao normaliza, nao valida escala e nao sabe
-o que e acento. Quem normaliza e quem escreve (a rota) e quem consulta (o
-lexico, que ja calcula `sem_acento` para o proprio indice de reserva). Ensinar
-normalizacao aqui criaria uma segunda regra de normalizacao, e duas regras
-divergem.
+ELA NAO VALIDA ESCALA: quem impoe -1/0/+1 na palavra e [-1,1] no emoji e a rota,
+onde a mensagem de recusa pode nomear a regua. Aqui ja chega valido.
+
+O QUE ELA SABE, e precisa saber, e ACENTO -- pelo mesmo motivo que o lexicon
+base tem indice de reserva: quem cura `lentissimo` com acento espera que o
+cliente que digitou sem acento seja alcancado. Quem possui a chave possui o
+indice dela; empurrar isso para o lexico o faria varrer os termos curados a cada
+token, em vez de consultar um dicionario pronto.
 """
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from types import MappingProxyType
 from typing import Mapping
+
+from fraus.sinais.normalizacao import sem_acento
 
 
 @dataclass(frozen=True)
@@ -38,6 +44,35 @@ class Curadoria:
     emojis: Mapping[str, float] = field(default_factory=dict)
     versao: int = 0
 
+    @cached_property
+    def _palavras_sem_acento(self) -> Mapping[str, int]:
+        """Indice de reserva das palavras curadas, sem diacritico.
+
+        Espelha o `_lexicon_sem_acento` do lexico base, e pelo mesmo motivo: o
+        cliente de chat nem sempre acentua. Sem ele, curar `lentissimo` com
+        acento nao alcancaria a fala que veio sem.
+
+        CONFLITO ZERA, tambem como no lexico base: se duas palavras curadas
+        colapsam na mesma chave sem acento com polaridades diferentes, nenhuma
+        das duas responde por ela. Chute de polaridade errado e pior que termo
+        ausente -- e aqui a curadora ainda pode cadastrar a forma exata.
+
+        `cached_property` num dataclass congelado funciona porque ela escreve no
+        `__dict__` da instancia diretamente, sem passar pelo `__setattr__` que o
+        `frozen` bloqueia. O indice e construido uma vez por objeto, e o objeto
+        vive uma requisicao.
+        """
+        indice: dict[str, int] = {}
+        conflitantes: set[str] = set()
+        for forma, polaridade in self.palavras.items():
+            chave = sem_acento(forma)
+            if chave in indice and indice[chave] != polaridade:
+                conflitantes.add(chave)
+            indice[chave] = polaridade
+        for chave in conflitantes:
+            del indice[chave]
+        return indice
+
     def polaridade_de(self, termo: str) -> int | None:
         """Polaridade curada, ou `None` se o termo nao foi curado.
 
@@ -46,7 +81,10 @@ class Curadoria:
         polaridade errada para atendimento. As duas respostas nao podem colapsar
         numa so.
         """
-        return self.palavras.get(termo)
+        exato = self.palavras.get(termo)
+        if exato is not None:
+            return exato
+        return self._palavras_sem_acento.get(sem_acento(termo))
 
     def score_de(self, caractere: str) -> float | None:
         """Score curado do emoji, ou `None` se nao foi curado."""
