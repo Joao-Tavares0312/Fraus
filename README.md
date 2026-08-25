@@ -155,8 +155,8 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
-| `FRAUS_CAMINHO_CHAVES` | `.fraus-chaves.txt` | onde a **primeira subida** grava a mestra e a chave de acesso que ela gera. Única cópia em claro delas; fora do git |
-| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente, que **vence** a gravada. Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao` (chave de fonte) e `GET /acesso/estado` (pública) |
+| `FRAUS_CAMINHO_CHAVES` | `.fraus-chaves.txt` | onde a **primeira subida** grava a mestra e a chave de acesso que ela gera. Única cópia em claro delas; fora do git, e criado com permissão **`0600`** — só o dono lê (em POSIX; no Windows quem manda é a ACL herdada da pasta) |
+| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao` (chave de fonte) e `GET /acesso/estado` (pública) |
 
 #### A autenticação já vem ligada
 
@@ -222,6 +222,27 @@ Com a variável definida, o painel da tela **não troca** a mestra: gravar por
 cima criaria duas credenciais com a do ambiente ganhando, e o botão pareceria
 funcionar sem mudar nada. A variável é também a saída de quem perdeu a chave
 gerada pela tela.
+
+#### Precedência: a variável **exclui** a gravada
+
+Definida a `FRAUS_CHAVE_MESTRA`, a mestra do banco **deixa de autorizar** — não
+é uma segunda credencial válida em paralelo, é substituição. Sem a variável, a
+gravada volta a valer sozinha, e é isso que faz a autenticação ligada pelo botão
+sobreviver a reiniciar o processo.
+
+> **Corrigido em 25/08/2026, e a inversão é deliberada.** Até aqui `e_mestra`
+> devolvia `ambiente OU banco`: as duas valiam ao mesmo tempo. Havia teste
+> afirmando isso, com o argumento de que recusar a do banco trancaria fora quem
+> tinha ligado pela tela. O argumento tem saída trivial — **apagar a variável
+> devolve o posto à mestra do banco**. O que a união criava não tinha saída: este
+> README apresenta a variável como o caminho de quem **perdeu ou vazou** a
+> mestra, e com a união a vazada continuava abrindo tudo. Pior, a variável
+> definida faz `POST /acesso/mestra` recusar a rotação com 409 — então não
+> restava caminho nenhum pela API para matar a chave vazada.
+>
+> A assimetria é o argumento inteiro: ser trancado fora é **reversível**;
+> credencial vazada que sobrevive ao procedimento de revogação documentado
+> **não é**. Fixado em `tests/test_autenticacao_runtime.py`, nos dois sentidos.
 
 `GET /acesso/estado` responde `{"ligada": ..., "origem": "ambiente"|"banco"|null}`
 e é a **única** rota que continua pública com a autenticação ligada — a tela
@@ -435,7 +456,7 @@ ordem lá é a ordem de importância.
 | **Agregação no servidor (fim do N+1)** | ✅ | `/serie-temporal`, `/lexico`, `/indicadores` (com tempo mediano) e o recorte `de`/`ate` em `/conversas`; **nenhuma tela baixa transcrição** no caminho feliz |
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
-| **Suíte** | ✅ | **350 testes** passando, build da dashboard verde, contraste AA verificado por `npm run contraste` |
+| **Suíte** | ✅ | **430 testes** de Python passando, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest) — a primeira lógica **comportamental** dele, o contador do easter egg da marca, é testada; renderização continua coberta por build e contraste |
 
 ### Falta
 

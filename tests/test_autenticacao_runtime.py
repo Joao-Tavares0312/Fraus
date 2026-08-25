@@ -48,12 +48,26 @@ def test_mestra_gravada_no_banco_passa_a_valer_no_mesmo_processo(tmp_path):
     assert autorizada.status_code == 200
 
 
-def test_ambiente_e_banco_autorizam_os_dois(tmp_path):
-    """O ambiente vence como ORIGEM declarada, nao invalida a gravada.
+def test_ambiente_EXCLUI_a_gravada(tmp_path):
+    """Com a variavel definida, ela e a UNICA mestra. A gravada nao vale mais.
 
-    Precedencia existe para responder "de onde vem a mestra vigente"; recusar a
-    do banco quando ha variavel deixaria quem gravou pela tela sem entrar depois
-    de alguem definir a variavel no ambiente.
+    ESTE TESTE INVERTEU EM 25/08/2026, e a reversao e deliberada. Ele afirmava o
+    contrario -- que as duas autorizavam juntas --, com esta justificativa:
+
+        "O ambiente vence como ORIGEM declarada, nao invalida a gravada.
+         Recusar a do banco quando ha variavel deixaria quem gravou pela tela
+         sem entrar depois de alguem definir a variavel no ambiente."
+
+    O medo e legitimo e a saida dele e trivial: apagar a variavel devolve o
+    posto a mestra do banco (fixado no teste seguinte). O que a uniao criava,
+    esse sim, nao tinha saida: o README apresenta `FRAUS_CHAVE_MESTRA` como o
+    caminho de quem PERDEU ou VAZOU a mestra da tela, e com a uniao a vazada
+    continuava abrindo tudo. Pior, a variavel definida faz `/acesso/mestra`
+    recusar a rotacao com 409 -- entao nao sobrava caminho nenhum pela API para
+    matar a chave vazada.
+
+    A assimetria e o argumento: ser trancado fora e REVERSIVEL, credencial
+    vazada que sobrevive ao procedimento de revogacao documentado nao e.
     """
     do_ambiente = "segredo-do-ambiente"
     cliente, banco = _cliente(tmp_path, chave_mestra=do_ambiente)
@@ -65,7 +79,7 @@ def test_ambiente_e_banco_autorizam_os_dois(tmp_path):
     ).status_code == 200
     assert cliente.get(
         "/conversas", headers={"Authorization": f"Bearer {do_banco}"}
-    ).status_code == 200
+    ).status_code == 401
 
 
 def test_chave_errada_continua_401_com_as_duas_procedencias(tmp_path):
@@ -122,3 +136,19 @@ def test_saude_responde_sem_chave_com_autenticacao_ligada(tmp_path):
     resposta = cliente.get("/saude")
     assert resposta.status_code == 200
     assert resposta.json() == {"status": "ok"}
+
+
+def test_sem_ambiente_a_gravada_continua_valendo(tmp_path):
+    """O par do teste acima: tirar a variavel devolve o posto a mestra do banco.
+
+    Sem isto, o conserto de precedencia poderia ter matado a mestra gravada em
+    TODA situacao -- e ela e o que faz a autenticacao ligada por botao
+    sobreviver a reiniciar o processo.
+    """
+    gravada = "frm_" + "c" * 64
+    cliente, banco = _cliente(tmp_path, chave_mestra=None)
+    _grava(banco, gravada)
+
+    assert cliente.get(
+        "/conversas", headers={"Authorization": f"Bearer {gravada}"}
+    ).status_code == 200

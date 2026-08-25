@@ -103,12 +103,26 @@ def fonte_autorizada(banco: Banco, chave: str) -> dict:
 
 
 def e_mestra(ctx: Contexto, chave: str) -> bool:
-    """Confere a chave contra as DUAS procedencias da mestra.
+    """Confere a chave contra a mestra VIGENTE -- uma so, nunca as duas.
 
     A do ambiente e comparada em tempo constante contra o valor cru; a do
     banco, contra o hash (`credencial.confere` tambem nao vaza pelo tempo).
-    As duas conferencias rodam SEMPRE, mesmo quando a primeira ja decidiu:
-    curto-circuitar faria o tempo de resposta contar qual das duas existe.
+    As duas conferencias rodam SEMPRE, mesmo quando a resposta ja esta
+    decidida: curto-circuitar faria o tempo de resposta contar qual das duas
+    existe.
+
+    A PRECEDENCIA E EXCLUDENTE, e isto e conserto de 25/08/2026. Antes daqui
+    saia `do_ambiente or do_banco`, e as duas mestras valiam ao mesmo tempo --
+    uniao, nao precedencia. O README apresenta `FRAUS_CHAVE_MESTRA` como a
+    saida de quem PERDEU ou VAZOU a mestra gerada pela tela, e `/acesso/mestra`
+    afirma o mesmo ao recusar a rotacao com 409 ("tem precedencia sobre a
+    gravada"). Com a uniao, quem seguia esse caminho achando ter revogado a
+    chave vazada nao havia revogado nada -- e, como a variavel definida bloqueia
+    a rotacao, nao sobrava nenhum caminho pela API para mata-la.
+
+    Com a variavel definida ela e a UNICA mestra. Sem ela, a gravada volta a
+    valer sozinha -- que e o que faz a autenticacao ligada por botao sobreviver
+    a reiniciar o processo.
     """
     do_ambiente = False
     if ctx.chave_mestra is not None:
@@ -116,7 +130,9 @@ def e_mestra(ctx: Contexto, chave: str) -> bool:
             chave.encode("utf-8"), ctx.chave_mestra.encode("utf-8")
         )
     do_banco = credencial.confere(chave, ctx.banco.hash_da_chave_mestra())
-    return do_ambiente or do_banco
+    # A leitura do banco acontece de qualquer jeito (tempo constante); o que
+    # muda e se ela CONTA. `origem_da_mestra` ja decide isso do mesmo jeito.
+    return do_ambiente if ctx.chave_mestra is not None else do_banco
 
 
 def acesso_autorizado(ctx: Contexto, chave: str) -> bool:
