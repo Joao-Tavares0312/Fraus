@@ -160,6 +160,30 @@ de papel sob luz de escritório — o analista fica horas nela.
 > `--marca-cor` (chapada) e a rampa (duas paradas) são coisas **diferentes**: a
 > primeira pinta a marca impressa no fundo do ateliê, que é máscara e não tem
 > gradiente. Trocar uma pela outra apaga o gradiente que *é* a marca.
+
+> **Emenda de 25/08/2026 (segunda) — a única mentira autorizada da interface.**
+> Enquanto o painel dos cinco cliques está aberto, os quatro indicadores da
+> visão geral exibem números **falsos**. É violação deliberada e **encenada** da
+> §5 ("sem sinal é cabeça vazada, nunca zero") e da invariante 2, e ela só se
+> sustenta porque encena. As quatro travas, em `lib/mentira.tsx`:
+>
+> 1. **Nada sai da memória** — zero escrita no banco, zero chamada à API. É
+>    estado de render, e morre no fechamento. Nenhum agregado, export ou
+>    ordenação chega perto disto.
+> 2. **Leitor de tela recebe a verdade** — o número falso é `aria-hidden`, e um
+>    `sr-only` ao lado diz que o valor foi falsificado e qual é o real.
+> 3. **O selo é inescapável** — o aviso em `--destructive` fica no mesmo quadro
+>    dos números. Não existe captura de tela da dashboard mentindo sem ele
+>    dentro dela.
+> 4. **Volta sozinha** — 8 s, `Esc` ou clique fora, e também no desmonte do
+>    componente (quem navega com o painel aberto não deixa a mentira para trás).
+>
+> **Gráficos e tabela não mentem**, por decisão: espalhar isso pelo Recharts é
+> onde deixa de ser contido e passa a arriscar sobrar na tela depois do
+> fechamento — o defeito que as travas existem para impedir. O trilho de
+> referência **some** enquanto o número mente: o ponteiro marca a posição
+> verdadeira, e ao lado de um número falso ele leria como bug de render, não
+> como ironia.
 >
 > O "fade + gradiente" é uma **segunda camada de máscara** cortada por
 > `mask-composite: intersect`: a marca nasce sólida onde sai da tela e se

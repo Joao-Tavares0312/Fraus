@@ -8,17 +8,41 @@ import {
   abriu,
   registrarClique,
 } from "@/lib/contadorSegredo";
+import { useMentira } from "@/lib/mentira";
+import {
+  type LeituraDeCliques,
+  lerCliques,
+  vereditoDe,
+} from "@/lib/pontuarCliques";
+import { cn } from "@/lib/utils";
 
 /**
- * O QUE A FENDA REVELA.
+ * O QUE A FENDA REVELA: Fraus lendo QUEM clicou.
  *
- * A fonte e Cicero, `De Natura Deorum` III.17, e nao a `Eneida` VI: Fraus NAO
- * esta na lista do vestibulo do Orco (la estao Luctus, Curae, Morbi, Senectus,
- * Metus, Fames, Egestas, Letum, Labos, Sopor, Bellum, as Eumenides e Discordia).
- * Cicero e quem a nomeia, e da a genealogia junto -- inclusive o irmao Dolus,
- * que e o nome antigo deste projeto.
+ * A versao anterior deste painel era um cartao com uma citacao -- trivia, e por
+ * isso paia: contava um fato em vez de provocar a sensacao que e a tese do
+ * produto. Agora os cinco cliques, que tem timestamps, sao lidos como a conversa
+ * que eles de fato sao, e o desfecho e a acusacao: voce diria outra coisa se
+ * perguntassem.
+ *
+ * A HONESTIDADE FICA VISIVEL NA TELA, e nao so no comentario: o painel declara
+ * que a leitura sai SO do sinal de tempo. O front nao carrega BERTimbau, e
+ * chamar isto de "score do Fraus" seria o projeto mentindo sobre a propria
+ * metodologia dentro de uma piada.
+ *
+ * A fonte da citacao e Cicero, `De Natura Deorum` III.17, e nao a `Eneida` VI:
+ * Fraus NAO esta na lista do vestibulo do Orco (la estao Luctus, Curae, Morbi,
+ * Senectus, Metus, Fames, Egestas, Letum, Labos, Sopor, Bellum, as Eumenides e
+ * Discordia). Cicero e quem a nomeia, e da a genealogia junto -- inclusive o
+ * irmao Dolus, que e o nome antigo deste projeto.
  */
-function Revelacao({ aoFechar }: { aoFechar: () => void }) {
+function Revelacao({
+  leitura,
+  aoFechar,
+}: {
+  leitura: LeituraDeCliques | null;
+  aoFechar: () => void;
+}) {
   const painel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,29 +62,99 @@ function Revelacao({ aoFechar }: { aoFechar: () => void }) {
     // O fundo e clicavel para fechar, e por isso NAO carrega papel de botao: quem
     // navega por teclado fecha com Esc, que o efeito acima escuta. Um `onClick`
     // em div de fundo sem par de teclado seria armadilha; aqui o par existe.
+    //
+    // `bg-background/80` e nao opaco: os indicadores mentindo precisam ficar
+    // VISIVEIS atras do painel, senao a metade mais interessante da encenacao
+    // acontece onde ninguem ve.
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-[2px]"
       onClick={aoFechar}
     >
+      {/* TRAVA 3: o selo e INESCAPAVEL. Enquanto a tela mente ele fica no mesmo
+          quadro dos numeros -- nao existe captura de tela da dashboard mentindo
+          sem este aviso dentro dela. */}
+      <p
+        role="alert"
+        className="fixed top-4 left-1/2 -translate-x-1/2 rounded-sm border border-destructive bg-destructive/15 px-3 py-1.5 text-xs font-semibold tracking-[0.15em] text-destructive uppercase"
+      >
+        Fraus está mentindo nesta tela
+      </p>
+
       <div
         ref={painel}
         role="dialog"
         aria-modal="true"
-        aria-label="Fraus, filha do Escuro e da Noite"
+        aria-label="Fraus leu os seus cliques"
         tabIndex={-1}
         onClick={(evento) => evento.stopPropagation()}
-        className="max-w-sm rounded-lg border border-border bg-card p-8 text-center outline-none"
+        className="max-w-md rounded-lg border border-border bg-card p-7 outline-none"
       >
-        <p className="text-3xl font-semibold tracking-[0.2em] text-primary">
+        <p className="text-center text-3xl font-semibold tracking-[0.2em] text-primary">
           FRAVS
         </p>
-        <p className="mt-4 text-sm text-muted-foreground">
+
+        {leitura ? (
+          <>
+            <p className="mt-6 text-xs text-muted-foreground">
+              Os seus cinco cliques têm horário. São uma conversa:
+            </p>
+
+            {/* As latencias, com a hesitacao apontada. `num` e a classe
+                monoespacada tabular do sistema -- numero que se compara nao
+                pode dancar de largura. */}
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {leitura.latenciasMs.map((ms, i) => (
+                <li
+                  key={i}
+                  className={cn(
+                    "num rounded-sm border px-2 py-1 text-xs",
+                    i === leitura.indiceDaHesitacao
+                      ? "border-destructive text-destructive"
+                      : "border-border text-muted-foreground",
+                  )}
+                >
+                  {ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`}
+                  {i === leitura.indiceDaHesitacao ? " ←" : ""}
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-5 flex items-baseline gap-2">
+              <span className="num text-4xl leading-none font-semibold text-foreground">
+                {leitura.leitura}
+              </span>
+              <span className="text-sm text-muted-foreground">/ 100</span>
+            </p>
+
+            {/* A RESSALVA, em texto visivel e sem eufemismo. Ela nao e nota de
+                rodape: e o que separa uma piada honesta de o projeto mentindo
+                sobre a propria metodologia. */}
+            <p className="mt-2 text-[0.6875rem] leading-snug text-muted-foreground">
+              Só o <strong>sinal de tempo</strong> — sem texto, sem emoji, sem
+              modelo. Não é o score do Fraus, e não vira nota nem categoria.
+            </p>
+
+            <p className="mt-5 border-t border-compasso pt-4 text-sm text-foreground">
+              {vereditoDe(leitura)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              E o que você diria, se eu perguntasse? Que gostou.
+            </p>
+          </>
+        ) : (
+          // Sem latencia nao ha leitura, e leitura sem dado seria numero
+          // inventado -- a invariante 2 vale inclusive dentro do easter egg.
+          <p className="mt-6 text-sm text-muted-foreground">
+            Não consegui medir o seu ritmo. Sem dado, não invento número — nem
+            aqui.
+          </p>
+        )}
+
+        <p className="mt-6 text-xs text-muted-foreground">
           <em>Erebo et Nocte nata</em> — filha do Escuro e da Noite, irmã de{" "}
           <strong className="text-foreground">Dolus</strong> e de{" "}
-          <strong className="text-foreground">Metus</strong>.
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Cícero, <em>De Natura Deorum</em> III.17
+          <strong className="text-foreground">Metus</strong>. Cícero,{" "}
+          <em>De Natura Deorum</em> III.17
         </p>
       </div>
     </div>
@@ -84,11 +178,25 @@ function Revelacao({ aoFechar }: { aoFechar: () => void }) {
  */
 export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   const [contador, setContador] = useState<EstadoContador>(CONTADOR_ZERADO);
+  // Os INSTANTES dos cliques da sequencia atual: e o que o painel le para
+  // devolver o ritmo de quem clicou. Zerado junto com o contador.
+  const [instantes, setInstantes] = useState<number[]>([]);
   const semMovimento = useReducedMotion();
   const gatilho = useRef<SVGSVGElement>(null);
+  const { mentir } = useMentira();
 
   const aoClicar = useCallback(() => {
-    setContador((anterior) => registrarClique(anterior, performance.now()));
+    const agora = performance.now();
+    setContador((anterior) => {
+      const proximo = registrarClique(anterior, agora);
+      // A sequencia acompanha o contador: quando ele recomeca do um (janela
+      // expirada, ou ja tendo aberto), os instantes antigos deixam de fazer
+      // parte da conversa e nao podem contaminar a leitura da proxima.
+      setInstantes((anteriores) =>
+        proximo.cliques === 1 ? [agora] : [...anteriores, agora],
+      );
+      return proximo;
+    });
   }, []);
 
   // Fechar DEVOLVE o foco e zera o contador -- senao o proximo clique reabriria
@@ -100,10 +208,25 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   // alcanca nesta sidebar sempre foi o link.
   const fechar = useCallback(() => {
     setContador(CONTADOR_ZERADO);
+    setInstantes([]);
     gatilho.current?.closest("a")?.focus();
   }, []);
 
   const aberta = abriu(contador);
+
+  // TRAVA 1 e 4: a mentira e ESTADO DE RENDER, ligada e desligada por este
+  // efeito e por mais nada. Ela nasce com a fenda e morre com ela -- inclusive
+  // se o componente desmontar no meio (o retorno do efeito), que e o caso de
+  // quem navega para outra pagina com o painel aberto. Sem essa limpeza a
+  // dashboard poderia continuar mentindo sem o selo por cima, que e exatamente
+  // o defeito que as travas existem para impedir.
+  useEffect(() => {
+    mentir(aberta);
+    return () => mentir(false);
+  }, [aberta, mentir]);
+
+  // A leitura so e calculada quando ha painel para mostra-la.
+  const leitura: LeituraDeCliques | null = aberta ? lerCliques(instantes) : null;
 
   // Os quatro primeiros cliques tremem, e cada um treme mais: 0px, 1, 2, 3. E o
   // unico aviso de que ALGO esta sendo contado -- sem ele o segredo nao seria
@@ -205,7 +328,7 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
         />
       </svg>
 
-      {aberta && <Revelacao aoFechar={fechar} />}
+      {aberta && <Revelacao leitura={leitura} aoFechar={fechar} />}
     </>
   );
 }
