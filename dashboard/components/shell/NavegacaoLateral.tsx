@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -25,6 +24,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { EstadoSaude } from "./EstadoSaude";
+import { MarcaFraus } from "./MarcaFraus";
 import { SeletorTema } from "./SeletorTema";
 
 /**
@@ -121,20 +121,12 @@ export function NavegacaoLateral() {
           aria-label="Fraus — voltar para a visão geral"
           className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none transition-colors duration-150 ease-fluid hover:bg-sidebar-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {/* `unoptimized` porque o alvo e SVG: o otimizador do next/image
-              nao processa SVG e serviria o arquivo cru de qualquer jeito --
-              declarar isso evita o aviso e deixa explicito que o vetor vai
-              inteiro para o navegador, que e o que faz o monograma ficar
-              nitido em qualquer densidade de tela. */}
-          <Image
-            src="/fraus-logo.svg"
-            alt=""
-            width={28}
-            height={28}
-            className="size-7 shrink-0 rounded-md"
-            unoptimized
-            priority
-          />
+          {/* O monograma e SVG INLINE, e nao mais `<Image src="/fraus-logo.svg">`.
+              Um SVG servido por `<img>` e documento externo: `var(--marca-cor-pe)`
+              nao atravessa a fronteira e nao ha como animar uma parte dele.
+              Inline, a marca herda o tema (dourada no grafite, magenta na chuva)
+              e a fenda pode abrir. Ver `MarcaFraus`. */}
+          <MarcaFraus tamanho={28} />
           <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm font-semibold tracking-tight">
               Fraus
