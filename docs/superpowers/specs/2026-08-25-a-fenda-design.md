@@ -175,3 +175,60 @@ zera as transições de CSS, e qualquer animação em JS passa pelo `<Movimento>
 - **Persistência do easter egg** entre sessões: ver §4.
 - **Revisão de segurança da API**: trabalho separado, nesta mesma sessão, depois
   desta entrega.
+
+---
+
+# Emenda de 25/08/2026 — a revelação era paia
+
+A §5 entregava um cartão com uma citação. Diagnóstico do que estava errado, nos
+termos que importam:
+
+1. **A recompensa era um `<div>` com texto.** Cinco cliques para ganhar um
+   tooltip com pretensão.
+2. **Contava um fato em vez de provocar uma sensação.** "Fraus é filha da Noite"
+   é trivia. A tese do projeto é *o cliente mente*; o easter egg devia fazer
+   sentir isso, não informar sobre mitologia.
+3. **Não usava nada que o Fraus é.** Podia estar em qualquer projeto. Um easter
+   egg bom usa a máquina do próprio produto contra quem o encontrou.
+
+## E1. Ele analisa QUEM clicou
+
+Os cinco cliques têm timestamps: são uma conversa. `lib/pontuarCliques.ts` —
+função pura, testada — extrai as latências, acha a hesitação e devolve uma
+leitura 0–100.
+
+**A trava de honestidade, e ela não é negociável:** o painel declara em texto
+visível que a leitura sai **só do sinal de tempo — sem texto, sem emoji, sem
+modelo**. O front não carrega BERTimbau. Apresentar isso como "o score do Fraus"
+seria o projeto mentindo sobre a própria metodologia dentro de uma piada, que é
+o pior lugar concebível para fazê-lo.
+
+**Não há `nota` nem categoria de NPS.** A invariante 3 proíbe derivar as duas no
+cliente, e o README registra que duplicar essa regra em TypeScript já produziu
+divergência de arredondamento nas fronteiras 6/7 e 8/9. A leitura 0–100 não é a
+escada do NPS e não vira uma; o desfecho do painel é a acusação, não um rótulo
+de categoria.
+
+## E2. E a dashboard mente enquanto o painel está aberto
+
+`CartaoIndicador` é o único lugar onde os números-manchete renderizam — um
+contexto (`MentiraProvider`) alcança os quatro sem caçar número por sete telas.
+
+**As quatro travas que separam isto do que a invariante 2 condena:**
+
+| trava | por quê |
+|---|---|
+| **Nada sai da memória** | zero escrita no banco, zero chamada à API. É render-time, e some no fechamento |
+| **Leitor de tela recebe a VERDADE** | o número falso é `aria-hidden`; o `sr-only` diz que o valor foi falsificado e qual é o real. Mentir para quem depende de leitor de tela não tem piada nenhuma |
+| **O selo é inescapável** | `FRAUS ESTÁ MENTINDO` fixo, em `--destructive`, no mesmo quadro dos números — não existe captura de tela da dashboard mentindo sem o aviso dentro dela |
+| **Volta sozinha** | 8 s, `Esc` ou clique fora, o que vier primeiro |
+
+## E3. Fora de escopo, e por decisão
+
+**Gráficos e tabela não mentem.** Só os quatro indicadores. Espalhar a mentira
+pelo Recharts é onde ela deixa de ser contida e passa a arriscar sobrar na tela
+depois do fechamento — e uma dashboard que continua mentindo sem o selo é
+exatamente o defeito que as travas acima existem para impedir.
+
+O que a §5 tinha e **sobrevive**: a fenda como junta, o tremor dos quatro
+primeiros cliques, a varredura no hover, e Cícero III.17 no pé do painel.
