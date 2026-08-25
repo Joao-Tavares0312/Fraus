@@ -21,8 +21,8 @@ inconsistência sistemática entre a nota que o cliente dá e o texto que ele
 escreve[^2].
 
 Fraus, a divindade romana da fraude e do engano — contraparte latina de
-Ápate/Dolos, postada por Virgílio à entrada do Inferno ao lado do Medo e da
-Discórdia (*Eneida*, VI)[^4] — lê o que foi dito de verdade.
+Ápate/Dolos, que Cícero nomeia entre a prole de Érebo e da Noite, ao lado de
+*Dolus*, *Metus* e *Senectus*[^4] — lê o que foi dito de verdade.
 
 ## Como funciona
 
@@ -714,4 +714,4 @@ são predição de modelo.
 [^1]: [Conversation logs as a source of insight: predicting user satisfaction for customer service chatbots](https://link.springer.com/article/10.1007/s41233-025-00071-8) — Quality and User Experience, Springer, 2025.
 [^2]: [Refining the prediction of user satisfaction on chat-based AI applications](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11793979/).
 [^3]: [RAG vs Fine-Tuning 2026: A Decision Framework](https://winder.ai/rag-vs-fine-tuning-2026-decision-framework/).
-[^4]: Virgílio, *Eneida*, Livro VI, v. 273-281 — Fraus (Fraude/Engano) personificada no vestíbulo do Orco, ao lado de Luto, Curae, Morbi, Senectus e Metus.
+[^4]: Cícero, *De Natura Deorum* III.17 — na enumeração da prole de Érebo e Nox aparecem *Amor, Dolus, Metus, Labor, Invidentia, Fatum, Senectus, Mors, Tenebrae, Miseria, Querella, Gratia,* **Fraus**, *Pertinacia*, as Parcas, as Hespérides e os Sonhos. **Correção de 25/08/2026:** esta nota creditava a Virgílio (*Eneida* VI, 273-281) a presença de Fraus no vestíbulo do Orco. Ela **não está** naquela lista — lá estão Luctus, Curae, Morbi, Senectus, Metus, Fames, Egestas, Letum, Labos, Sopor, Bellum, as Eumênides e Discórdia. Cícero é quem a nomeia, e dá a genealogia junto: irmã de *Dolus*, que é o nome antigo deste projeto nas specs.
