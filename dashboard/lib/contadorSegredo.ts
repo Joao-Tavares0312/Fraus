@@ -21,9 +21,25 @@ export type EstadoContador = {
   readonly cliques: number;
   /** O instante do ultimo, em ms. */
   readonly ultimoEm: number;
+  /**
+   * Os instantes da sequencia ATUAL, para o painel ler o ritmo de quem clicou.
+   *
+   * Moram AQUI, e nao num `useState` vizinho, por causa de um bug real: a
+   * primeira versao chamava `setInstantes` dentro do updater do `setContador`.
+   * Updater de `useState` tem que ser PURO -- o React pode invoca-lo mais de
+   * uma vez -- e cada invocacao empurrava um instante repetido. O painel
+   * mostrava oito latencias para cinco cliques, metade delas `0 ms`. Com os
+   * instantes dentro do proprio estado, `registrarClique` continua sendo uma
+   * funcao pura e a duplicacao deixa de ser possivel por construcao.
+   */
+  readonly instantes: readonly number[];
 };
 
-export const CONTADOR_ZERADO: EstadoContador = { cliques: 0, ultimoEm: 0 };
+export const CONTADOR_ZERADO: EstadoContador = {
+  cliques: 0,
+  ultimoEm: 0,
+  instantes: [],
+};
 
 /**
  * Registra um clique em `agoraMs` e devolve o estado novo.
@@ -45,6 +61,9 @@ export function registrarClique(
   return {
     cliques: recomeca ? 1 : estado.cliques + 1,
     ultimoEm: agoraMs,
+    // Recomecando, os instantes antigos deixam de fazer parte da conversa: eles
+    // nao podem contaminar a leitura da proxima sequencia.
+    instantes: recomeca ? [agoraMs] : [...estado.instantes, agoraMs],
   };
 }
 

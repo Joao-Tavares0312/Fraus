@@ -66,9 +66,14 @@ function mediana(valores: number[]): number {
 export function lerCliques(instantesMs: number[]): LeituraDeCliques | null {
   if (instantesMs.length < 2) return null;
 
+  // ARREDONDADAS na origem, e nao so na exibicao: `performance.now()` devolve
+  // fracao de milissegundo, e a tela mostrava "192.0999999642372 ms". Milissegundo
+  // inteiro e toda a precisao que este ritmo tem significado, e arredondar aqui
+  // faz a mediana e a leitura sairem da MESMA grandeza que o painel exibe --
+  // numero mostrado e numero pontuado nao podem divergir.
   const latenciasMs = instantesMs
     .slice(1)
-    .map((instante, i) => instante - instantesMs[i]);
+    .map((instante, i) => Math.round(instante - instantesMs[i]));
 
   const medianaMs = mediana(latenciasMs);
 

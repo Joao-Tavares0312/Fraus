@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useReducedMotion } from "motion/react";
 import {
   CONTADOR_ZERADO,
@@ -58,7 +59,19 @@ function Revelacao({
     };
   }, [aoFechar]);
 
-  return (
+  // Sem guarda de montagem, e ela nao faz falta: este componente so e
+  // renderizado quando o contador chega a cinco, o que exige cinco cliques --
+  // ou seja, ele NUNCA existe no render do servidor, e `document` sempre esta
+  // la quando esta linha roda.
+  //
+  // POR PORTAL, DIRETO NO <body>, e isto e conserto de bug observado: a marca
+  // mora dentro da barra lateral, e a barra usa `transform` para recolher.
+  // Ancestral com `transform` vira o bloco de contencao de qualquer descendente
+  // `position: fixed` -- entao o painel e o selo, que se creem colados na
+  // viewport, apareciam grudados na coluna da esquerda, por cima dos itens de
+  // navegacao. No `<body>` nao ha transform no caminho, e `fixed` volta a
+  // significar viewport.
+  return createPortal(
     // O fundo e clicavel para fechar, e por isso NAO carrega papel de botao: quem
     // navega por teclado fecha com Esc, que o efeito acima escuta. Um `onClick`
     // em div de fundo sem par de teclado seria armadilha; aqui o par existe.
@@ -157,7 +170,8 @@ function Revelacao({
           <em>De Natura Deorum</em> III.17
         </p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -178,25 +192,18 @@ function Revelacao({
  */
 export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   const [contador, setContador] = useState<EstadoContador>(CONTADOR_ZERADO);
-  // Os INSTANTES dos cliques da sequencia atual: e o que o painel le para
-  // devolver o ritmo de quem clicou. Zerado junto com o contador.
-  const [instantes, setInstantes] = useState<number[]>([]);
   const semMovimento = useReducedMotion();
   const gatilho = useRef<SVGSVGElement>(null);
   const { mentir } = useMentira();
 
+  // O updater e PURO -- nada de `setState` de outro estado aqui dentro. Os
+  // instantes viajam DENTRO do contador exatamente por isto: a versao anterior
+  // chamava `setInstantes` daqui, o React invocava o updater mais de uma vez, e
+  // cada invocacao empurrava um instante repetido. O painel mostrava oito
+  // latencias para cinco cliques, metade delas `0 ms`.
   const aoClicar = useCallback(() => {
     const agora = performance.now();
-    setContador((anterior) => {
-      const proximo = registrarClique(anterior, agora);
-      // A sequencia acompanha o contador: quando ele recomeca do um (janela
-      // expirada, ou ja tendo aberto), os instantes antigos deixam de fazer
-      // parte da conversa e nao podem contaminar a leitura da proxima.
-      setInstantes((anteriores) =>
-        proximo.cliques === 1 ? [agora] : [...anteriores, agora],
-      );
-      return proximo;
-    });
+    setContador((anterior) => registrarClique(anterior, agora));
   }, []);
 
   // Fechar DEVOLVE o foco e zera o contador -- senao o proximo clique reabriria
@@ -208,7 +215,6 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   // alcanca nesta sidebar sempre foi o link.
   const fechar = useCallback(() => {
     setContador(CONTADOR_ZERADO);
-    setInstantes([]);
     gatilho.current?.closest("a")?.focus();
   }, []);
 
@@ -226,7 +232,9 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   }, [aberta, mentir]);
 
   // A leitura so e calculada quando ha painel para mostra-la.
-  const leitura: LeituraDeCliques | null = aberta ? lerCliques(instantes) : null;
+  const leitura: LeituraDeCliques | null = aberta
+    ? lerCliques([...contador.instantes])
+    : null;
 
   // Os quatro primeiros cliques tremem, e cada um treme mais: 0px, 1, 2, 3. E o
   // unico aviso de que ALGO esta sendo contado -- sem ele o segredo nao seria

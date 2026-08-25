@@ -45,3 +45,32 @@ describe("contadorSegredo", () => {
     expect(registrarClique(aberto, 1400).cliques).toBe(1);
   });
 });
+
+describe("os instantes da sequencia", () => {
+  it("guarda um instante por clique, sem repetir", () => {
+    // REGRESSAO: a primeira versao chamava setInstantes dentro do updater do
+    // setContador. Updater tem que ser puro, o React invoca mais de uma vez, e
+    // o painel mostrava OITO latencias para cinco cliques -- metade `0 ms`.
+    const estado = sequencia([0, 300, 600, 900, 1200]);
+    expect(estado.instantes).toEqual([0, 300, 600, 900, 1200]);
+  });
+
+  it("registrar o mesmo clique duas vezes nao e possivel a partir do mesmo estado", () => {
+    // A pureza e o que garante isso: aplicar duas vezes o MESMO estado de
+    // entrada devolve o MESMO resultado, nunca um acumulo.
+    const um = registrarClique(CONTADOR_ZERADO, 500);
+    const outra = registrarClique(CONTADOR_ZERADO, 500);
+    expect(um.instantes).toEqual(outra.instantes);
+    expect(um.instantes).toHaveLength(1);
+  });
+
+  it("recomecar descarta os instantes da sequencia anterior", () => {
+    const expirado = sequencia([0, 300, 600, 900, 900 + JANELA_MS + 500]);
+    expect(expirado.instantes).toEqual([900 + JANELA_MS + 500]);
+  });
+
+  it("depois de abrir, a sequencia seguinte comeca limpa", () => {
+    const aberto = sequencia([0, 300, 600, 900, 1200]);
+    expect(registrarClique(aberto, 1400).instantes).toEqual([1400]);
+  });
+});

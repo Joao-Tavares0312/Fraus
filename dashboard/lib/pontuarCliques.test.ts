@@ -65,3 +65,15 @@ describe("lerCliques", () => {
     expect(LIMIAR_DE_HESITACAO).toBe(2.5);
   });
 });
+
+describe("precisao", () => {
+  it("as latencias sao milissegundos INTEIROS", () => {
+    // REGRESSAO: `performance.now()` devolve fracao, e a tela mostrava
+    // "192.0999999642372 ms" num chip de 60px.
+    const leitura = lerCliques([0, 192.0999999642372, 403.4999999642372]);
+    expect(leitura?.latenciasMs).toEqual([192, 211]);
+    expect(
+      leitura?.latenciasMs.every((ms) => Number.isInteger(ms)),
+    ).toBe(true);
+  });
+});
