@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useReducedMotion } from "motion/react";
-import { type LeituraDeCliques, vereditoDe } from "@/lib/pontuarCliques";
+import { type LeituraDeCliques, timecodeDe, vereditoDe } from "@/lib/pontuarCliques";
 import { cn } from "@/lib/utils";
 
 /**
@@ -42,6 +42,7 @@ const RESPIRO_APOS_O_REPLAY_MS = 8_000;
 /** Velocidade da maquina de escrever do veredito. */
 const MS_POR_CARACTERE = 28;
 
+
 export function RevelacaoFraus({
   leitura,
   aoFechar,
@@ -77,10 +78,12 @@ export function RevelacaoFraus({
     return () => relogios.forEach(clearTimeout);
   }, [leitura, semMovimento]);
 
-  /** Quanto o replay inteiro leva -- a soma das esperas reais. */
-  const duracaoDoReplay = semMovimento
-    ? 0
-    : (leitura?.latenciasMs.reduce((soma, ms) => soma + ms, 0) ?? 0);
+  /** A duracao REAL da sequencia de cliques -- vai para o timecode da fita. */
+  const duracaoTotal =
+    leitura?.latenciasMs.reduce((soma, ms) => soma + ms, 0) ?? 0;
+
+  /** Quanto o replay leva. Com movimento reduzido nao ha replay: e zero. */
+  const duracaoDoReplay = semMovimento ? 0 : duracaoTotal;
 
   // A DIGITACAO do veredito, depois que o replay termina.
   useEffect(() => {
@@ -132,6 +135,7 @@ export function RevelacaoFraus({
           `aria-hidden`, sem conteudo, e nao roubam foco nem leitura. */}
       <div className="fenda-ceu" aria-hidden />
       <div className="fenda-sol" aria-hidden />
+      <div className="fenda-horizonte" aria-hidden />
       <div className="fenda-grade" aria-hidden />
       <div className="fenda-scanlines" aria-hidden />
 
@@ -151,24 +155,37 @@ export function RevelacaoFraus({
         aria-label="Fraus leu os seus cliques"
         tabIndex={-1}
         onClick={(evento) => evento.stopPropagation()}
-        className="fenda-painel relative w-full max-w-lg p-8 outline-none sm:p-10"
+        className="fenda-painel relative w-full max-w-lg outline-none"
       >
-        {/* O MONOGRAMA com aberracao cromatica: tres copias empilhadas, magenta
-            e ciano deslocadas 2px para os lados. As duas de tras sao
-            `aria-hidden` -- o leitor de tela recebe UMA palavra, nao tres. */}
-        <p className="fenda-marca relative text-center">
-          <span className="fenda-marca-c" aria-hidden>
-            FRAVS
+        {/* A CABECA DE FITA. Timecode nao e fantasia aqui: este produto MEDE
+            TEMPO, e o numero da direita e a duracao real da sequencia de
+            cliques em quadros de 1/25 s. E a peca que faz a caixa ler como fita
+            em vez de retangulo arredondado com neon em volta. */}
+        <div className="fenda-cabeca" aria-hidden>
+          <span className="fenda-rec">
+            <i />
+            REC
           </span>
-          <span className="fenda-marca-m" aria-hidden>
-            FRAVS
-          </span>
-          <span className="fenda-marca-t">FRAVS</span>
-        </p>
+          <span className="fenda-timecode">{timecodeDe(duracaoTotal)}</span>
+        </div>
+
+        <div className="fenda-corpo">
+          {/* O MONOGRAMA com aberracao cromatica: tres copias empilhadas,
+              magenta e ciano deslocadas 2px para os lados. As duas de tras sao
+              aria-hidden -- o leitor de tela recebe UMA palavra, nao tres. */}
+          <p className="fenda-marca relative text-center">
+            <span className="fenda-marca-c" aria-hidden>
+              FRAVS
+            </span>
+            <span className="fenda-marca-m" aria-hidden>
+              FRAVS
+            </span>
+            <span className="fenda-marca-t">FRAVS</span>
+          </p>
 
         {leitura ? (
           <>
-            <p className="fenda-legenda mt-8">
+            <p className="fenda-legenda mt-6">
               Os seus cinco cliques têm horário. São uma conversa:
             </p>
 
@@ -191,7 +208,7 @@ export function RevelacaoFraus({
               ))}
             </ul>
 
-            <p className="mt-8 flex items-baseline gap-3">
+            <p className="fenda-placar mt-7">
               <span className="fenda-numero num">{leitura.leitura}</span>
               <span className="fenda-de-cem num">/ 100</span>
             </p>
@@ -205,7 +222,7 @@ export function RevelacaoFraus({
               modelo. Não é o score do Fraus, e não vira nota nem categoria.
             </p>
 
-            <p className="fenda-veredito mt-8">
+            <p className="fenda-veredito mt-7">
               {semMovimento ? veredito : veredito.slice(0, digitados)}
               {!semMovimento && digitados < veredito.length ? (
                 <span className="fenda-cursor" aria-hidden />
@@ -218,17 +235,18 @@ export function RevelacaoFraus({
         ) : (
           // Sem latencia nao ha leitura, e leitura sem dado seria numero
           // inventado -- a invariante 2 vale inclusive dentro do easter egg.
-          <p className="fenda-veredito mt-8">
+          <p className="fenda-veredito mt-7">
             Não consegui medir o seu ritmo. Sem dado, não invento número — nem
             aqui.
           </p>
         )}
 
-        <p className="fenda-cicero mt-10">
-          <em>Erebo et Nocte nata</em> — filha do Escuro e da Noite, irmã de{" "}
-          <strong>Dolus</strong> e de <strong>Metus</strong>. Cícero,{" "}
-          <em>De Natura Deorum</em> III.17
-        </p>
+          <p className="fenda-cicero mt-8">
+            <em>Erebo et Nocte nata</em> — filha do Escuro e da Noite, irmã de{" "}
+            <strong>Dolus</strong> e de <strong>Metus</strong>. Cícero,{" "}
+            <em>De Natura Deorum</em> III.17
+          </p>
+        </div>
       </div>
     </div>,
     document.body,
@@ -255,20 +273,48 @@ function EstiloDaCena() {
       }
 
       /* O SOL: disco cortado por faixas horizontais -- o corte e o que o
-         distingue de um circulo com degrade, e e a assinatura do genero. */
+         distingue de um circulo com degrade, e e a assinatura do genero.
+
+         GRANDE O BASTANTE PARA SOBRAR DO PAINEL, e isto e conserto de uma coisa
+         que so a tela mostrou: com 30rem ele tinha exatamente a largura da
+         caixa (max-w-lg = 32rem) e ficava inteiro escondido atras dela. O
+         elemento mais reconhecivel do genero existia no CSS e nao na imagem.
+         Agora ele transborda dos dois lados e por cima, e a caixa recorta o
+         meio dele -- que e uma composicao melhor do que a original.
+
+         O corte tambem ABRE com a distancia (faixas mais largas embaixo,
+         apertando para cima) em vez de ser regular: o degrade de mascara
+         acompanha o disco em vez de listra-lo uniformemente. */
       .fenda-sol {
         position: absolute;
         left: 50%;
-        bottom: 26%;
-        width: min(30rem, 62vw);
+        bottom: 22%;
+        width: min(46rem, 92vw);
         aspect-ratio: 1;
         translate: -50% 0;
         border-radius: 50%;
-        background: linear-gradient(180deg, oklch(0.88 0.19 75) 0%, oklch(0.72 0.26 30) 48%, oklch(0.62 0.28 350) 100%);
-        -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 10px, transparent 10px 16px);
-        mask-image: repeating-linear-gradient(180deg, #000 0 10px, transparent 10px 16px);
-        filter: blur(0.4px);
-        opacity: 0.5;
+        background: linear-gradient(180deg, oklch(0.9 0.19 80) 0%, oklch(0.76 0.25 35) 42%, oklch(0.62 0.29 350) 78%, oklch(0.45 0.26 320) 100%);
+        -webkit-mask-image:
+          repeating-linear-gradient(180deg, #000 0 14px, transparent 14px 20px),
+          linear-gradient(180deg, transparent 0%, #000 26%);
+        -webkit-mask-composite: source-in;
+        mask-image:
+          repeating-linear-gradient(180deg, #000 0 14px, transparent 14px 20px),
+          linear-gradient(180deg, transparent 0%, #000 26%);
+        mask-composite: intersect;
+        opacity: 0.72;
+      }
+
+      /* A LINHA DO HORIZONTE acesa, onde o sol encontra a grade. Sem ela as
+         duas pecas so se sobrepoem; com ela existe um chao. */
+      .fenda-horizonte {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 26%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, oklch(0.88 0.2 330) 30%, oklch(0.92 0.16 200) 50%, oklch(0.88 0.2 330) 70%, transparent);
+        box-shadow: 0 0 24px 4px oklch(0.7 0.24 330 / 0.55);
       }
 
       /* O CEU acima do horizonte, para o sol nao encostar direto no degrade. */
@@ -287,8 +333,14 @@ function EstiloDaCena() {
         inset: 74% 0 0 0;
         perspective: 14rem;
         overflow: hidden;
-        -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 100%);
-        mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 100%);
+        /* A mascara APAGA A FAIXA DO HORIZONTE, e nao so a borda de cima. Sem
+           isso, as linhas que fogem ao ponto de fuga comprimem umas nas outras
+           ate virarem um risco vertical solido no centro -- observado na tela, e
+           ele lia como defeito de render, nao como grade. Fazer a grade nascer
+           JA a alguma distancia resolve na raiz: um chao real tambem nao mostra
+           detalhe no infinito. */
+        -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 8%, #000 34%, #000 100%);
+        mask-image: linear-gradient(180deg, transparent 0%, transparent 8%, #000 34%, #000 100%);
       }
       .fenda-grade::before {
         content: "";
@@ -296,8 +348,8 @@ function EstiloDaCena() {
         inset: -60% -60% -20% -60%;
         transform: rotateX(74deg);
         background:
-          repeating-linear-gradient(90deg, oklch(0.82 0.18 200 / 0.55) 0 1px, transparent 1px 4.5rem),
-          repeating-linear-gradient(0deg, oklch(0.72 0.24 330 / 0.5) 0 1px, transparent 1px 3rem);
+          repeating-linear-gradient(90deg, oklch(0.82 0.18 200 / 0.5) 0 1px, transparent 1px 4.5rem),
+          repeating-linear-gradient(0deg, oklch(0.72 0.24 330 / 0.55) 0 1px, transparent 1px 3rem);
         animation: fenda-avanco 2.6s linear infinite;
       }
       @keyframes fenda-avanco {
@@ -305,13 +357,20 @@ function EstiloDaCena() {
       }
 
       /* As SCANLINES por cima de tudo, inclusive do painel: e o que unifica a
-         cena como uma imagem captada, e nao como camadas empilhadas. */
+         cena como uma imagem CAPTADA, e nao como camadas empilhadas.
+
+         multiply estava errado e nao aparecia: multiplicar preto sobre um
+         fundo que ja e quase preto nao escurece nada. O que uma varredura de
+         tubo faz e alternar linha acesa e linha apagada, entao a faixa clara
+         entra por screen e a escura por opacidade -- duas camadas, e agora
+         elas existem na imagem. */
       .fenda-scanlines {
         position: absolute;
         inset: 0;
         pointer-events: none;
-        background: repeating-linear-gradient(180deg, oklch(0 0 0 / 0.34) 0 1px, transparent 1px 3px);
-        mix-blend-mode: multiply;
+        background:
+          repeating-linear-gradient(180deg, oklch(1 0 0 / 0.045) 0 1px, transparent 1px 3px),
+          repeating-linear-gradient(180deg, transparent 0 2px, oklch(0 0 0 / 0.42) 2px 3px);
       }
 
       .fenda-selo {
@@ -325,14 +384,60 @@ function EstiloDaCena() {
       /* O PAINEL: vidro escuro com dois fios de neon -- ciano em cima, magenta
          embaixo, que sao os dois tubos do tema "chuva de neon". */
       .fenda-painel {
-        background: oklch(0.12 0.05 305 / 0.82);
+        background: oklch(0.12 0.05 305 / 0.86);
         border: 1px solid oklch(0.62 0.2 330 / 0.55);
         border-radius: 0.25rem;
         backdrop-filter: blur(14px) saturate(1.3);
         box-shadow:
-          inset 0 1px 0 oklch(0.85 0.16 200 / 0.5),
           inset 0 -1px 0 oklch(0.72 0.26 330 / 0.6),
           0 24px 70px oklch(0.05 0.04 320 / 0.75);
+        overflow: hidden;
+      }
+      .fenda-corpo { padding: 1.75rem 2rem 2rem; }
+      @media (min-width: 640px) { .fenda-corpo { padding: 2rem 2.5rem 2.5rem; } }
+
+      /* A CABECA DE FITA. Barra de status na borda de cima, no ciano do tubo --
+         e o que separa "caixa com neon em volta" de "isto e uma fita". */
+      .fenda-cabeca {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.5rem 0.875rem;
+        border-bottom: 1px solid oklch(0.62 0.16 200 / 0.4);
+        background: oklch(0.18 0.06 250 / 0.55);
+        font-size: 0.625rem;
+        letter-spacing: 0.22em;
+        font-weight: 600;
+      }
+      .fenda-rec {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        color: oklch(0.8 0.19 25);
+      }
+      .fenda-rec i {
+        width: 0.4rem;
+        height: 0.4rem;
+        border-radius: 50%;
+        background: oklch(0.68 0.24 25);
+        box-shadow: 0 0 8px oklch(0.68 0.24 25);
+        animation: fenda-piscar 1.4s steps(1, end) infinite;
+      }
+      .fenda-timecode {
+        font-family: var(--font-mono, ui-monospace, monospace);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.14em;
+        color: oklch(0.86 0.13 200);
+      }
+
+      /* O PLACAR: a base do "/ 100" assenta na base do numerao. items-baseline
+         do flex nao resolvia sozinho porque line-height: 0.9 no numero
+         desloca a caixa de texto em relacao a base optica. */
+      .fenda-placar {
+        display: flex;
+        align-items: last baseline;
+        gap: 0.6rem;
       }
 
       /* O MONOGRAMA e a ABERRACAO CROMATICA. As tres copias ocupam o mesmo

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { lerCliques, LIMIAR_DE_HESITACAO, PISO_SEM_PENA } from "./pontuarCliques";
+import {
+  LIMIAR_DE_HESITACAO,
+  PISO_SEM_PENA,
+  lerCliques,
+  timecodeDe,
+} from "./pontuarCliques";
 
 describe("lerCliques", () => {
   it("menos de dois cliques nao tem latencia nenhuma para ler", () => {
@@ -75,5 +80,26 @@ describe("precisao", () => {
     expect(
       leitura?.latenciasMs.every((ms) => Number.isInteger(ms)),
     ).toBe(true);
+  });
+});
+
+describe("timecodeDe", () => {
+  it("zero e o inicio da fita", () => {
+    expect(timecodeDe(0)).toBe("00:00:00");
+  });
+
+  it("conta quadros de 1/25 s no ultimo par", () => {
+    // 40ms = 1 quadro; 1s = 25 quadros e o par vira 00.
+    expect(timecodeDe(40)).toBe("00:00:01");
+    expect(timecodeDe(1000)).toBe("00:01:00");
+    expect(timecodeDe(1480)).toBe("00:01:12");
+  });
+
+  it("vira o minuto aos 60 s", () => {
+    expect(timecodeDe(60_000)).toBe("01:00:00");
+  });
+
+  it("sempre sai com tres pares de dois digitos", () => {
+    expect(timecodeDe(2_137)).toMatch(/^\d{2}:\d{2}:\d{2}$/);
   });
 });

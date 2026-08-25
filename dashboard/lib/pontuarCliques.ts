@@ -110,3 +110,22 @@ export function vereditoDe(leitura: LeituraDeCliques): string {
   }
   return "Você demorou. Isso também é um dado.";
 }
+
+/**
+ * A duracao da sequencia em TIMECODE de fita: `MM:SS:QQ`, quadros de 1/25 s.
+ *
+ * Nao e fantasia de "tecnico": este produto mede TEMPO, e o numero na cabeca da
+ * fita e a duracao real dos cinco cliques. Em vinte e cinco quadros por segundo
+ * a resolucao do ultimo par e 40 ms -- fina o bastante para o timecode mudar
+ * entre uma sequencia apressada e uma hesitante, que e a unica coisa que ele
+ * precisa distinguir.
+ */
+export function timecodeDe(duracaoMs: number): string {
+  const totalDeQuadros = Math.round((duracaoMs / 1000) * 25);
+  const doisDigitos = (n: number) => String(n).padStart(2, "0");
+  return [
+    doisDigitos(Math.floor(totalDeQuadros / (25 * 60))),
+    doisDigitos(Math.floor(totalDeQuadros / 25) % 60),
+    doisDigitos(totalDeQuadros % 25),
+  ].join(":");
+}
