@@ -111,3 +111,32 @@ def test_cria_a_pasta_do_arquivo_quando_preciso(tmp_path, subpasta):
 
     assert ligar_no_primeiro_uso(banco, arquivo, None) == arquivo
     assert arquivo.is_file()
+
+
+def test_arquivo_de_credenciais_e_legivel_so_pelo_dono(tmp_path):
+    """A UNICA copia em claro da mestra nao pode nascer legivel pelo mundo.
+
+    `open(caminho, "x")` respeita o umask e sai 0o644 num POSIX tipico -- ou
+    seja, qualquer usuario da maquina le a chave mestra. Laudo de 25/08/2026.
+
+    Em Windows o modo POSIX e quase decorativo (quem manda e a ACL herdada da
+    pasta), entao a asercao so vale onde o bit significa alguma coisa. O `mode`
+    do `os.open` e passado nos dois de qualquer forma: nao custa nada, e o
+    arquivo criado no Windows tambem para de sair `0o666`.
+    """
+    import os
+    import stat
+
+    banco = _banco(tmp_path)
+    arquivo = tmp_path / ".fraus-chaves.txt"
+
+    assert ligar_no_primeiro_uso(banco, arquivo, None) == arquivo
+
+    modo = stat.S_IMODE(arquivo.stat().st_mode)
+    if os.name == "posix":
+        assert modo == 0o600, f"credencial em claro legivel alem do dono: {oct(modo)}"
+    else:
+        # No Windows o Python reporta 0o666 para arquivo gravavel e 0o444 para
+        # somente leitura -- o bit de grupo/outros nao existe. O que da para
+        # afirmar aqui e que o arquivo foi criado e e gravavel pelo dono.
+        assert modo & stat.S_IRUSR

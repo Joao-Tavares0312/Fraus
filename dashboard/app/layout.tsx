@@ -8,6 +8,7 @@ import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ProvedorDaMentira } from "@/lib/mentira";
 import { SCRIPT_ANTI_PISCADA } from "@/lib/tema";
 
 const DESCRICAO =
@@ -73,6 +74,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Movimento>
           <TooltipProvider>
             <SaudeProvider>
+              {/* O easter egg da marca liga a mentira na NAVEGACAO e ela e
+                  exibida pelos INDICADORES, noutra sub-arvore -- o provedor
+                  precisa ficar acima das duas, e este e o ponto onde elas se
+                  encontram. Fora do painel o valor e sempre `false`, e nenhum
+                  indicador sabe mentir por conta propria. Ver lib/mentira.tsx. */}
+              <ProvedorDaMentira>
               <SidebarProvider>
                 {/* A navegacao le `useSearchParams` para carregar o periodo
                     entre as secoes, e isso exige limite de Suspense no App
@@ -87,6 +94,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   {children}
                 </SidebarInset>
               </SidebarProvider>
+              </ProvedorDaMentira>
             </SaudeProvider>
           </TooltipProvider>
         </Movimento>

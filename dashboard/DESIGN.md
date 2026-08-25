@@ -140,6 +140,51 @@ de papel sob luz de escritório — o analista fica horas nela.
 > o tema respectivo aplicado" — dourada no grafite, magenta na chuva — sem
 > gerar dois arquivos e sem tema novo pedir asset novo.
 >
+> **Emenda de 25/08/2026 — a fenda, e a rampa em token.** O monograma ganhou uma
+> diagonal (`M110,470L560,180`, 18 unidades de espessura) atravessando o `F` e o
+> `S`. Aos 28 px da navegação ela dá 0,8 px: parada, lê como detalhe de desenho.
+> Ela é a **junta** por onde a marca se abre no gesto dos cinco cliques — sem
+> ela a revelação seria efeito colado por cima do desenho, e não o desenho se
+> abrindo pela própria costura. **Os dois arquivos a recebem**, para
+> continuarem sendo o mesmo desenho; na marca do ateliê ela é recorte de alfa.
+>
+> A rampa do gradiente virou dois tokens, `--marca-cor-pe` e `--marca-cor-topo`,
+> e **isso obrigou o desenho a virar SVG inline** em `MarcaFraus.tsx`: um SVG
+> servido por `<img>` é documento externo, onde `var(--…)` não atravessa a
+> fronteira e animar uma parte não existe. `public/fraus-logo.svg` sobrevive com
+> o dourado literal para o `og:image` e o README, que consomem a marca fora do
+> React, onde token nenhum chega. A duplicação é o preço de a marca existir
+> dentro e fora da aplicação, e fica registrada aqui para não ser "consertada"
+> por engano.
+>
+> `--marca-cor` (chapada) e a rampa (duas paradas) são coisas **diferentes**: a
+> primeira pinta a marca impressa no fundo do ateliê, que é máscara e não tem
+> gradiente. Trocar uma pela outra apaga o gradiente que *é* a marca.
+
+> **Emenda de 25/08/2026 (segunda) — a única mentira autorizada da interface.**
+> Enquanto o painel dos cinco cliques está aberto, os quatro indicadores da
+> visão geral exibem números **falsos**. É violação deliberada e **encenada** da
+> §5 ("sem sinal é cabeça vazada, nunca zero") e da invariante 2, e ela só se
+> sustenta porque encena. As quatro travas, em `lib/mentira.tsx`:
+>
+> 1. **Nada sai da memória** — zero escrita no banco, zero chamada à API. É
+>    estado de render, e morre no fechamento. Nenhum agregado, export ou
+>    ordenação chega perto disto.
+> 2. **Leitor de tela recebe a verdade** — o número falso é `aria-hidden`, e um
+>    `sr-only` ao lado diz que o valor foi falsificado e qual é o real.
+> 3. **O selo é inescapável** — o aviso em `--destructive` fica no mesmo quadro
+>    dos números. Não existe captura de tela da dashboard mentindo sem ele
+>    dentro dela.
+> 4. **Volta sozinha** — 8 s, `Esc` ou clique fora, e também no desmonte do
+>    componente (quem navega com o painel aberto não deixa a mentira para trás).
+>
+> **Gráficos e tabela não mentem**, por decisão: espalhar isso pelo Recharts é
+> onde deixa de ser contido e passa a arriscar sobrar na tela depois do
+> fechamento — o defeito que as travas existem para impedir. O trilho de
+> referência **some** enquanto o número mente: o ponteiro marca a posição
+> verdadeira, e ao lado de um número falso ele leria como bug de render, não
+> como ironia.
+>
 > O "fade + gradiente" é uma **segunda camada de máscara** cortada por
 > `mask-composite: intersect`: a marca nasce sólida onde sai da tela e se
 > dissolve subindo. Sem isso ela leria como adesivo colado.
@@ -357,6 +402,18 @@ exatamente o que a regra original proíbe. 40 ms lê como um gesto só.
 O custo declarado: esta é a segunda peça de movimento da interface, e a seção
 dizia "um momento autorado". São dois agora — o cursor de leitura na linha do
 tempo e a entrada dos sistemas. Um terceiro precisa de argumento novo.
+
+> **Nota de 25/08/2026 — a marca responde a gesto, e isso não é o terceiro
+> momento.** `MarcaFraus` reage a hover e a clique: o dourado varre pela fenda,
+> os quatro primeiros cliques tremem, o quinto abre a marca. Parada, ela é
+> **imóvel** — não anima por ter montado, não respira, não pulsa.
+>
+> A distinção que sustenta isso: **momento autorado é o que a interface executa
+> por conta própria** — o cursor de leitura, a entrada dos sistemas. Resposta a
+> gesto do usuário é outra categoria, a mesma dos `transition-colors` de 150 ms
+> que a navegação inteira já usa. Se hover de botão contasse como momento
+> autorado, esta seção já estaria violada em cada linha da navegação. **A conta
+> continua em dois.**
 
 O vocabulário (duração, curva, distância) mora em `lib/movimento.ts`, um lugar
 só, pelo mesmo motivo que a cor mora em token. `prefers-reduced-motion` é

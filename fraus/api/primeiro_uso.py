@@ -25,6 +25,7 @@ QUANDO NAO ACONTECE:
   que nao abre nada).
 """
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -52,11 +53,24 @@ def escrever_credenciais(caminho: Path, mestra: str, chave_de_acesso: str) -> No
         f"chave_mestra={mestra}\n"
         f"chave_acesso={chave_de_acesso}\n"
     )
-    # `x` e nao `w`: se o arquivo ja existe, alguem tem credencial anterior ali
-    # e sobrescrever apagaria a unica copia dela. Chegar aqui com o arquivo
-    # existente significa banco novo com arquivo velho -- caso em que o certo e
-    # falhar e deixar o operador decidir, nao escolher por ele qual copia morre.
-    with open(caminho, "x", encoding="utf-8") as arquivo:
+    # `O_EXCL` e nao truncar: se o arquivo ja existe, alguem tem credencial
+    # anterior ali e sobrescrever apagaria a unica copia dela. Chegar aqui com o
+    # arquivo existente significa banco novo com arquivo velho -- caso em que o
+    # certo e falhar e deixar o operador decidir, nao escolher por ele qual
+    # copia morre. (`O_CREAT|O_EXCL` levanta `FileExistsError`, subclasse de
+    # `OSError`, entao o tratamento de quem chama continua valendo.)
+    #
+    # `0o600` E O CONSERTO DE 25/08/2026: `open(caminho, "x")` respeita o umask
+    # e criava o arquivo 0o644 num POSIX tipico -- a UNICA copia em claro da
+    # chave mestra legivel por qualquer usuario da maquina. O modo entra na
+    # CRIACAO, e nao num `chmod` depois, porque entre criar e ajustar existe uma
+    # janela em que o arquivo ja tem o segredo e ainda tem a permissao larga.
+    #
+    # Em Windows o bit de grupo/outros nao existe (quem manda e a ACL herdada da
+    # pasta) e o Python so distingue gravavel de somente-leitura; passar o modo
+    # ali nao machuca e mantem um caminho de codigo so.
+    descritor = os.open(caminho, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    with os.fdopen(descritor, "w", encoding="utf-8") as arquivo:
         arquivo.write(conteudo)
 
 

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ehFalhaDeConexao } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { mentirSobre, useMentira } from "@/lib/mentira";
 import { TRANSICAO, itemDaPilha } from "@/lib/movimento";
 
 /**
@@ -76,6 +77,14 @@ export function CartaoIndicador({
   trilho?: Trilho;
   rodape?: ReactNode;
 }) {
+  // O EASTER EGG DA MARCA. Enquanto o painel dele esta aberto, este numero
+  // MENTE -- ver `lib/mentira.tsx` para as quatro travas que separam a
+  // encenacao do defeito que a invariante 2 condena. Fora do painel isto e
+  // sempre `false`, e este componente nunca soube mentir por conta propria.
+  const { mentindo } = useMentira();
+  const verdadeiro = formatado ?? String(valor);
+  const exibido = mentindo ? mentirSobre(verdadeiro) : verdadeiro;
+
   return (
     // Sem cartao: na armadura os indicadores se separam por REGUA e espaco, nao
     // por caixa. Cartao aqui produzia quatro caixas de altura igualada pelo
@@ -139,15 +148,33 @@ export function CartaoIndicador({
               className={cn(
                 "num text-[1.75rem] leading-none font-semibold tracking-tight text-foreground",
                 estimativa && "estimado",
+                // Mentindo, o numero vai para o vermelho de erro: mesmo quem
+                // nao le o selo percebe que a tela mudou de regime.
+                mentindo && "text-destructive",
               )}
+              // TRAVA 2: o leitor de tela NUNCA recebe o numero falso. Ele fica
+              // `aria-hidden` e a verdade sai no `sr-only` abaixo -- mentir para
+              // quem depende de leitor de tela nao tem piada nenhuma.
+              aria-hidden={mentindo || undefined}
             >
-              {formatado ?? valor}
+              {exibido}
             </span>
+            {mentindo ? (
+              <span className="sr-only">
+                {`Valor falsificado por um easter egg da interface. O valor real é ${verdadeiro}${unidade ? ` ${unidade}` : ""}.`}
+              </span>
+            ) : null}
             {unidade ? (
               <span className="text-sm text-muted-foreground">{unidade}</span>
             ) : null}
           </p>
-          {trilho ? <TrilhoDeReferencia valor={valor} trilho={trilho} /> : null}
+          {/* O trilho SOME enquanto o numero mente. O ponteiro dele marca a
+              posicao VERDADEIRA, e deixa-lo ao lado de um numero falso nao
+              leria como ironia -- leria como bug de render, que e o oposto do
+              efeito. Some junto e volta junto. */}
+          {trilho && !mentindo ? (
+            <TrilhoDeReferencia valor={valor} trilho={trilho} />
+          ) : null}
         </>
       )}
 

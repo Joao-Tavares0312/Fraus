@@ -502,6 +502,20 @@
   --marca-cor: var(--atelie-marca);
   --marca-op: 0.15;
 
+  /* --- A RAMPA DA MARCA ---------------------------------------------------
+     As duas paradas do gradiente do monograma. Sao os valores literais do
+     `public/fraus-logo.svg` convertidos: o pe rgb(170,134,80) e o topo
+     rgb(226,195,148). A nota acima ja registrava essa rampa como a fonte da
+     verdade do `--primary`; agora ela e TOKEN, e a marca inline pode herdar o
+     tema em vez de carregar o dourado colado no desenho.
+
+     `--marca-cor` (logo acima) e outra coisa, e a distincao importa: aquela e a
+     cor CHAPADA da marca impressa no fundo do atelie, que e mascara e nao tem
+     gradiente nenhum. Esta aqui e a rampa de duas paradas do monograma da
+     navegacao. Trocar uma pela outra apaga o gradiente que E a marca. */
+  --marca-cor-pe: oklch(0.642 0.084 76);
+  --marca-cor-topo: oklch(0.832 0.071 78);
+
   /* --- A GRADE A LASER ---------------------------------------------------
      O chao da cena: linhas fugindo ao ponto de fuga mais linhas horizontais
      comprimindo com a distancia. E o elemento mais reconhecivel do
@@ -751,6 +765,13 @@
      todas as outras luzes deste tema: aqui ela compete com um atelie aceso. */
   --marca-cor: oklch(0.7 0.24 330);
   --marca-op: 0.22;
+
+  /* A RAMPA da marca vira magenta, o par do ciano da pauta. Duas paradas do
+     mesmo tubo: o pe mais fundo, o topo aceso -- o gradiente sobrevive a troca
+     de tema, so muda de cor. E o que entrega "a logo com o tema respectivo
+     aplicado" tambem na navegacao, e nao so no fundo do atelie. */
+  --marca-cor-pe: oklch(0.58 0.2 330);
+  --marca-cor-topo: oklch(0.78 0.22 332);
 
   /* A GRADE vira tubo de ciano, o par do magenta da marca. Mais forte que no
      grafite pelo mesmo motivo de todas as luzes deste tema: ela compete com
