@@ -89,6 +89,42 @@ def importar(
     }
 
 
+@router.post("/conversas/repontuar")
+def repontuar(ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """Repontua o banco inteiro com o lexico vigente.
+
+    O que ela conserta: o `score` e gravado na importacao, entao curar uma
+    palavra nao mexe no que ja existe -- e um banco com conversas pontuadas
+    antes e depois soma duas reguas no mesmo agregado. Esta rota e o unico jeito
+    de zerar essa divergencia sem reimportar.
+
+    UMA leitura de faixa e UMA de curadoria para o lote inteiro, fora do laco:
+    ler por conversa abriria janela para o lote comecar com uma configuracao e
+    terminar com outra -- que e a regua misturada de novo, agora dentro da rota
+    que existe para acabar com ela.
+
+    LIMITACAO DECLARADA: repontuar roda os TRES BERTimbau de novo por conversa.
+    O vetor e de 35 features e o fusor exige as 35 -- nao existe recalcular so
+    as tres lexicas e as cinco de emoji sem o resto. Em dezenas de atendimentos
+    sao segundos; em milhares vira trabalho de fila, e a fila nao existe aqui.
+    A rota e SINCRONA de proposito: uma fila que ninguem observa seria pior que
+    uma espera que se ve.
+    """
+    curadoria = ctx.curadoria_vigente()
+    faixas = ctx.faixas_vigentes()
+    quantas = 0
+    for conversa, _ in ctx.banco.todas():
+        score = ctx.motor.pontuar_conversa(conversa, curadoria)
+        ctx.banco.salvar(
+            conversa,
+            score,
+            ctx.categoria_de(score, faixas),
+            lexico_versao=curadoria.versao,
+        )
+        quantas += 1
+    return {"repontuadas": quantas}
+
+
 @router.get("/conversas")
 def listar(
     de: str | None = None,
