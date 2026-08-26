@@ -51,12 +51,21 @@ def importar(
         ) from erro
 
     faixas = ctx.faixas_vigentes()
+    # UMA leitura de curadoria por importacao, e e a MESMA que grava a versao:
+    # reler abriria janela para a conversa ser pontuada com um lexico e marcada
+    # com a versao de outro -- o defeito exato que a versao existe para impedir.
+    curadoria = ctx.curadoria_vigente()
     for conversa in resultado.conversas:
-        score = ctx.motor.pontuar_conversa(conversa)
+        score = ctx.motor.pontuar_conversa(conversa, curadoria)
         # A coluna `categoria` e o retrato do instante da importacao; quem
         # le nao a consome (ver `categoria_de`), mas gravar com a faixa
         # vigente evita que o banco inspecionado a mao conte outra historia.
-        ctx.banco.salvar(conversa, score, ctx.categoria_de(score, faixas))
+        ctx.banco.salvar(
+            conversa,
+            score,
+            ctx.categoria_de(score, faixas),
+            lexico_versao=curadoria.versao,
+        )
 
     # "Motivo registrado" (spec 9) tem que CHEGAR a alguem: a contagem
     # sozinha nao diz o que ficou de fora.

@@ -22,6 +22,7 @@ from fraus.configuracao import faixas_de
 from fraus.db import Banco
 from fraus.indicadores import categoria_nps
 from fraus.motor import Motor
+from fraus.sinais.curadoria import Curadoria
 
 
 @dataclass(frozen=True)
@@ -61,6 +62,16 @@ class Contexto:
         faixa envelhecendo em memoria depois de um PUT.
         """
         return faixas_de(carregar_configuracao(self.banco))
+
+    def curadoria_vigente(self) -> Curadoria:
+        """O que o analista ensinou ao lexico, lido A CADA requisicao.
+
+        Irma de `faixas_vigentes`, pelo mesmo motivo escrito la: nao existe
+        copia do estado envelhecendo em memoria depois de uma escrita. O `Motor`
+        e construido uma vez no boot e continua sem saber da curadoria -- quem a
+        passa e a rota, no momento de pontuar.
+        """
+        return self.banco.carregar_curadoria()
 
     def categoria_de(self, score: float | None, faixas: dict) -> str | None:
         """Categoria DERIVADA NA LEITURA do score gravado e da faixa vigente.

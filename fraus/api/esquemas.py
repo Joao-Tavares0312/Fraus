@@ -6,6 +6,7 @@ porta para o cliente escolher a propria nota.
 """
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -44,6 +45,21 @@ class PedidoAnalise(BaseModel):
 
 class PedidoChaveAcesso(BaseModel):
     nome: str = Field(min_length=1)
+
+
+class PedidoCurado(BaseModel):
+    """Entrada de `POST /lexico/curado`.
+
+    NENHUM campo de veredito -- invariante 3. O analista diz o que a PALAVRA
+    vale para o lexico; o score continua saindo do fusor. Campo extra que o
+    cliente mande e ignorado pelo pydantic, e e por isso que este modelo e a
+    fronteira e nao um dicionario cru.
+    """
+
+    tipo: Literal["palavra", "emoji"]
+    termo: str = Field(min_length=1, max_length=64)
+    peso: float
+    motivo: str | None = Field(default=None, max_length=280)
 
 
 class PedidoIngestao(BaseModel):

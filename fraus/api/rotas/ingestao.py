@@ -55,12 +55,15 @@ def ingerir(
     except ValidationError as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
 
-    score = ctx.motor.pontuar_conversa(conversa)
+    # UMA leitura de curadoria, e e a MESMA que grava a versao: reler abriria
+    # janela para pontuar com um lexico e marcar com a versao de outro.
+    curadoria = ctx.curadoria_vigente()
+    score = ctx.motor.pontuar_conversa(conversa, curadoria)
     # UMA leitura de faixa por requisicao: derivar a categoria duas vezes
     # abria janela para a gravacao e a resposta lerem configuracoes
     # diferentes, e as duas precisam contar a mesma historia.
     categoria = ctx.categoria_de(score, ctx.faixas_vigentes())
-    ctx.banco.salvar(conversa, score, categoria)
+    ctx.banco.salvar(conversa, score, categoria, lexico_versao=curadoria.versao)
     return {
         "id": conversa.id,
         "canal": conversa.canal,

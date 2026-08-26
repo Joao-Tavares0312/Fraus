@@ -20,7 +20,7 @@ from fraus.modelos import Conversa, Mensagem
 class MotorFalso:
     """Nenhuma rota deste arquivo pontua: o motor nao pode ser exigido."""
 
-    def pontuar_conversa(self, conversa):  # pragma: no cover - nao chamado
+    def pontuar_conversa(self, conversa, curadoria=None):  # pragma: no cover - nao chamado
         raise AssertionError("rota de leitura nao deve pontuar")
 
 
