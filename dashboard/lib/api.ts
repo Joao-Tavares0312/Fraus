@@ -103,6 +103,16 @@ export type Indicadores = {
    * timestamps na leitura. null sem nenhum par -- nunca zero.
    */
   tempo_mediano_resposta_s: number | null;
+  /**
+   * Quantas conversas do BANCO INTEIRO foram pontuadas com uma versao anterior
+   * do lexico curado, e o total. As duas ignoram `de`/`ate` de proposito: a
+   * regua misturada e propriedade do banco, nao do recorte que se olha.
+   *
+   * Opcionais porque uma API anterior a este mecanismo nao as devolve -- e
+   * `undefined` ali significa "nao sei", que nao pode virar zero.
+   */
+  pontuadas_com_lexico_antigo?: number;
+  total_no_banco?: number;
 };
 
 export type ResumoConversa = {

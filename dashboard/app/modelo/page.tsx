@@ -20,6 +20,7 @@ import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
 import { LexiconEmoji } from "@/components/modelo/LexiconEmoji";
+import { LexicoCurado } from "@/components/modelo/LexicoCurado";
 import { MetricasTreino } from "@/components/modelo/MetricasTreino";
 import { PesosFeatures } from "@/components/modelo/PesosFeatures";
 import { Simulador } from "@/components/modelo/Simulador";
@@ -157,6 +158,10 @@ export default async function PaginaModelo() {
         >
           <LexiconEmoji total={modelo.total_emojis_lexicon} />
         </Painel>
+
+        {/* Depois do lexicon de emoji de propósito: primeiro o que o projeto
+            trouxe pronto, depois o que esta instalação acrescentou por cima. */}
+        <LexicoCurado />
       </div>
     </>
   );
