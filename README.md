@@ -34,12 +34,16 @@ por um classificador leve:
 | **Texto** | BERTimbau fine-tunado, probabilidade **por mensagem** | permite apontar *quais trechos* puxaram a nota |
 | **Emoji** | polaridade e **posição relativa** na mensagem | a polaridade do emoji cresce perto do fim da frase |
 | **Tempo** | latência, escalação, abandono | o efeito é não-linear — o peso é aprendido, não arbitrado |
-| **Emoção** ⏳ | as 7 emoções humanas, por mensagem | requisito de banca; a nota diz *quanto*, a emoção diz *o quê* |
-| **Léxico** ⏳ | SentiLex-PT02 com escopo de **negação** | polaridade de procedência independente do BERTimbau |
-| **Ironia** ⏳ | cabeça binária sobre o IDPT 2021 | texto positivo com sentido negativo derruba a leitura dos outros sinais |
+| **Emoção** | as 7 emoções humanas, por mensagem | requisito de banca; a nota diz *quanto*, a emoção diz *o quê* |
+| **Léxico** | SentiLex-PT02 com escopo de **negação**, mais o [léxico curado](#léxico-curado) | polaridade de procedência independente do BERTimbau |
+| **Ironia** ⚠️ | cabeça binária sobre o IDPT 2021 | texto positivo com sentido negativo derruba a leitura dos outros sinais |
+| **Estilo** | caixa alta, pontuação, alongamento, palavrão, censura | a forma de escrever carrega afeto que a palavra sozinha não carrega |
 
-⏳ *módulo pronto e testado; entra no vetor de features quando o modelo for
-treinado — ver [contrato de features](docs/treinamento.md#contrato-de-features).*
+As sete famílias somam **35 features** e todas entram no vetor desde 21/08/2026
+— ver [contrato de features](docs/treinamento.md#contrato-de-features).
+
+⚠️ *a cabeça de ironia tem vazamento de corpus medido e pontua assim mesmo — é
+dívida assumida, não pendência de integração; ver [pendência 1](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida).*
 
 O resultado é um score de 0 a 100 por atendimento, que vira nota 0–10 e categoria
 de NPS (**0–6 detrator · 7–8 neutro · 9–10 promotor**), agregado numa dashboard.
@@ -506,7 +510,8 @@ ordem lá é a ordem de importância.
 | **Agregação no servidor (fim do N+1)** | ✅ | `/serie-temporal`, `/lexico`, `/indicadores` (com tempo mediano) e o recorte `de`/`ate` em `/conversas`; **nenhuma tela baixa transcrição** no caminho feliz |
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
-| **Suíte** | ✅ | **430 testes** de Python passando, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest) — a primeira lógica **comportamental** dele, o contador do easter egg da marca, é testada; renderização continua coberta por build e contraste |
+| **Léxico curado** | ✅ | o que o analista ensina por cima do SentiLex e do ranking de emoji de 2015: cadastro, edição e revogação por rota e por painel; a curadoria **vence** o léxico base e atravessa até o score. Cada escrita versiona, a conversa grava com qual versão foi pontuada, a Visão geral **nomeia** a régua misturada e `POST /conversas/repontuar` a zera |
+| **Suíte** | ✅ | **481 testes** de Python passando, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest) — a primeira lógica **comportamental** dele, o contador do easter egg da marca, é testada; renderização continua coberta por build e contraste |
 
 ### Falta
 
@@ -636,9 +641,17 @@ que o projeto existe para não cometer.
 - **Mudar o peso do neutro exige repontuar o banco.** Ele é constante, não
   configuração, e o `score` é gravado na importação: um banco com conversas
   pontuadas antes e depois da mudança soma duas réguas no mesmo agregado, e
-  nenhuma leitura consegue separá-las. Não existe hoje um script de repontuar —
-  o caminho é reimportar. A mudança de 0,5 para 0,75 não precisou de nenhum dos
-  dois: o banco estava vazio quando ela foi feita.
+  nenhuma leitura consegue separá-las. O caminho é
+  `POST /conversas/repontuar`, que existe desde o léxico curado e serve aos dois
+  casos — ele repontua com o motor e o léxico vigentes, seja o que mudou o peso
+  ou a curadoria. A mudança de 0,5 para 0,75 não precisou dele: o banco estava
+  vazio quando ela foi feita.
+
+  **O aviso de régua misturada, porém, só enxerga a versão do léxico.** A
+  conversa grava com qual versão do léxico curado foi pontuada, e é isso que a
+  contagem de `/indicadores` compara — o peso do neutro não é versionado, então
+  mudá-lo mistura duas réguas **sem que nenhuma tela avise**. É a razão a mais
+  para ele continuar constante e não virar botão.
 - **O fusor é treinado em conversas sintéticas.** Nenhum corpus público de
   resenha PT-BR tem timestamps de diálogo: latência, escalação e abandono saem
   de distribuições calibradas por literatura de live chat. O texto é real, o
