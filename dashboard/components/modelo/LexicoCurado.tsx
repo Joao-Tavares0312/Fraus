@@ -214,9 +214,14 @@ export function LexicoCurado() {
                   key={rotulo}
                   className="flex items-center gap-1.5 text-sm text-muted-foreground"
                 >
+                  {/* `accent-color` em vez de um controle reconstruído: o
+                      radio nativo já tem o foco, o teclado e o leitor de tela
+                      certos, e o único desvio do sistema de design era a cor
+                      roxa que o navegador escolhe sozinho. */}
                   <input
                     type="radio"
                     name="peso-curado"
+                    className="size-3.5 accent-[var(--primary)]"
                     checked={peso === valor}
                     onChange={() => setPeso(valor)}
                   />
@@ -239,7 +244,7 @@ export function LexicoCurado() {
                 step={0.01}
                 value={peso}
                 onChange={(evento) => setPeso(Number(evento.target.value))}
-                className="min-w-0 flex-1"
+                className="min-w-0 flex-1 accent-[var(--primary)]"
               />
               {/* `.num` porque é número que se compara: monoespaçado. */}
               <span className="num w-12 shrink-0 text-right text-sm text-foreground">

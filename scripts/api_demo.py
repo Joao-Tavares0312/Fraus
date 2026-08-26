@@ -83,7 +83,7 @@ class MotorDuble:
         total = sum(bruto)
         return [valor / total for valor in bruto]
 
-    def atribuir_conversa(self, conversa: Conversa) -> dict:
+    def atribuir_conversa(self, conversa: Conversa, curadoria=None) -> dict:
         mensagens = []
         for indice, mensagem in enumerate(conversa.mensagens):
             do_cliente = mensagem.autor == "cliente"
@@ -120,7 +120,14 @@ class MotorDuble:
             "contribuicoes": contribuicoes,
         }
 
-    def pontuar_conversa(self, conversa: Conversa) -> float | None:
+    def pontuar_conversa(self, conversa: Conversa, curadoria=None) -> float | None:
+        """`curadoria` e ACEITA e IGNORADA, e a assimetria e honesta.
+
+        O dublê pontua por contagem de termo fixo, sem lexicon nenhum -- nao ha
+        onde um peso curado entrar. Aceitar o parametro mantem a rota igual a de
+        producao; fingir que ele muda o numero seria demonstrar um efeito que o
+        motor real tem e este nao.
+        """
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
 

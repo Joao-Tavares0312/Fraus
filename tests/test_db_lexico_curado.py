@@ -85,6 +85,23 @@ def test_conversa_pontuada_antes_da_mudanca_conta_como_defasada(banco):
     assert banco.contar_defasadas() == (1, 1)
 
 
+def test_versao_NULA_SEM_curadoria_nenhuma_NAO_e_defasada(banco):
+    """Sem nenhum termo curado nao existe "lexico anterior" a que ficar atras.
+
+    A regra generica -- NULL e defasada -- estava certa e incompleta: num banco
+    que nunca teve curadoria ela marcava TODA conversa como pontuada com outra
+    regua, e a Visao geral abria com um alarme falso de 64 de 64. Pego rodando a
+    interface contra a API de demonstracao, nao pelos testes: nenhum deles tinha
+    a combinacao "versao nula E versao vigente zero".
+
+    NULL e zero sao a mesma coisa AQUI, e so aqui: os dois dizem "pontuada antes
+    de existir curadoria". O que distingue defasada de em dia e a versao
+    VIGENTE ter andado desde entao.
+    """
+    banco.salvar(_conversa("c1"), 70.0, "neutro")  # sem passar a versao
+    assert banco.contar_defasadas() == (0, 1)
+
+
 def test_conversa_de_banco_antigo_com_versao_NULA_conta_como_defasada(banco):
     """Coluna acrescentada depois: linha antiga fica NULL e e anterior ao
     mecanismo -- que e defasada, nao 'em dia'."""

@@ -555,14 +555,22 @@ class Banco:
     def contar_defasadas(self) -> tuple[int, int]:
         """(pontuadas com lexico anterior, total). Do banco INTEIRO.
 
-        `lexico_versao IS NULL` conta como defasada: e linha de banco anterior a
-        este mecanismo, e "nao sei com qual lexico" nao e "em dia".
+        `lexico_versao IS NULL` e linha de banco anterior a este mecanismo, e
+        vale ZERO: nao ha diferenca entre "pontuada antes da coluna existir" e
+        "pontuada quando ninguem tinha curado nada" -- as duas usaram o lexico
+        base puro.
+
+        Por isso o `COALESCE`, e nao um `IS NULL` que conta como defasada
+        sozinho: num banco que nunca teve curadoria, aquela regra marcava TODA
+        conversa como pontuada com outra regua e a tela abria com um alarme
+        falso de 64 de 64. O que distingue defasada de em dia e a versao VIGENTE
+        ter andado -- se ela e 0, existe um lexico so, e nada pode estar atras.
         """
         vigente = self.lexico_versao()
         with self._conectar() as conexao:
             linha = conexao.execute(
                 "SELECT COUNT(*) AS total, "
-                "SUM(CASE WHEN lexico_versao IS NULL OR lexico_versao <> ? "
+                "SUM(CASE WHEN COALESCE(lexico_versao, 0) <> ? "
                 "THEN 1 ELSE 0 END) AS defasadas "
                 "FROM conversas",
                 (vigente,),
