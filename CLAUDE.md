@@ -46,6 +46,8 @@ CSV / Discord / WhatsApp
 | `fraus/sinais/lexico.py` | SentiLex-PT02 + escopo de negação |
 | `fraus/sinais/ironia.py` | cabeça binária (IDPT 2021) |
 | `fraus/sinais/estilo.py` | caixa alta, pontuação, alongamento, palavrão, censura |
+| `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex e o ranking de emoji |
+| `fraus/api/rotas/lexico.py` | cadastrar, listar e revogar termo curado |
 | `scripts/preparar_sentilex.py` | converte o SentiLex bruto em `fraus/dados/sentilex_pt02.csv` |
 | `fraus/fusor.py` | `NOMES_FEATURES` (35) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
