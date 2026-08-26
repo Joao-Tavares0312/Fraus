@@ -14,7 +14,7 @@ MESTRA = "segredo-de-teste-com-entropia-suficiente"
 
 
 class MotorFalso:
-    def pontuar_conversa(self, conversa):
+    def pontuar_conversa(self, conversa, curadoria=None):
         return 50.0
 
     def importancias(self):

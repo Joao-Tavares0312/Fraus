@@ -5,9 +5,11 @@ Latencia NAO e persistida -- e derivada dos timestamps na leitura.
 
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fraus.modelos import Conversa
+from fraus.sinais.curadoria import Curadoria
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS conversas (
@@ -86,6 +88,26 @@ CREATE TABLE IF NOT EXISTS chave_mestra (
     dica TEXT NOT NULL,
     criada_em TEXT NOT NULL
 );
+
+-- O que o analista ensinou ao lexico: termos que o SentiLex-PT02 e o Emoji
+-- Sentiment Ranking nao trazem, ou trazem com polaridade errada para o dominio
+-- de atendimento. Ver fraus/sinais/curadoria.py.
+--
+-- O INDICE UNICO e o que faz recadastrar o mesmo termo ser EDICAO em vez de
+-- duplicata silenciosa com uma das duas vencendo por ordem de leitura.
+--
+-- `motivo` e opcional e existe para a decisao sobreviver a quem a tomou: um
+-- peso sem porque, seis meses depois, e indistinguivel de erro de digitacao.
+CREATE TABLE IF NOT EXISTS lexico_curado (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT NOT NULL,
+    termo TEXT NOT NULL,
+    peso REAL NOT NULL,
+    motivo TEXT,
+    criado_em TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lexico_curado_termo
+    ON lexico_curado(tipo, termo);
 """
 
 
@@ -105,6 +127,7 @@ class Banco:
         ("fontes_integracao", "chave_hash", "TEXT"),
         ("fontes_integracao", "chave_dica", "TEXT"),
         ("fontes_integracao", "chave_criada_em", "TEXT"),
+        ("conversas", "lexico_versao", "INTEGER"),
     )
 
     def migrar(self) -> None:
@@ -118,11 +141,24 @@ class Banco:
                 if coluna not in existentes:
                     conexao.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
 
-    def salvar(self, conversa: Conversa, score: float | None, categoria: str | None) -> None:
+    def salvar(
+        self,
+        conversa: Conversa,
+        score: float | None,
+        categoria: str | None,
+        lexico_versao: int | None = None,
+    ) -> None:
+        """Grava a conversa e COM QUAL LEXICO ela foi pontuada.
+
+        `lexico_versao` e opcional e vai ao fim porque todo chamador anterior a
+        curadoria continua valendo -- e `None` ali significa exatamente o que
+        significa numa linha de banco antigo: nao se sabe, logo defasada.
+        """
         with self._conectar() as conexao:
             conexao.execute(
                 "INSERT OR REPLACE INTO conversas "
-                "(id, canal, iniciada_em, score, categoria, payload) VALUES (?, ?, ?, ?, ?, ?)",
+                "(id, canal, iniciada_em, score, categoria, payload, lexico_versao) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     conversa.id,
                     conversa.canal,
@@ -130,6 +166,7 @@ class Banco:
                     score,
                     categoria,
                     conversa.model_dump_json(),
+                    lexico_versao,
                 ),
             )
 
@@ -428,3 +465,114 @@ class Banco:
         if linha is None:
             return None
         return {"dica": linha["dica"], "criada_em": linha["criada_em"]}
+
+    # ---- lexico curado --------------------------------------------------
+
+    # A versao mora na tabela de configuracoes, e nao numa tabela propria: ela e
+    # UM inteiro, e a tabela chave/valor existe exatamente para isso. Comeca em
+    # 0 e sobe a cada ESCRITA -- curar e revogar contam igual, porque as duas
+    # mudam o que o lexico responde.
+    CHAVE_VERSAO = "lexico_versao"
+
+    def lexico_versao(self) -> int:
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT valor FROM configuracoes WHERE chave = ?", (self.CHAVE_VERSAO,)
+            ).fetchone()
+        return int(json.loads(linha["valor"])) if linha else 0
+
+    def _incrementar_versao(self, conexao) -> int:
+        """Sobe a versao DENTRO da transacao de quem chamou.
+
+        Recebe a conexao em vez de abrir a propria: gravar o termo e subir a
+        versao precisam acontecer juntos ou nenhum dos dois. Em transacoes
+        separadas, uma falha no meio deixaria termo curado com versao antiga --
+        e a tela diria que o banco esta em dia quando nao esta.
+        """
+        linha = conexao.execute(
+            "SELECT valor FROM configuracoes WHERE chave = ?", (self.CHAVE_VERSAO,)
+        ).fetchone()
+        proxima = (int(json.loads(linha["valor"])) if linha else 0) + 1
+        conexao.execute(
+            "INSERT OR REPLACE INTO configuracoes (chave, valor) VALUES (?, ?)",
+            (self.CHAVE_VERSAO, json.dumps(proxima)),
+        )
+        return proxima
+
+    def curar(self, tipo: str, termo: str, peso: float, motivo: str | None) -> dict:
+        """Cadastra ou EDITA um termo curado. Devolve o registro gravado."""
+        agora = datetime.now(timezone.utc).isoformat()
+        with self._conectar() as conexao:
+            conexao.execute(
+                "INSERT INTO lexico_curado (tipo, termo, peso, motivo, criado_em) "
+                "VALUES (?, ?, ?, ?, ?) "
+                "ON CONFLICT(tipo, termo) DO UPDATE SET "
+                "peso = excluded.peso, motivo = excluded.motivo, "
+                "criado_em = excluded.criado_em",
+                (tipo, termo, peso, motivo, agora),
+            )
+            self._incrementar_versao(conexao)
+            linha = conexao.execute(
+                "SELECT * FROM lexico_curado WHERE tipo = ? AND termo = ?",
+                (tipo, termo),
+            ).fetchone()
+        return dict(linha)
+
+    def listar_curados(self) -> list[dict]:
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT * FROM lexico_curado ORDER BY criado_em DESC, id DESC"
+            ).fetchall()
+        return [dict(linha) for linha in linhas]
+
+    def revogar_curado(self, curado_id: int) -> bool:
+        """`False` quando nao havia o que revogar -- e ai a versao NAO sobe.
+
+        Subir a versao numa revogacao que nao aconteceu marcaria o banco inteiro
+        como defasado sem nenhuma mudanca de lexico por tras.
+        """
+        with self._conectar() as conexao:
+            cursor = conexao.execute(
+                "DELETE FROM lexico_curado WHERE id = ?", (curado_id,)
+            )
+            if cursor.rowcount == 0:
+                return False
+            self._incrementar_versao(conexao)
+        return True
+
+    def carregar_curadoria(self) -> Curadoria:
+        """Monta o objeto que os sinais consomem. Lido a cada requisicao."""
+        palavras: dict[str, int] = {}
+        emojis: dict[str, float] = {}
+        with self._conectar() as conexao:
+            for linha in conexao.execute("SELECT tipo, termo, peso FROM lexico_curado"):
+                if linha["tipo"] == "palavra":
+                    palavras[linha["termo"]] = int(linha["peso"])
+                else:
+                    emojis[linha["termo"]] = float(linha["peso"])
+        return Curadoria(palavras=palavras, emojis=emojis, versao=self.lexico_versao())
+
+    def contar_defasadas(self) -> tuple[int, int]:
+        """(pontuadas com lexico anterior, total). Do banco INTEIRO.
+
+        `lexico_versao IS NULL` e linha de banco anterior a este mecanismo, e
+        vale ZERO: nao ha diferenca entre "pontuada antes da coluna existir" e
+        "pontuada quando ninguem tinha curado nada" -- as duas usaram o lexico
+        base puro.
+
+        Por isso o `COALESCE`, e nao um `IS NULL` que conta como defasada
+        sozinho: num banco que nunca teve curadoria, aquela regra marcava TODA
+        conversa como pontuada com outra regua e a tela abria com um alarme
+        falso de 64 de 64. O que distingue defasada de em dia e a versao VIGENTE
+        ter andado -- se ela e 0, existe um lexico so, e nada pode estar atras.
+        """
+        vigente = self.lexico_versao()
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT COUNT(*) AS total, "
+                "SUM(CASE WHEN COALESCE(lexico_versao, 0) <> ? "
+                "THEN 1 ELSE 0 END) AS defasadas "
+                "FROM conversas",
+                (vigente,),
+            ).fetchone()
+        return int(linha["defasadas"] or 0), int(linha["total"] or 0)

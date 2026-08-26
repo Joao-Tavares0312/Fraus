@@ -71,14 +71,25 @@ class Motor:
             return None
         return [float(p[IRONICO]) for p in self._ironia.prever_mensagens(textos)]
 
-    def pontuar_conversa(self, conversa) -> float | None:
+    def pontuar_conversa(self, conversa, curadoria=None) -> float | None:
+        """Score 0-100, ou `None` sem fala do cliente.
+
+        `curadoria` chega POR PARAMETRO e o Motor NAO a guarda: ele e construido
+        uma vez no boot, e um atributo aqui envelheceria a cada palavra
+        cadastrada -- o mesmo defeito que o `lru_cache` dos lexicons teria se a
+        curadoria entrasse por la, e o mesmo que a autenticacao ja teve quando o
+        middleware so era registrado no boot. Quem a carrega e o `Contexto`, a
+        cada requisicao.
+        """
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
         return self._fusor.pontuar(
-            montar_features(conversa, self._classificador, self._emocao, self._ironia)
+            montar_features(
+                conversa, self._classificador, self._emocao, self._ironia, curadoria
+            )
         )
 
-    def atribuir_conversa(self, conversa) -> dict:
+    def atribuir_conversa(self, conversa, curadoria=None) -> dict:
         """Quebra a nota por mensagem: quem falou o que, e com que probabilidade.
 
         SO a fala do cliente recebe probabilidade -- bot e humano vem com os
@@ -139,7 +150,12 @@ class Motor:
 
         contribuicoes = None
         if conversa.tem_sinal_cliente:
-            features = montar_features(conversa, self._classificador, self._emocao, self._ironia)
+            # A MESMA curadoria que pontua: se a atribuicao usasse outro lexico
+            # que o score, a tela explicaria a nota com evidencia que nao a
+            # produziu -- pior que nao explicar.
+            features = montar_features(
+                conversa, self._classificador, self._emocao, self._ironia, curadoria
+            )
             contribuicoes = self._fusor.contribuicoes(features)
 
         return {
@@ -165,7 +181,7 @@ class Motor:
         """Passthrough do peso global COM sinal -- o grafo da memoria consome."""
         return self._fusor.eixo_global()
 
-    def analisar_conversa(self, conversa, referencia=None) -> dict:
+    def analisar_conversa(self, conversa, referencia=None, curadoria=None) -> dict:
         """Analise completa de UMA conversa, com peso palavra a palavra.
 
         E a atribuicao de `atribuir_conversa` mais duas coisas que so fazem
@@ -178,7 +194,7 @@ class Motor:
         palavra do roteiro do bot "empurra a nota" produziria um numero
         bonito e sem lastro.
         """
-        atribuicao = self.atribuir_conversa(conversa)
+        atribuicao = self.atribuir_conversa(conversa, curadoria)
         for mensagem in atribuicao["mensagens"]:
             mensagem["palavras"] = (
                 pesos_das_palavras(mensagem["texto"], self._classificador)
@@ -186,7 +202,7 @@ class Motor:
                 else None
             )
 
-        score = self.pontuar_conversa(conversa)
+        score = self.pontuar_conversa(conversa, curadoria)
         return {
             **atribuicao,
             "score": score,

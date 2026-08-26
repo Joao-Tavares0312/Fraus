@@ -96,6 +96,56 @@ deliberada: `categoria` é derivada na leitura e refatia dado que já existe, ma
 o peso muda o `score` **gravado**. Um botão aqui deixaria o banco com scores de
 duas réguas somados no mesmo agregado, sem nenhuma leitura capaz de separá-los.
 
+## Léxico curado
+
+O SentiLex-PT02 tem 79.189 formas e não tem `lentíssimo`. O Emoji Sentiment
+Ranking anotou 751 emojis **em 2015** — tudo que o Unicode acrescentou depois
+vale zero. Nenhum dos dois conhece o jargão da empresa que opera o atendimento.
+O léxico curado é o que o analista acrescenta por cima.
+
+**O que o peso faz:** alimenta o sinal léxico, e o fusor treinado decide o
+quanto isso move a nota — exatamente como já faz com as 79.189 formas do
+SentiLex. **O que ele não faz:** corrigir score. Um ajuste por cima do número do
+modelo criaria uma **segunda régua**, que é a mesma dor documentada acima em
+`PESO_NEUTRO_NO_SCORE`. O analista conserta o dicionário, nunca a nota.
+
+**A curadoria vence o léxico base**, e é isso que a faz servir aos dois casos:
+preencher buraco (o termo não existe) e corrigir polaridade errada para o
+domínio. Peso `0` não é "ausente" — é **curado como neutro**, e silencia um
+termo que o SentiLex anota com polaridade errada para atendimento.
+
+**As duas escalas não são a mesma, e não podem ser:**
+
+| tipo | escala | por quê |
+|---|---|---|
+| palavra | inteiro **−1 / 0 / +1** | é a escala em que `lexico_polaridade_media` foi treinada; um `-0.7` injetaria na feature um valor que o fusor nunca viu |
+| emoji | float em **[−1, 1]** | é a escala contínua do Emoji Sentiment Ranking |
+
+A API recusa com `400` o que sai da escala, e a interface nem oferece: palavra
+tem três opções, nunca campo numérico livre.
+
+**A versão, e a régua misturada.** Cada escrita no léxico curado incrementa uma
+versão, e toda conversa grava **com qual versão foi pontuada**. Como o `score` é
+gravado na importação, curar uma palavra não mexe no que já existe — e um banco
+com conversas pontuadas antes e depois soma duas réguas no mesmo agregado. A
+Visão geral **nomeia** isso ("41 de 62 atendimentos foram pontuados com um
+léxico anterior") em vez de esconder, e a contagem ignora o filtro de período de
+propósito: a régua misturada é propriedade do banco, não da semana que se olha.
+
+`POST /conversas/repontuar` zera a divergência. **Limitação declarada:** ele roda
+os três BERTimbau de novo por conversa — o vetor é de 35 features e o fusor exige
+as 35, então não existe recalcular só as três léxicas e as cinco de emoji. Em
+dezenas de atendimentos são segundos; em milhares vira trabalho de fila, e a fila
+não existe. A rota é **síncrona de propósito**: uma fila que ninguém observa
+seria pior que uma espera que se vê.
+
+```
+GET    /lexico/curado          lista os termos curados
+POST   /lexico/curado          cadastra ou EDITA (tipo, termo, peso, motivo)
+DELETE /lexico/curado/{id}     revoga — o termo volta a valer o léxico base
+POST   /conversas/repontuar    repontua o banco inteiro com o léxico vigente
+```
+
 ## Stack
 
 Python 3.11 · transformers + torch (CPU) · scikit-learn · FastAPI · SQLite ·

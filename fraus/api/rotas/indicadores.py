@@ -41,6 +41,17 @@ def indicadores(
         "total_conversas": len(conversas),
         "sem_sinal": len(conversas) - len(scores),
         "tempo_mediano_resposta_s": tempo_mediano_resposta(registros),
+        # AS DUAS CONTAGENS SAO DO BANCO INTEIRO, e sao a unica coisa nesta
+        # resposta que ignora `de`/`ate`. A regua misturada e propriedade do
+        # banco, nao do recorte: um aviso que sumisse ao filtrar o periodo
+        # esconderia o problema exatamente de quem estivesse investigando um
+        # numero estranho.
+        **dict(
+            zip(
+                ("pontuadas_com_lexico_antigo", "total_no_banco"),
+                ctx.banco.contar_defasadas(),
+            )
+        ),
     }
 
 

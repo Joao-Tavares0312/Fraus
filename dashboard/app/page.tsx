@@ -33,6 +33,7 @@ import {
 } from "@/lib/derivacoes";
 import { formatarDataHora } from "@/lib/formato";
 import { lerPeriodo } from "@/lib/periodo";
+import { AvisoLexicoAntigo } from "@/components/AvisoLexicoAntigo";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { DistribuicaoScores } from "@/components/DistribuicaoScores";
 import { EstadoVazio } from "@/components/EstadoVazio";
@@ -124,6 +125,16 @@ export default async function Pagina(props: PageProps<"/">) {
     : tempoMedianoDeResposta(detalhes);
   const piores: ResumoConversa[] = pioresAtendimentos(resumos, PIORES_NA_TELA);
 
+  // Só existe quando o servidor de fato respondeu a contagem E ela é maior que
+  // zero. Com `/indicadores` fora, nada é afirmado: não saber com qual léxico o
+  // banco foi pontuado não é o mesmo que saber que está em dia.
+  const defasadas = indicadoresDoServidor.ok
+    ? (indicadoresDoServidor.dado.pontuadas_com_lexico_antigo ?? 0)
+    : 0;
+  const totalNoBanco = indicadoresDoServidor.ok
+    ? (indicadoresDoServidor.dado.total_no_banco ?? 0)
+    : 0;
+
   return (
     <>
       {/* Sem subtitulo, por decisao do Joao (14/08): o pitch morava aqui e
@@ -132,6 +143,10 @@ export default async function Pagina(props: PageProps<"/">) {
       <CabecalhoPagina titulo="Visão geral" periodo={periodo} extensao={extensao} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-7 px-4 py-5 sm:px-6">
+        {defasadas > 0 ? (
+          <AvisoLexicoAntigo defasadas={defasadas} total={totalNoBanco} />
+        ) : null}
+
         {/*
           O PRIMEIRO SISTEMA. A tese da tela — o trade-off entre satisfação e
           tempo — abre a página, e os indicadores agregados ficam à esquerda

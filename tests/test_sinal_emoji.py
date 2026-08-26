@@ -66,3 +66,41 @@ def test_fracoes_somam_no_maximo_um():
     )
     assert features["emoji_frac_positivos"] + features["emoji_frac_negativos"] <= 1.0
     assert features["emoji_contagem"] == 2
+
+
+# --- A CURADORIA -----------------------------------------------------------
+# O Emoji Sentiment Ranking anotou 751 emojis em 2015: tudo que o Unicode
+# acrescentou depois vale 0 aqui, e e esse buraco que o analista preenche.
+
+from fraus.sinais.curadoria import Curadoria  # noqa: E402
+
+
+def test_emoji_curado_vence_o_ranking():
+    assert score_do_emoji("\N{GRINNING FACE}") > 0
+    c = Curadoria(emojis={"\N{GRINNING FACE}": -0.9})
+    assert score_do_emoji("\N{GRINNING FACE}", c) == -0.9
+
+
+def test_emoji_fora_do_ranking_e_nao_curado_continua_zero():
+    assert score_do_emoji("\N{MELTING FACE}") == 0.0
+    assert score_do_emoji("\N{MELTING FACE}", Curadoria()) == 0.0
+
+
+def test_emoji_curado_preenche_o_que_o_ranking_de_2015_nao_tem():
+    c = Curadoria(emojis={"\N{MELTING FACE}": -0.7})
+    assert score_do_emoji("\N{MELTING FACE}", c) == -0.7
+
+
+def test_curadoria_de_emoji_move_as_features():
+    c = Curadoria(emojis={"\N{MELTING FACE}": -0.8})
+    conversa = _conversa(["acabou assim \N{MELTING FACE}"])
+    sem = features_emoji(conversa)
+    com = features_emoji(conversa, c)
+    assert sem["emoji_score_medio"] == 0.0
+    assert com["emoji_score_medio"] == -0.8
+    assert com["emoji_frac_negativos"] == 1.0
+
+
+def test_sem_curadoria_o_comportamento_e_o_de_antes():
+    conversa = _conversa(["tudo certo \N{GRINNING FACE}"])
+    assert features_emoji(conversa) == features_emoji(conversa, None)

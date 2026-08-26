@@ -113,14 +113,14 @@ class AtribuicaoDuble:
 
 
 class MotorFalso(AtribuicaoDuble):
-    def pontuar_conversa(self, conversa):
+    def pontuar_conversa(self, conversa, curadoria=None):
         return 90.0
 
 
 class MotorRespeitandoSinal(AtribuicaoDuble):
     """Duble que honra o invariante do Motor real: sem fala do cliente, sem score."""
 
-    def pontuar_conversa(self, conversa):
+    def pontuar_conversa(self, conversa, curadoria=None):
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
         return 90.0

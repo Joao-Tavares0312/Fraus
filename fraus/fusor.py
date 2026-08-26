@@ -109,6 +109,7 @@ def montar_features(
     classificador,
     classificador_emocao,
     classificador_ironia,
+    curadoria=None,
 ) -> dict[str, float]:
     """Junta os sete sinais numa linha unica de features.
 
@@ -117,13 +118,19 @@ def montar_features(
     nota. Aceitar `None` aqui produziria vetor incompleto, e vetor incompleto
     vira `KeyError` la em `vetorizar` -- com a diferenca de que o erro apontaria
     para o lugar errado.
+
+    `curadoria` e opcional e chega POR PARAMETRO, nunca por estado global: e o
+    que o analista ensinou ao lexico, lido a cada requisicao. Ela alcanca as
+    duas familias lexicais e MAIS NENHUMA -- o contrato continua de 35 chaves
+    (invariante 9), e o que ela muda e o VALOR de `lexico_*` e `emoji_*`, jamais
+    o conjunto de features.
     """
     return {
         **features_texto(conversa, classificador),
-        **features_emoji(conversa),
+        **features_emoji(conversa, curadoria),
         **features_tempo(conversa),
         **features_emocao(conversa, classificador_emocao),
-        **features_lexico(conversa),
+        **features_lexico(conversa, curadoria),
         **features_ironia(conversa, classificador_ironia),
         **features_estilo(conversa),
     }

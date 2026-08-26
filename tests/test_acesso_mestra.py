@@ -12,7 +12,7 @@ from fraus.db import Banco
 
 
 class MotorFalso:
-    def pontuar_conversa(self, conversa):
+    def pontuar_conversa(self, conversa, curadoria=None):
         return 50.0
 
 
