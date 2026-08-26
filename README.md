@@ -482,6 +482,81 @@ A subida **não abre janela de terminal**. O `stdout` da API vai para
 `dashboard/.fraus-api.log`, que é onde olhar quando ela falha — o motivo mais
 comum é modelo ausente em `modelos/`, que derruba o boot por design.
 
+### 6. Publicando a dashboard com a API na sua máquina (túnel)
+
+Para **demonstrar** a dashboard publicada (Vercel) falando com a API de verdade,
+sem hospedar a API em lugar nenhum: um túnel dá um endereço `https` público
+temporário para o `uvicorn` que roda no seu computador.
+
+**Por que não hospedar a API junto da dashboard:** a Vercel é serverless, e só o
+`torch` ocupa 497 MB instalado contra o teto de 250 MB de uma função — os três
+BERTimbau somam mais 1,25 GB, e cada requisição roda inferência em CPU. O
+Hugging Face Spaces resolveria o tamanho, mas Docker Space exige assinatura PRO
+(`402 Payment Required` no plano gratuito); o tier gratuito do Render dá 512 MB
+de RAM, e os três modelos carregados não cabem. Hospedar de verdade pede um
+container com ~2 GB de RAM e disco — ver [docs/hospedagem.md](docs/hospedagem.md).
+
+Enquanto a API vive na sua máquina, o túnel é o caminho de dois minutos.
+
+```bash
+# 1. Suba a API com os modelos (uma vez; leva 30-60 s carregando os BERTimbau).
+#    Windows/PowerShell: troque `export X=y` por `$env:X = "y"`.
+export FRAUS_CAMINHO_MODELO_TEXTO=modelos/bertimbau-satisfacao
+export FRAUS_CAMINHO_MODELO_EMOCAO=modelos/bertimbau-emocao
+export FRAUS_CAMINHO_MODELO_IRONIA=modelos/bertimbau-ironia
+export FRAUS_CAMINHO_FUSOR=modelos/fusor.joblib
+export FRAUS_CAMINHO_METRICAS=modelos/bertimbau-satisfacao/metricas.json
+export FRAUS_CAMINHO_METRICAS_EMOCAO=modelos/metricas_emocao.json
+export FRAUS_CAMINHO_METRICAS_IRONIA=modelos/metricas_ironia.json
+export FRAUS_CHAVE_MESTRA=$(openssl rand -hex 32)   # GUARDE: some ao fechar o shell
+uv run python -m uvicorn fraus.api.main:app --host 127.0.0.1 --port 8000
+
+# 2. Gere a chave de ACESSO da dashboard (outro terminal), com a mestra acima.
+curl -X POST http://127.0.0.1:8000/acesso/chaves \
+  -H "Authorization: Bearer $FRAUS_CHAVE_MESTRA" \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"dashboard-vercel"}'
+# → devolve `fra_...` UMA única vez.
+
+# 3. Abra o túnel (outro terminal). A URL sai no stdout, em "Your quick Tunnel".
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+
+No `uv run`, prefira `python -m uvicorn` a chamar `uvicorn` direto: no Git Bash
+do Windows o executável do `uv` falha com *"trampoline failed to canonicalize
+script path"*.
+
+Na Vercel (**Settings → Environment Variables**, depois um redeploy — variável
+server-side só entra em processo novo):
+
+| Variável | Valor |
+|---|---|
+| `FRAUS_API_URL` | a URL `https://....trycloudflare.com` do passo 3 |
+| `FRAUS_CHAVE_ACESSO` | a chave `fra_...` do passo 2 |
+
+`FRAUS_ORIGENS` **não** é necessária: quem chama a API é o servidor Next, não o
+navegador, e requisição de servidor não faz preflight de CORS.
+
+**O que o túnel exige, e o que ele não perdoa:**
+
+- **Sua máquina precisa estar ligada** com os dois processos vivos. Fechou o
+  terminal, acabou a demonstração.
+- **A URL muda a cada `cloudflared tunnel --url`.** Um túnel rápido é anônimo e
+  descartável; reabrir significa atualizar `FRAUS_API_URL` na Vercel e
+  redeployar. Para um endereço fixo, é preciso túnel nomeado com domínio.
+- **Defina `FRAUS_CHAVE_MESTRA` ANTES de abrir o túnel.** Sem ela a API sobe
+  aberta, e o túnel publica na internet uma API que grava no seu banco. Com ela,
+  quem chegar no endereço esbarra em **401**.
+- A mestra protege a **API**, não a **dashboard**: a dashboard publicada não tem
+  login, e quem tem o link lê os dados por ela. Para demonstrar com atendimento
+  real, ligue também a **Vercel Deployment Protection**.
+- **Feche o túnel quando terminar** (`Ctrl+C`).
+
+**Sem a API no ar, o deploy não quebra.** Todas as telas são `force-dynamic` e
+`lib/api.ts` devolve `Resultado<T>` em vez de lançar: o build da Vercel passa sem
+falar com a API, e cada tela nomeia o que falta em vez de mostrar zero. Publicar
+a dashboard antes de resolver a hospedagem é uma opção honesta.
+
 ## Roadmap
 
 Onde o trabalho está. **Entregue** é o que existe no repositório e tem teste ou
