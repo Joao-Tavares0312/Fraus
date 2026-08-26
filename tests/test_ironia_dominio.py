@@ -127,6 +127,62 @@ def test_probabilidade_de_ironia_e_saturada_e_nao_da_para_calibrar_por_limiar(
     )
 
 
+@pytest.mark.gate_ironia
+def test_gate_o_modelo_retreinado_acerta_a_fala_sincera(classificador):
+    """O ALVO do retreino. Vermelho com os pesos de 14/08, e e para estar.
+
+    Os tres testes acima sao a FOTOGRAFIA do modelo quebrado: eles passam
+    porque ele erra, e dois deles passariam a falhar se ele acertasse. Isso os
+    torna imprestaveis como criterio de aceitacao -- rodar a suite depois de
+    trocar os pesos e ver verde nao provaria nada, e ver vermelho seria a boa
+    noticia disfarçada de regressao.
+
+    Este aqui e o inverso: afirma o que o modelo novo PRECISA fazer. Fica fora
+    da rodada padrao pelo marcador `gate_ironia`, senao o main ficaria vermelho
+    por design ate o Colab rodar -- e vermelho permanente ensina a ignorar
+    vermelho.
+
+        uv run pytest -m gate_ironia
+
+    Os 20% nao sao arbitrarios: sao o teto que ainda permite exibir a
+    probabilidade de ironia como VEREDITO em vez de indicio. Com dois falsos
+    positivos em dez a ressalva colada continua necessaria; acima disso o
+    retreino nao entregou o que prometeu e trocar os pesos so muda o numero
+    do vazamento.
+
+    Quando este teste passar, a limpeza obrigatoria e, na mesma PR:
+    apagar os tres testes-fotografia acima, atualizar as ressalvas de dominio
+    na interface, e RETREINAR O FUSOR (notebook 02) -- o vigente aprendeu os
+    pesos das tres features de ironia sobre a cabeca que vazava.
+    """
+    probabilidades = _probabilidades(classificador, FALA_SINCERA)
+    marcadas = [(p, t) for p, t in zip(probabilidades, FALA_SINCERA) if p > 0.5]
+    taxa = len(marcadas) / len(FALA_SINCERA)
+
+    detalhe = "\n".join(f"    {p:.3f}  {t}" for p, t in sorted(marcadas, reverse=True))
+    assert taxa <= 0.20, (
+        f"falso positivo de ironia em fala sincera: {taxa:.0%} "
+        f"(alvo <= 20%, medido 60% em 2026-08-14)\n{detalhe}"
+    )
+
+
+@pytest.mark.gate_ironia
+def test_gate_a_ironia_de_manual_sobrevive_ao_retreino(classificador):
+    """Metade do portao, e a metade que um modelo preguicoso quebraria.
+
+    O teste acima, sozinho, tem uma solucao trivial e inutil: um modelo que
+    responde "nao e ironia" para tudo tira 0% de falso positivo. Este exige que
+    o caso que justifica a cabeca existir continue funcionando -- e com folga,
+    nao raspando o 0,5, porque probabilidade de ironia colada no limiar nao
+    sustenta exibicao como veredito.
+    """
+    (probabilidade,) = _probabilidades(classificador, [IRONIA_DE_MANUAL])
+    assert probabilidade > 0.7, (
+        f"a ironia de manual caiu para {probabilidade:.3f} -- o retreino "
+        "comprou fala sincera limpa vendendo a ironia que justifica a cabeca."
+    )
+
+
 def test_acuracia_perfeita_do_relatorio_vale_so_no_corpus_gerado(classificador):
     """A acuracia 1.0 e real no corpus dele e nao sobrevive a fala espontanea.
 

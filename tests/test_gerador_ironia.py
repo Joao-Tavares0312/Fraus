@@ -113,6 +113,53 @@ def test_marcador_de_discurso_nao_separa_as_classes():
     )
 
 
+def test_caixa_e_pontuacao_nao_separam_as_classes():
+    """A pista TIPOGRAFICA -- a que o modelo de 14/08 de fato leu.
+
+    O teste do marcador acima nomeia a causa do vazamento, mas a medicao em
+    tests/test_ironia_dominio.py descreve o corte observado como outra coisa:
+    "dispara em minusculo, sem pontuacao final, tom contido; fica em zero em
+    frase enfatica com exclamacao". Isso e caixa e pontuacao, nao marcador.
+
+    `_talvez_maiuscula` ja aplica as duas por sorteio no gargalo unico de
+    `acrescentar`, junto com marcador e emoji -- a correcao existe. O que nao
+    existia era teste olhando para ela, que e exatamente a historia do
+    marcador se repetindo: a defesa entra no codigo, ninguem tranca, e o
+    proximo refactor que mover um sorteio para dentro de um ramo especifico
+    recria o vazamento em silencio. O corpus volta a passar limpo e a conta
+    chega tres horas depois, na metrica.
+
+    Trava por PROPORCAO nas duas classes, como a do marcador: maiuscula rara
+    de um lado e comum do outro continua prevendo o rotulo, mesmo que as duas
+    classes tenham algum exemplo de cada forma.
+    """
+    exemplos = gerar_exemplos(1200, semente=19)
+
+    def comeca_em_maiuscula(texto: str) -> bool:
+        return bool(texto) and texto[0].isupper()
+
+    def termina_com_pontuacao(texto: str) -> bool:
+        return texto.rstrip().endswith((".", "!", "..."))
+
+    for nome, pista in (
+        ("caixa alta na abertura", comeca_em_maiuscula),
+        ("pontuacao final", termina_com_pontuacao),
+    ):
+        taxa_ironica = _proporcao(exemplos, IRONICO, pista)
+        taxa_sincera = _proporcao(exemplos, NAO_IRONICO, pista)
+
+        assert min(taxa_ironica, taxa_sincera) > 0.05, (
+            f"{nome} quase nao aparece numa das classes "
+            f"(ironica {taxa_ironica:.1%}, sincera {taxa_sincera:.1%}) -- "
+            "voltou a ser gabarito."
+        )
+        assert abs(taxa_ironica - taxa_sincera) < 0.12, (
+            f"{nome} aparece em {taxa_ironica:.1%} da ironia contra "
+            f"{taxa_sincera:.1%} da fala sincera: a diferenca prevê o rotulo. "
+            "E a pista que derrubou o modelo de 2026-08-14."
+        )
+
+
 def test_ironia_nao_exige_palavra_elogiosa():
     """A familia por atenuacao ("imagina, ... nao incomoda nada") existe para
     que "tem elogio" nao seja condicao NECESSARIA de ironia."""

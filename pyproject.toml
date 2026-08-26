@@ -33,7 +33,12 @@ testpaths = ["tests"]
 # `lento` sai da rodada padrao: sao testes de minutos, nao de segundos. Eles
 # continuam existindo e sao obrigatorios ao mexer no gerador de corpus --
 # `uv run pytest -m lento`. Desmarcar por padrao e diferente de apagar.
-addopts = "-m 'not lento'"
+addopts = "-m 'not lento and not gate_ironia'"
 markers = [
     "lento: leva minutos (esgota espaco de combinacoes). Rode com -m lento.",
+    # Fora da rodada padrao porque mede o modelo que AINDA NAO EXISTE. Deixar
+    # na suite deixaria o main vermelho ate o retreino, e main vermelho por
+    # design ensina a ignorar vermelho -- que e como uma falha de verdade
+    # passa. Rode com `-m gate_ironia` depois de trocar os pesos.
+    "gate_ironia: o alvo do retreino da ironia. VERMELHO com os pesos de 14/08.",
 ]
