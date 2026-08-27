@@ -9,23 +9,42 @@ import { Button } from "@/components/ui/button";
  *  componente proprio (`ChaveEmClaro`), com o aviso de "copie agora" junto. */
 function BotaoCopiar({ texto, rotulo }: { texto: string; rotulo: string }) {
   const [copiado, setCopiado] = useState(false);
+  /**
+   * `navigator.clipboard` so existe em contexto seguro (HTTPS ou localhost).
+   * Num IP de LAN por HTTP a promise rejeita, e sem isto o botao ficava mudo.
+   * O texto continua na tela ao lado, entao a saida e copiar a mao -- e a
+   * mensagem precisa dizer isso, nao so "falhou".
+   */
+  const [falhou, setFalhou] = useState(false);
 
   async function copiar() {
-    await navigator.clipboard.writeText(texto);
-    setCopiado(true);
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setFalhou(false);
+    } catch {
+      setFalhou(true);
+    }
   }
 
   return (
-    <Button
-      type="button"
-      size="xs"
-      variant="outline"
-      onClick={copiar}
-      className="shrink-0"
-    >
-      {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
-      {copiado ? "Copiado" : rotulo}
-    </Button>
+    <span className="flex shrink-0 flex-col items-end gap-1">
+      <Button
+        type="button"
+        size="xs"
+        variant="outline"
+        onClick={copiar}
+        className="shrink-0"
+      >
+        {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
+        {copiado ? "Copiado" : rotulo}
+      </Button>
+      {falhou ? (
+        <span role="status" className="text-[0.6875rem] text-muted-foreground">
+          o navegador não deixou copiar fora de HTTPS — selecione o texto ao lado
+        </span>
+      ) : null}
+    </span>
   );
 }
 
