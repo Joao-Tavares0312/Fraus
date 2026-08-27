@@ -28,8 +28,8 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 | | |
 |---|---|
-| Branch | `feat/autenticacao` (autenticação implementada e verificada por fumaça HTTP, ainda não mesclada em `main`) |
-| Testes | **300 passando**, 1 deselecionado (marcado `lento`) |
+| Branch | `feat/webhook-integracao` (integração por webhook de pé: assinatura HMAC, tabela de entregas, rota assinada por fonte e tela `/integracoes` mestre-detalhe) |
+| Testes | **551 passed, 1 deselected** |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git** |
 | API | `uv run python scripts/api_demo.py` → :8000 |
 | Dashboard | `cd dashboard && npm run build && npx next start -p 3000` |
@@ -158,6 +158,9 @@ lista, ela para de ser lida.
 | `ingest/arquivos.py` | decide o formato e traduz erro em mensagem útil |
 | `ingest/gerador_ironia.py` | corpus sintético blindado contra vazamento |
 | `api/main.py` | ~1200 linhas. `criar_app(banco, motor, raiz)` recebe tudo por parâmetro |
+| `assinatura.py` | HMAC de webhook (Standard Webhooks): `whsec_<base64>`, chave = base64 **decodificado**, assina `{id}.{timestamp}.{corpo}`, janela de 5 min |
+| `api/registro.py` | o miolo de `montar → pontuar → derivar → gravar`, compartilhado por `/ingestao` e `/integracoes/webhook/{id}`; é onde mora `resumo_validacao` |
+| `api/rotas/webhook.py` | `POST /integracoes/webhook/{fonte_id}` — o porteiro na ordem identidade→autoridade→parse, com registro de entrega em `entregas_webhook` |
 
 ### Front — `dashboard/`
 
@@ -318,6 +321,36 @@ Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
 7. **Oclusão quebra expressão fixa**: "Bom dia" sem "dia" vira "Bom" solto, e
    "dia" recebe peso alto e enganoso. Está declarado na interface — não trate
    como bug.
+8. **Rota de escrita com credencial própria precisa entrar em `ISENTAS`**
+   (`fraus/api/seguranca.py`), ou o middleware de chave de acesso a recusa com
+   401 **antes** de olhar a credencial dela. `/integracoes/webhook/{id}` tem
+   assinatura própria — a plataforma externa não tem, nem pode ter, uma chave
+   `fra_`. O defeito só aparece com a mestra **ligada**, isto é, só em
+   produção: o log de entregas fica vazio dizendo "não chegou nada" enquanto a
+   plataforma recebe 401 em cada tentativa, e nada no ambiente de
+   desenvolvimento (API aberta) revela o problema.
+9. **`PRAGMA foreign_keys` vale por CONEXÃO no SQLite**, não por banco. Ligá-lo
+   uma vez na criação do esquema não teria efeito nenhum nas conexões
+   seguintes — cada `_conectar()` precisa executá-lo de novo — e sem isso o
+   `ON DELETE CASCADE` de `entregas_webhook` seria documentação em vez de
+   comportamento: apagar uma fonte deixaria as entregas órfãs, apontando para
+   um `fonte_id` que ninguém mais consegue consultar.
+10. **`str(ValidationError)` do Pydantic v2 embute o `input_value` recebido** —
+    para JSON malformado, até o corpo cru inteiro; para campo de tipo errado,
+    o valor daquele campo. Gravar essa mensagem num log ou devolvê-la no
+    `detail` de uma resposta persiste ou vaza PII de cliente real. Por isso
+    `fraus/api/registro.py` tem `resumo_validacao`, que usa só `loc` (onde) e
+    `type` (o que) de `erro.errors()`, e descarta `input`/`msg`/`ctx` de
+    propósito — qualquer um deles pode carregar o valor recebido.
+11. **Dedupe de webhook só pode contar entregas com veredito `aceita`.**
+    `entrega_ja_vista` filtra por `veredito = 'aceita'` de propósito: se
+    contasse qualquer veredito, uma recusa registrada — inclusive de um
+    anônimo com assinatura inválida, já que a rota é anônima por desenho —
+    faria a entrega legítima seguinte com o mesmo `webhook-id` virar
+    "duplicada", e o atendimento se perderia em silêncio. Tem variante
+    auto-infligida: um 503 (variável de segredo ausente) grava a linha, o
+    operador corrige a variável no ambiente e reinicia, e a retentativa da
+    plataforma some como se já tivesse entrado.
 
 ---
 

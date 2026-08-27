@@ -400,6 +400,139 @@ Nos outros exemplos deste README vale a mesma tradução; e para definir variáv
 de ambiente, `$env:FRAUS_CHAVE_MESTRA = "..."` antes do comando, já que
 `VAR=valor comando` é sintaxe de bash.
 
+#### Recebendo atendimento por webhook (`POST /integracoes/webhook/{fonte_id}`)
+
+É o segundo caminho de escrita pela rede, ao lado de `POST /ingestao`. A
+diferença é a credencial: `/ingestao` pede uma chave `frs_` no cabeçalho
+`Authorization`, e este endpoint confere uma **assinatura HMAC** sobre o corpo,
+no padrão [Standard Webhooks](https://www.standardwebhooks.com/) — quem integra
+usa biblioteca de prateleira, em vez de ler a nossa documentação. Depois de
+autenticar, o que as duas rotas fazem é o **mesmo código**
+(`fraus/api/registro.py`): o canal vem da fonte cadastrada, e o veredito é
+derivado no servidor.
+
+**1. Cadastre a fonte, com `tipo: "webhook"` e o nome de uma variável de
+ambiente** (ela ainda não precisa existir no ambiente — só o nome):
+
+```bash
+curl -X POST localhost:8000/integracoes/fontes \
+  -H 'content-type: application/json' \
+  -d '{"nome":"WhatsApp","canal":"whatsapp","tipo":"webhook","variavel_segredo":"FRAUS_SEGREDO_WHATSAPP"}'
+```
+
+**2. Gere o segredo** (privilégio da mestra, como as demais rotas de
+credencial):
+
+```bash
+curl -X POST localhost:8000/integracoes/fontes/1/segredo \
+  -H "Authorization: Bearer <mestra>"
+# → {"segredo": "whsec_...", "variavel": "FRAUS_SEGREDO_WHATSAPP", "aviso": "..."}
+```
+
+O segredo sai em claro **uma única vez** — o Fraus não grava essa resposta em
+lugar nenhum, nem o hash: HMAC exige o segredo em claro no servidor toda vez
+que uma assinatura é conferida, e guardar valor recuperável no SQLite desfaria
+a propriedade que faz um backup vazado não levar credencial junto. Perder o
+segredo custa gerar outro.
+
+**3. Defina a variável no ambiente da API — e REINICIE o processo.**
+`os.environ` é lido pelo processo em execução; escrever a variável e continuar
+com a mesma API no ar não muda nada que ela enxerga. Sem reiniciar, o operador
+vê **503** com o segredo aparentemente "definido" (definido no terminal onde
+ele rodou o `export`, não no processo que está de pé):
+
+```bash
+export FRAUS_SEGREDO_WHATSAPP=whsec_...
+uv run python -m uvicorn fraus.api.main:app --reload
+```
+
+**4. Entregue a URL e o segredo à plataforma**, e assine cada evento antes de
+mandar.
+
+O contrato:
+
+- **URL:** `POST /integracoes/webhook/{fonte_id}`, o id devolvido no cadastro
+  da fonte.
+- **Três cabeçalhos**, no padrão Standard Webhooks: `webhook-id` (identifica o
+  evento — é a chave da deduplicação), `webhook-timestamp` (segundos desde a
+  época) e `webhook-signature` (`v1,<assinatura em base64>`; pode trazer mais
+  de uma assinatura separada por espaço, para rotação de segredo sem janela de
+  indisponibilidade).
+- **O que se assina:** `{webhook-id}.{webhook-timestamp}.{corpo}`, os três
+  concatenados nessa ordem, com o corpo em **bytes crus** — nunca o
+  dict/JSON re-serializado, porque HMAC é byte-exato e reordenar uma chave ou
+  mudar um espaço muda a assinatura.
+- **Corpo:** o mesmo contrato de `POST /ingestao` (`PedidoIngestao`) — `id`,
+  `mensagens` (com `autor`, `texto`, `enviada_em` timezone-aware) e os campos
+  opcionais `encerrada_em`/`escalou_para_humano`. O canal não entra: é o da
+  fonte cadastrada.
+
+Exemplo de assinar em Python, curto o bastante para colar direto — a chave
+HMAC é o **base64 decodificado** do segredo, não a string `whsec_...` inteira
+(usar a string inteira mataria o único motivo de adotar o padrão: a biblioteca
+do outro lado faz o decode, geraria outra assinatura, e nada bateria):
+
+```python
+import base64
+import hashlib
+import hmac
+import time
+
+segredo = "whsec_..."          # o valor gerado no passo 2
+webhook_id = "evt-001"         # um id por evento, único por fonte
+timestamp = str(int(time.time()))
+corpo = b'{"id":"atendimento-123","mensagens":[...]}'   # bytes exatos do POST
+
+chave = base64.b64decode(segredo.removeprefix("whsec_"))
+conteudo = f"{webhook_id}.{timestamp}.".encode() + corpo
+assinatura = base64.b64encode(
+    hmac.new(chave, conteudo, hashlib.sha256).digest()
+).decode()
+
+headers = {
+    "webhook-id": webhook_id,
+    "webhook-timestamp": timestamp,
+    "webhook-signature": f"v1,{assinatura}",
+    "content-type": "application/json",
+}
+# requests.post(f"http://localhost:8000/integracoes/webhook/1", data=corpo, headers=headers)
+```
+
+A conferência dos status, na ordem em que o porteiro os produz — identidade,
+depois autoridade, depois parse, nunca o contrário:
+
+| Status | Quando |
+|---|---|
+| **201** | aceito: a conversa foi gravada, o corpo da resposta traz o veredito |
+| **200** | reentrega: mesmo `webhook-id` já **aceito** antes para esta fonte — o Standard Webhooks manda a plataforma retentar diante de qualquer resposta fora de 2xx, então responder erro a uma reentrega legítima poria a integração em laço |
+| **400** | corpo fora do contrato, `webhook-timestamp` fora da janela de 5 minutos, ou um dos três cabeçalhos ausente |
+| **401** | assinatura não confere |
+| **403** | fonte cadastrada e desativada |
+| **404** | `fonte_id` inexistente |
+| **503** | variável de ambiente ausente, ou com valor que não é um segredo válido |
+
+**Por que o último é 503 e não 401.** Variável ausente é defeito da **máquina
+que hospeda a API**, não de quem chamou — a assinatura de quem integra pode
+estar perfeita e a resposta seria a mesma. Responder 401 mandaria o integrador
+caçar um problema que não é dele: reconferir a assinatura, gerar segredo novo,
+reler a própria implementação — quando o conserto real é reiniciar o processo
+da API com a variável definida.
+
+**A ressalva honesta: HMAC prova origem e integridade, não confidencialidade.**
+A assinatura garante que o corpo veio de quem tem o segredo e não foi alterado
+no caminho — não que ninguém no caminho o leu. O corpo trafega **legível**
+para qualquer um posicionado entre a plataforma e a API, e ele carrega fala
+real de cliente. Quem publica a API precisa de TLS; ver
+[docs/hospedagem.md](docs/hospedagem.md), que já descreve o túnel Cloudflare
+usado para demonstração.
+
+**Limitação declarada: não há adaptador de plataforma nenhuma.** O Fraus
+recebe eventos num **contrato documentado** — o mesmo de `PedidoIngestao` —, e
+não há tradutor embutido para o formato de Zendesk, Meta (WhatsApp Business),
+Twilio ou qualquer outra plataforma nomeada. Traduzir o payload da plataforma
+para este contrato, e assinar com o segredo dela, é trabalho de quem integra.
+Não é plug-and-play.
+
 ### 4. Dashboard
 
 ```bash
