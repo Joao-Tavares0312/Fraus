@@ -683,7 +683,18 @@ navegador, e requisição de servidor não faz preflight de CORS.
   redeployar. Para um endereço fixo, é preciso túnel nomeado com domínio.
 - **Defina `FRAUS_CHAVE_MESTRA` ANTES de abrir o túnel.** Sem ela a API sobe
   aberta, e o túnel publica na internet uma API que grava no seu banco. Com ela,
-  quem chegar no endereço esbarra em **401**.
+  quem chegar no endereço esbarra em **401** — em toda rota menos duas, que têm
+  credencial própria e por isso não passam pela chave: `POST /ingestao` (chave
+  de fonte `frs_`) e `POST /integracoes/webhook/{fonte_id}` (assinatura HMAC).
+- **A rota do webhook é anônima por desenho, e continua sendo uma porta pública
+  de escrita.** Ela não pede `Authorization` porque a credencial dela é a
+  assinatura do corpo: a plataforma que entrega ali não tem, nem pode ter, uma
+  chave `fra_`. Quem não souber o segredo daquela fonte não consegue gravar nada
+  — sem assinatura válida a entrega para no porteiro, e cada tentativa fica no
+  histórico de entregas da fonte. O que fica exposto é o endereço: com o túnel
+  aberto, qualquer um pode **chamar** `/integracoes/webhook/{id}` e gerar
+  tentativas recusadas. Publique sabendo disso, e guarde o segredo com o mesmo
+  cuidado da chave mestra.
 - A mestra protege a **API**, não a **dashboard**: a dashboard publicada não tem
   login, e quem tem o link lê os dados por ela. Para demonstrar com atendimento
   real, ligue também a **Vercel Deployment Protection**.

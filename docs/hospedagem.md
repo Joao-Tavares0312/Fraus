@@ -132,6 +132,17 @@ consciente, não a única opção: o passo a passo acima leva minutos.
 Um túnel (`cloudflared tunnel --url http://localhost:8000`) dá um endereço
 público temporário para a API rodando na sua máquina. Serve para mostrar a
 dashboard funcionando de verdade. Com `FRAUS_CHAVE_MESTRA` definida antes de
-subir a API, o túnel deixa de ser porta aberta — quem chega no endereço ainda
-esbarra em 401 sem chave. Sem a mestra, vale o aviso de sempre: feche o túnel
-depois de demonstrar.
+subir a API, quem chega no endereço esbarra em 401 sem chave — em toda rota
+menos duas, que têm credencial própria e por isso não passam pela chave mestra:
+`POST /ingestao`, que exige a chave de fonte `frs_`, e
+`POST /integracoes/webhook/{fonte_id}`, que exige a assinatura HMAC sobre o
+corpo.
+
+A rota do webhook é **anônima por desenho**: a plataforma que entrega nela não
+tem, nem pode ter, uma chave `fra_`, e a credencial dela é a assinatura. Sem
+assinatura válida nada é gravado, e cada tentativa fica no histórico de entregas
+da fonte. Mas ela é uma **porta pública de escrita**: com o túnel aberto,
+qualquer um pode chamá-la e gerar tentativas recusadas. A mestra não fecha essa
+porta — o segredo do webhook é que fecha. Publique sabendo disso.
+
+Sem a mestra, vale o aviso de sempre: feche o túnel depois de demonstrar.

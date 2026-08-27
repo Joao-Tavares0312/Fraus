@@ -36,8 +36,13 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 Sem `FRAUS_CHAVE_MESTRA` no ambiente, a API sobe **aberta**, como sempre — é o
 modo de desenvolvimento local e o que os comandos acima assumem. Definir a
-variável liga a exigência de `Authorization: Bearer` em toda rota, exceto
-`POST /ingestao` (chave de fonte). Ver `README.md` e `docs/hospedagem.md`.
+variável liga a exigência de `Authorization: Bearer` em toda rota, exceto duas,
+que têm credencial própria: `POST /ingestao` (chave de fonte `frs_`) e
+`POST /integracoes/webhook/{fonte_id}` (assinatura HMAC no corpo). A segunda é
+**anônima por desenho** — a plataforma externa não tem, nem pode ter, uma chave
+`fra_`; ver a armadilha 8. Ela é uma porta pública de **escrita**: quem publica
+a API na internet precisa saber que ela existe. Ver `README.md` e
+`docs/hospedagem.md`.
 
 ### Como subir
 
