@@ -29,7 +29,7 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 | | |
 |---|---|
 | Branch | `feat/webhook-integracao` (integração por webhook de pé: assinatura HMAC, tabela de entregas, rota assinada por fonte e tela `/integracoes` mestre-detalhe) |
-| Testes | **551 passed, 1 deselected** |
+| Testes | **554 passed, 1 deselected** |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git** |
 | API | `uv run python scripts/api_demo.py` → :8000 |
 | Dashboard | `cd dashboard && npm run build && npx next start -p 3000` |
