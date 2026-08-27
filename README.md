@@ -186,7 +186,7 @@ uv run pytest -q       # ou -v para ver caso a caso
 ### 3. API
 
 ```bash
-uv run python -m uvicorn fraus.api.main:app --reload   # http://localhost:8000
+uv run python -m uvicorn fraus.api.main:app --reload   # http://127.0.0.1:8000
 ```
 
 > `python -m uvicorn`, e não `uv run uvicorn`: o segundo passa pelo trampolim
@@ -263,7 +263,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 FRAUS_CHAVE_MESTRA=<segredo> uv run python -m uvicorn fraus.api.main:app
 
 # 3. Toda rota agora exige chave. Gere uma chave de ACESSO para a dashboard:
-curl -X POST localhost:8000/acesso/chaves \
+curl -X POST 127.0.0.1:8000/acesso/chaves \
   -H "Authorization: Bearer <segredo>" \
   -H 'content-type: application/json' -d '{"nome": "dashboard"}'
 # → devolve a chave fra_... UMA única vez; o banco guarda só o hash.
@@ -340,7 +340,7 @@ Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
 caminho relativo a ela:
 
 ```bash
-curl -X POST localhost:8000/conversas/importar \
+curl -X POST 127.0.0.1:8000/conversas/importar \
   -H 'content-type: application/json' \
   -d '{"caminho": "atendimentos.csv"}'
 ```
@@ -358,7 +358,7 @@ chave de acesso levam 401 aqui, de propósito: uma credencial por rota. O
 **canal** é o da fonte cadastrada, não o que vier no corpo.
 
 ```bash
-curl -X POST localhost:8000/ingestao \
+curl -X POST 127.0.0.1:8000/ingestao \
   -H "Authorization: Bearer frs_..." \
   -H 'content-type: application/json' \
   -d '{"id":"atendimento-123","mensagens":[
@@ -382,7 +382,7 @@ $corpo = @{
   )
 } | ConvertTo-Json -Depth 5
 
-Invoke-RestMethod -Uri http://localhost:8000/ingestao -Method Post `
+Invoke-RestMethod -Uri http://127.0.0.1:8000/ingestao -Method Post `
   -Headers @{ Authorization = "Bearer frs_..." } `
   -ContentType "application/json; charset=utf-8" `
   -Body ([System.Text.Encoding]::UTF8.GetBytes($corpo))
@@ -415,7 +415,7 @@ derivado no servidor.
 ambiente** (ela ainda não precisa existir no ambiente — só o nome):
 
 ```bash
-curl -X POST localhost:8000/integracoes/fontes \
+curl -X POST 127.0.0.1:8000/integracoes/fontes \
   -H 'content-type: application/json' \
   -d '{"nome":"WhatsApp","canal":"whatsapp","tipo":"webhook","variavel_segredo":"FRAUS_SEGREDO_WHATSAPP"}'
 ```
@@ -424,7 +424,7 @@ curl -X POST localhost:8000/integracoes/fontes \
 credencial):
 
 ```bash
-curl -X POST localhost:8000/integracoes/fontes/1/segredo \
+curl -X POST 127.0.0.1:8000/integracoes/fontes/1/segredo \
   -H "Authorization: Bearer <mestra>"
 # → {"segredo": "whsec_...", "variavel": "FRAUS_SEGREDO_WHATSAPP", "aviso": "..."}
 ```
@@ -495,7 +495,7 @@ headers = {
     "webhook-signature": f"v1,{assinatura}",
     "content-type": "application/json",
 }
-# requests.post(f"http://localhost:8000/integracoes/webhook/1", data=corpo, headers=headers)
+# requests.post(f"http://127.0.0.1:8000/integracoes/webhook/1", data=corpo, headers=headers)
 ```
 
 A conferência dos status, na ordem em que o porteiro os produz — identidade,
@@ -545,11 +545,11 @@ npm run build    # build de produção
 A dashboard não fala com a API direto: toda chamada de `lib/api.ts` sai por um
 proxy no servidor Next (`app/api/fraus/[...caminho]/route.ts`), que repassa
 método, corpo, query string e status para `FRAUS_API_URL` (padrão
-`http://localhost:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
+`http://127.0.0.1:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
 quando essa variável existe. A chave de acesso nunca toca o navegador.
 
 ```bash
-FRAUS_API_URL=http://localhost:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
+FRAUS_API_URL=http://127.0.0.1:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
 ```
 
 O proxy monta o header com `FRAUS_CHAVE_ACESSO` **ou**, na falta dela, com a
@@ -1008,7 +1008,7 @@ banco temporário com conversas do simulador, incluindo atendimentos **sem fala
 do cliente** para exercitar o estado "sem sinal":
 
 ```bash
-uv run python scripts/api_demo.py   # http://localhost:8000
+uv run python scripts/api_demo.py   # http://127.0.0.1:8000
 ```
 
 **Nunca use `scripts/api_demo.py` em produção.** Os números que ele devolve não

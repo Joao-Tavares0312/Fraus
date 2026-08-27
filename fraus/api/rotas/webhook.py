@@ -77,7 +77,18 @@ class Recusa(Exception):
 # OpenAPI publicado sai do decorador, e sem ele o `/docs` anunciava 200 para o
 # caminho feliz enquanto a rota devolvia 201 -- a tabela do README promete 201, e
 # quem integra le o schema.
-@router.post(PREFIXO_WEBHOOK + "/{fonte_id}", status_code=201)
+@router.post(
+    PREFIXO_WEBHOOK + "/{fonte_id}",
+    status_code=201,
+    responses={
+        200: {
+            "description": (
+                "Reentrega ja processada (mesmo webhook-id da fonte). Nao e "
+                "erro -- o corpo confirma a duplicidade sem gravar de novo."
+            )
+        }
+    },
+)
 async def receber(
     fonte_id: int,
     request: Request,
@@ -178,10 +189,22 @@ def _passar_pelo_porteiro(
     )
     nome_da_variavel = fonte["variavel_segredo"]
     if not nome_da_variavel:
-        raise Recusa(503, "sem_segredo", (
+        # Quando a fonte nem e do tipo 'webhook', a causa raiz nao e a
+        # variavel ausente -- e o tipo. Uma fonte 'csv' ou 'discord' nunca vai
+        # nomear variavel de segredo, e dizer so "nao nomeia variavel" faria
+        # quem opera procurar um cadastro incompleto onde o que ha e uma
+        # fonte do tipo errado. O passo 6 e que recusaria por tipo, mas uma
+        # fonte sem segredo nunca chega la -- para aqui, no passo 2.
+        motivo = (
             f"a fonte '{fonte['nome']}' nao nomeia variavel de ambiente para o "
             "segredo do webhook -- cadastre o nome dela na tela de Integracoes"
-        ), publico_sem_segredo)
+        )
+        if fonte["tipo"] != "webhook":
+            motivo += (
+                f" (a fonte e do tipo '{fonte['tipo']}', nao 'webhook' -- "
+                "essa e a causa raiz)"
+            )
+        raise Recusa(503, "sem_segredo", motivo, publico_sem_segredo)
     segredo = os.environ.get(nome_da_variavel)
     if not segredo:
         raise Recusa(503, "sem_segredo", (
@@ -232,9 +255,11 @@ def _passar_pelo_porteiro(
     # a fonte nao e de webhook e diagnostico, nao informacao privilegiada.
     #
     # O efeito colateral aceito: uma fonte nao-webhook SEM variavel de segredo
-    # para no passo 2 com 503, e nao com este 403. Os dois dizem "esta fonte
-    # nao recebe webhook"; o 503 so nao diz por que, o que e exatamente a
-    # discricao que o passo 2 passou a ter.
+    # para no passo 2 com 503, e nao com este 403. As duas mensagens publicas
+    # sao diferentes -- a do passo 2 fala em segredo nao configurado, a deste
+    # passo em entrega por webhook nao aceita -- mas nenhuma delas conta o
+    # tipo real da fonte a quem ainda nao provou identidade, que e a mesma
+    # discricao que o passo 2 tem.
     if fonte["tipo"] != "webhook":
         raise Recusa(403, "tipo_incompativel", (
             f"a fonte '{fonte['nome']}' e do tipo '{fonte['tipo']}' e nao recebe "
