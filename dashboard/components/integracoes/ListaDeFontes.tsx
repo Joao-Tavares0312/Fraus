@@ -52,19 +52,23 @@ export function ListaDeFontes({
           size="xs"
           variant="outline"
           onClick={aoCadastrar}
-          aria-label="Cadastrar uma fonte"
+          // `title`, e nao `aria-label`: sobrescrever o nome acessivel de um
+          // botao cujo texto visivel e "Nova" quebra o Label in Name (WCAG
+          // 2.5.3) e faz "clicar em Nova" falhar no comando de voz. O `sr-only`
+          // COMPLEMENTA o rotulo visivel em vez de troca-lo -- o nome acessivel
+          // vira "Nova fonte", que ainda comeca pelo que se le na tela.
+          title="Cadastrar uma fonte"
         >
           <Plus aria-hidden />
-          Nova
+          Nova<span className="sr-only"> fonte</span>
         </Button>
       </div>
 
-      {fontes.length === 0 ? (
-        <p className="max-w-[42ch] py-3 text-xs leading-relaxed text-muted-foreground">
-          Nenhuma fonte cadastrada. A fonte é o registro de por onde a conversa
-          entra — os atendimentos já importados continuam existindo sem ela.
-        </p>
-      ) : (
+      {/* Lista vazia NAO ganha texto proprio. O painel ao lado ja diz o mesmo,
+          com mais espaco e com o endpoint; dois avisos identicos lado a lado
+          sao a ressalva repetida que a regra 3.7 combate -- e a contagem `0` no
+          cabecalho acima ja nomeia a ausencia sem gastar um paragrafo. */}
+      {fontes.length === 0 ? null : (
         <ul className="flex min-w-0 flex-col py-1">
           {fontes.map((fonte) => {
             const ativa = fonte.id === selecionada;

@@ -75,9 +75,14 @@ export function Fontes({
   const [selecionada, setSelecionada] = useState<number | null>(
     iniciais[0]?.id ?? null,
   );
-  // O formulario nasce aberto so quando nao ha nada para escolher: ai o
-  // cadastro E a tela. Com fontes na lista ele fica atras do `[+]`.
-  const [cadastrando, setCadastrando] = useState(iniciais.length === 0);
+  const [cadastrando, setCadastrando] = useState(false);
+
+  // O formulario aparece quando alguem pede `[+]` OU quando nao ha nada para
+  // escolher -- e a segunda metade e DERIVADA, nao um estado inicial. Inicial
+  // ela ja deixou a tela sem saida uma vez: quem entrava com fontes (formulario
+  // fechado) e removia todas ficava numa tela cujo estado vazio mandava "comece
+  // pelo formulario acima", sem formulario acima nenhum.
+  const formularioAberto = cadastrando || fontes.length === 0;
 
   const podeCadastrar =
     ocupada !== "nova" && nova.nome.trim() !== "" && nova.canal.trim() !== "";
@@ -133,6 +138,13 @@ export function Fontes({
     await recarregar();
   }
 
+  /**
+   * Renomeia e DEVOLVE se deu certo.
+   *
+   * O booleano nao e enfeite: quem chama fecha o campo de edicao, e fechar
+   * antes da resposta joga fora o nome digitado exatamente no caso em que ele
+   * ainda e preciso -- o da recusa. So o servidor sabe se o nome passou.
+   */
   async function confirmarRenome(fonte: FonteIntegracao, nome: string) {
     setErro(null);
     setOcupada(fonte.id);
@@ -140,9 +152,10 @@ export function Fontes({
     setOcupada(null);
     if (!resposta.ok) {
       setErro(resposta.erro);
-      return;
+      return false;
     }
     await recarregar();
+    return true;
   }
 
   async function remover(fonte: FonteIntegracao) {
@@ -152,17 +165,18 @@ export function Fontes({
     setOcupada(null);
     if (!resposta.ok) {
       setErro(resposta.erro);
-      return;
+      return false;
     }
     // Remover a fonte aberta limpa a selecao: o painel direito nao pode
     // continuar exibindo um cadastro que o servidor acabou de apagar.
     if (selecionada === fonte.id) setSelecionada(null);
     await recarregar();
+    return true;
   }
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      {cadastrando ? (
+      {formularioAberto ? (
         <div className="min-w-0 rounded-sm border border-border bg-muted/20 p-4">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-medium text-foreground">
@@ -349,7 +363,11 @@ export function Fontes({
           ) : (
             <EstadoVazio
               titulo="Escolha uma fonte à esquerda"
-              explicacao="Chave de API, segredo de assinatura, contrato do webhook e histórico de entregas são de uma fonte por vez — sem uma escolhida, não há o que mostrar aqui, e mostrar a primeira por conta própria daria a impressão de que ela é a que importa."
+              // A tela abre já na primeira fonte, de propósito: é tela de
+              // operação, e obrigar um clique para ver qualquer coisa seria
+              // cerimônia. Este vazio é o do caminho em que a seleção se
+              // desfez — a fonte aberta foi removida, ou sumiu numa recarga.
+              explicacao="Chave de API, segredo de assinatura, contrato do webhook e histórico de entregas são de uma fonte por vez. A fonte que estava aberta aqui não existe mais na lista — escolha outra à esquerda para continuar."
             />
           )}
         </div>

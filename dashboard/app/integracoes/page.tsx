@@ -54,7 +54,16 @@ export default async function PaginaIntegracoes() {
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         {/* AS FONTES vêm primeiro: é o mestre-detalhe da tela, e é aqui que a
             conversa passa a entrar pela rede. */}
-        <Painel titulo="Fontes">
+        {/* A LEGENDA VOLTOU PARA O APARATO. Ela dizia a regra que esta tela
+            precisa dizer em voz alta -- o que se guarda é o NOME da variável, e
+            não a credencial -- e tinha ido parar dentro do formulário de
+            cadastro, que fica fechado sempre que existe ao menos uma fonte.
+            Estado normal da tela sem a frase em lugar nenhum é remoção
+            disfarçada de realocação. Recolher é permitido; remover não. */}
+        <Painel
+          titulo="Fontes"
+          legenda="Cada fonte registra por onde a conversa entra. O segredo não mora aqui: o que se guarda é o nome da variável de ambiente que a API lê na máquina onde ela roda."
+        >
           {fontes.ok ? (
             <Fontes
               iniciais={fontes.dado}
@@ -83,7 +92,12 @@ export default async function PaginaIntegracoes() {
                 <p className="max-w-[72ch] text-xs leading-relaxed text-muted-foreground">
                   A escolha é por lista porque a rota aceita apenas caminho
                   relativo à raiz de importação e recusa com 400 qualquer
-                  caminho que escape dela. A interface devolve ao servidor
+                  caminho que escape dela —{" "}
+                  <strong>
+                    inclusive caminho absoluto e{" "}
+                    <span className="num">../..</span>
+                  </strong>
+                  . A interface devolve ao servidor
                   exatamente a string que ele publicou, sem montar caminho a
                   mão — e <strong>não há upload</strong>: subir arquivo abriria
                   uma superfície de escrita numa API sem autenticação. Colocar o
@@ -120,8 +134,17 @@ export default async function PaginaIntegracoes() {
               />
             ) : (
               <>
+                {/* A AFIRMAÇÃO DE PROVENIÊNCIA volta inteira. “O relato vem do
+                    servidor, que registra o mesmo que devolveu na importação” é
+                    o que separa este histórico de um número montado na tela —
+                    texto de honestidade metodológica, do lote intocável. Ele
+                    tinha sido reduzido a “Mais recente primeiro.” na mudança de
+                    layout. */}
                 <p className="px-5 pb-3 text-xs leading-relaxed text-muted-foreground">
-                  Mais recente primeiro. Arquivo recusado na porta — caminho
+                  Mais recente primeiro. Quantas conversas cada arquivo trouxe,
+                  quantas linhas ficaram de fora e por quê — o relato vem do
+                  servidor, que registra o mesmo que devolveu na importação.
+                  Arquivo recusado na porta — caminho
                   fora da raiz de importação, coluna estrutural ausente — não
                   vira linha aqui: nada foi processado, e listar a tentativa como
                   evento de dado contaria uma importação que não houve.

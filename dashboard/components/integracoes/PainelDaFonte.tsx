@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { KeyRound, Pencil, Trash2 } from "lucide-react";
 import type { FonteIntegracao, TipoDeFonte } from "@/lib/api";
 import { formatarData } from "@/lib/formato";
@@ -68,13 +68,39 @@ export function PainelDaFonte({
   tipos: TipoDeFonte[];
   baseDaApi: string;
   ocupada: boolean;
-  aoRenomear: (fonte: FonteIntegracao, nome: string) => void;
+  /**
+   * Devolve se o servidor aceitou. O campo de edição só fecha com `true`:
+   * fechar antes da resposta perde o nome digitado justamente na recusa, que é
+   * quando ele ainda é preciso para corrigir e reenviar.
+   */
+  aoRenomear: (fonte: FonteIntegracao, nome: string) => Promise<boolean>;
   aoAlternarAtiva: (fonte: FonteIntegracao) => void;
-  aoRemover: (fonte: FonteIntegracao) => void;
+  /** Devolve se o servidor aceitou; ver `aoRenomear`. */
+  aoRemover: (fonte: FonteIntegracao) => Promise<boolean>;
 }) {
+  const identificador = useId();
   const [renomeando, setRenomeando] = useState(false);
   const [nomeEmEdicao, setNomeEmEdicao] = useState("");
   const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
+
+  /**
+   * Renomeia e só fecha o campo se deu certo.
+   *
+   * O `await` é o ponto: sem ele o formulário desmontava no mesmo quadro em que
+   * a chamada partia, e nada do que vem depois da resposta chegava a existir na
+   * tela -- nem o `disabled` durante o envio, nem o nome digitado de volta para
+   * corrigir depois de um 4xx.
+   */
+  async function salvarRenome() {
+    if (nomeEmEdicao.trim() === "") return;
+    const aceitou = await aoRenomear(fonte, nomeEmEdicao);
+    if (aceitou) setRenomeando(false);
+  }
+
+  async function confirmarRemocao() {
+    const aceitou = await aoRemover(fonte);
+    if (aceitou) setConfirmandoRemocao(false);
+  }
 
   const rotuloTipo =
     TIPOS.find((tipo) => tipo.valor === fonte.tipo)?.rotulo ?? fonte.tipo;
@@ -87,33 +113,34 @@ export function PainelDaFonte({
           <div className="min-w-0">
             {renomeando ? (
               <div className="flex flex-wrap items-center gap-2">
-                <Label htmlFor="renome-da-fonte" className="sr-only">
+                <Label
+                  htmlFor={`${identificador}-renome`}
+                  className="sr-only"
+                >
                   Novo nome da fonte
                 </Label>
                 <Input
-                  id="renome-da-fonte"
+                  // `useId`, como o resto da familia. O id fixo funcionava so
+                  // porque um unico painel fica montado por vez -- era a unica
+                  // id global do modulo, e colidiria calada no dia em que dois
+                  // detalhes coexistissem.
+                  id={`${identificador}-renome`}
                   className="h-8 w-56"
                   autoFocus
                   value={nomeEmEdicao}
                   onChange={(evento) => setNomeEmEdicao(evento.target.value)}
                   onKeyDown={(evento) => {
-                    if (evento.key === "Enter" && nomeEmEdicao.trim() !== "") {
-                      aoRenomear(fonte, nomeEmEdicao);
-                      setRenomeando(false);
-                    }
+                    if (evento.key === "Enter") salvarRenome();
                     if (evento.key === "Escape") setRenomeando(false);
                   }}
                 />
                 <Button
                   type="button"
                   size="xs"
-                  onClick={() => {
-                    aoRenomear(fonte, nomeEmEdicao);
-                    setRenomeando(false);
-                  }}
+                  onClick={salvarRenome}
                   disabled={ocupada || nomeEmEdicao.trim() === ""}
                 >
-                  Salvar
+                  {ocupada ? "Salvando…" : "Salvar"}
                 </Button>
                 <Button
                   type="button"
@@ -244,10 +271,7 @@ export function PainelDaFonte({
                 type="button"
                 size="xs"
                 variant="destructive"
-                onClick={() => {
-                  aoRemover(fonte);
-                  setConfirmandoRemocao(false);
-                }}
+                onClick={confirmarRemocao}
                 disabled={ocupada}
               >
                 {ocupada ? "Removendo…" : "Remover o cadastro"}
