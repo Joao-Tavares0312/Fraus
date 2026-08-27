@@ -100,18 +100,41 @@ def test_fonte_inexistente_e_404(cliente, fonte):  # noqa: F811
     assert _enviar(cliente, 99999).status_code == 404
 
 
-def test_variavel_ausente_no_ambiente_e_503_nomeando_a_variavel(
+def test_variavel_ausente_no_ambiente_e_503_sem_nomear_a_variavel_na_rede(
     cliente, fonte, monkeypatch,  # noqa: F811
 ):
     """503, nao 401: variavel ausente e defeito da MAQUINA que hospeda.
 
     Responder 401 mandaria quem integra caçar um problema que nao e dele --
-    horas gastas por quem nem consegue conserta-lo."""
+    horas gastas por quem nem consegue conserta-lo.
+
+    O NOME DA VARIAVEL fica na entrega registrada, e nao na resposta: quem
+    chama esta rota e anonimo, e nome de variavel de ambiente da maquina que
+    hospeda e estado interno. Quem opera le o detalhe em
+    `GET /integracoes/fontes/{id}/entregas`, atras de credencial."""
     monkeypatch.delenv(VARIAVEL, raising=False)
     resposta = _enviar(cliente, fonte["id"])
     assert resposta.status_code == 503
-    assert VARIAVEL in resposta.json()["detail"]
-    assert _entregas(cliente, fonte["id"])[0]["veredito"] == "sem_segredo"
+    assert VARIAVEL not in resposta.json()["detail"]
+    assert "Zendesk" not in resposta.json()["detail"]
+    entrega = _entregas(cliente, fonte["id"])[0]
+    assert entrega["veredito"] == "sem_segredo"
+    assert VARIAVEL in entrega["motivo"]
+
+
+def test_segredo_mal_formado_nao_vaza_o_erro_de_formato_na_resposta(
+    cliente, fonte, monkeypatch,  # noqa: F811
+):
+    """O texto do ValueError diz se o valor tem prefixo `whsec_` e se o base64
+    decodifica -- e um oraculo sobre o segredo da instalacao para quem nao
+    provou identidade nenhuma. Ele fica so no motivo registrado."""
+    monkeypatch.setenv(VARIAVEL, "isto-nao-e-um-segredo")
+    resposta = _enviar(cliente, fonte["id"], segredo=SEGREDO)
+    assert resposta.status_code == 503
+    assert VARIAVEL not in resposta.json()["detail"]
+    entrega = _entregas(cliente, fonte["id"])[0]
+    assert entrega["veredito"] == "sem_segredo"
+    assert VARIAVEL in entrega["motivo"]
 
 
 def test_fonte_sem_variavel_nomeada_e_503(cliente):  # noqa: F811
@@ -119,7 +142,11 @@ def test_fonte_sem_variavel_nomeada_e_503(cliente):  # noqa: F811
     sem = cliente.post("/integracoes/fontes", json={
         "nome": "Solta", "canal": "webchat", "tipo": "webhook",
     }).json()
-    assert _enviar(cliente, sem["id"]).status_code == 503
+    resposta = _enviar(cliente, sem["id"])
+    assert resposta.status_code == 503
+    # O nome da fonte tambem e cadastro, e tambem nao sai pela rede.
+    assert "Solta" not in resposta.json()["detail"]
+    assert "Solta" in _entregas(cliente, sem["id"])[0]["motivo"]
 
 
 @pytest.mark.parametrize("faltando", ["webhook-id", "webhook-timestamp", "webhook-signature"])

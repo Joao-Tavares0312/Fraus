@@ -39,20 +39,38 @@ PREFIXO_WEBHOOK = "/integracoes/webhook"
 
 
 class Recusa(Exception):
-    """Recusa do porteiro: o status HTTP, o veredito registrado e o motivo.
+    """Recusa do porteiro: o status HTTP, o veredito e DUAS mensagens.
 
     Excecao propria em vez de HTTPException direta porque TODA recusa precisa
     virar linha em `entregas_webhook` antes de virar resposta. Levantar
     HTTPException de dentro dos passos deixaria o registro na mao de quem
     lembrasse -- e a recusa que ninguem registra e exatamente a que o operador
     precisava ver.
+
+    SAO DUAS MENSAGENS porque os dois destinos tem plateias diferentes:
+
+    - `motivo` vai para `entregas_webhook`, que so se le com credencial. E ali
+      que quem OPERA precisa do detalhe -- qual variavel de ambiente falta, que
+      fonte e essa. Sem o detalhe, a tabela existe e nao ajuda.
+    - `publico` e o `detail` do HTTP, e chega a um ANONIMO: a rota do webhook
+      nao pede Authorization, a credencial dela e a assinatura. Nome de fonte,
+      nome de variavel de ambiente da maquina que hospeda e o texto de um
+      `ValueError` sobre o formato do segredo sao estado interno, e contar
+      estado interno a quem ainda nao provou identidade e o mesmo defeito que o
+      passo 6 recusa cometer.
+
+    Quem nao passa `publico` esta dizendo que o motivo ja e generico -- o caso
+    dos passos que falam so do que veio na propria requisicao.
     """
 
-    def __init__(self, status: int, veredito: str, motivo: str) -> None:
+    def __init__(
+        self, status: int, veredito: str, motivo: str, publico: str | None = None,
+    ) -> None:
         super().__init__(motivo)
         self.status = status
         self.veredito = veredito
         self.motivo = motivo
+        self.publico = publico if publico is not None else motivo
 
 
 @router.post(PREFIXO_WEBHOOK + "/{fonte_id}")
@@ -74,8 +92,16 @@ async def receber(
     """
     fonte = ctx.banco.buscar_fonte(fonte_id)
     if fonte is None:
-        # Sem fonte nao ha de quem registrar a entrega -- e uma linha com
-        # fonte_id invalido nao teria onde ser lida.
+        # Passo 1. Sem fonte nao ha de quem registrar a entrega -- e uma linha
+        # com fonte_id invalido nao teria onde ser lida.
+        #
+        # O texto ja e generico: nome nenhum, nada do cadastro. O que sobra e o
+        # 404 em si, que diz a um anonimo se aquele id existe. Fechar isso
+        # exigiria responder o mesmo para id valido e invalido, e ai a entrega
+        # de uma fonte que existe seria indistinguivel de um erro de digitacao
+        # na URL -- justamente o diagnostico que quem integra precisa. Como o
+        # id e um inteiro pequeno e sequencial, o cadastro e enumeravel por
+        # desenho; e limitacao declarada, nao descuido.
         raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
     corpo = await request.body()
@@ -94,8 +120,10 @@ async def receber(
             webhook_id, webhook_timestamp, webhook_signature,
         )
     except Recusa as recusa:
+        # O DETALHE vai para a tabela; a REDE recebe a versao publica. Ver a
+        # docstring de `Recusa`.
         registrar(recusa.veredito, recusa.motivo)
-        raise HTTPException(status_code=recusa.status, detail=recusa.motivo) from recusa
+        raise HTTPException(status_code=recusa.status, detail=recusa.publico) from recusa
 
     if resultado is None:
         # Passo 7: reentrega. 200, NAO erro -- o Standard Webhooks manda a
@@ -124,26 +152,37 @@ def _passar_pelo_porteiro(
     entrega antes de responder.
     """
     # Passo 2: o segredo. 503, nao 401: variavel ausente e defeito da MAQUINA
-    # que hospeda, e o corpo nomeia a variavel porque quem opera precisa saber
-    # qual. Responder 401 mandaria quem integra depurar a propria requisicao
-    # por um problema que nao e dele.
+    # que hospeda. Responder 401 mandaria quem integra depurar a propria
+    # requisicao por um problema que nao e dele.
+    #
+    # O NOME DA VARIAVEL NAO SAI PELA REDE. Quem chama aqui e anonimo, e o
+    # nome da variavel de ambiente da maquina que hospeda -- assim como o nome
+    # da fonte e o texto do ValueError sobre o formato do segredo -- e estado
+    # interno. Ele continua inteiro no `motivo`, que so se le em
+    # `GET /integracoes/fontes/{id}/entregas`, atras de credencial: e ali que
+    # quem opera precisa descobrir qual variavel falta, e e ali que ele esta.
+    publico_sem_segredo = (
+        "esta fonte nao esta com o segredo de webhook configurado na API -- "
+        "e defeito da instalacao que hospeda, nao da sua requisicao; o motivo "
+        "detalhado esta no historico de entregas da fonte"
+    )
     nome_da_variavel = fonte["variavel_segredo"]
     if not nome_da_variavel:
         raise Recusa(503, "sem_segredo", (
             f"a fonte '{fonte['nome']}' nao nomeia variavel de ambiente para o "
             "segredo do webhook -- cadastre o nome dela na tela de Integracoes"
-        ))
+        ), publico_sem_segredo)
     segredo = os.environ.get(nome_da_variavel)
     if not segredo:
         raise Recusa(503, "sem_segredo", (
             f"a variavel {nome_da_variavel} nao esta definida no ambiente da API"
-        ))
+        ), publico_sem_segredo)
     try:
         assinatura.chave_do_segredo(segredo)
     except ValueError as erro:
         raise Recusa(503, "sem_segredo", (
             f"a variavel {nome_da_variavel} nao carrega um segredo valido: {erro}"
-        )) from erro
+        ), publico_sem_segredo) from erro
 
     # Passo 3: os tres cabecalhos. Nomeia QUAL falta -- "cabecalho ausente" sem
     # o nome manda o integrador conferir os tres.
