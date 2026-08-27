@@ -425,3 +425,45 @@ def test_a_url_com_barra_final_tambem_passa_pelo_middleware(cliente, fonte):  # 
         follow_redirects=True,
     )
     assert resposta.status_code == 201
+
+
+# --- a rota que gera o segredo ----------------------------------------------
+
+def test_gerar_segredo_devolve_em_claro_e_nao_grava_nada(cliente, fonte):  # noqa: F811
+    """O segredo NAO entra no banco: a fonte guarda so o NOME da variavel.
+
+    E o que mantem a propriedade do projeto inteiro -- um fraus.db vazado num
+    backup nao leva credencial junto."""
+    resposta = cliente.post(f"/integracoes/fontes/{fonte['id']}/segredo")
+    assert resposta.status_code == 201
+    segredo = resposta.json()["segredo"]
+    assert segredo.startswith("whsec_")
+    assert resposta.json()["variavel"] == VARIAVEL
+    # Em lugar nenhum da leitura da fonte o valor aparece.
+    assert segredo not in cliente.get("/integracoes/fontes").text
+
+
+def test_segredo_gerado_e_de_fato_o_que_a_rota_confere(cliente, fonte, monkeypatch):  # noqa: F811
+    """O teste que fecha o circuito: gerar -> por no ambiente -> assinar com ele
+    -> a rota aceita. Sem ele, os dois lados poderiam divergir de formato e cada
+    um passaria nos proprios testes."""
+    novo = cliente.post(f"/integracoes/fontes/{fonte['id']}/segredo").json()["segredo"]
+    monkeypatch.setenv(VARIAVEL, novo)
+    assert _enviar(cliente, fonte["id"], segredo=novo).status_code == 201
+
+
+def test_gerar_segredo_de_fonte_inexistente_e_404(cliente):  # noqa: F811
+    assert cliente.post("/integracoes/fontes/99999/segredo").status_code == 404
+
+
+def test_dois_segredos_gerados_nunca_sao_iguais(cliente, fonte):  # noqa: F811
+    um = cliente.post(f"/integracoes/fontes/{fonte['id']}/segredo").json()["segredo"]
+    outro = cliente.post(f"/integracoes/fontes/{fonte['id']}/segredo").json()["segredo"]
+    assert um != outro
+
+
+def test_o_tipo_webhook_publica_a_ajuda_certa(cliente):  # noqa: F811
+    """A ajuda do tipo dizia so \"recebe eventos da plataforma\" quando a rota
+    nem existia. Agora ela nomeia o endereco."""
+    tipos = {t["valor"]: t for t in cliente.get("/integracoes/tipos").json()}
+    assert "webhook" in tipos["webhook"]["ajuda"]
