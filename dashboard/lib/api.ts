@@ -723,6 +723,52 @@ export type TipoDeFonte = { valor: string; rotulo: string; ajuda: string };
 export const listarTiposDeFonte = () =>
   proteger(buscar<TipoDeFonte[]>("/integracoes/tipos"));
 
+/**
+ * O veredito de uma entrega de webhook. A lista vem de `VEREDITOS` em
+ * `fraus/db.py` e e digitada aqui uma unica vez -- se um veredito novo entrar
+ * la sem entrar aqui, o TypeScript reclama no `switch` de `Entregas.tsx`, que
+ * e exatamente onde a divergencia precisa aparecer.
+ */
+export type Veredito =
+  | "aceita"
+  | "assinatura"
+  | "fora_da_janela"
+  | "duplicada"
+  | "corpo_invalido"
+  | "fonte_inativa"
+  | "sem_segredo";
+
+/** Uma linha do historico de `GET /integracoes/fontes/{id}/entregas`. */
+export type Entrega = {
+  id: number;
+  fonte_id: number;
+  webhook_id: string | null;
+  recebida_em: string;
+  veredito: Veredito;
+  motivo: string | null;
+  /** `null` quando a entrega nao gerou conversa -- nunca "" nem 0. */
+  conversa_id: string | null;
+};
+
+/** Historico de entregas de webhook da fonte, mais recente primeiro. */
+export const listarEntregas = (fonteId: number) =>
+  proteger(buscar<Entrega[]>(`/integracoes/fontes/${fonteId}/entregas`));
+
+/** Resposta de `POST /integracoes/fontes/{id}/segredo`. */
+export type SegredoGerado = {
+  segredo: string;
+  /** `null` quando a fonte nao nomeia variavel de ambiente nenhuma. */
+  variavel: string | null;
+  aviso: string;
+};
+
+/**
+ * Gera o segredo de assinatura do webhook da fonte, devolvido EM CLARO uma
+ * unica vez -- o servidor nao grava a credencial que emite, nem o hash.
+ */
+export const gerarSegredo = (fonteId: number) =>
+  proteger(escrever<SegredoGerado>(`/integracoes/fontes/${fonteId}/segredo`, "POST"));
+
 export type ArquivoImportavel = { caminho: string; bytes: number };
 
 /** Os CSV disponiveis na raiz de importacao, com caminho relativo a ela. */
