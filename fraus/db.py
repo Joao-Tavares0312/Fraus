@@ -108,7 +108,49 @@ CREATE TABLE IF NOT EXISTS lexico_curado (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_lexico_curado_termo
     ON lexico_curado(tipo, termo);
+
+-- Cada chamada de webhook, aceita ou recusada. Sem ela, um webhook recusado nao
+-- deixa rastro em lugar nenhum -- e falha silenciosa e o modo de falha numero
+-- um dessa integracao.
+--
+-- Guardar SO as recusas parece economico e quebra o diagnostico central: sem as
+-- aceitas, "nao chegou nada" e "chegou e foi tudo recusado" viram a mesma tela
+-- vazia.
+--
+-- O CORPO NUNCA ENTRA AQUI. Seria PII de cliente real parada em disco sem
+-- proposito -- e o proposito de depurar e servido pelo veredito e pelo motivo.
+--
+-- `ON DELETE CASCADE` ao contrario das CONVERSAS, que sobrevivem a fonte:
+-- entrega e registro operacional DA fonte, nao dado de atendimento medido.
+CREATE TABLE IF NOT EXISTS entregas_webhook (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fonte_id INTEGER NOT NULL REFERENCES fontes_integracao(id) ON DELETE CASCADE,
+    webhook_id TEXT,
+    recebida_em TEXT NOT NULL,
+    veredito TEXT NOT NULL,
+    motivo TEXT,
+    conversa_id TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_entregas_fonte ON entregas_webhook(fonte_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_entregas_dedupe ON entregas_webhook(fonte_id, webhook_id);
 """
+
+# Os vereditos possiveis de uma entrega, num lugar so. A tela pinta cada um de
+# um jeito e a rota escolhe um deles; uma segunda lista digitada em outro
+# arquivo so ficaria errada no dia em que um veredito novo entrasse -- sem erro
+# nenhum, so sumindo da vista.
+#
+# `sem_segredo` e o unico que NAO e culpa de quem chamou: a variavel de ambiente
+# da fonte sumiu do ambiente da API. Ele vira 503, nao 401.
+VEREDITOS = (
+    "aceita",
+    "assinatura",
+    "fora_da_janela",
+    "duplicada",
+    "corpo_invalido",
+    "fonte_inativa",
+    "sem_segredo",
+)
 
 
 class Banco:
@@ -118,6 +160,13 @@ class Banco:
     def _conectar(self) -> sqlite3.Connection:
         conexao = sqlite3.connect(self._caminho)
         conexao.row_factory = sqlite3.Row
+        # SQLite ignora chave estrangeira por padrao, e o pragma vale por
+        # CONEXAO -- ligar uma vez na criacao do esquema nao teria efeito
+        # nenhum nas seguintes. Sem isto, o ON DELETE CASCADE de
+        # `entregas_webhook` seria documentacao, nao comportamento: apagar a
+        # fonte deixaria as entregas orfas apontando para um id que ninguem
+        # mais consegue consultar.
+        conexao.execute("PRAGMA foreign_keys = ON")
         return conexao
 
     # Colunas acrescentadas depois que a tabela ja existia em disco.
@@ -330,6 +379,83 @@ class Banco:
                 "DELETE FROM fontes_integracao WHERE id = ?", (identificador,)
             )
             return cursor.rowcount > 0
+
+    # Quantas entregas cada fonte guarda. Registrar recusa de assinatura e
+    # exatamente o que o operador precisa ver -- alguem esta batendo com o
+    # segredo errado -- e e tambem como um atacante enche o SQLite. A poda e o
+    # que permite manter a primeira propriedade sem pagar a segunda.
+    #
+    # Ela e TAMBEM a memoria do dedupe (`entrega_ja_vista` consulta esta
+    # tabela), entao uma fonte que receba 200 recusas seguidas esquece as
+    # aceitas anteriores. O efeito pratico e limitado: `salvar` grava com
+    # INSERT OR REPLACE pelo id da conversa, entao reprocessar nao duplica
+    # atendimento, so o repontua. E por isso que a poda pode ser simples.
+    ENTREGAS_POR_FONTE = 200
+
+    def registrar_entrega(
+        self,
+        fonte_id: int,
+        webhook_id: str | None,
+        veredito: str,
+        recebida_em: str,
+        motivo: str | None = None,
+        conversa_id: str | None = None,
+    ) -> None:
+        """Registra a tentativa e poda as antigas DAQUELA fonte, numa transacao.
+
+        A poda anda junto com o insert de proposito: separada, ela dependeria de
+        alguem lembrar de chama-la, e o dia em que ninguem lembrasse seria o dia
+        em que a tabela cresce sem teto.
+        """
+        with self._conectar() as conexao:
+            conexao.execute(
+                "INSERT INTO entregas_webhook "
+                "(fonte_id, webhook_id, recebida_em, veredito, motivo, conversa_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (fonte_id, webhook_id, recebida_em, veredito, motivo, conversa_id),
+            )
+            # O corte e por `id`, nao por `recebida_em`: o id e monotonico e
+            # decidido aqui, e o horario vem de fora -- duas entregas do mesmo
+            # segundo deixariam a ordem indefinida e a poda escolheria por sorte
+            # qual das duas cai.
+            conexao.execute(
+                "DELETE FROM entregas_webhook WHERE fonte_id = ? AND id NOT IN ("
+                "  SELECT id FROM entregas_webhook WHERE fonte_id = ? "
+                "  ORDER BY id DESC LIMIT ?"
+                ")",
+                (fonte_id, fonte_id, self.ENTREGAS_POR_FONTE),
+            )
+
+    def listar_entregas(self, fonte_id: int) -> list[dict]:
+        """Entregas da fonte, mais recente primeiro.
+
+        Ordena por `recebida_em` -- o horario que a chamada de fato chegou --
+        com `id` como desempate. So por `id` colocaria a ordem de insercao na
+        frente do horario real quando as duas divergem (ex.: reprocessamento
+        fora de ordem), e e o horario que o operador espera ver no topo.
+        """
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT id, fonte_id, webhook_id, recebida_em, veredito, motivo, "
+                "conversa_id FROM entregas_webhook WHERE fonte_id = ? "
+                "ORDER BY recebida_em DESC, id DESC",
+                (fonte_id,),
+            ).fetchall()
+        return [dict(linha) for linha in linhas]
+
+    def entrega_ja_vista(self, fonte_id: int, webhook_id: str) -> bool:
+        """Se aquele evento ja passou por aqui. O dedupe e POR FONTE.
+
+        Duas plataformas podem numerar eventos igual, e tratar o `msg_1` de uma
+        como reentrega da outra descartaria atendimento em silencio.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT 1 FROM entregas_webhook WHERE fonte_id = ? AND webhook_id = ? "
+                "LIMIT 1",
+                (fonte_id, webhook_id),
+            ).fetchone()
+        return linha is not None
 
     @staticmethod
     def _fonte(linha: sqlite3.Row) -> dict:
