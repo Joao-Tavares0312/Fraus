@@ -736,7 +736,8 @@ export type Veredito =
   | "duplicada"
   | "corpo_invalido"
   | "fonte_inativa"
-  | "sem_segredo";
+  | "sem_segredo"
+  | "tipo_incompativel";
 
 /** Uma linha do historico de `GET /integracoes/fontes/{id}/entregas`. */
 export type Entrega = {

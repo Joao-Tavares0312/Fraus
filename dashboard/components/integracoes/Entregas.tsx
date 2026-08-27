@@ -31,6 +31,7 @@ const ORDEM_DOS_VEREDITOS: Record<Veredito, number> = {
   corpo_invalido: 4,
   fonte_inativa: 5,
   sem_segredo: 6,
+  tipo_incompativel: 7,
 };
 
 /**
@@ -102,6 +103,12 @@ function descreverVeredito(veredito: Veredito): {
         rotulo: "segredo ausente no ambiente da API",
         plural: "sem segredo no ambiente da API",
         cor: "text-detrator-texto",
+      };
+    case "tipo_incompativel":
+      return {
+        rotulo: "fonte não é do tipo webhook",
+        plural: "recusadas por a fonte não ser do tipo webhook",
+        cor: "text-muted-foreground",
       };
   }
 }

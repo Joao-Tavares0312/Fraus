@@ -1,4 +1,4 @@
-"""POST /integracoes/webhook/{fonte_id} -- o porteiro de oito passos.
+"""POST /integracoes/webhook/{fonte_id} -- o porteiro de nove passos.
 
 A ordem e identidade, depois autoridade, depois parse: nada de desserializar
 JSON, tocar no banco ou pontuar antes de a assinatura passar.
@@ -147,6 +147,31 @@ def test_fonte_sem_variavel_nomeada_e_503(cliente):  # noqa: F811
     # O nome da fonte tambem e cadastro, e tambem nao sai pela rede.
     assert "Solta" not in resposta.json()["detail"]
     assert "Solta" in _entregas(cliente, sem["id"])[0]["motivo"]
+
+
+def test_fonte_que_nao_e_webhook_recusa_mesmo_com_assinatura_valida(
+    cliente, monkeypatch,  # noqa: F811
+):
+    """Passo 6: o `tipo` ramifica no SERVIDOR, nao so na tela.
+
+    Uma fonte `csv` que por acidente nomeie uma variavel de segredo aceitava
+    entrega assinada e gravava conversa -- o tipo era rotulo de tabela e nada
+    mais. Aqui a assinatura e VALIDA de proposito: e o unico jeito de provar
+    que a recusa vem do tipo, e nao de alguma outra etapa do porteiro."""
+    monkeypatch.setenv(VARIAVEL, SEGREDO)
+    csv = cliente.post("/integracoes/fontes", json={
+        "nome": "Planilha", "canal": "webchat", "tipo": "csv",
+        "variavel_segredo": VARIAVEL,
+    }).json()
+
+    resposta = _enviar(cliente, csv["id"])
+
+    assert resposta.status_code == 403
+    entrega = _entregas(cliente, csv["id"])[0]
+    assert entrega["veredito"] == "tipo_incompativel"
+    assert entrega["conversa_id"] is None
+    # Nada foi gravado: a recusa vem ANTES de o corpo virar objeto.
+    assert cliente.get("/conversas").json() == []
 
 
 @pytest.mark.parametrize("faltando", ["webhook-id", "webhook-timestamp", "webhook-signature"])

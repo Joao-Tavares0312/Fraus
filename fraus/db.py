@@ -142,6 +142,10 @@ CREATE INDEX IF NOT EXISTS idx_entregas_dedupe ON entregas_webhook(fonte_id, web
 #
 # `sem_segredo` e o unico que NAO e culpa de quem chamou: a variavel de ambiente
 # da fonte sumiu do ambiente da API. Ele vira 503, nao 401.
+#
+# `tipo_incompativel` e a fonte que existe mas nao e do tipo `webhook`. Ele
+# existe para que a recusa apareca no historico: o `tipo` ramificava so na tela,
+# e uma fonte `csv` com variavel de segredo aceitava entrega assinada.
 VEREDITOS = (
     "aceita",
     "assinatura",
@@ -150,6 +154,7 @@ VEREDITOS = (
     "corpo_invalido",
     "fonte_inativa",
     "sem_segredo",
+    "tipo_incompativel",
 )
 
 

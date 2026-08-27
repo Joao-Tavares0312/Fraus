@@ -60,7 +60,7 @@ class Recusa(Exception):
       passo 6 recusa cometer.
 
     Quem nao passa `publico` esta dizendo que o motivo ja e generico -- o caso
-    dos passos que falam so do que veio na propria requisicao.
+    dos passos 3 a 8, que falam so do que veio na propria requisicao.
     """
 
     def __init__(
@@ -146,7 +146,7 @@ def _passar_pelo_porteiro(
     webhook_timestamp: str | None,
     webhook_signature: str | None,
 ) -> dict | None:
-    """Os passos 2 a 8. Devolve o veredito, ou None se for reentrega.
+    """Os passos 2 a 9. Devolve o veredito, ou None se for reentrega.
 
     Levanta `Recusa` -- nunca HTTPException -- para que quem chamou registre a
     entrega antes de responder.
@@ -208,17 +208,40 @@ def _passar_pelo_porteiro(
     ):
         raise Recusa(401, "assinatura", "assinatura nao confere")
 
-    # Passo 6: a fonte ativa. DEPOIS da assinatura: informar que a fonte esta
+    # Passo 6: o TIPO da fonte. So fonte cadastrada como `webhook` recebe
+    # entrega por esta rota -- uma fonte `csv` que por acidente nomeie uma
+    # variavel de segredo nao vira porta de escrita pela rede.
+    #
+    # A POSICAO E DEPOIS DA ASSINATURA, de proposito, junto do passo 7 e pelo
+    # mesmo motivo dele: responder 403 antes do HMAC contaria a um anonimo o
+    # tipo de cada fonte do cadastro, que e o estado interno que o passo 7 se
+    # recusa a contar. Colocar este passo la em cima, logo apos buscar a fonte,
+    # seria barato e coerente com "recusar cedo", mas trocaria o vazamento que
+    # o item de revisao pediu para fechar por um vazamento novo. Quem chega
+    # aqui ja provou que tem o segredo desta fonte; para essa pessoa, saber que
+    # a fonte nao e de webhook e diagnostico, nao informacao privilegiada.
+    #
+    # O efeito colateral aceito: uma fonte nao-webhook SEM variavel de segredo
+    # para no passo 2 com 503, e nao com este 403. Os dois dizem "esta fonte
+    # nao recebe webhook"; o 503 so nao diz por que, o que e exatamente a
+    # discricao que o passo 2 passou a ter.
+    if fonte["tipo"] != "webhook":
+        raise Recusa(403, "tipo_incompativel", (
+            f"a fonte '{fonte['nome']}' e do tipo '{fonte['tipo']}' e nao recebe "
+            "entrega por webhook"
+        ), "esta fonte nao recebe entrega por webhook")
+
+    # Passo 7: a fonte ativa. DEPOIS da assinatura: informar que a fonte esta
     # desativada a quem nao provou identidade conta a um desconhecido o estado
     # interno do sistema.
     if not fonte["ativa"]:
         raise Recusa(403, "fonte_inativa", f"a fonte '{fonte['nome']}' esta desativada")
 
-    # Passo 7: reentrega. Nao e recusa -- ver o comentario em `receber`.
+    # Passo 8: reentrega. Nao e recusa -- ver o comentario em `receber`.
     if ctx.banco.entrega_ja_vista(fonte_id, webhook_id):
         return None
 
-    # Passo 8: so agora o corpo vira objeto.
+    # Passo 9: so agora o corpo vira objeto.
     #
     # O motivo da Recusa NUNCA e `str(erro)`: `ValidationError.__str__` embute
     # o `input_value` recebido -- para JSON malformado, o corpo cru inteiro; e

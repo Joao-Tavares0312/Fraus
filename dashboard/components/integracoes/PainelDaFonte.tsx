@@ -49,11 +49,15 @@ function Bloco({
 /**
  * O DETALHE do mestre-detalhe: tudo que e de UMA fonte.
  *
- * O condicional `fonte.tipo === "webhook"` deste arquivo e o primeiro lugar do
- * codigo em que o campo `tipo` de fato RAMIFICA. Ate aqui ele era um rotulo:
- * ficava numa celula de tabela, era escolhido no cadastro e nao mudava nada.
- * Fonte `csv` nao ganha bloco de webhook -- e nao ganhar e a informacao, porque
- * URL de webhook numa fonte que ninguem chama pela rede seria uma promessa.
+ * O condicional `fonte.tipo === "webhook"` deste arquivo RAMIFICA no campo
+ * `tipo`, que ate esta branch era so um rotulo numa celula de tabela. Fonte
+ * `csv` nao ganha bloco de webhook -- e nao ganhar e a informacao, porque URL
+ * de webhook numa fonte que ninguem chama pela rede seria uma promessa.
+ *
+ * Ele ESPELHA a decisao do servidor, nunca a substitui: o passo 6 do porteiro
+ * em `fraus/api/rotas/webhook.py` recusa entrega em fonte que nao seja
+ * `webhook` com 403 `tipo_incompativel`. Enquanto essa checagem morou so aqui,
+ * a tela prometia uma recusa que a API nao fazia.
  */
 export function PainelDaFonte({
   fonte,
@@ -329,7 +333,9 @@ export function PainelDaFonte({
             <span className="text-foreground">{rotuloTipo}</span> e não recebe
             entrega pela rede: não há URL de webhook, segredo de assinatura nem
             histórico de entregas para ela. Exibir os três aqui prometeria um
-            endereço que a API recusaria.
+            endereço que a API recusa — a rota do webhook confere o tipo da
+            fonte no servidor e responde <span className="num">403</span>, mesmo
+            com assinatura válida.
           </p>
         </Bloco>
       )}
