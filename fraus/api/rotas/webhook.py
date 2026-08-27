@@ -27,7 +27,7 @@ from pydantic import ValidationError
 from fraus import assinatura
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoIngestao
-from fraus.api.registro import registrar_conversa
+from fraus.api.registro import registrar_conversa, resumo_validacao
 
 router = APIRouter()
 
@@ -180,10 +180,18 @@ def _passar_pelo_porteiro(
         return None
 
     # Passo 8: so agora o corpo vira objeto.
+    #
+    # O motivo da Recusa NUNCA e `str(erro)`: `ValidationError.__str__` embute
+    # o `input_value` recebido -- para JSON malformado, o corpo cru inteiro; e
+    # para campo de tipo errado, o valor daquele campo (que pode ser fala real
+    # de cliente). Esse motivo vai direto para `registrar_entrega` e fica na
+    # coluna `motivo`, alem de sair no `detail` da resposta -- as duas rotas
+    # persistiriam ou vazariam PII. `resumo_validacao` usa so o CAMINHO e o
+    # TIPO do erro, nunca o valor.
     try:
         pedido = PedidoIngestao.model_validate_json(corpo)
     except ValidationError as erro:
-        raise Recusa(400, "corpo_invalido", str(erro)) from erro
+        raise Recusa(400, "corpo_invalido", resumo_validacao(erro)) from erro
 
     try:
         return registrar_conversa(ctx, pedido, fonte)

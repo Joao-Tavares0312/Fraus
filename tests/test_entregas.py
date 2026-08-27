@@ -86,6 +86,31 @@ def test_webhook_id_ja_visto_e_reconhecido_por_fonte(tmp_path):
     assert banco.entrega_ja_vista(uma, "msg_2") is False
 
 
+def test_recusa_registrada_nao_conta_como_entrega_ja_vista(tmp_path):
+    """So veredito "aceita" conta para o dedupe. Uma recusa (assinatura errada,
+    variavel de ambiente ausente, fonte desativada, corpo invalido) registra a
+    tentativa -- mas nao e uma entrega ja processada. Contar qualquer veredito
+    abriria duas portas: um anonimo "queimando" um webhook-id alheio com
+    assinatura lixo antes da entrega legitima chegar, e um operador que
+    corrige o proprio ambiente vendo a retentativa cair como duplicada."""
+    banco = _banco(tmp_path)
+    fonte_id = _fonte(banco)
+    for veredito in VEREDITOS:
+        if veredito == "aceita":
+            continue
+        banco.registrar_entrega(
+            fonte_id=fonte_id, webhook_id=f"msg_{veredito}", veredito=veredito,
+            recebida_em="2026-08-27T10:00:00+00:00",
+        )
+        assert banco.entrega_ja_vista(fonte_id, f"msg_{veredito}") is False
+
+    banco.registrar_entrega(
+        fonte_id=fonte_id, webhook_id="msg_ok", veredito="aceita",
+        recebida_em="2026-08-27T10:01:00+00:00",
+    )
+    assert banco.entrega_ja_vista(fonte_id, "msg_ok") is True
+
+
 def test_poda_mantem_as_ultimas_e_descarta_as_mais_antigas(tmp_path):
     """Registrar recusa de assinatura e o que o operador precisa ver -- e e
     tambem como um atacante enche o SQLite. A poda e o que permite manter a

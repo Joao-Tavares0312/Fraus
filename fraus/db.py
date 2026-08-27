@@ -450,15 +450,27 @@ class Banco:
         return [dict(linha) for linha in linhas]
 
     def entrega_ja_vista(self, fonte_id: int, webhook_id: str) -> bool:
-        """Se aquele evento ja passou por aqui. O dedupe e POR FONTE.
+        """Se aquele evento ja foi ACEITO por aqui. O dedupe e POR FONTE.
 
         Duas plataformas podem numerar eventos igual, e tratar o `msg_1` de uma
         como reentrega da outra descartaria atendimento em silencio.
+
+        So conta veredito "aceita" -- de proposito. Uma RECUSA registrada
+        (assinatura errada, variavel de ambiente ausente, fonte desativada) nao
+        e uma entrega ja processada, e uma tentativa. Contar qualquer veredito
+        aqui abre duas portas: um anonimo manda `webhook-id` alheio com
+        assinatura lixo so para "queimar" aquele id antes da plataforma
+        legitima entregar (a rota e ISENTA de chave de acesso, e o formato do
+        id costuma ser previsivel); e, sem atacante nenhum, um operador que
+        corrige a variavel de ambiente ou reativa a fonte depois de um 503/403
+        veria a propria retentativa cair como "duplicada" e o atendimento se
+        perder para sempre -- exatamente o caminho de recuperacao que a
+        integracao existe para oferecer.
         """
         with self._conectar() as conexao:
             linha = conexao.execute(
                 "SELECT 1 FROM entregas_webhook WHERE fonte_id = ? AND webhook_id = ? "
-                "LIMIT 1",
+                "AND veredito = 'aceita' LIMIT 1",
                 (fonte_id, webhook_id),
             ).fetchone()
         return linha is not None

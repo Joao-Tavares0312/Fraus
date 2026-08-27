@@ -242,6 +242,130 @@ def test_o_corpo_da_requisicao_nao_aparece_em_entrega_nenhuma(cliente, fonte):  
     ).text
 
 
+SENTINELA = "SEGREDO_DO_CLIENTE_a1b2c3"
+
+
+def test_json_malformado_nao_grava_o_corpo_cru_no_motivo(cliente, fonte):  # noqa: F811
+    """O caminho que vazava: `str(ValidationError)` para JSON invalido embute
+    o `input_value`, que e o corpo cru inteiro -- inclusive uma sentinela de
+    cliente que estivesse ali dentro. So o CAMINHO e o TIPO do erro podem
+    aparecer, nunca o valor recebido."""
+    import time
+    ts = str(int(time.time()))
+    bruto = f"isto nao e json {{{SENTINELA}}}".encode("utf-8")
+    resposta = cliente.post(
+        f"{PREFIXO_WEBHOOK}/{fonte['id']}", content=bruto,
+        headers={
+            "content-type": "application/json", "webhook-id": "msg_1",
+            "webhook-timestamp": ts,
+            "webhook-signature": assinatura.assinar("msg_1", ts, bruto, SEGREDO),
+        },
+    )
+    assert resposta.status_code == 400
+    assert SENTINELA not in resposta.text
+    entrega = _entregas(cliente, fonte["id"])[0]
+    assert entrega["veredito"] == "corpo_invalido"
+    assert SENTINELA not in json.dumps(entrega)
+
+
+def test_campo_de_tipo_errado_nao_grava_a_fala_do_cliente_no_motivo(cliente, fonte):  # noqa: F811
+    """O segundo caminho que vazava: campo com tipo errado embute o valor
+    RECEBIDO na mensagem de erro do Pydantic -- e o valor pode ser a fala real
+    de um cliente."""
+    resposta = _enviar(cliente, fonte["id"], corpo={
+        "id": "atendimento-2",
+        "mensagens": [
+            # "autor" e um Literal["cliente", "bot", "humano"] -- um valor
+            # fora do enum falha, e o "texto" ao lado carrega a sentinela.
+            {"autor": SENTINELA, "texto": SENTINELA,
+             "enviada_em": "2026-08-27T10:00:00-03:00"},
+        ],
+    })
+    assert resposta.status_code == 400
+    assert SENTINELA not in resposta.text
+    entrega = _entregas(cliente, fonte["id"])[0]
+    assert entrega["veredito"] == "corpo_invalido"
+    assert SENTINELA not in json.dumps(entrega)
+
+
+# --- o dedupe nao pode calar entrega legitima --------------------------------
+
+def test_recusa_por_assinatura_nao_impede_a_entrega_legitima_depois(cliente, fonte):  # noqa: F811
+    """O envenenamento do dedupe: um anonimo manda `webhook-id` alheio com
+    assinatura lixo (a rota e ISENTA de chave de acesso -- e ANONIMA por
+    desenho). Se a recusa contasse para o dedupe, a entrega legitima do MESMO
+    id, chegando depois assinada corretamente, seria descartada como
+    "duplicada" sem nunca virar conversa."""
+    recusada = _enviar(cliente, fonte["id"], webhook_id="msg_1", assinada="v1,QUJD")
+    assert recusada.status_code == 401
+
+    legitima = _enviar(cliente, fonte["id"], webhook_id="msg_1")
+    assert legitima.status_code == 201
+    assert [c["id"] for c in cliente.get("/conversas").json()] == ["atendimento-1"]
+
+
+def test_503_por_variavel_ausente_nao_impede_a_retentativa_depois(
+    cliente, fonte, monkeypatch,  # noqa: F811
+):
+    """A variante auto-infligida: um 503 (variavel ausente, fonte desativada)
+    grava a linha; o operador corrige o ambiente; a retentativa do MESMO
+    webhook-id precisa ser aceita, nao cair como "duplicada" -- senao o
+    caminho de recuperacao que a integracao existe para oferecer e o que
+    perde o atendimento para sempre."""
+    monkeypatch.delenv(VARIAVEL, raising=False)
+    recusada = _enviar(cliente, fonte["id"], webhook_id="msg_2")
+    assert recusada.status_code == 503
+
+    monkeypatch.setenv(VARIAVEL, SEGREDO)
+    retentativa = _enviar(cliente, fonte["id"], webhook_id="msg_2")
+    assert retentativa.status_code == 201
+    assert [c["id"] for c in cliente.get("/conversas").json()] == ["atendimento-1"]
+
+
+def test_reentrega_de_entrega_aceita_continua_200_duplicada(cliente, fonte):  # noqa: F811
+    """O caso que TEM que continuar recusando: reentrega de um webhook-id que
+    ja virou conversa continua 200 duplicada, sem duplicar."""
+    assert _enviar(cliente, fonte["id"], webhook_id="msg_3").status_code == 201
+    repetida = _enviar(cliente, fonte["id"], webhook_id="msg_3")
+    assert repetida.status_code == 200
+    assert repetida.json()["duplicada"] is True
+    assert len(cliente.get("/conversas").json()) == 1
+
+
+# --- GET .../entregas, testemunha dos testes acima ---------------------------
+
+def test_entregas_de_fonte_inexistente_e_404(cliente):  # noqa: F811
+    assert cliente.get("/integracoes/fontes/99999/entregas").status_code == 404
+
+
+def test_entregas_de_fonte_sem_nenhuma_e_lista_vazia(cliente, fonte):  # noqa: F811
+    assert _entregas(cliente, fonte["id"]) == []
+
+
+# --- o teto de corpo cobre esta rota tambem -----------------------------------
+
+def test_corpo_acima_do_teto_e_413_antes_de_qualquer_conferencia(cliente, fonte):  # noqa: F811
+    """`registrar_middleware_de_corpo` roda para TODA rota, sem olhar ISENTAS
+    -- inclusive esta, que le o corpo inteiro em bytes antes do parse. Um
+    Content-Length acima do teto precisa ser recusado ali, sem que a rota
+    chegue a rodar `request.body()`."""
+    from fraus.api.limites import TETO_CORPO
+    import time
+    ts = str(int(time.time()))
+    resposta = cliente.post(
+        f"{PREFIXO_WEBHOOK}/{fonte['id']}",
+        content=b"x",
+        headers={
+            "content-type": "application/json",
+            "content-length": str(TETO_CORPO + 1),
+            "webhook-id": "msg_1",
+            "webhook-timestamp": ts,
+            "webhook-signature": "v1,QUJD",
+        },
+    )
+    assert resposta.status_code == 413
+
+
 # --- a regressao que so apareceria em producao ------------------------------
 
 def test_a_rota_responde_com_a_mestra_ligada_sem_exigir_chave_de_acesso(
@@ -277,6 +401,12 @@ def test_a_rota_responde_com_a_mestra_ligada_sem_exigir_chave_de_acesso(
 
     # Sem Authorization nenhum -- so a assinatura.
     assert _enviar(protegido, fonte_criada["id"]).status_code == 201
+
+    # O lado NEGATIVO: uma rota que so PARECE fora do prefixo do webhook
+    # continua exigindo a mestra. Travaria um `startswith("/integracoes")`
+    # digitado por engano -- essa string tambem seria prefixo de
+    # `/integracoes/fontes` e abriria o cadastro inteiro sem credencial.
+    assert protegido.get("/integracoes/fontes").status_code == 401
 
 
 def test_a_url_com_barra_final_tambem_passa_pelo_middleware(cliente, fonte):  # noqa: F811

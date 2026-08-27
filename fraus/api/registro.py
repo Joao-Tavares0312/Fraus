@@ -16,6 +16,24 @@ from fraus.indicadores import nota_0_10
 from fraus.modelos import Conversa
 
 
+def resumo_validacao(erro: ValidationError) -> str:
+    """Mensagem de erro SEM o valor de entrada -- so o caminho e o tipo.
+
+    `str(ValidationError)` embute o `input_value` recebido na mensagem (e para
+    JSON malformado, ate o corpo cru inteiro). Essa mensagem acaba gravada em
+    `entregas_webhook.motivo` e devolvida no `detail` do 400 -- as duas saidas
+    persistem ou expoem PII de cliente real. `erro.errors()` traz o mesmo
+    diagnostico campo a campo; usamos so `loc` (onde) e `type` (o que), e
+    descartamos `input`/`msg`/`ctx` de proposito, porque QUALQUER um deles pode
+    carregar o valor recebido.
+    """
+    partes = [
+        f"{'.'.join(str(p) for p in item['loc'])} ({item['type']})"
+        for item in erro.errors()
+    ]
+    return "corpo nao bate o contrato: " + ", ".join(partes)
+
+
 def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> dict:
     """Grava o atendimento e devolve o veredito DERIVADO.
 
@@ -33,7 +51,7 @@ def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> di
             mensagens=sorted(pedido.mensagens, key=lambda m: m.enviada_em),
         )
     except ValidationError as erro:
-        raise HTTPException(status_code=400, detail=str(erro)) from erro
+        raise HTTPException(status_code=400, detail=resumo_validacao(erro)) from erro
 
     # UMA leitura de curadoria, e e a MESMA que grava a versao: reler abriria
     # janela para pontuar com um lexico e marcar com a versao de outro.
