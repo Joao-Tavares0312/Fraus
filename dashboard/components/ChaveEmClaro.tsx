@@ -30,10 +30,26 @@ export function ChaveEmClaro({
   children: React.ReactNode;
 }) {
   const [copiado, setCopiado] = useState(false);
+  /**
+   * A copia FALHOU, e o usuario precisa saber disso.
+   *
+   * `navigator.clipboard` so existe em contexto seguro: HTTPS ou localhost. Num
+   * IP de LAN por HTTP -- o cenario que o proprio README descreve -- a promise
+   * rejeita, e sem tratamento o botao ficava mudo. Aqui isso e pior do que em
+   * qualquer outro lugar da dashboard: esta e a tela em que a credencial aparece
+   * UMA vez, porque o servidor guarda so o hash. Botao mudo somado a "copie
+   * agora" e uma chave perdida.
+   */
+  const [falhou, setFalhou] = useState(false);
 
   async function copiar() {
-    await navigator.clipboard.writeText(chave);
-    setCopiado(true);
+    try {
+      await navigator.clipboard.writeText(chave);
+      setCopiado(true);
+      setFalhou(false);
+    } catch {
+      setFalhou(true);
+    }
   }
 
   return (
@@ -50,6 +66,14 @@ export function ChaveEmClaro({
             {copiado ? "Copiado" : "Copiar"}
           </Button>
         </div>
+        {falhou ? (
+          <p role="status" className="mt-2 max-w-[72ch] text-xs leading-relaxed">
+            O navegador não deixou copiar — a área de transferência só funciona
+            em HTTPS ou em <span className="num">localhost</span>.{" "}
+            <strong>Selecione o valor acima e copie à mão antes de sair</strong>:
+            ele não aparece de novo.
+          </p>
+        ) : null}
       </AlertDescription>
     </Alert>
   );

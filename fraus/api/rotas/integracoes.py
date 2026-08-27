@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
-from fraus import credencial
+from fraus import assinatura, credencial
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import TIPOS_DE_FONTE, PedidoAjusteFonte, PedidoFonte
 from fraus.api.seguranca import exigir_mestra
@@ -152,6 +152,65 @@ def revogar_chave(
     ctx.banco.revogar_chave(fonte_id)
 
 
+@router.post("/integracoes/fontes/{fonte_id}/segredo", status_code=201)
+def gerar_segredo(
+    fonte_id: int,
+    authorization: str | None = Header(default=None),
+    ctx: Contexto = Depends(obter_contexto),
+) -> dict:
+    """Gera o segredo de assinatura do webhook e o devolve EM CLARO uma vez.
+
+    E A UNICA ROTA DESTE PROJETO QUE NAO GRAVA A CREDENCIAL QUE EMITE -- nem o
+    hash. E de proposito: HMAC exige o segredo em claro no servidor toda vez
+    que uma assinatura e conferida, e guardar valor recuperavel no SQLite
+    desfaria a propriedade que faz um backup vazado nao levar credencial
+    junto.
+
+    O valor mora na variavel de ambiente que a fonte nomeia. O fluxo do
+    operador tem tres passos e a tela mostra os tres: gerar, por na variavel de
+    ambiente da maquina da API, entregar a copia a plataforma.
+
+    Privilegio da mestra, como as demais rotas de credencial: uma chave que
+    emite outra chave nao seria um posto menor.
+    """
+    exigir_mestra(ctx, authorization)
+    fonte = ctx.banco.buscar_fonte(fonte_id)
+    if fonte is None:
+        raise HTTPException(status_code=404, detail="fonte nao encontrada")
+
+    variavel = fonte["variavel_segredo"]
+    return {
+        "segredo": assinatura.gerar_segredo(),
+        # O NOME da variavel onde ele deve ser posto. `None` quando a fonte nao
+        # nomeia nenhuma -- a tela precisa saber a diferenca para pedir o
+        # cadastro em vez de mandar o operador adivinhar onde por o valor.
+        "variavel": variavel,
+        "aviso": (
+            "Guarde agora: este segredo nao e gravado em lugar nenhum pelo Fraus. "
+            + (
+                f"Defina {variavel} com este valor no ambiente da API e entregue "
+                "a mesma copia a plataforma."
+                if variavel
+                else "Cadastre antes o nome da variavel de ambiente desta fonte."
+            )
+        ),
+    }
+
+
+@router.get("/integracoes/fontes/{fonte_id}/entregas")
+def listar_entregas_da_fonte(
+    fonte_id: int, ctx: Contexto = Depends(obter_contexto)
+) -> list[dict]:
+    """Historico de entregas de webhook da fonte, mais recente primeiro.
+
+    O corpo da requisicao nunca aparece aqui -- e PII de cliente real, e
+    depurar se resolve com veredito e motivo, nunca com o payload guardado.
+    """
+    if ctx.banco.buscar_fonte(fonte_id) is None:
+        raise HTTPException(status_code=404, detail="fonte nao encontrada")
+    return ctx.banco.listar_entregas(fonte_id)
+
+
 @router.get("/integracoes/tipos")
 def tipos_de_fonte() -> list[dict]:
     """Os tipos que a ingestao sabe tratar HOJE.
@@ -171,7 +230,10 @@ def tipos_de_fonte() -> list[dict]:
         {
             "valor": "webhook",
             "rotulo": "Webhook",
-            "ajuda": "recebe eventos da plataforma",
+            "ajuda": (
+                "a plataforma chama POST /integracoes/webhook/{id} com o evento "
+                "assinado"
+            ),
         },
     ]
 

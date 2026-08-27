@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, KeyRound, Plus, X } from "lucide-react";
 import {
   ajustarFonte,
   apagarFonte,
@@ -11,10 +11,9 @@ import {
   type FonteIntegracao,
   type TipoDeFonte,
 } from "@/lib/api";
-import { ChaveDaFonte } from "./ChaveDaFonte";
-import { formatarData } from "@/lib/formato";
+import { ListaDeFontes } from "./ListaDeFontes";
+import { PainelDaFonte } from "./PainelDaFonte";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,14 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { EstadoVazio } from "@/components/EstadoVazio";
 
 /*
@@ -46,6 +37,20 @@ import { EstadoVazio } from "@/components/EstadoVazio";
 
 const NOVA_VAZIA = { nome: "", canal: "", tipo: "csv", variavel_segredo: "" };
 
+/**
+ * O MESTRE-DETALHE das fontes.
+ *
+ * A tabela saiu. Ela tinha seis colunas mais uma linha inteira por fonte so
+ * para a chave, e o webhook somaria mais quatro blocos por fonte -- a doze
+ * fontes a tela seria uma coluna de rolagem sem lugar nenhum para pousar. A
+ * lista fica estreita e constante; a fonte escolhida abre a direita com tudo
+ * que e dela.
+ *
+ * A SELECAO ACOMPANHA A LISTA, e isso e o que evita o painel preso num
+ * fantasma: cadastrar seleciona a nova, e qualquer recarga que nao encontre
+ * mais o id selecionado limpa a selecao em vez de renderizar uma fonte que o
+ * servidor ja nao tem.
+ */
 export function Fontes({
   iniciais,
   tipos: TIPOS,
@@ -67,18 +72,38 @@ export function Fontes({
   const [nova, setNova] = useState(NOVA_VAZIA);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupada, setOcupada] = useState<number | "nova" | null>(null);
-  const [renomeando, setRenomeando] = useState<number | null>(null);
-  const [nomeEmEdicao, setNomeEmEdicao] = useState("");
-  const [confirmandoRemocao, setConfirmandoRemocao] = useState<number | null>(
-    null,
+  const [selecionada, setSelecionada] = useState<number | null>(
+    iniciais[0]?.id ?? null,
   );
+  const [cadastrando, setCadastrando] = useState(false);
+
+  // O formulario aparece quando alguem pede `[+]` OU quando nao ha nada para
+  // escolher -- e a segunda metade e DERIVADA, nao um estado inicial. Inicial
+  // ela ja deixou a tela sem saida uma vez: quem entrava com fontes (formulario
+  // fechado) e removia todas ficava numa tela cujo estado vazio mandava "comece
+  // pelo formulario acima", sem formulario acima nenhum.
+  const formularioAberto = cadastrando || fontes.length === 0;
 
   const podeCadastrar =
     ocupada !== "nova" && nova.nome.trim() !== "" && nova.canal.trim() !== "";
+  const fonteAberta = fontes.find((fonte) => fonte.id === selecionada) ?? null;
 
-  async function recarregar() {
+  /**
+   * Recarrega a lista e, se pedido, mira numa fonte.
+   *
+   * `mirar` existe porque o cadastro precisa selecionar a fonte que acabou de
+   * nascer, e o id dela so existe DEPOIS da resposta. Sem isso, cadastrar
+   * deixaria o painel direito na fonte anterior.
+   */
+  async function recarregar(mirar?: number) {
     const resposta = await listarFontes();
-    if (resposta.ok) setFontes(resposta.dado);
+    if (resposta.ok) {
+      setFontes(resposta.dado);
+      setSelecionada((atual) => {
+        const alvo = mirar ?? atual;
+        return resposta.dado.some((fonte) => fonte.id === alvo) ? alvo : null;
+      });
+    }
     router.refresh();
   }
 
@@ -97,7 +122,8 @@ export function Fontes({
       return;
     }
     setNova(NOVA_VAZIA);
-    await recarregar();
+    setCadastrando(false);
+    await recarregar(resposta.dado.id);
   }
 
   async function alternarAtiva(fonte: FonteIntegracao) {
@@ -112,17 +138,24 @@ export function Fontes({
     await recarregar();
   }
 
-  async function confirmarRenome(fonte: FonteIntegracao) {
+  /**
+   * Renomeia e DEVOLVE se deu certo.
+   *
+   * O booleano nao e enfeite: quem chama fecha o campo de edicao, e fechar
+   * antes da resposta joga fora o nome digitado exatamente no caso em que ele
+   * ainda e preciso -- o da recusa. So o servidor sabe se o nome passou.
+   */
+  async function confirmarRenome(fonte: FonteIntegracao, nome: string) {
     setErro(null);
     setOcupada(fonte.id);
-    const resposta = await ajustarFonte(fonte.id, { nome: nomeEmEdicao });
+    const resposta = await ajustarFonte(fonte.id, { nome });
     setOcupada(null);
     if (!resposta.ok) {
       setErro(resposta.erro);
-      return;
+      return false;
     }
-    setRenomeando(null);
     await recarregar();
+    return true;
   }
 
   async function remover(fonte: FonteIntegracao) {
@@ -132,359 +165,213 @@ export function Fontes({
     setOcupada(null);
     if (!resposta.ok) {
       setErro(resposta.erro);
-      return;
+      return false;
     }
-    setConfirmandoRemocao(null);
+    // Remover a fonte aberta limpa a selecao: o painel direito nao pode
+    // continuar exibindo um cadastro que o servidor acabou de apagar.
+    if (selecionada === fonte.id) setSelecionada(null);
     await recarregar();
+    return true;
   }
 
   return (
-    <div className="flex min-w-0 flex-col">
-      <div className="border-b border-border p-5">
-        <h3 className="text-sm font-medium text-foreground">
-          Cadastrar uma fonte
-        </h3>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_minmax(0,1.3fr)_auto]">
-          <div className="min-w-0">
-            <Label htmlFor={`${identificador}-nome`} className="text-xs">
-              Nome
-            </Label>
-            <Input
-              id={`${identificador}-nome`}
-              className="mt-1"
-              value={nova.nome}
-              placeholder="Suporte — Zendesk"
-              onChange={(evento) =>
-                setNova({ ...nova, nome: evento.target.value })
-              }
-              onKeyDown={(evento) => {
-                if (evento.key === "Enter" && podeCadastrar) adicionar();
-              }}
-            />
+    <div className="flex min-w-0 flex-col gap-4">
+      {formularioAberto ? (
+        <div className="min-w-0 rounded-sm border border-border bg-muted/20 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-foreground">
+              Cadastrar uma fonte
+            </h3>
+            {fontes.length > 0 ? (
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                onClick={() => setCadastrando(false)}
+              >
+                <X aria-hidden />
+                Fechar
+              </Button>
+            ) : null}
           </div>
 
-          <div className="min-w-0">
-            <Label htmlFor={`${identificador}-canal`} className="text-xs">
-              Canal
-            </Label>
-            <Input
-              id={`${identificador}-canal`}
-              className="mt-1"
-              value={nova.canal}
-              placeholder="webchat, whatsapp, instagram…"
-              onChange={(evento) =>
-                setNova({ ...nova, canal: evento.target.value })
-              }
-              onKeyDown={(evento) => {
-                if (evento.key === "Enter" && podeCadastrar) adicionar();
-              }}
-            />
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_minmax(0,1.3fr)_auto]">
+            <div className="min-w-0">
+              <Label htmlFor={`${identificador}-nome`} className="text-xs">
+                Nome
+              </Label>
+              <Input
+                id={`${identificador}-nome`}
+                className="mt-1"
+                value={nova.nome}
+                placeholder="Suporte — Zendesk"
+                onChange={(evento) =>
+                  setNova({ ...nova, nome: evento.target.value })
+                }
+                onKeyDown={(evento) => {
+                  if (evento.key === "Enter" && podeCadastrar) adicionar();
+                }}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <Label htmlFor={`${identificador}-canal`} className="text-xs">
+                Canal
+              </Label>
+              <Input
+                id={`${identificador}-canal`}
+                className="mt-1"
+                value={nova.canal}
+                placeholder="webchat, whatsapp, instagram…"
+                onChange={(evento) =>
+                  setNova({ ...nova, canal: evento.target.value })
+                }
+                onKeyDown={(evento) => {
+                  if (evento.key === "Enter" && podeCadastrar) adicionar();
+                }}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <Label htmlFor={`${identificador}-tipo`} className="text-xs">
+                Tipo
+              </Label>
+              <Select
+                value={nova.tipo}
+                onValueChange={(valor) =>
+                  setNova({ ...nova, tipo: valor ?? "csv" })
+                }
+              >
+                <SelectTrigger
+                  id={`${identificador}-tipo`}
+                  className="mt-1 w-full"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPOS.map(({ valor, rotulo }) => (
+                    <SelectItem key={valor} value={valor}>
+                      {rotulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-[0.6875rem] leading-relaxed text-muted-foreground">
+                {TIPOS.find((tipo) => tipo.valor === nova.tipo)?.ajuda}
+              </p>
+            </div>
+
+            <div className="min-w-0">
+              <Label htmlFor={`${identificador}-segredo`} className="text-xs">
+                Nome da variável de ambiente do segredo
+              </Label>
+              <Input
+                id={`${identificador}-segredo`}
+                className="num mt-1"
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                value={nova.variavel_segredo}
+                placeholder="FRAUS_TOKEN_ZENDESK"
+                aria-describedby={`${identificador}-segredo-ajuda`}
+                onChange={(evento) =>
+                  setNova({ ...nova, variavel_segredo: evento.target.value })
+                }
+                onKeyDown={(evento) => {
+                  if (evento.key === "Enter" && podeCadastrar) adicionar();
+                }}
+              />
+              {/* A prosa de honestidade nao foi cortada: ela desceu do rodape
+                  do painel para debaixo do proprio campo que explica. */}
+              <p
+                id={`${identificador}-segredo-ajuda`}
+                className="mt-2 max-w-[72ch] text-[0.6875rem] leading-relaxed text-muted-foreground"
+              >
+                <KeyRound
+                  aria-hidden
+                  className="mr-1 inline size-3 -translate-y-px"
+                />
+                O campo do segredo guarda o{" "}
+                <strong className="text-foreground">
+                  nome de uma variável de ambiente
+                </strong>{" "}
+                — <span className="num">FRAUS_TOKEN_ZENDESK</span>, não o token.
+                Por isso não existe campo de senha nesta tela: credencial em
+                texto puro dentro do SQLite vazaria junto com o backup. Quem lê
+                a variável é a API, na máquina onde ela roda.
+              </p>
+            </div>
+
+            <div className="flex items-start sm:items-end">
+              <Button type="button" onClick={adicionar} disabled={!podeCadastrar}>
+                <Plus aria-hidden />
+                {ocupada === "nova" ? "Cadastrando…" : "Cadastrar"}
+              </Button>
+            </div>
           </div>
-
-          <div className="min-w-0">
-            <Label htmlFor={`${identificador}-tipo`} className="text-xs">
-              Tipo
-            </Label>
-            <Select
-              value={nova.tipo}
-              onValueChange={(valor) =>
-                setNova({ ...nova, tipo: valor ?? "csv" })
-              }
-            >
-              <SelectTrigger id={`${identificador}-tipo`} className="mt-1 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIPOS.map(({ valor, rotulo }) => (
-                  <SelectItem key={valor} value={valor}>
-                    {rotulo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="mt-1 text-[0.6875rem] leading-relaxed text-muted-foreground">
-              {TIPOS.find((tipo) => tipo.valor === nova.tipo)?.ajuda}
-            </p>
-          </div>
-
-          <div className="min-w-0">
-            <Label htmlFor={`${identificador}-segredo`} className="text-xs">
-              Nome da variável de ambiente do segredo
-            </Label>
-            <Input
-              id={`${identificador}-segredo`}
-              className="num mt-1"
-              type="text"
-              autoComplete="off"
-              spellCheck={false}
-              value={nova.variavel_segredo}
-              placeholder="FRAUS_TOKEN_ZENDESK"
-              aria-describedby={`${identificador}-segredo-ajuda`}
-              onChange={(evento) =>
-                setNova({ ...nova, variavel_segredo: evento.target.value })
-              }
-              onKeyDown={(evento) => {
-                if (evento.key === "Enter" && podeCadastrar) adicionar();
-              }}
-            />
-          </div>
-
-          <div className="flex items-end">
-            <Button
-              type="button"
-              onClick={adicionar}
-              disabled={!podeCadastrar}
-            >
-              <Plus aria-hidden />
-              {ocupada === "nova" ? "Cadastrando…" : "Cadastrar"}
-            </Button>
-          </div>
-        </div>
-
-        <p
-          id={`${identificador}-segredo-ajuda`}
-          className="mt-3 max-w-[80ch] text-xs leading-relaxed text-muted-foreground"
-        >
-          <KeyRound aria-hidden className="mr-1 inline size-3 -translate-y-px" />
-          O campo do segredo guarda o{" "}
-          <strong className="text-foreground">
-            nome de uma variável de ambiente
-          </strong>{" "}
-          — <span className="num">FRAUS_TOKEN_ZENDESK</span>, não o token. Por
-          isso não existe campo de senha nesta tela: credencial em texto puro
-          dentro do SQLite vazaria junto com o backup. Quem lê a variável é a
-          API, na máquina onde ela roda.
-        </p>
-      </div>
-
-      {erro ? (
-        <div className="border-b border-border p-5 pb-0">
-          <Alert variant="destructive">
-            <AlertTriangle aria-hidden />
-            <AlertTitle>A API recusou a operação</AlertTitle>
-            <AlertDescription>
-              <span className="text-destructive">{erro}</span>
-            </AlertDescription>
-          </Alert>
         </div>
       ) : null}
 
-      {fontes.length === 0 ? (
-        <EstadoVazio
-          className="m-5"
-          titulo="Nenhuma fonte cadastrada"
-          explicacao="O cadastro de fontes registra por onde a conversa entra: nome, canal, tipo e o nome da variável de ambiente que carrega a credencial. Enquanto ele estiver vazio, os atendimentos importados continuam existindo — a fonte é o registro da origem, não a origem do dado."
-          endpoint="POST /integracoes/fontes"
-        />
-      ) : (
-        <div className="min-w-0 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fonte</TableHead>
-                <TableHead>Canal</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Segredo</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fontes.map((fonte) => {
-                const emEdicao = renomeando === fonte.id;
-                const confirmando = confirmandoRemocao === fonte.id;
+      {erro ? (
+        <Alert variant="destructive">
+          <AlertTriangle aria-hidden />
+          <AlertTitle>A API recusou a operação</AlertTitle>
+          <AlertDescription>
+            <span className="text-destructive">{erro}</span>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
-                return [
-                  <TableRow key={fonte.id}>
-                    <TableCell className="min-w-56 align-top">
-                      {emEdicao ? (
-                        <div className="flex items-center gap-2">
-                          <Label
-                            htmlFor={`${identificador}-renome-${fonte.id}`}
-                            className="sr-only"
-                          >
-                            Novo nome da fonte
-                          </Label>
-                          <Input
-                            id={`${identificador}-renome-${fonte.id}`}
-                            className="h-7"
-                            autoFocus
-                            value={nomeEmEdicao}
-                            onChange={(evento) =>
-                              setNomeEmEdicao(evento.target.value)
-                            }
-                            onKeyDown={(evento) => {
-                              if (
-                                evento.key === "Enter" &&
-                                nomeEmEdicao.trim() !== ""
-                              ) {
-                                confirmarRenome(fonte);
-                              }
-                              if (evento.key === "Escape") setRenomeando(null);
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            size="xs"
-                            onClick={() => confirmarRenome(fonte)}
-                            disabled={
-                              ocupada === fonte.id || nomeEmEdicao.trim() === ""
-                            }
-                          >
-                            Salvar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => setRenomeando(null)}
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-sm text-foreground">
-                            {fonte.nome}
-                          </span>
-                          <span className="num mt-0.5 block text-[0.6875rem] text-muted-foreground">
-                            cadastrada em {formatarData(fonte.criada_em)}
-                          </span>
-                        </>
-                      )}
-
-                      {confirmando ? (
-                        <div className="mt-2 rounded-md border border-border bg-muted/40 p-3">
-                          <p className="max-w-[70ch] text-xs leading-relaxed text-foreground">
-                            Remover <strong>{fonte.nome}</strong> apaga só o
-                            cadastro da origem.{" "}
-                            <strong>
-                              Nenhum atendimento já importado é apagado
-                            </strong>{" "}
-                            — conversa que entrou é dado medido, e apagar a
-                            origem não pode reescrever o histórico.
-                          </p>
-                          <div className="mt-2 flex gap-2">
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="destructive"
-                              onClick={() => remover(fonte)}
-                              disabled={ocupada === fonte.id}
-                            >
-                              {ocupada === fonte.id
-                                ? "Removendo…"
-                                : "Remover o cadastro"}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="ghost"
-                              onClick={() => setConfirmandoRemocao(null)}
-                            >
-                              Manter
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-                    </TableCell>
-
-                    <TableCell className="align-top text-sm text-muted-foreground">
-                      {fonte.canal}
-                    </TableCell>
-
-                    <TableCell className="align-top text-sm text-muted-foreground">
-                      {TIPOS.find((tipo) => tipo.valor === fonte.tipo)?.rotulo ??
-                        fonte.tipo}
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <Badge variant={fonte.ativa ? "outline" : "ghost"}>
-                        {fonte.ativa ? "Ativa" : "Inativa"}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="min-w-56 align-top">
-                      {fonte.variavel_segredo ? (
-                        <>
-                          <span className="num block text-xs text-foreground">
-                            {fonte.variavel_segredo}
-                          </span>
-                          <span
-                            className={`mt-0.5 block text-[0.6875rem] ${
-                              fonte.configurada
-                                ? "text-promotor-texto"
-                                : "text-detrator-texto"
-                            }`}
-                          >
-                            {fonte.configurada
-                              ? "variável definida no ambiente da API"
-                              : "variável ausente no ambiente da API"}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          nenhuma variável nomeada
-                        </span>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <div className="flex justify-end gap-1.5">
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => {
-                            setRenomeando(fonte.id);
-                            setNomeEmEdicao(fonte.nome);
-                            setConfirmandoRemocao(null);
-                          }}
-                          disabled={emEdicao}
-                        >
-                          <Pencil aria-hidden />
-                          Renomear
-                        </Button>
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="outline"
-                          onClick={() => alternarAtiva(fonte)}
-                          disabled={ocupada === fonte.id}
-                        >
-                          {fonte.ativa ? "Desativar" : "Ativar"}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => {
-                            setConfirmandoRemocao(fonte.id);
-                            setRenomeando(null);
-                          }}
-                          disabled={confirmando}
-                        >
-                          <Trash2 aria-hidden />
-                          Remover
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>,
-                  /* A chave ocupa a largura inteira numa linha propria: ela
-                     carrega um segredo longo e um exemplo de `curl`, e
-                     espremer isso numa celula de tabela deixaria a coisa mais
-                     importante da tela ilegivel. */
-                  <TableRow key={`${fonte.id}-chave`} className="border-b-0">
-                    <TableCell colSpan={6} className="pt-0">
-                      <ChaveDaFonte fonte={fonte} base={baseDaApi} />
-                    </TableCell>
-                  </TableRow>,
-                ];
-              })}
-            </TableBody>
-          </Table>
+      {/* Abaixo de `lg` a coluna mestre vira uma faixa acima do painel, e a
+          regua muda de lado junto (borda de baixo em vez de borda a direita):
+          uma linha vertical entre dois blocos empilhados nao separa nada. */}
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:gap-6">
+        <div className="min-w-0 border-b border-linha pb-2 lg:border-r lg:border-b-0 lg:pr-4 lg:pb-0">
+          <ListaDeFontes
+            fontes={fontes}
+            tipos={TIPOS}
+            selecionada={selecionada}
+            aoSelecionar={(id) => {
+              setSelecionada(id);
+              setCadastrando(false);
+            }}
+            aoCadastrar={() => setCadastrando(true)}
+          />
         </div>
-      )}
+
+        <div className="min-w-0">
+          {fonteAberta ? (
+            // `key` remonta o detalhe ao trocar de fonte: o renome em curso e a
+            // confirmacao de remocao sao de UMA fonte, e carrega-los para a
+            // proxima ofereceria "Remover" com o nome trocado.
+            <PainelDaFonte
+              key={fonteAberta.id}
+              fonte={fonteAberta}
+              tipos={TIPOS}
+              baseDaApi={baseDaApi}
+              ocupada={ocupada === fonteAberta.id}
+              aoRenomear={confirmarRenome}
+              aoAlternarAtiva={alternarAtiva}
+              aoRemover={remover}
+            />
+          ) : fontes.length === 0 ? (
+            <EstadoVazio
+              titulo="Nenhuma fonte cadastrada"
+              explicacao="O cadastro de fontes registra por onde a conversa entra: nome, canal, tipo e o nome da variável de ambiente que carrega a credencial. Enquanto ele estiver vazio, os atendimentos importados continuam existindo — a fonte é o registro da origem, não a origem do dado. Comece pelo formulário acima."
+              endpoint="POST /integracoes/fontes"
+            />
+          ) : (
+            <EstadoVazio
+              titulo="Escolha uma fonte à esquerda"
+              // A tela abre já na primeira fonte, de propósito: é tela de
+              // operação, e obrigar um clique para ver qualquer coisa seria
+              // cerimônia. Este vazio é o do caminho em que a seleção se
+              // desfez — a fonte aberta foi removida, ou sumiu numa recarga.
+              explicacao="Chave de API, segredo de assinatura, contrato do webhook e histórico de entregas são de uma fonte por vez. A fonte que estava aberta aqui não existe mais na lista — escolha outra à esquerda para continuar."
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

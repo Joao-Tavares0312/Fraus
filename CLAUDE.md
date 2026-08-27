@@ -48,6 +48,9 @@ CSV / Discord / WhatsApp
 | `fraus/sinais/estilo.py` | caixa alta, pontuação, alongamento, palavrão, censura |
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex e o ranking de emoji |
 | `fraus/api/rotas/lexico.py` | cadastrar, listar e revogar termo curado |
+| `fraus/assinatura.py` | HMAC do webhook — o segredo mora no ambiente, nunca no banco |
+| `fraus/api/registro.py` | o miolo de derivação, compartilhado pelas duas rotas de entrada |
+| `fraus/api/rotas/webhook.py` | webhook assinado por fonte, com registro de entrega |
 | `scripts/preparar_sentilex.py` | converte o SentiLex bruto em `fraus/dados/sentilex_pt02.csv` |
 | `fraus/fusor.py` | `NOMES_FEATURES` (35) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
