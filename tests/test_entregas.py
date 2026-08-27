@@ -4,6 +4,8 @@ Sem esta tabela, um webhook recusado nao deixa rastro em lugar nenhum -- e
 falha silenciosa e o modo de falha numero um dessa integracao.
 """
 
+from datetime import datetime, timedelta, timezone
+
 from fraus.db import VEREDITOS, Banco
 
 
@@ -100,6 +102,35 @@ def test_poda_mantem_as_ultimas_e_descarta_as_mais_antigas(tmp_path):
     # As 20 primeiras cairam; a mais nova continua.
     assert entregas[0]["webhook_id"] == "msg_0219"
     assert banco.entrega_ja_vista(fonte_id, "msg_0000") is False
+
+
+def test_poda_descarta_pelo_mesmo_criterio_que_a_listagem_usa(tmp_path):
+    """A poda corta por `recebida_em DESC, id DESC` -- o MESMO criterio de
+    `listar_entregas`. Sem isto, sob entrega fora de ordem (`recebida_em` nao
+    acompanhando a ordem de insercao), a poda por `id` poderia manter uma
+    entrega velha pelo relogio enquanto descarta uma nova pelo relogio que so
+    chegou depois na ordem de insercao -- inconsistencia entre o que fica no
+    banco e o que a tela mostra como "mais recente"."""
+    banco = _banco(tmp_path)
+    fonte_id = _fonte(banco)
+    # A primeira entrega registrada carimba o horario MAIS NOVO de todas: se a
+    # poda cortasse por `id`, ela sairia primeiro por ser a mais antiga na
+    # ordem de insercao -- mas e a mais nova por `recebida_em`, entao tem que
+    # sobreviver.
+    banco.registrar_entrega(
+        fonte_id=fonte_id, webhook_id="mais_nova_por_recebida_em",
+        veredito="aceita", recebida_em="2026-08-27T23:59:59+00:00",
+    )
+    inicio = datetime(2026, 8, 27, 10, 0, 0, tzinfo=timezone.utc)
+    for numero in range(banco.ENTREGAS_POR_FONTE + 20):
+        recebida_em = (inicio + timedelta(seconds=numero)).isoformat()
+        banco.registrar_entrega(
+            fonte_id=fonte_id, webhook_id=f"msg_{numero:04d}", veredito="assinatura",
+            recebida_em=recebida_em,
+        )
+    webhook_ids = {e["webhook_id"] for e in banco.listar_entregas(fonte_id)}
+    assert "mais_nova_por_recebida_em" in webhook_ids
+    assert banco.entrega_ja_vista(fonte_id, "mais_nova_por_recebida_em") is True
 
 
 def test_a_poda_nao_toca_nas_entregas_de_outra_fonte(tmp_path):

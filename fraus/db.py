@@ -414,14 +414,20 @@ class Banco:
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (fonte_id, webhook_id, recebida_em, veredito, motivo, conversa_id),
             )
-            # O corte e por `id`, nao por `recebida_em`: o id e monotonico e
-            # decidido aqui, e o horario vem de fora -- duas entregas do mesmo
-            # segundo deixariam a ordem indefinida e a poda escolheria por sorte
-            # qual das duas cai.
+            # O corte usa o MESMO criterio de `listar_entregas`
+            # (`recebida_em DESC, id DESC`), de proposito: `recebida_em` e
+            # carimbado pelo servidor no instante em que a chamada chega (a
+            # rota grava `datetime.now(timezone.utc)`, nunca um campo do
+            # corpo) -- e tao interno quanto o `id`, entao nao ha razao para
+            # os dois criterios divergirem. Com o mesmo criterio nos dois
+            # lados, "as 200 que ficam" e "as 200 que aparecem" sao
+            # literalmente o mesmo conjunto, na mesma ordem, por construcao.
+            # `id` entra so como desempate, porque duas entregas podem
+            # carimbar o mesmo instante ISO.
             conexao.execute(
                 "DELETE FROM entregas_webhook WHERE fonte_id = ? AND id NOT IN ("
                 "  SELECT id FROM entregas_webhook WHERE fonte_id = ? "
-                "  ORDER BY id DESC LIMIT ?"
+                "  ORDER BY recebida_em DESC, id DESC LIMIT ?"
                 ")",
                 (fonte_id, fonte_id, self.ENTREGAS_POR_FONTE),
             )
