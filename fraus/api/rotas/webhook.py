@@ -73,7 +73,11 @@ class Recusa(Exception):
         self.publico = publico if publico is not None else motivo
 
 
-@router.post(PREFIXO_WEBHOOK + "/{fonte_id}")
+# `status_code=201` no DECORADOR, e nao so no JSONResponse do fim: o schema
+# OpenAPI publicado sai do decorador, e sem ele o `/docs` anunciava 200 para o
+# caminho feliz enquanto a rota devolvia 201 -- a tabela do README promete 201, e
+# quem integra le o schema.
+@router.post(PREFIXO_WEBHOOK + "/{fonte_id}", status_code=201)
 async def receber(
     fonte_id: int,
     request: Request,
@@ -130,8 +134,14 @@ async def receber(
         # plataforma retentar diante de qualquer resposta fora de 2xx, e
         # responder erro a uma reentrega legitima poria a integracao em laco
         # infinito por conta propria.
+        #
+        # O 200 e EXPLICITO no JSONResponse porque o decorador declara 201: sem
+        # o status aqui, a reentrega herdaria o 201 e diria que gravou uma
+        # conversa que ja existia.
         registrar("duplicada", "webhook-id ja processado")
-        return {"duplicada": True, "webhook_id": webhook_id}
+        return JSONResponse(
+            status_code=200, content={"duplicada": True, "webhook_id": webhook_id}
+        )
 
     registrar("aceita", conversa_id=resultado["id"])
     return JSONResponse(status_code=201, content=jsonable_encoder(resultado))

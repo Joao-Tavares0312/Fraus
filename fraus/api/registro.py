@@ -26,11 +26,29 @@ def resumo_validacao(erro: ValidationError) -> str:
     diagnostico campo a campo; usamos so `loc` (onde) e `type` (o que), e
     descartamos `input`/`msg`/`ctx` de proposito, porque QUALQUER um deles pode
     carregar o valor recebido.
+
+    A GARANTIA TEM UMA CONDICAO, e ela nao e obvia: `loc` e seguro porque hoje
+    todo caminho de `PedidoIngestao` e um nome de campo declarado no codigo ou
+    um indice de lista. Isso deixaria de valer em dois casos --
+
+    - se `PedidoIngestao` ganhar um campo `dict` de chaves livres (metadados,
+      por exemplo): a CHAVE vinda do input entra no `loc`, e chave de dicionario
+      e valor de entrada como qualquer outro;
+    - se algum modelo passar a `extra="forbid"`: o erro `extra_forbidden` traz
+      no `loc` o nome do campo que o cliente inventou.
+
+    Hoje nao existe nenhum dos dois. Quem acrescentar um dos dois precisa
+    filtrar `loc` aqui, ou esta funcao deixa de ser a defesa de PII que a rota
+    anonima do webhook confia que ela e.
     """
-    partes = [
-        f"{'.'.join(str(p) for p in item['loc'])} ({item['type']})"
-        for item in erro.errors()
-    ]
+    partes = []
+    for item in erro.errors():
+        caminho = ".".join(str(p) for p in item["loc"])
+        # Sem `loc` -- o caso de `json_invalid`, em que o erro e do corpo
+        # inteiro e nao de um campo. Interpolar o caminho vazio produzia
+        # "contrato:  (json_invalid)", com o espaco duplo, e essa string vai
+        # inteira para a coluna `motivo` e para a tela de Entregas.
+        partes.append(f"{caminho} ({item['type']})" if caminho else f"({item['type']})")
     return "corpo nao bate o contrato: " + ", ".join(partes)
 
 

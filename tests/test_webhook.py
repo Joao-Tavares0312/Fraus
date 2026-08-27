@@ -275,6 +275,20 @@ def test_corpo_que_nao_e_json_e_400_sem_explodir(cliente, fonte):  # noqa: F811
         },
     )
     assert resposta.status_code == 400
+    # O motivo vai inteiro para a tela de Entregas: sem `loc` (o erro e do corpo
+    # todo, nao de um campo) ele saia com espaco duplo, "contrato:  (...)".
+    motivo = _entregas(cliente, fonte["id"])[0]["motivo"]
+    assert "  " not in motivo
+    assert "json_invalid" in motivo
+
+
+def test_o_schema_publicado_anuncia_201_no_caminho_feliz(cliente):  # noqa: F811
+    """O `/docs` sai do decorador, nao do JSONResponse. Sem `status_code` la, o
+    schema anunciava 200 enquanto a rota devolvia 201 -- e quem integra le o
+    schema, nao o codigo."""
+    caminho = f"{PREFIXO_WEBHOOK}/{{fonte_id}}"
+    respostas = cliente.get("/openapi.json").json()["paths"][caminho]["post"]["responses"]
+    assert "201" in respostas
 
 
 # --- o registro -------------------------------------------------------------
