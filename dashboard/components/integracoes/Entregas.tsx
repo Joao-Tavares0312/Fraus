@@ -1,10 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { listarEntregas, type Entrega, type Veredito } from "@/lib/api";
 import { formatarDataHora } from "@/lib/formato";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+
+/**
+ * A ordem canonica dos vereditos, a mesma do tipo `Veredito` e a mesma de
+ * `VEREDITOS` no Python.
+ *
+ * Existe para o cabecalho de contagem NAO dancar: derivada da ordem de
+ * aparicao na lista, ela se reorganizava a cada carregamento conforme o que
+ * tinha chegado por ultimo. Esta e a tela que o operador fica olhando enquanto
+ * depura -- ela nao pode trocar de forma sozinha.
+ *
+ * E um `Record<Veredito, number>`, e nao um array, pelo mesmo motivo de o
+ * `switch` abaixo nao ter `default`: o `Record` exige TODAS as chaves, entao
+ * veredito novo no tipo que nao entre aqui vira erro de tipo. Um array de
+ * `Veredito[]` aceitaria a lista incompleta em silencio, e o veredito faltante
+ * sumiria do cabecalho sem nunca sumir da lista.
+ */
+const ORDEM_DOS_VEREDITOS: Record<Veredito, number> = {
+  aceita: 0,
+  assinatura: 1,
+  fora_da_janela: 2,
+  duplicada: 3,
+  corpo_invalido: 4,
+  fonte_inativa: 5,
+  sem_segredo: 6,
+};
 
 /**
  * O rotulo e a cor de um veredito de entrega.
@@ -16,31 +43,64 @@ import { Skeleton } from "@/components/ui/skeleton";
  * que o tipo existe para pegar -- e o sintoma seria um rotulo em branco na
  * tela, que ninguem le como bug.
  *
+ * SAO DOIS ROTULOS porque sao duas frases diferentes. Na linha da lista o
+ * veredito qualifica UMA entrega e o singular esta certo ("assinatura
+ * invalida"); no cabecalho ele vem depois de uma contagem, e "18 aceita" e
+ * agramatical. Concordar no cabecalho sem estragar a linha exige os dois.
+ *
  * A cor segue a §3.3 do DESIGN.md: nada de `--primary` aqui, porque o dourado e
  * acao e foco e NUNCA dado. `sem_segredo` e o unico em vermelho porque e o
  * unico defeito da MAQUINA que hospeda -- a variavel de ambiente nao esta la, a
  * rota responde 503, e nenhuma plataforma do outro lado consegue consertar.
  */
 function descreverVeredito(veredito: Veredito): {
+  /** Uma entrega, na linha da lista. */
   rotulo: string;
+  /** Varias entregas, depois da contagem no cabecalho. */
+  plural: string;
   cor: string;
 } {
   switch (veredito) {
     case "aceita":
-      return { rotulo: "aceita", cor: "text-promotor-texto" };
+      return {
+        rotulo: "aceita",
+        plural: "aceitas",
+        cor: "text-promotor-texto",
+      };
     case "assinatura":
-      return { rotulo: "assinatura inválida", cor: "text-muted-foreground" };
+      return {
+        rotulo: "assinatura inválida",
+        plural: "com assinatura inválida",
+        cor: "text-muted-foreground",
+      };
     case "fora_da_janela":
-      return { rotulo: "fora da janela de tempo", cor: "text-muted-foreground" };
+      return {
+        rotulo: "fora da janela de tempo",
+        plural: "fora da janela de tempo",
+        cor: "text-muted-foreground",
+      };
     case "duplicada":
-      return { rotulo: "reentrega", cor: "text-muted-foreground" };
+      return {
+        rotulo: "reentrega",
+        plural: "reentregas",
+        cor: "text-muted-foreground",
+      };
     case "corpo_invalido":
-      return { rotulo: "corpo fora do contrato", cor: "text-muted-foreground" };
+      return {
+        rotulo: "corpo fora do contrato",
+        plural: "com corpo fora do contrato",
+        cor: "text-muted-foreground",
+      };
     case "fonte_inativa":
-      return { rotulo: "fonte desativada", cor: "text-muted-foreground" };
+      return {
+        rotulo: "fonte desativada",
+        plural: "recusadas por fonte desativada",
+        cor: "text-muted-foreground",
+      };
     case "sem_segredo":
       return {
         rotulo: "segredo ausente no ambiente da API",
+        plural: "sem segredo no ambiente da API",
         cor: "text-detrator-texto",
       };
   }
@@ -51,20 +111,38 @@ function descreverVeredito(veredito: Veredito): {
  *
  * Busca no CLIENTE, e nao no servidor da pagina: esta lista muda enquanto a
  * tela esta aberta -- e ela que o operador olha enquanto aponta a plataforma
- * para ca e ve a primeira chamada chegar. Uma lista renderizada uma vez no
- * servidor exigiria recarregar a pagina para descobrir se a integracao passou.
+ * para ca e ve a primeira chamada chegar. E por isso que existe o botao
+ * "Atualizar": sem ele a promessa era falsa, porque descobrir se a integracao
+ * passou exigiria recarregar a pagina inteira, exatamente como na lista
+ * renderizada uma vez no servidor.
+ *
+ * BOTAO, E NAO POLLING, e a escolha e deliberada: laco de fundo bate na API sem
+ * ninguem pedir, e o Fraus roda inferencia em CPU local na mesma maquina. Quem
+ * disparou a chamada do outro lado sabe quando vale olhar de novo.
  */
 export function Entregas({ fonteId }: { fonteId: number }) {
   /**
-   * O resultado carrega a fonte a que ele pertence.
+   * A rodada de busca. Trocar de valor E o pedido de buscar de novo.
    *
-   * E o que dispensa um `setEstado(null)` no corpo do efeito ao trocar de
-   * fonte -- render em cascata, que o ESLint recusa. Enquanto a fonte do
-   * estado nao for a fonte pedida, o que vale e o esqueleto: a lista da fonte
-   * anterior nunca chega a ser exibida sob o nome da nova.
+   * O botao so incrementa isto, num manipulador de evento, e quem busca
+   * continua sendo o efeito unico abaixo -- nenhuma segunda copia de
+   * `listarEntregas`, de tratamento de erro ou de protecao contra corrida.
+   * Chamar a busca direto do `onClick` exigiria `setEstado` sincrono fora do
+   * efeito e duplicaria os dois caminhos, que e como eles divergem depois.
+   */
+  const [rodada, setRodada] = useState(0);
+
+  /**
+   * O resultado carrega a fonte E a rodada a que ele pertence.
+   *
+   * E o que dispensa um `setEstado(null)` no corpo do efeito -- render em
+   * cascata, que o ESLint recusa. E cobre a janela que o `vivo` nao cobre: o
+   * intervalo entre a re-renderizacao com `fonteId` novo e a chegada da
+   * resposta, em que a lista da fonte anterior apareceria sob o nome da nova.
    */
   const [estado, setEstado] = useState<{
     fonteId: number;
+    rodada: number;
     entregas: Entrega[] | null;
     erro: string | null;
   } | null>(null);
@@ -75,28 +153,47 @@ export function Entregas({ fonteId }: { fonteId: number }) {
       if (!vivo) return;
       setEstado(
         resposta.ok
-          ? { fonteId, entregas: resposta.dado, erro: null }
-          : { fonteId, entregas: null, erro: resposta.erro },
+          ? { fonteId, rodada, entregas: resposta.dado, erro: null }
+          : { fonteId, rodada, entregas: null, erro: resposta.erro },
       );
     });
-    // Trocar de fonte descarta a resposta em voo: sem isto, a lista da fonte
-    // anterior chegando depois pintaria as entregas de outra fonte.
+    // Trocar de fonte ou pedir outra rodada descarta a resposta em voo: sem
+    // isto, a resposta antiga chegando depois pintaria a lista de outra fonte.
     return () => {
       vivo = false;
     };
-  }, [fonteId]);
+  }, [fonteId, rodada]);
 
-  const atual = estado !== null && estado.fonteId === fonteId ? estado : null;
+  const atual =
+    estado !== null && estado.fonteId === fonteId ? estado : null;
   const erro = atual === null ? null : atual.erro;
   const entregas = atual === null ? null : atual.entregas;
+  // Em voo e DERIVADO, nunca um `setBuscando(true)` no efeito. Enquanto a
+  // resposta desta rodada nao chegou, o botao fica desabilitado.
+  const emVoo = atual === null || atual.rodada !== rodada;
+
+  const botao = (
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => setRodada((anterior) => anterior + 1)}
+      disabled={emVoo}
+    >
+      <RefreshCw aria-hidden />
+      Atualizar
+    </Button>
+  );
 
   if (erro) {
     return (
-      <EstadoVazio
-        titulo="Não foi possível ler as entregas desta fonte"
-        explicacao={erro}
-        endpoint={`GET /integracoes/fontes/${fonteId}/entregas`}
-      />
+      <div className="flex min-w-0 flex-col items-start gap-3">
+        <EstadoVazio
+          titulo="Não foi possível ler as entregas desta fonte"
+          explicacao={erro}
+          endpoint={`GET /integracoes/fontes/${fonteId}/entregas`}
+        />
+        {botao}
+      </div>
     );
   }
 
@@ -114,11 +211,14 @@ export function Entregas({ fonteId }: { fonteId: number }) {
 
   if (entregas.length === 0) {
     return (
-      <EstadoVazio
-        titulo="Nenhuma entrega registrada nesta fonte"
-        explicacao="Enquanto a plataforma não chamar a rota do webhook, esta lista fica vazia — e é assim que ela deve ficar. Um exemplo aqui pareceria tráfego que nunca existiu."
-        endpoint={`POST /integracoes/webhook/${fonteId}`}
-      />
+      <div className="flex min-w-0 flex-col items-start gap-3">
+        <EstadoVazio
+          titulo="Nenhuma entrega registrada nesta fonte"
+          explicacao="Enquanto a plataforma não chamar a rota do webhook, esta lista fica vazia — e é assim que ela deve ficar. Um exemplo aqui pareceria tráfego que nunca existiu."
+          endpoint={`POST /integracoes/webhook/${fonteId}`}
+        />
+        {botao}
+      </div>
     );
   }
 
@@ -127,24 +227,32 @@ export function Entregas({ fonteId }: { fonteId: number }) {
   // abaixo dele.
   const contagem = new Map<Veredito, number>();
   for (const entrega of entregas) {
-    const vistas = contagem.get(entrega.veredito);
-    contagem.set(entrega.veredito, vistas === undefined ? 1 : vistas + 1);
+    contagem.set(entrega.veredito, (contagem.get(entrega.veredito) ?? 0) + 1);
   }
+  // A ordem e a do tipo, nao a da chegada -- ver ORDEM_DOS_VEREDITOS.
+  const resumo = [...contagem.entries()].sort(
+    ([a], [b]) => ORDEM_DOS_VEREDITOS[a] - ORDEM_DOS_VEREDITOS[b],
+  );
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <p className="text-xs text-muted-foreground">
-        {[...contagem.entries()].map(([veredito, quantas], indice) => {
-          const { rotulo, cor } = descreverVeredito(veredito);
-          return (
-            <span key={veredito}>
-              {indice > 0 ? " · " : null}
-              <span className="num tabular-nums text-foreground">{quantas}</span>{" "}
-              <span className={cor}>{rotulo}</span>
-            </span>
-          );
-        })}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          {resumo.map(([veredito, quantas], indice) => {
+            const { plural, cor } = descreverVeredito(veredito);
+            return (
+              <span key={veredito}>
+                {indice > 0 ? " · " : null}
+                <span className="num tabular-nums text-foreground">
+                  {quantas}
+                </span>{" "}
+                <span className={cor}>{plural}</span>
+              </span>
+            );
+          })}
+        </p>
+        {botao}
+      </div>
 
       <ul className="flex flex-col">
         {entregas.map((entrega) => {
