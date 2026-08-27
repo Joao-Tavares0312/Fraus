@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 
 from fraus import acesso, credencial
 from fraus.api.contexto import Contexto
+from fraus.api.rotas.webhook import PREFIXO_WEBHOOK
 from fraus.db import Banco
 
 
@@ -34,6 +35,12 @@ from fraus.db import Banco
 #   opera procurar servidor derrubado quando o que faltava era uma chave. Ela
 #   nao devolve dado nenhum: o corpo e `{"status": "ok"}`, o mesmo fato que
 #   qualquer um confirma abrindo uma conexao TCP na porta.
+# - `/integracoes/webhook/{id}` tem credencial propria (a ASSINATURA do corpo),
+#   e a plataforma externa nao tem -- nem pode ter -- uma chave de acesso
+#   `fra_`. Sem esta linha o defeito e silencioso e so aparece em producao: com
+#   a mestra definida, toda chamada de webhook levaria 401 aqui antes de a
+#   assinatura ser olhada, e o log de entregas ficaria vazio dizendo "nao
+#   chegou nada" enquanto a plataforma recebe 401 em cada tentativa.
 ISENTAS = ("/ingestao", "/acesso/estado", "/saude")
 
 
@@ -190,7 +197,12 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
         # para ela), e comparar o path exato mandava o integrador que
         # configurou a URL com barra final para o 401 daqui em vez da
         # credencial de fonte.
-        if request.url.path.rstrip("/") in ISENTAS or request.method == "OPTIONS":
+        caminho = request.url.path.rstrip("/")
+        if (
+            caminho in ISENTAS
+            or caminho.startswith(f"{PREFIXO_WEBHOOK}/")
+            or request.method == "OPTIONS"
+        ):
             return await call_next(request)
         cabecalho = request.headers.get("authorization")
         chave_recebida = chave_bearer(cabecalho)

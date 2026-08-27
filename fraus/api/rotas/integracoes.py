@@ -152,6 +152,20 @@ def revogar_chave(
     ctx.banco.revogar_chave(fonte_id)
 
 
+@router.get("/integracoes/fontes/{fonte_id}/entregas")
+def listar_entregas_da_fonte(
+    fonte_id: int, ctx: Contexto = Depends(obter_contexto)
+) -> list[dict]:
+    """Historico de entregas de webhook da fonte, mais recente primeiro.
+
+    O corpo da requisicao nunca aparece aqui -- e PII de cliente real, e
+    depurar se resolve com veredito e motivo, nunca com o payload guardado.
+    """
+    if ctx.banco.buscar_fonte(fonte_id) is None:
+        raise HTTPException(status_code=404, detail="fonte nao encontrada")
+    return ctx.banco.listar_entregas(fonte_id)
+
+
 @router.get("/integracoes/tipos")
 def tipos_de_fonte() -> list[dict]:
     """Os tipos que a ingestao sabe tratar HOJE.
