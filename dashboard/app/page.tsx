@@ -11,8 +11,13 @@ import {
 } from "lucide-react";
 import { PartituraExemplo } from "@/components/lp/PartituraExemplo";
 import { Revelar } from "@/components/lp/Revelar";
+import {
+  botaoVitrine,
+  botaoVitrineContorno,
+  botaoVitrineFantasma,
+  botaoVitrineMiudo,
+} from "@/components/lp/botoes";
 import { MarcaFraus } from "@/components/shell/MarcaFraus";
-import { buttonVariants } from "@/components/ui/button";
 import { loginDisponivel, usuarioDaSessao } from "@/lib/sessao";
 
 /**
@@ -145,14 +150,14 @@ export default async function PaginaInicial() {
             {!usuario && temLogin && (
               <Link
                 href="/cadastrar"
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
+                className={botaoVitrineFantasma}
               >
                 Criar conta
               </Link>
             )}
             <Link
               href={acaoPrimaria.href}
-              className={buttonVariants({ size: "sm" })}
+              className={botaoVitrineMiudo}
             >
               {acaoPrimaria.rotulo}
             </Link>
@@ -181,15 +186,15 @@ export default async function PaginaInicial() {
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
                 href={acaoPrimaria.href}
-                className={buttonVariants({ size: "lg" })}
+                className={botaoVitrine}
               >
                 {acaoPrimaria.rotulo}
-                <ArrowRight aria-hidden data-icon="inline-end" />
+                <ArrowRight aria-hidden />
               </Link>
               {!usuario && temLogin && (
                 <Link
                   href="/cadastrar"
-                  className={buttonVariants({ variant: "outline", size: "lg" })}
+                  className={botaoVitrineContorno}
                 >
                   Criar conta
                 </Link>
@@ -397,15 +402,15 @@ export default async function PaginaInicial() {
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link
                 href={acaoPrimaria.href}
-                className={buttonVariants({ size: "lg" })}
+                className={botaoVitrine}
               >
                 {acaoPrimaria.rotulo}
-                <ArrowRight aria-hidden data-icon="inline-end" />
+                <ArrowRight aria-hidden />
               </Link>
               {!usuario && temLogin && (
                 <Link
                   href="/cadastrar"
-                  className={buttonVariants({ variant: "outline", size: "lg" })}
+                  className={botaoVitrineContorno}
                 >
                   Criar conta
                 </Link>

@@ -19,26 +19,29 @@ export function PartituraExemplo() {
         <span className="font-mono text-xs text-muted-foreground">webchat</span>
       </div>
 
-      {/* ACIMA DA LINHA — o dito */}
+      {/* ACIMA DA LINHA — o dito. O raio dos balões é próprio (12px): o
+          chanfro de 2px do chassi é identidade de controle, não de fala. */}
       <div className="flex flex-col gap-3 px-5 py-5">
-        <div className="max-w-[85%] self-start rounded-md rounded-bl-none bg-muted/60 px-3.5 py-2.5 text-sm text-muted-foreground">
+        <div className="max-w-[85%] self-start rounded-[12px] rounded-bl-[4px] bg-muted/60 px-4 py-2.5 text-sm text-muted-foreground">
           Seu chamado foi encerrado. Posso ajudar em algo mais?
         </div>
-        <div className="max-w-[85%] self-end rounded-md rounded-br-none bg-dito/10 px-3.5 py-2.5 text-sm text-dito-texto">
+        <div className="max-w-[85%] self-end rounded-[12px] rounded-br-[4px] bg-dito/10 px-4 py-2.5 text-sm text-dito-texto">
           passei 40 minutos esperando pra isso
         </div>
-        <div className="max-w-[85%] self-end rounded-md rounded-br-none bg-dito/10 px-3.5 py-2.5 text-sm text-dito-texto">
+        <div className="max-w-[85%] self-end rounded-[12px] rounded-br-[4px] bg-dito/10 px-4 py-2.5 text-sm text-dito-texto">
           ok, obrigado 🙂
         </div>
       </div>
 
-      {/* A RÉGUA — a linha que separa as duas vozes */}
-      <div className="relative border-t border-linha">
-        <span className="absolute -top-2.5 left-5 bg-transparent font-mono text-[10px] uppercase tracking-widest text-dito-texto">
-          dito
+      {/* A RÉGUA — a linha que separa as duas vozes. Os rótulos ficam nas
+          pontas, no fluxo (a versão com position:absolute os empilhava). */}
+      <div className="flex items-center gap-3 px-5 py-1" aria-hidden>
+        <span className="font-mono text-[10px] uppercase tracking-widest text-dito-texto">
+          dito ↑
         </span>
-        <span className="absolute -bottom-2.5 left-5 font-mono text-[10px] uppercase tracking-widest text-medido-texto">
-          medido
+        <span className="h-px flex-1 bg-linha" />
+        <span className="font-mono text-[10px] uppercase tracking-widest text-medido-texto">
+          ↓ medido
         </span>
       </div>
 
