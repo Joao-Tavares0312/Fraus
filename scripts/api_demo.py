@@ -380,7 +380,23 @@ def montar_app():
             "    cd dashboard && FRAUS_CHAVE_ACESSO=<a chave fra_...> npm run dev\n"
             "  A chave morre junto com este banco: a demo o recria a cada boot."
         )
-    return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
+    # As variaveis da autenticacao de USUARIO seguem a mesma regra da mestra
+    # logo acima: a doc promete que defini-las liga o login, e a demo que as
+    # ignorasse quebraria a promessa em silencio -- o mesmo defeito ja pago
+    # com a FRAUS_CHAVE_MESTRA.
+    jwt_segredo = os.environ.get("FRAUS_JWT_SEGREDO") or None
+    if jwt_segredo is None:
+        print(
+            "[api_demo] Login de usuario DESLIGADO (FRAUS_JWT_SEGREDO ausente): "
+            "a dashboard abre sem exigir conta."
+        )
+    return criar_app(
+        banco=banco,
+        motor=motor,
+        chave_mestra=chave_mestra,
+        jwt_segredo=jwt_segredo,
+        codigo_dev=os.environ.get("FRAUS_CODIGO_DEV") or None,
+    )
 
 
 app = montar_app()
