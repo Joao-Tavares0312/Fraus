@@ -196,6 +196,75 @@ def test_auth_eu_sem_token_ou_com_lixo_e_401(tmp_path):
 # --- convivencia com a mestra ----------------------------------------------
 
 
+def _token(cliente, codigo_dev=None) -> str:
+    cadastro = _cadastro()
+    if codigo_dev is not None:
+        cadastro["codigo_dev"] = codigo_dev
+    cliente.post("/auth/registrar", json=cadastro)
+    return cliente.post(
+        "/auth/entrar", json={"email": "ana@empresa.com", "senha": "senha-longa-o-bastante"}
+    ).json()["token"]
+
+
+def test_jwt_vale_como_credencial_com_a_mestra_ligada(tmp_path):
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    token = _token(cliente, codigo_dev=CODIGO_DEV)
+    com_token = cliente.get("/conversas", headers={"Authorization": f"Bearer {token}"})
+    assert com_token.status_code == 200
+    sem_nada = cliente.get("/conversas")
+    assert sem_nada.status_code == 401
+    com_lixo = cliente.get("/conversas", headers={"Authorization": "Bearer lixo"})
+    assert com_lixo.status_code == 401
+
+
+def test_usuario_comum_recebe_403_em_rota_administrativa(tmp_path):
+    # A interface esconde as telas, mas quem decide e o servidor: um usuario
+    # com o proxy na mao nao vira administrador.
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    token = _token(cliente)  # papel usuario
+    cabecalho = {"Authorization": f"Bearer {token}"}
+    assert cliente.get("/conversas", headers=cabecalho).status_code == 200
+    assert cliente.get("/indicadores", headers=cabecalho).status_code == 200
+    for metodo, caminho in (
+        ("GET", "/integracoes/fontes"),
+        ("GET", "/modelo"),
+        ("PUT", "/configuracoes"),
+        ("POST", "/conversas/importar"),
+        ("POST", "/conversas/repontuar"),
+        ("POST", "/lexico/curado"),
+    ):
+        resposta = cliente.request(metodo, caminho, headers=cabecalho, json={})
+        assert resposta.status_code == 403, f"{metodo} {caminho}: {resposta.status_code}"
+
+
+def test_dev_passa_nas_rotas_administrativas(tmp_path):
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    token = _token(cliente, codigo_dev=CODIGO_DEV)
+    cabecalho = {"Authorization": f"Bearer {token}"}
+    assert cliente.get("/integracoes/fontes", headers=cabecalho).status_code == 200
+    assert cliente.get("/modelo", headers=cabecalho).status_code == 200
+
+
+def test_o_portao_de_papel_vale_tambem_no_modo_aberto(tmp_path):
+    # A API aberta continua aberta para quem NAO se identifica -- mas um JWT de
+    # usuario apresentado e identidade valida, e identidade de usuario nao
+    # administra em modo nenhum.
+    cliente = _cliente(tmp_path)
+    token = _token(cliente)
+    cabecalho = {"Authorization": f"Bearer {token}"}
+    assert cliente.get("/integracoes/fontes", headers=cabecalho).status_code == 403
+    assert cliente.get("/integracoes/fontes").status_code == 200
+
+
+def test_leitura_do_lexico_curado_nao_e_administrativa(tmp_path):
+    # O painel de lexico da tela de atendimentos LE o curado; so a escrita e
+    # privilegio de dev.
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    token = _token(cliente)
+    cabecalho = {"Authorization": f"Bearer {token}"}
+    assert cliente.get("/lexico/curado", headers=cabecalho).status_code == 200
+
+
 def test_registrar_e_entrar_ficam_isentos_com_a_mestra_ligada(tmp_path):
     # Sao as rotas de quem ainda nao tem credencial nenhuma -- o mesmo
     # argumento de /acesso/estado.
