@@ -34,6 +34,22 @@ class PedidoImportacao(BaseModel):
     caminho: str  # unico campo aceito: veredito nunca vem do cliente
 
 
+class PedidoCadastro(BaseModel):
+    nome: str = Field(min_length=1)
+    # Validacao minima e honesta: um @ com algo dos dois lados. EmailStr do
+    # Pydantic exigiria a dependencia email-validator para pegar um punhado a
+    # mais de casos -- e quem digita o proprio e-mail errado nao entra depois,
+    # o que ja e o custo natural do erro.
+    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    senha: str = Field(min_length=8)
+    codigo_dev: str | None = None  # o que diferencia o cadastro de dev
+
+
+class PedidoEntrada(BaseModel):
+    email: str
+    senha: str
+
+
 class PedidoSimulacao(BaseModel):
     texto: str  # unico campo aceito: probabilidade e derivada no servidor
 

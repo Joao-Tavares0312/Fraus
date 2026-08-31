@@ -35,13 +35,17 @@ from fraus.db import Banco
 #   opera procurar servidor derrubado quando o que faltava era uma chave. Ela
 #   nao devolve dado nenhum: o corpo e `{"status": "ok"}`, o mesmo fato que
 #   qualquer um confirma abrindo uma conexao TCP na porta.
+# - `/auth/registrar` e `/auth/entrar` sao as rotas de quem ainda nao tem
+#   credencial NENHUMA -- o mesmo argumento de `/acesso/estado`. Elas tem
+#   defesa propria: o cadastro exige o codigo de convite para privilegio, e o
+#   login so devolve token a quem prova a senha.
 # - `/integracoes/webhook/{id}` tem credencial propria (a ASSINATURA do corpo),
 #   e a plataforma externa nao tem -- nem pode ter -- uma chave de acesso
 #   `fra_`. Sem esta linha o defeito e silencioso e so aparece em producao: com
 #   a mestra definida, toda chamada de webhook levaria 401 aqui antes de a
 #   assinatura ser olhada, e o log de entregas ficaria vazio dizendo "nao
 #   chegou nada" enquanto a plataforma recebe 401 em cada tentativa.
-ISENTAS = ("/ingestao", "/acesso/estado", "/saude")
+ISENTAS = ("/ingestao", "/acesso/estado", "/saude", "/auth/registrar", "/auth/entrar")
 
 
 def chave_bearer(authorization: str | None) -> str | None:
