@@ -134,10 +134,14 @@
 .dark {
   color-scheme: dark;
 
-  --fonte-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --fonte-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono",
-    Menlo, Consolas, monospace;
+  /* Pauta evoluído, etapa 1 (spec 2026-08-31): Inter na frente da pilha,
+     JetBrains Mono nos dados. As variáveis --fonte-inter/--fonte-jetbrains
+     vêm do next/font no layout raiz — self-hosted, zero rede em runtime.
+     A pilha de sistema fica atrás como fallback do primeiro paint. */
+  --fonte-sans: var(--fonte-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --fonte-mono: var(--fonte-jetbrains), ui-monospace, "Cascadia Mono",
+    "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
 
   --duration-sidebar: 300ms;
 
@@ -793,6 +797,10 @@
     @apply bg-background text-foreground;
     /* O `body` NUNCA rola na horizontal: conteudo largo rola no proprio container. */
     overflow-x: hidden;
+    /* Os ajustes da Inter que o Linear usa: cv01 (digitos e "a" mais
+       geometricos) e ss03 (r encurtado). So mudam desenho de glifo — numeral
+       tabular continua sendo responsabilidade do `.num`, por elemento. */
+    font-feature-settings: "cv01", "ss03";
   }
   html {
     @apply font-sans;

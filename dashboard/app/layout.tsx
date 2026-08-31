@@ -1,8 +1,27 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Atelier } from "@/components/shell/Atelier";
 import { Movimento } from "@/components/shell/Movimento";
 import { SCRIPT_ANTI_PISCADA } from "@/lib/tema";
+
+/**
+ * Etapa 1 do Pauta evoluído (spec 2026-08-31): Inter no lugar da sans de
+ * sistema, JetBrains Mono nos dados. `next/font` baixa os arquivos NO BUILD e
+ * os serve do próprio deploy — nenhuma chamada ao Google em runtime, que é a
+ * regra da casa. As variáveis entram no `<html>` e o globals.css as põe na
+ * frente da pilha com fallback de sistema.
+ */
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  variable: "--fonte-inter",
+  display: "swap",
+});
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--fonte-jetbrains",
+  display: "swap",
+});
 
 const DESCRICAO =
   "Painel de satisfação inferida a partir do texto, dos emojis e do tempo de resposta dos atendimentos.";
@@ -45,7 +64,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // classe do tema antes da hidratacao, e o React acusaria a diferenca entre
     // o HTML que o servidor mandou e o que encontrou no DOM. A divergencia e
     // intencional e e o ponto do script.
-    <html lang="pt-BR" className="dark" suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      className={`dark ${inter.variable} ${jetbrains.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         {/* ANTES DE TUDO. Ver SCRIPT_ANTI_PISCADA em lib/tema.ts: sem isto,
             quem escolheu "chuva de neon" ve a tela pintar em grafite e trocar
