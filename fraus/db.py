@@ -89,6 +89,23 @@ CREATE TABLE IF NOT EXISTS chave_mestra (
     criada_em TEXT NOT NULL
 );
 
+-- Usuario da DASHBOARD: identidade de quem olha a tela, nao credencial
+-- tecnica -- as chaves fra_/frs_ autenticam processos e fontes e continuam
+-- existindo ao lado. `senha_hash` e scrypt (ver fraus/usuarios.py), nunca a
+-- senha. `papel` decide o que a pessoa PODE: 'dev' administra, 'usuario'
+-- analisa -- e o CHECK faz do vocabulario garantia do banco, como o id=1 da
+-- chave_mestra. `email` compara sem caixa: Ana@ e ana@ sao a mesma pessoa,
+-- e tratar como duas criaria duas contas irmas.
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    senha_hash TEXT NOT NULL,
+    papel TEXT NOT NULL CHECK (papel IN ('dev', 'usuario')),
+    ativo INTEGER NOT NULL DEFAULT 1,
+    criado_em TEXT NOT NULL
+);
+
 -- O que o analista ensinou ao lexico: termos que o SentiLex-PT02 e o Emoji
 -- Sentiment Ranking nao trazem, ou trazem com polaridade errada para o dominio
 -- de atendimento. Ver fraus/sinais/curadoria.py.
@@ -561,6 +578,60 @@ class Banco:
                 "DELETE FROM chaves_acesso WHERE id = ?", (identificador,)
             )
             return cursor.rowcount > 0
+
+    @staticmethod
+    def _usuario(linha: sqlite3.Row) -> dict:
+        """Usuario como ele pode circular. O HASH DA SENHA NAO SAI POR AQUI --
+        mesma regra de `_fonte`: removido na origem, nao na borda HTTP."""
+        registro = dict(linha)
+        registro["ativo"] = bool(registro["ativo"])
+        registro.pop("senha_hash", None)
+        return registro
+
+    def criar_usuario(
+        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str
+    ) -> dict:
+        """E-mail duplicado deixa o IntegrityError propagar: a unicidade e
+        garantia do banco, e a borda HTTP traduz em 409 -- o mesmo desenho da
+        coluna ausente no driver de CSV."""
+        with self._conectar() as conexao:
+            cursor = conexao.execute(
+                "INSERT INTO usuarios (nome, email, senha_hash, papel, criado_em) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (nome, email, senha_hash, papel, criado_em),
+            )
+            identificador = cursor.lastrowid
+        return {
+            "id": identificador,
+            "nome": nome,
+            "email": email,
+            "papel": papel,
+            "ativo": True,
+            "criado_em": criado_em,
+        }
+
+    def buscar_usuario(self, identificador: int) -> dict | None:
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT * FROM usuarios WHERE id = ?", (identificador,)
+            ).fetchone()
+        return self._usuario(linha) if linha is not None else None
+
+    def buscar_usuario_por_email(self, email: str) -> dict | None:
+        # A coluna e COLLATE NOCASE, entao o = ja compara sem caixa.
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT * FROM usuarios WHERE email = ?", (email,)
+            ).fetchone()
+        return self._usuario(linha) if linha is not None else None
+
+    def hash_da_senha(self, identificador: int) -> str | None:
+        """O unico caminho para ler o hash -- explicito no nome, uso unico."""
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT senha_hash FROM usuarios WHERE id = ?", (identificador,)
+            ).fetchone()
+        return linha["senha_hash"] if linha is not None else None
 
     def gravar_chave_mestra(self, chave_hash: str, dica: str, criada_em: str) -> None:
         """Grava a mestra NO LUGAR da anterior, se houver.
