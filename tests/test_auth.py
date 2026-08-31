@@ -193,6 +193,21 @@ def test_auth_eu_sem_token_ou_com_lixo_e_401(tmp_path):
     ).status_code == 401
 
 
+def test_auth_estado_diz_se_o_login_existe(tmp_path):
+    # A dashboard so exige login quando ha como logar: sem FRAUS_JWT_SEGREDO
+    # nao existe token possivel, e mandar para uma tela de entrar que responde
+    # 503 trancaria o modo aberto para fora.
+    assert _cliente(tmp_path).get("/auth/estado").json() == {"disponivel": True}
+    assert _cliente(tmp_path, jwt_segredo=None).get("/auth/estado").json() == {
+        "disponivel": False
+    }
+
+
+def test_auth_estado_e_isento_com_a_mestra_ligada(tmp_path):
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    assert cliente.get("/auth/estado").status_code == 200
+
+
 # --- convivencia com a mestra ----------------------------------------------
 
 

@@ -46,7 +46,14 @@ from fraus.db import Banco
 #   a mestra definida, toda chamada de webhook levaria 401 aqui antes de a
 #   assinatura ser olhada, e o log de entregas ficaria vazio dizendo "nao
 #   chegou nada" enquanto a plataforma recebe 401 em cada tentativa.
-ISENTAS = ("/ingestao", "/acesso/estado", "/saude", "/auth/registrar", "/auth/entrar")
+ISENTAS = (
+    "/ingestao",
+    "/acesso/estado",
+    "/saude",
+    "/auth/estado",
+    "/auth/registrar",
+    "/auth/entrar",
+)
 
 
 def chave_bearer(authorization: str | None) -> str | None:

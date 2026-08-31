@@ -28,6 +28,19 @@ router = APIRouter()
 _RECUSA_UNIFORME = "e-mail ou senha invalidos"
 
 
+@router.get("/auth/estado")
+def estado(ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """Se o login de usuario EXISTE nesta instalacao -- nao quem esta logado.
+
+    A dashboard so exige login quando ha como logar: sem FRAUS_JWT_SEGREDO nao
+    existe token possivel, e mandar o modo aberto para uma tela de entrar que
+    responde 503 trancaria a instalacao local para fora. Publica pelo mesmo
+    argumento de /acesso/estado: e a resposta que diz a tela se ha o que
+    apresentar, e nao devolve segredo nenhum -- so o fato de existir.
+    """
+    return {"disponivel": ctx.jwt_segredo is not None}
+
+
 @router.post("/auth/registrar", status_code=201)
 def registrar(pedido: PedidoCadastro, ctx: Contexto = Depends(obter_contexto)) -> dict:
     papel = "usuario"
