@@ -29,7 +29,7 @@ export default function NaoEncontrada() {
             Ir para a visão geral
           </Link>
           <Link
-            href="/atendimentos"
+            href="/dashboard/atendimentos"
             className={buttonVariants({ size: "sm", variant: "outline" })}
           >
             Ver atendimentos

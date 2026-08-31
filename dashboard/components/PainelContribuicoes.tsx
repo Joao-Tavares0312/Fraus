@@ -58,7 +58,7 @@ export function PainelContribuicoes({
           baixo. O peso <em>global</em> do modelo — o mesmo para todos os
           atendimentos — vive na tela{" "}
           <Link
-            href="/modelo"
+            href="/dashboard/modelo"
             className="inline-flex items-center gap-0.5 text-primary underline underline-offset-4"
           >
             Modelo

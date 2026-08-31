@@ -48,7 +48,7 @@ export const dynamic = "force-dynamic";
 
 const PIORES_NA_TELA = 6;
 
-export default async function Pagina(props: PageProps<"/">) {
+export default async function Pagina(props: PageProps<"/dashboard">) {
   const parametros = await props.searchParams;
 
   // As leituras sao independentes de proposito: se `/indicadores` cair, a
