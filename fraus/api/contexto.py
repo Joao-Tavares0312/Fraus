@@ -31,6 +31,12 @@ class Contexto:
     motor: Motor
     raiz: Path
     chave_mestra: str | None
+    # Autenticacao de USUARIO (spec 2026-08-31): o segredo que assina o JWT de
+    # sessao e o codigo de convite que permite um cadastro nascer `dev`. Os
+    # dois moram no ambiente, nunca no banco -- a mesma regra da mestra e do
+    # segredo de webhook. `None` = a instalacao nao ofereceu essa porta.
+    jwt_segredo: str | None = None
+    codigo_dev: str | None = None
 
     def autenticacao_ligada(self) -> bool:
         """Se alguma mestra existe -- do ambiente ou gravada pela tela."""

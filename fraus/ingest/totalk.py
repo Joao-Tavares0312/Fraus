@@ -57,7 +57,27 @@ PREFIXO_AGENTE = re.compile(r"^\*([^*\n]+):\*")
 # O id da conversa vive na URL da coluna `Conversa`, como `id=<uuid>`.
 ID_NA_URL = re.compile(r"[?&]id=([0-9a-fA-F-]+)")
 
+# A data do export .CSV da Totalk: americana, MM/DD/YYYY (a armadilha ja
+# paga -- lida como brasileira, espalha as mensagens por meses em silencio).
 FORMATO_DATA = "%m/%d/%Y %H:%M:%S"
+
+
+def _data_do_export(bruto: str) -> datetime:
+    """A data nas DUAS procedencias do export: .csv (americana) e planilha.
+
+    O .xlsx da Totalk traz a data como datetime de CELULA, e o leitor de
+    planilha (`fraus/ingest/arquivos.py`) a serializa em ISO -- nunca no
+    MM/DD/YYYY do .csv. Aceitar so o formato americano fazia o adaptador ser
+    acionado e rejeitar TODAS as linhas com "data invalida": o arquivo
+    inteiro voltava como "nenhuma conversa valida", sem mencionar data.
+
+    A ordem dos dois parses nao cria ambiguidade: `10/06/2025` nao e ISO
+    valido, e `2025-10-06T20:02:53` nao casa com o strptime americano.
+    """
+    try:
+        return datetime.strptime(bruto, FORMATO_DATA)
+    except ValueError:
+        return datetime.fromisoformat(bruto)
 
 # America/Sao_Paulo. Fixo em -03:00 de proposito: o Brasil nao tem horario de
 # verao desde 2019, entao nao ha transicao para errar, e depender do banco de
@@ -156,14 +176,18 @@ def converter(
             continue
 
         try:
-            enviada_em = datetime.strptime(
-                (linha["Mensagem/Data de criação"] or "").strip(), FORMATO_DATA
-            ).replace(tzinfo=fuso)
+            enviada_em = _data_do_export(
+                (linha["Mensagem/Data de criação"] or "").strip()
+            )
         except ValueError as erro:
             ignoradas.append(
                 LinhaIgnorada(numero_linha=numero_linha, motivo=f"data invalida: {erro}")
             )
             continue
+        if enviada_em.tzinfo is None:
+            # So a data naive ganha o fuso da Totalk; uma ISO que ja declara
+            # offset sabe mais sobre si mesma do que o padrao daqui.
+            enviada_em = enviada_em.replace(tzinfo=fuso)
 
         conta = _normalizar(linha["Conta/Nome"] or "")
         texto = (linha["Mensagem/Conteúdo"] or "").strip()

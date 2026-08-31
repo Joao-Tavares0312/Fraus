@@ -71,6 +71,53 @@ def test_planilha_com_as_mesmas_colunas_do_csv():
     assert extracao.tem_tempo is True
 
 
+def test_planilha_da_totalk_com_data_de_celula():
+    # O export .xlsx da Totalk traz a data como DATETIME de celula, que o
+    # leitor de planilha converte para ISO -- nao como o MM/DD/YYYY do export
+    # .csv. Rejeitar a ISO fazia o arquivo INTEIRO voltar como "nenhuma
+    # conversa valida" (31/08/2026, export real do Joao): o adaptador era
+    # acionado, e todas as linhas morriam em "data invalida".
+    from datetime import datetime
+
+    url = "https://app.totalk.chat/redirect?type=SE&id=0bf841a6-e15f-446c-96cf-391c361cfb17"
+    cabecalho = [
+        "Conta/Nome", "Canal/Plataforma", "Contato/Nome",
+        "Mensagem/Data de criação", "Mensagem/Quem enviou",
+        "Mensagem/Conteúdo", "Conversa",
+    ]
+    dados = _xlsx([
+        cabecalho,
+        ["Empresa X", "WhatsApp", "Cliente Y",
+         datetime(2025, 10, 6, 20, 2, 53), "De: Cliente Y Para: Empresa X",
+         "meu pedido nao chegou", url],
+        ["Empresa X", "WhatsApp", "Cliente Y",
+         datetime(2025, 10, 6, 20, 3, 12), "De: Empresa X Para: Cliente Y",
+         "vou verificar", url],
+    ])
+    extracao = extrair("message-export.xlsx", dados)
+    assert extracao.formato == "export da Totalk"
+    assert len(extracao.conversas) == 1
+    assert len(extracao.conversas[0].mensagens) == 2
+    # O fuso continua o da Totalk (-03:00): a data de celula vem naive.
+    assert extracao.conversas[0].mensagens[0].enviada_em.utcoffset() is not None
+
+
+def test_csv_da_totalk_continua_com_a_data_americana():
+    # A armadilha 1 nao mudou de lugar: no export .csv a data segue MM/DD/YYYY,
+    # e aceitar ISO nao pode quebrar o caminho antigo.
+    url = "https://app.totalk.chat/redirect?type=SE&id=0bf841a6-e15f-446c-96cf-391c361cfb17"
+    csv_totalk = (
+        "Conta/Nome,Canal/Plataforma,Mensagem/Data de criação,"
+        "Mensagem/Quem enviou,Mensagem/Conteúdo,Conversa\n"
+        f'Empresa X,WhatsApp,10/06/2025 20:02:53,De: Cliente Y Para: Empresa X,meu pedido nao chegou,{url}\n'
+        f'Empresa X,WhatsApp,10/06/2025 20:03:12,De: Empresa X Para: Cliente Y,vou verificar,{url}\n'
+    )
+    extracao = extrair("export.csv", csv_totalk.encode("utf-8"))
+    assert extracao.formato == "export da Totalk"
+    assert extracao.conversas[0].mensagens[0].enviada_em.month == 10
+    assert extracao.conversas[0].mensagens[0].enviada_em.day == 6
+
+
 def test_csv_em_latin1_nao_e_recusado_por_causa_de_acento():
     """Export de Windows sai em latin-1. Recusar por isso seria perder o arquivo."""
     texto = CSV_FRAUS.replace("meu pedido nao chegou", "meu pedido não chegou")

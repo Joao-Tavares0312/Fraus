@@ -25,6 +25,13 @@ import { resolve } from "node:path";
 
 const COOKIE = "fraus_acesso";
 
+// O cookie da SESSAO DE USUARIO (JWT). A constante mora AQUI, e nao em
+// lib/sessao.ts, porque este modulo entra na cadeia de bundle dos client
+// components (via lib/api.ts) e o `next/headers` estatico de lib/sessao.ts
+// quebraria o build -- e o motivo de `autorizacaoDoServidorAtual` importar
+// `next/headers` dinamicamente.
+export const COOKIE_SESSAO = "fraus_sessao";
+
 /**
  * A chave de acesso que a API gravou na PRIMEIRA subida dela.
  *
@@ -56,14 +63,17 @@ function chaveDoArquivo(): string | undefined {
   }
 }
 
-export function chaveDoCookie(requisicao: Request): string | undefined {
+export function chaveDoCookie(
+  requisicao: Request,
+  procurado: string = COOKIE,
+): string | undefined {
   const bruto = requisicao.headers.get("cookie");
   if (!bruto) return undefined;
   for (const pedaco of bruto.split(";")) {
     const [nome, ...resto] = pedaco.trim().split("=");
     // `join("=")`: valor de cookie pode conter `=`, e cortar no primeiro
     // truncaria a chave sem erro nenhum aparecer.
-    if (nome === COOKIE) return resto.join("=");
+    if (nome === procurado) return resto.join("=");
   }
   return undefined;
 }
@@ -77,6 +87,15 @@ export function chaveDoCookie(requisicao: Request): string | undefined {
  * proxy em oraculo para testar chaves.
  */
 export function autorizacaoDoServidor(requisicao: Request): string | undefined {
+  // Degrau 0 (31/08/2026): a SESSAO DE USUARIO, quando existe. Ela precisa
+  // vencer a chave do deploy, ou o portao de papel da API nunca veria o
+  // papel: toda chamada chegaria como a credencial tecnica `fra_`, que passa
+  // por tudo, e um analista logado administraria atraves do proxy sem nenhum
+  // 403 no caminho. Sessao expirada degrada para os degraus de baixo -- e a
+  // dashboard volta a exigir login no proximo render do layout.
+  const daSessao = chaveDoCookie(requisicao, COOKIE_SESSAO);
+  if (daSessao) return `Bearer ${daSessao}`;
+
   const doAmbiente = process.env.FRAUS_CHAVE_ACESSO;
   if (doAmbiente) return `Bearer ${doAmbiente}`;
 
@@ -115,17 +134,24 @@ export function autorizacaoDoServidor(requisicao: Request): string | undefined {
  * para mandar header nenhum.
  */
 export async function autorizacaoDoServidorAtual(): Promise<string | undefined> {
-  const doAmbiente = process.env.FRAUS_CHAVE_ACESSO;
-  if (doAmbiente) return `Bearer ${doAmbiente}`;
-
+  let daSessao: string | undefined;
   let doCookie: string | undefined;
   try {
     const { cookies } = await import("next/headers");
-    doCookie = (await cookies()).get(COOKIE)?.value;
+    const jarra = await cookies();
+    // Degrau 0, o mesmo de `autorizacaoDoServidor`: a sessao de usuario vence
+    // a chave do deploy para o portao de papel da API enxergar o papel.
+    daSessao = jarra.get(COOKIE_SESSAO)?.value;
+    doCookie = jarra.get(COOKIE)?.value;
   } catch {
     // Fora do escopo de uma requisicao -- `cookies()` lanca. Degrada para os
     // proximos degraus, que nao dependem dele.
   }
+  if (daSessao) return `Bearer ${daSessao}`;
+
+  const doAmbiente = process.env.FRAUS_CHAVE_ACESSO;
+  if (doAmbiente) return `Bearer ${doAmbiente}`;
+
   if (doCookie) return `Bearer ${doCookie}`;
 
   const doArquivo = chaveDoArquivo();

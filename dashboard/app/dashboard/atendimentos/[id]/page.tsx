@@ -32,7 +32,7 @@ import { Transcricao } from "@/components/Transcricao";
 export const dynamic = "force-dynamic";
 
 export default async function PaginaDoAtendimento(
-  props: PageProps<"/atendimentos/[id]">,
+  props: PageProps<"/dashboard/atendimentos/[id]">,
 ) {
   const { id } = await props.params;
   const parametros = await props.searchParams;
@@ -66,7 +66,7 @@ export default async function PaginaDoAtendimento(
         />
         <p>
           <Link
-            href={`/atendimentos${sufixo}`}
+            href={`/dashboard/atendimentos${sufixo}`}
             className="text-sm text-primary underline underline-offset-4"
           >
             ← Todos os atendimentos
@@ -97,7 +97,7 @@ export default async function PaginaDoAtendimento(
         subtitulo="Nota, categoria e a transcrição inteira, com o tempo de espera anotado em cada resposta e os trechos marcados pela probabilidade que o classificador deu a cada fala."
         acoes={
           <Link
-            href={`/atendimentos${sufixo}`}
+            href={`/dashboard/atendimentos${sufixo}`}
             className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ArrowLeft aria-hidden className="size-4" />

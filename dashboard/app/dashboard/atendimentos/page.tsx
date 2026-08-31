@@ -40,7 +40,7 @@ function paraLinha(resumo: ResumoConversa): LinhaConversa {
 }
 
 export default async function PaginaAtendimentos(
-  props: PageProps<"/atendimentos">,
+  props: PageProps<"/dashboard/atendimentos">,
 ) {
   const parametros = await props.searchParams;
   // So a listagem: esta tela nunca leu transcricao nenhuma -- a ficha

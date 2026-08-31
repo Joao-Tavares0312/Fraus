@@ -344,6 +344,19 @@ só por cor — sempre acompanham rótulo textual.
 Uma família só, sans de sistema. O modo Operate tem permissão para isso, e o
 analista lê em DPI consistente: fonte de display em rótulo e dado é proibida.
 
+> **Emenda de 31/08/2026 — a sans deixou de ser a de sistema.** Etapa 1 do
+> Pauta evoluído (`docs/superpowers/specs/2026-08-31-pauta-evoluido-design.md`),
+> por decisão do dono do projeto: **Inter** variável na frente da pilha, com
+> `font-feature-settings: "cv01", "ss03"` no body (o ajuste do Linear), e
+> **JetBrains Mono** como `--fonte-mono` — o `.num` continua sendo quem liga
+> numeral tabular por elemento. As duas entram por `next/font` no layout raiz:
+> baixadas **no build** e servidas do próprio deploy, zero chamada de rede em
+> runtime, que é a regra da casa. A pilha de sistema fica atrás como fallback.
+> O que a regra original defendia sobrevive: continua sendo UMA família para
+> rótulo e dado, e fonte de display segue proibida — a exceção nomeada é a
+> **LP** (`app/page.tsx`), vitrine fora do modo Operate, onde o display usa a
+> própria Inter em corpo grande com tracking até −0.02em.
+
 - **Escala fixa em rem**, razão apertada (1.125–1.2). Nada fluido.
 - **Numeral tabular e monoespaçado em todo número que se compara** (`.num`).
   Número que dança ao atualizar é ruído, não dado.
