@@ -79,6 +79,28 @@ enquanto a API não tem endereço público. Sem `FRAUS_CHAVE_ACESSO`, o proxy
 repassa sem `Authorization` — só serve se a API do outro lado estiver aberta
 (sem `FRAUS_CHAVE_MESTRA`).
 
+### O login de usuário (LP + `/dashboard`)
+
+Desde 31/08/2026 a raiz é a página pública do produto e as telas moram em
+`/dashboard`, atrás de login **quando ele existe**. Duas variáveis na **API**
+(não na Vercel) o ligam:
+
+```
+FRAUS_JWT_SEGREDO=<openssl rand -hex 32>   # assina o token de sessão
+FRAUS_CODIGO_DEV=<código de convite>       # opcional: sem ele, ninguém nasce dev
+```
+
+Com `FRAUS_JWT_SEGREDO` definida, a dashboard exige entrar (ou criar conta) e
+o papel decide o que aparece: `dev` administra, `usuario` analisa — e o
+servidor da API nega rota administrativa a `usuario` com 403, com ou sem tela.
+O token vive num cookie `httpOnly` do domínio da dashboard; o navegador nunca
+o vê. Quem publica **sem** a variável mantém o comportamento antigo: dashboard
+aberta, sem conceito de usuário.
+
+Quando há sessão ativa, o proxy usa **o token do usuário** como credencial
+perante a API (degrau zero, antes de `FRAUS_CHAVE_ACESSO`) — é o que faz o
+403 de papel valer de verdade através do proxy.
+
 ## Passo a passo com as chaves
 
 A ordem importa, porque cada peça depende da anterior:

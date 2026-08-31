@@ -1,4 +1,4 @@
-# Handoff — Fraus, 27/08/2026 (atualizado — integração por webhook implementada)
+# Handoff — Fraus, 31/08/2026 (atualizado — LP na raiz e autenticação de usuário)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -24,12 +24,12 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 ---
 
-## 2. Estado atual — 27/08/2026
+## 2. Estado atual — 31/08/2026
 
 | | |
 |---|---|
-| Branch | `feat/webhook-integracao` (integração por webhook de pé: assinatura HMAC, tabela de entregas, rota assinada por fonte e tela `/integracoes` mestre-detalhe) |
-| Testes | **554 passed, 1 deselected** |
+| Branch | `feat/lp-e-autenticacao` (webhook foi mesclado na main via PR #20; agora: LP pública na raiz, telas em `/dashboard/*`, login/cadastro com JWT e papéis dev/usuario — ver spec `docs/superpowers/specs/2026-08-31-lp-e-autenticacao-design.md`) |
+| Testes | **595 passed, 1 deselected** |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git** |
 | API | `uv run python scripts/api_demo.py` → :8000 |
 | Dashboard | `cd dashboard && npm run build && npx next start -p 3000` |
@@ -43,6 +43,28 @@ que têm credencial própria: `POST /ingestao` (chave de fonte `frs_`) e
 `fra_`; ver a armadilha 8. Ela é uma porta pública de **escrita**: quem publica
 a API na internet precisa saber que ela existe. Ver `README.md` e
 `docs/hospedagem.md`.
+
+### A LP e a autenticação de usuário, em um parágrafo cada
+
+**A raiz virou vitrine.** `/` descreve o produto (tese, sete sinais,
+honestidade metodológica) e as telas moram em `/dashboard/*`, com redirect das
+rotas antigas. Nenhum número da LP é inventado — 35 features e sete sinais são
+fatos do código, e não há acurácia fabricada nem depoimento.
+
+**Usuário é identidade, não credencial técnica.** Tabela `usuarios` (senha
+scrypt em `fraus/usuarios.py`), JWT HS256 (`fraus/token_acesso.py`, PyJWT —
+única dependência nova), rotas em `fraus/api/rotas/auth.py`. Papéis: `dev`
+administra, `usuario` analisa — o portão de papel mora no middleware
+(`seguranca.py`, `rota_administrativa`) e vale **nos dois modos**: JWT de
+usuario apresentado toma 403 em rota administrativa mesmo com a API aberta.
+Segredos no ambiente, nunca no banco: `FRAUS_JWT_SEGREDO` (assina o token; sem
+ela o login responde 503 e a dashboard abre sem exigir login — modo aberto) e
+`FRAUS_CODIGO_DEV` (código de convite; sem ela ninguém nasce dev; código
+errado é 403 explícito, nunca rebaixamento silencioso). No Next, o token vive
+em cookie httpOnly (`fraus_sessao`) e é o degrau ZERO da credencial do proxy —
+vence a chave `fra_` do deploy de propósito, ou o portão de papel nunca veria
+o papel. A recusa de login é uniforme em status, texto e tempo (o scrypt
+deriva mesmo para e-mail inexistente).
 
 ### Como subir
 
