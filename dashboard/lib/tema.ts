@@ -1,9 +1,15 @@
 /**
  * OS DOIS TEMAS.
  *
- * O grafite e o padrao de fabrica e continua sendo a posicao de projeto do
- * DESIGN.md: papel de ensaio, croma baixo, dado por cima. A "chuva de neon" e
- * uma segunda opcao declarada, escolhida em 24/08/2026.
+ * O "espaco profundo" e o PADRAO DE FABRICA desde 01/09/2026, e por isso ele
+ * mora no `:root` do globals.css e nao num bloco proprio: tema padrao e a
+ * AUSENCIA de classe (ver `classeDoTema`). A "chuva de neon" e a opcao.
+ *
+ * O GRAFITE FOI DESCARTADO na mesma data, por decisao do dono do projeto. Ele
+ * era o padrao desde o inicio; o que ele tinha de melhor -- o papel pautado e o
+ * ouro fosco da marca -- foi absorvido pelo espaco em vez de ser jogado fora.
+ * Quem tiver "grafite" gravado no storage cai no padrao sozinho: `temaValido`
+ * so aceita o que existe, entao a migracao nao precisou de codigo.
  *
  * O QUE MUDA E O QUE NAO MUDA: o tema troca o CHASSI (fundo, superficie,
  * borda, quina do vidro, luz do atelie). A camada de DADO nao entra aqui --
@@ -15,22 +21,26 @@
  * uma segunda fonte de verdade para uma coisa que o navegador ja guarda.
  */
 
-export const TEMAS = ["grafite", "chuva"] as const;
+export const TEMAS = ["espacial", "chuva"] as const;
 
 export type Tema = (typeof TEMAS)[number];
 
-export const TEMA_PADRAO: Tema = "grafite";
+export const TEMA_PADRAO: Tema = "espacial";
 
 /** Onde a escolha sobrevive ao refresh. */
 export const CHAVE_TEMA = "fraus-tema";
 
 /**
- * A classe que o `<html>` carrega. O grafite e a AUSENCIA de classe, nao uma
+ * A classe que o `<html>` carrega. O PADRAO e a AUSENCIA de classe, nao uma
  * classe propria: ele e o `:root`, e um tema padrao que precisa se declarar
  * para funcionar quebra em toda tela que renderiza antes do JavaScript.
+ *
+ * Escrito contra `TEMA_PADRAO` e nao contra o nome literal do tema: foi
+ * exatamente essa indirecao que permitiu trocar o padrao de grafite para
+ * espacial em 01/09/2026 sem tocar nesta funcao.
  */
 export function classeDoTema(tema: Tema): string | null {
-  return tema === "grafite" ? null : `tema-${tema}`;
+  return tema === TEMA_PADRAO ? null : `tema-${tema}`;
 }
 
 /** Aceita so o que existe. Valor estranho no storage cai no padrao. */
@@ -42,9 +52,9 @@ export function temaValido(valor: unknown): Tema {
  * O SCRIPT ANTI-PISCADA, injetado no `<head>` e executado antes da primeira
  * pintura.
  *
- * Sem ele o servidor manda o HTML sem classe, a tela pinta em grafite, o React
- * hidrata e so entao aplica a "chuva" -- um flash claro-para-escuro a cada
- * navegacao. E preciso ser string inline: qualquer arquivo externo chega
+ * Sem ele o servidor manda o HTML sem classe, a tela pinta no tema padrao, o
+ * React hidrata e so entao aplica a "chuva" -- um flash de troca de paleta a
+ * cada navegacao. E preciso ser string inline: qualquer arquivo externo chega
  * depois do primeiro quadro, que e exatamente o quadro que se quer corrigir.
  *
  * `try/catch` porque `localStorage` levanta em navegacao privada de alguns
@@ -96,7 +106,8 @@ export function lerTema(): Tema {
 
 /**
  * Aplica e guarda. Remove as classes de TODOS os temas antes de por a nova --
- * so tirar a anterior deixaria lixo se um dia existir um terceiro.
+ * so tirar a anterior deixaria lixo com tres ou mais. O projeto ja teve tres
+ * (24/08 a 01/09/2026), entao isto nao e hipotese: e caso ja vivido.
  */
 export function aplicarTema(tema: Tema): void {
   const raiz = document.documentElement;
