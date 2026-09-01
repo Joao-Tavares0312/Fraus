@@ -113,7 +113,7 @@ if (base.size === 0) {
   process.exit(1);
 }
 
-const temas = [{ nome: "grafite (base)", tokens: base }];
+const temas = [{ nome: "espacial (base)", tokens: base }];
 
 for (const m of css.matchAll(/^(\.tema-[a-z0-9-]+)\s*\{/gim)) {
   const corpo = recortarBloco(css, m[1]);

@@ -69,6 +69,47 @@ export function Atelier() {
         }}
       />
 
+      {/* O CAMPO DE ESTRELAS -- so o tema "espaco profundo" acende (nos outros
+          dois a opacidade e zero, mesmo mecanismo do asfalto e da chuva).
+
+          TRES TILES DE TAMANHOS PRIMOS ENTRE SI (137, 191, 89), e essa e a
+          peca inteira: um `background-repeat` unico ladrilha visivelmente --
+          o olho acha a grade em dois segundos e o ceu vira papel de parede.
+          Tres periodos sem divisor comum so repetem o conjunto a cada
+          137x191x89 pixels, ou seja, nunca dentro de uma tela. E o mesmo
+          truque de quebra de simetria que a terceira mancha do atelie fazia,
+          aplicado a uma textura em vez de a uma luz.
+
+          As tres camadas tambem tem BRILHO diferente (0.95 / 0.75 / 0.55) e
+          nao so posicao: estrela toda do mesmo peso le como ruido de sensor.
+          Profundidade num campo de pontos vem de variacao de magnitude.
+
+          ESTATICO, sem `requestAnimationFrame`. Cintilancia rodaria um quadro
+          por frame atras da tabela e do grafico que o analista le por horas,
+          e a secao 6 do DESIGN.md ja gastou os dois momentos de movimento da
+          interface. O espetaculo de particulas em WebGL existe -- mas na LP,
+          que e visita de 40 segundos e outro contrato. Ver components/lp/.
+
+          A mascara clareia o campo no ALTO e o apaga descendo, pelo mesmo
+          motivo do papel pautado: o terco de baixo pertence ao planeta e a
+          grade, e estrela por cima de horizonte iluminado nao existe. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: "var(--estrelas-op)",
+          backgroundImage: [
+            "radial-gradient(1.2px 1.2px at 23px 31px, oklch(0.98 0.02 230 / 0.95), transparent 100%)",
+            "radial-gradient(1px 1px at 118px 74px, oklch(0.96 0.03 250 / 0.75), transparent 100%)",
+            "radial-gradient(0.8px 0.8px at 47px 12px, oklch(0.94 0.04 84 / 0.55), transparent 100%)",
+          ].join(","),
+          backgroundSize: "137px 137px, 191px 191px, 89px 89px",
+          maskImage:
+            "radial-gradient(130% 105% at 50% 0%, black 25%, transparent 82%)",
+          WebkitMaskImage:
+            "radial-gradient(130% 105% at 50% 0%, black 25%, transparent 82%)",
+        }}
+      />
+
       {/* dourada -- a marca, alto a esquerda */}
       <div
         className="absolute -left-[15%] -top-[25%] h-[70vmax] w-[70vmax] rounded-full blur-[80px]"
