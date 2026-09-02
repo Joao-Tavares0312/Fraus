@@ -263,6 +263,53 @@ def _traduzir(sql: str) -> str:
     return sql.replace("?", "%s")
 
 
+class _ConexaoSqlite:
+    """Conexao SQLite que de fato FECHA ao sair do `with`.
+
+    `with sqlite3.connect(...)` faz commit e NAO fecha -- e uma pegadinha da
+    biblioteca padrao. Como este modulo abre uma conexao POR CHAMADA, cada
+    metodo deixava um descritor aberto para o coletor recolher quando desse na
+    telha.
+
+    Em Linux passa despercebido. No Windows o arquivo fica TRAVADO: apagar o
+    diretorio temporario de um teste levanta `PermissionError [WinError 32]`.
+    Foi assim que o defeito apareceu -- dois scripts diferentes quebraram no
+    mesmo ponto antes de alguem procurar a causa.
+
+    Existe tambem para emparelhar com `_ConexaoPostgres`: la o `__exit__`
+    devolve a conexao ao pool, e ter um dialeto que solta o recurso e outro que
+    nao solta e a assimetria que vira bug quando alguem le um caminho e assume
+    o outro.
+    """
+
+    def __init__(self, conexao: sqlite3.Connection) -> None:
+        self._conexao = conexao
+
+    def execute(self, sql: str, parametros=()):
+        return self._conexao.execute(sql, parametros)
+
+    def executemany(self, sql: str, sequencia):
+        return self._conexao.executemany(sql, sequencia)
+
+    def executescript(self, sql: str):
+        return self._conexao.executescript(sql)
+
+    def __enter__(self) -> "_ConexaoSqlite":
+        return self
+
+    def __exit__(self, tipo, valor, traco) -> None:
+        # Commit no caminho feliz e rollback no erro -- o mesmo contrato que o
+        # `with` do sqlite3 ja dava e que todo metodo daqui assume. O `finally`
+        # garante que a conexao fecha inclusive quando o proprio commit falha.
+        try:
+            if tipo is None:
+                self._conexao.commit()
+            else:
+                self._conexao.rollback()
+        finally:
+            self._conexao.close()
+
+
 class _ConexaoPostgres:
     """Conexao Postgres com a MESMA superficie que o codigo ja usava do SQLite.
 
@@ -395,7 +442,35 @@ class Banco:
         # fonte deixaria as entregas orfas apontando para um id que ninguem
         # mais consegue consultar.
         conexao.execute("PRAGMA foreign_keys = ON")
-        return conexao
+        return _ConexaoSqlite(conexao)
+
+    def _ordem(self, coluna: str) -> str:
+        """Ordenacao de coluna TEXT com data ISO, IGUAL nos dois dialetos.
+
+        AS DATAS DESTE BANCO SAO TEXTO. Isso funciona porque ISO-8601 em UTC
+        ordena igual lexicograficamente -- mas so quando a comparacao e por
+        BYTE, e o Postgres do Supabase nao compara por byte.
+
+        O banco nasce com `datcollate = en_US.UTF-8`, e essa collation ignora
+        pontuacao no nivel primario. Medido no banco de producao:
+
+            '2026-03-01T10:00:00+00:00' < '2026-03-01T10:00:00.500000+00:00'
+              Python/SQLite ....... True
+              Postgres padrao ..... False   <-- o ponto e ignorado
+              Postgres COLLATE C .. True
+
+        `datetime.now(timezone.utc).isoformat()` sempre carrega microssegundos,
+        entao basta UMA conversa com fracao de segundo para a listagem sair
+        fora de ordem -- e SO em producao. A suite roda em SQLite e nunca ve.
+        Foi uma regressao da migracao de 02/09/2026: a mesma consulta passou a
+        significar coisas diferentes nos dois bancos.
+
+        `COLLATE "C"` e a collation de BYTE do Postgres, que e exatamente o que
+        o SQLite ja fazia. Ela vai na CLAUSULA DE ORDENACAO e nao na coluna, de
+        proposito: mudar o tipo da coluna exigiria migrar a tabela, e o que
+        precisa ser bytewise e a comparacao, nao o armazenamento.
+        """
+        return f'{coluna} COLLATE "C"' if self._postgres else coluna
 
     def _upsert(self, tabela: str, colunas: tuple[str, ...], chaves: tuple[str, ...]) -> str:
         """`INSERT OR REPLACE` do SQLite e o `ON CONFLICT` equivalente no Postgres.
@@ -497,7 +572,7 @@ class Banco:
         with self._conectar() as conexao:
             linhas = conexao.execute(
                 "SELECT id, canal, iniciada_em, score, categoria FROM conversas "
-                "ORDER BY iniciada_em DESC"
+                f"ORDER BY {self._ordem('iniciada_em')} DESC"
             ).fetchall()
         return [dict(linha) for linha in linhas]
 
@@ -520,7 +595,7 @@ class Banco:
         with self._conectar() as conexao:
             linhas = conexao.execute(
                 "SELECT id, canal, iniciada_em, score, categoria, payload FROM conversas "
-                "ORDER BY iniciada_em DESC"
+                f"ORDER BY {self._ordem('iniciada_em')} DESC"
             ).fetchall()
         return [
             (
@@ -571,7 +646,7 @@ class Banco:
     def listar_fontes(self) -> list[dict]:
         with self._conectar() as conexao:
             linhas = conexao.execute(
-                "SELECT * FROM fontes_integracao ORDER BY criada_em, id"
+                f"SELECT * FROM fontes_integracao ORDER BY {self._ordem('criada_em')}, id"
             ).fetchall()
         return [self._fonte(linha) for linha in linhas]
 
@@ -701,7 +776,7 @@ class Banco:
             conexao.execute(
                 "DELETE FROM entregas_webhook WHERE fonte_id = ? AND id NOT IN ("
                 "  SELECT id FROM entregas_webhook WHERE fonte_id = ? "
-                "  ORDER BY recebida_em DESC, id DESC LIMIT ?"
+                f"  ORDER BY {self._ordem('recebida_em')} DESC, id DESC LIMIT ?"
                 ")",
                 (fonte_id, fonte_id, self.ENTREGAS_POR_FONTE),
             )
@@ -718,7 +793,7 @@ class Banco:
             linhas = conexao.execute(
                 "SELECT id, fonte_id, webhook_id, recebida_em, veredito, motivo, "
                 "conversa_id FROM entregas_webhook WHERE fonte_id = ? "
-                "ORDER BY recebida_em DESC, id DESC",
+                f"ORDER BY {self._ordem('recebida_em')} DESC, id DESC",
                 (fonte_id,),
             ).fetchall()
         return [dict(linha) for linha in linhas]
@@ -781,7 +856,7 @@ class Banco:
     def listar_importacoes(self) -> list[dict]:
         with self._conectar() as conexao:
             linhas = conexao.execute(
-                "SELECT * FROM importacoes ORDER BY ocorrida_em DESC, id DESC"
+                f"SELECT * FROM importacoes ORDER BY {self._ordem('ocorrida_em')} DESC, id DESC"
             ).fetchall()
         return [{**dict(l), "motivos": json.loads(l["motivos"])} for l in linhas]
 
@@ -812,7 +887,7 @@ class Banco:
         """O HASH NAO SAI POR AQUI -- mesma regra de _fonte: removido na origem."""
         with self._conectar() as conexao:
             linhas = conexao.execute(
-                "SELECT id, nome, dica, criada_em FROM chaves_acesso ORDER BY criada_em, id"
+                f"SELECT id, nome, dica, criada_em FROM chaves_acesso ORDER BY {self._ordem('criada_em')}, id"
             ).fetchall()
         return [dict(linha) for linha in linhas]
 
@@ -1001,7 +1076,7 @@ class Banco:
     def listar_curados(self) -> list[dict]:
         with self._conectar() as conexao:
             linhas = conexao.execute(
-                "SELECT * FROM lexico_curado ORDER BY criado_em DESC, id DESC"
+                f"SELECT * FROM lexico_curado ORDER BY {self._ordem('criado_em')} DESC, id DESC"
             ).fetchall()
         return [dict(linha) for linha in linhas]
 
