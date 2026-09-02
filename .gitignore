@@ -11,3 +11,8 @@ node_modules/
 
 # Credenciais geradas na primeira subida da API. Unica copia em claro delas.
 .fraus-chaves.txt
+
+# Segredos do ambiente local (FRAUS_DATABASE_URL, JWT, mestra). A senha do
+# Postgres NUNCA entra no repositorio -- o mesmo motivo de .fraus-chaves.txt.
+.env
+.env.local
