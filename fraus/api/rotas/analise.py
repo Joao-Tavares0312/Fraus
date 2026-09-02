@@ -28,6 +28,22 @@ from fraus.sinais.palavras import contar_palavras
 TETO_ARQUIVO_ANALISE = 200_000
 TETO_CONVERSAS_ANALISE = 10
 
+# Teto de MENSAGENS DE CLIENTE por analise -- o unico dos tres que limita o que
+# de fato custa.
+#
+# POR QUE ELE PRECISOU EXISTIR. Os outros dois tetos medem grandezas que nao
+# governam o tempo: 200 kB e o tamanho do arquivo (um xlsx comprime, e 125 kB
+# ja carregam milhares de mensagens) e 10 e o numero de conversas (que podem ter
+# 5 ou 500 mensagens cada). Medido em producao: um arquivo dentro dos dois tetos
+# levou 314 SEGUNDOS -- 10 conversas, 600 mensagens, 2964 palavras de cliente a
+# ~106 ms cada. O proxy da dashboard desiste aos 60 s, entao a tela mostrava
+# "API nao respondeu" para uma API que estava viva e trabalhando.
+#
+# 40 mensagens cabem com folga nos 60 s do proxy pela medicao acima. O numero e
+# do PRODUTO, nao da maquina: esta tela examina UM atendimento, e o texto dela
+# ja manda quem tem lote usar a importacao.
+TETO_MENSAGENS_CLIENTE_ANALISE = 40
+
 # Quanto se le por vez ao medir um upload. Grande o bastante para nao
 # multiplicar chamadas num arquivo legitimo, pequeno o bastante para o
 # excedente que chega a entrar na memoria nunca passar disso.
@@ -180,6 +196,36 @@ def extrair_ou_400(nome: str, dados: bytes):
         ) from erro
 
 
+def cabem_no_orcamento(conversas: list) -> tuple[list, int]:
+    """Quantas conversas cabem no teto de mensagens, e quantas mensagens sao.
+
+    O CORTE E POR CONVERSA INTEIRA, e essa e a decisao que governa a funcao.
+    Cortar mensagens no MEIO de uma conversa caberia no mesmo orcamento e
+    produziria um score calculado sobre meia conversa -- exibido, na tela, com
+    a mesma cara de um score completo. Numero errado apresentado como certo e
+    pior do que numero nenhum, entao o que entra, entra inteiro.
+
+    So a fala do CLIENTE conta: e ela que paga a oclusao (uma passada de
+    BERTimbau por palavra, ver `fraus.sinais.palavras`). Mensagem de bot e
+    lida uma vez e nao entra no orcamento.
+
+    A primeira conversa entra SEMPRE, mesmo estourando o teto. Devolver lista
+    vazia porque o unico atendimento do arquivo e grande demais transformaria
+    "e grande" em "nao da para ver nada", e quem chama nao teria como saber a
+    diferenca. Cabe a rota decidir o que fazer com o estouro -- aqui so se
+    mede.
+    """
+    escolhidas: list = []
+    total = 0
+    for conversa in conversas:
+        quantas = len(conversa.mensagens_cliente)
+        if escolhidas and total + quantas > TETO_MENSAGENS_CLIENTE_ANALISE:
+            break
+        escolhidas.append(conversa)
+        total += quantas
+    return escolhidas, total
+
+
 def montar_analise(ctx: Contexto, extracao) -> dict:
     resultado = extracao
     if not resultado.conversas:
@@ -204,7 +250,30 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
     )
 
     faixas = ctx.faixas_vigentes()
-    analisadas = resultado.conversas[:TETO_CONVERSAS_ANALISE]
+    analisadas, mensagens_cliente = cabem_no_orcamento(
+        resultado.conversas[:TETO_CONVERSAS_ANALISE]
+    )
+
+    # UM atendimento sozinho acima do teto e o unico caso que o corte por
+    # conversa inteira nao resolve -- nao ha o que deixar de fora sem deixar
+    # tudo de fora. A recusa e explicita e diz OS DOIS numeros, porque
+    # "arquivo grande demais" sem quantidade nao diz o que cortar.
+    #
+    # Ela e um 400 e nao uma analise parcial: parcial exigiria cortar dentro da
+    # conversa, que e exatamente o que `cabem_no_orcamento` existe para nao
+    # fazer. E e um 400 e nao um 502 por tempo esgotado -- que era o que
+    # acontecia antes, e culpava a rede por uma decisao de produto.
+    if mensagens_cliente > TETO_MENSAGENS_CLIENTE_ANALISE:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"este atendimento tem {mensagens_cliente} mensagens do cliente, "
+                f"acima do limite de {TETO_MENSAGENS_CLIENTE_ANALISE} desta tela. "
+                "Cada palavra do cliente custa uma passada do modelo, e um "
+                "atendimento deste tamanho levaria minutos. Para um volume "
+                "assim, use a importacao."
+            ),
+        )
     analises = []
     for conversa in analisadas:
         analise = ctx.motor.analisar_conversa(conversa, referencia)
@@ -244,6 +313,14 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
         # arquivo inteiro.
         "conversas_no_arquivo": len(resultado.conversas),
         "conversas_analisadas": len(analisadas),
+        # Quantas mensagens de cliente entraram, e qual era o orcamento. Os
+        # DOIS numeros, e nao so um aviso de "cortei": com eles a tela explica
+        # por que quatro conversas de um arquivo de nove ficaram de fora, e a
+        # pessoa entende que o corte foi por TAMANHO e nao por defeito no
+        # arquivo dela. `conversas_analisadas` menor que `conversas_no_arquivo`
+        # ja aparecia; o que faltava era o porque.
+        "mensagens_cliente_analisadas": mensagens_cliente,
+        "teto_mensagens_cliente": TETO_MENSAGENS_CLIENTE_ANALISE,
         "rejeitadas": resultado.rejeitadas[:LIMITE_MOTIVOS],
         "total_rejeitadas": len(resultado.rejeitadas),
         "referencia_conversas": len(ctx.banco.listar()),
