@@ -12,6 +12,7 @@ terco por nada.
 """
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
 
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoAnalise
@@ -99,8 +100,36 @@ async def analisar_arquivo(
     if not dados:
         raise HTTPException(status_code=400, detail="arquivo vazio")
 
-    extracao = extrair_ou_400(arquivo.filename or "arquivo", dados)
-    return montar_analise(ctx, extracao)
+    # O TRABALHO PESADO SAI DO EVENT LOOP, e este e o ponto todo desta rota.
+    #
+    # Esta funcao e `async` por necessidade -- ler o upload exige `await`. Mas
+    # `extrair` parseia planilha/PDF e `montar_analise` roda BERTimbau uma vez
+    # por palavra do cliente, e as duas sao CPU pura e sincrona. Chamadas
+    # DIRETO daqui, elas rodam DENTRO do event loop: enquanto duram, o uvicorn
+    # nao atende mais nenhuma requisicao -- nem `/saude`.
+    #
+    # O efeito nao e "fica um pouco lento": a dashboard pergunta `/saude` de
+    # tempos em tempos, aquela pergunta fica presa na fila, e a tela pinta
+    # "API fora do ar" no meio de uma analise que esta indo bem. Um xlsx de
+    # verdade congelava a instalacao inteira por minutos, e o proxy do Next
+    # derrubava a conexao por tempo esgotado -- com a API viva o tempo todo.
+    #
+    # `run_in_threadpool` e o que a rota irmã `/analisar` ja ganha de graca por
+    # ser `def` comum: o FastAPI manda toda rota sincrona para o threadpool
+    # justamente por isso. A assimetria entre as duas era acidental, nao uma
+    # decisao -- e so uma delas pagava o preco.
+    return await run_in_threadpool(
+        _extrair_e_analisar, ctx, arquivo.filename or "arquivo", dados
+    )
+
+
+def _extrair_e_analisar(ctx: Contexto, nome: str, dados: bytes) -> dict:
+    """As duas etapas de CPU, juntas, para uma ida so ao threadpool.
+
+    Separadas seriam dois saltos de contexto sem ganho nenhum: nada entre elas
+    precisa do event loop de volta.
+    """
+    return montar_analise(ctx, extrair_ou_400(nome, dados))
 
 
 async def ler_ate_o_teto(arquivo: UploadFile, teto: int) -> bytes:
