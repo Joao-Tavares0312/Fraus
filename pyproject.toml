@@ -23,6 +23,10 @@ dependencies = [
     # mao com hmac+base64 custaria o mesmo e reintroduziria a classe de bug
     # que a biblioteca ja matou (confusao de algoritmo, exp nao conferido).
     "pyjwt>=2.8",
+    # Postgres (Supabase). O `pool` nao e luxo: `Banco` abre conexao POR
+    # chamada, e sem pool cada uma pagaria um handshake TLS pela rede -- o que
+    # e barato num arquivo local e caro num banco remoto.
+    "psycopg[binary,pool]>=3.2",
 ]
 
 [project.optional-dependencies]

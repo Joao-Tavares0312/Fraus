@@ -17,6 +17,17 @@ CAMINHO_MODELO_IRONIA = Path(os.environ.get("FRAUS_CAMINHO_MODELO_IRONIA", "mode
 CAMINHO_FUSOR = Path(os.environ.get("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
 CAMINHO_BANCO = Path(os.environ.get("FRAUS_CAMINHO_BANCO", "fraus.db"))
 
+# ONDE o banco mora. `FRAUS_DATABASE_URL` (Postgres/Supabase) VENCE o caminho de
+# arquivo quando definida: e a fonte declarada do deploy, do mesmo jeito que
+# FRAUS_CHAVE_MESTRA vence a mestra gravada no banco.
+#
+# O motivo de existir: SQLite e um arquivo, e host de container com disco
+# efemero descarta esse arquivo a cada deploy -- usuario cadastrado ontem
+# simplesmente nao existe hoje, sem erro nenhum no caminho. Sem a variavel, nada
+# muda: o padrao continua sendo o arquivo local.
+URL_BANCO = os.environ.get("FRAUS_DATABASE_URL") or None
+DESTINO_BANCO = URL_BANCO or CAMINHO_BANCO
+
 # Onde a PRIMEIRA subida escreve a mestra e a chave de acesso que ela gera.
 # E a unica copia em claro delas -- o banco guarda so o hash. Fica fora do git
 # (`.gitignore`), e o servidor da dashboard le daqui para nao obrigar ninguem a

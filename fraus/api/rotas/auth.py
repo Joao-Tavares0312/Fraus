@@ -10,7 +10,6 @@ operador, nunca por padrao. Ver a spec de 31/08/2026, §2.3.
 """
 
 import hmac
-import sqlite3
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -18,6 +17,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fraus import token_acesso, usuarios
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoCadastro, PedidoEntrada
+from fraus.db import ErroDeIntegridade
 from fraus.api.seguranca import chave_do_cabecalho
 
 router = APIRouter()
@@ -65,7 +65,7 @@ def registrar(pedido: PedidoCadastro, ctx: Contexto = Depends(obter_contexto)) -
             papel=papel,
             criado_em=agora,
         )
-    except sqlite3.IntegrityError:
+    except ErroDeIntegridade:
         # A unicidade e garantia do banco; aqui ela vira 409. Dizer que o
         # e-mail ja tem conta e o que permite a pessoa ir ao login -- e o
         # cadastro ja confirma existencia por natureza.

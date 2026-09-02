@@ -30,6 +30,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
+                                DESTINO_BANCO,
                                 CAMINHO_MODELO_EMOCAO, CAMINHO_MODELO_IRONIA,
                                 CAMINHO_MODELO_TEXTO, RAIZ_IMPORTACAO)
 from fraus.api.contexto import Contexto
@@ -165,7 +166,7 @@ def criar_app_padrao() -> FastAPI:
     ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA)
 
     motor = Motor(classificador, fusor, emocao, ironia)
-    banco = Banco(CAMINHO_BANCO)
+    banco = Banco(DESTINO_BANCO)
     banco.migrar()
 
     chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
