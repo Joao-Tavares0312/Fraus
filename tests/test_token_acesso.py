@@ -47,7 +47,20 @@ def test_token_adulterado_recusa():
     token = _emitir(papel="usuario")
     cabecalho, corpo, assinatura = token.split(".")
     corpo_dev = pyjwt.encode(
-        pyjwt.decode(token, SEGREDO, algorithms=["HS256"]) | {"papel": "dev"},
+        # `verify_exp: False` porque esta leitura e ANDAIME, nao a asercao: ela
+        # so abre o corpo para montar a versao adulterada, e quem julga e o
+        # `conferir` la embaixo, com `agora` injetado.
+        #
+        # Sem isso o `pyjwt` confere a validade contra o relogio DA MAQUINA --
+        # exatamente o que o docstring deste arquivo proibe -- e o teste passou
+        # a estourar `ExpiredSignatureError` na propria linha de preparo a
+        # partir de 01/09/2026, doze horas depois do `AGORA` fixo. Falhava sem
+        # nenhuma mudanca de codigo, e acusando a linha errada: parecia defeito
+        # na deteccao de adulteracao, quando era o relogio.
+        pyjwt.decode(
+            token, SEGREDO, algorithms=["HS256"], options={"verify_exp": False}
+        )
+        | {"papel": "dev"},
         "segredo-do-atacante",
         algorithm="HS256",
     ).split(".")[1]
