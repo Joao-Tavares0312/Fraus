@@ -93,6 +93,7 @@ def criar_app(
     chave_mestra: str | None = None,
     jwt_segredo: str | None = None,
     codigo_dev: str | None = None,
+    codigo_convite: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Fraus", version="0.1.0")
 
@@ -106,6 +107,10 @@ def criar_app(
         # Mesma regra para os segredos da autenticacao de usuario.
         jwt_segredo=jwt_segredo or None,
         codigo_dev=codigo_dev or None,
+        # Vazio e ausente sao a mesma coisa aqui tambem: um convite vazio
+        # exigiria uma string vazia para cadastrar, que e pior do que nao
+        # exigir nada -- pareceria fechado e estaria aberto.
+        codigo_convite=codigo_convite or None,
     )
     # Como as rotas alcancam o contexto: `Depends(obter_contexto)` le daqui.
     app.state.contexto = ctx
@@ -202,6 +207,10 @@ def criar_app_padrao() -> FastAPI:
         # que falta; sem FRAUS_CODIGO_DEV nenhum cadastro nasce dev.
         jwt_segredo=os.environ.get("FRAUS_JWT_SEGREDO") or None,
         codigo_dev=os.environ.get("FRAUS_CODIGO_DEV") or None,
+        # Sem esta variavel o cadastro segue ABERTO -- o comportamento de
+        # sempre, certo para quem roda em casa. Definir e a decisao de quem
+        # publica a API na internet.
+        codigo_convite=os.environ.get("FRAUS_CODIGO_CONVITE") or None,
     )
 
 

@@ -197,9 +197,17 @@ def test_auth_estado_diz_se_o_login_existe(tmp_path):
     # A dashboard so exige login quando ha como logar: sem FRAUS_JWT_SEGREDO
     # nao existe token possivel, e mandar para uma tela de entrar que responde
     # 503 trancaria o modo aberto para fora.
-    assert _cliente(tmp_path).get("/auth/estado").json() == {"disponivel": True}
+    # A igualdade e do dicionario INTEIRO de proposito: esta rota e publica, e
+    # um campo novo aparecendo aqui sem ninguem decidir isso seria vazamento.
+    # `cadastro_exige_codigo` entrou em 02/09/2026 -- diz que existe exigencia,
+    # nunca qual e o codigo. Ver tests/test_cadastro_por_convite.py.
+    assert _cliente(tmp_path).get("/auth/estado").json() == {
+        "disponivel": True,
+        "cadastro_exige_codigo": False,
+    }
     assert _cliente(tmp_path, jwt_segredo=None).get("/auth/estado").json() == {
-        "disponivel": False
+        "disponivel": False,
+        "cadastro_exige_codigo": False,
     }
 
 

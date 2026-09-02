@@ -37,6 +37,11 @@ class Contexto:
     # segredo de webhook. `None` = a instalacao nao ofereceu essa porta.
     jwt_segredo: str | None = None
     codigo_dev: str | None = None
+    # Codigo exigido para CRIAR CONTA -- diferente do `codigo_dev`, que decide
+    # com qual papel a conta nasce. `None` deixa o cadastro aberto, que e o
+    # comportamento de sempre e o certo para uso local. Ver
+    # `fraus.api.rotas.auth.papel_do_cadastro` para o porque de ele existir.
+    codigo_convite: str | None = None
 
     def autenticacao_ligada(self) -> bool:
         """Se alguma mestra existe -- do ambiente ou gravada pela tela."""

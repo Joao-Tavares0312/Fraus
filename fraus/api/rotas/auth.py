@@ -38,24 +38,69 @@ def estado(ctx: Contexto = Depends(obter_contexto)) -> dict:
     argumento de /acesso/estado: e a resposta que diz a tela se ha o que
     apresentar, e nao devolve segredo nenhum -- so o fato de existir.
     """
-    return {"disponivel": ctx.jwt_segredo is not None}
+    return {
+        "disponivel": ctx.jwt_segredo is not None,
+        # Se o cadastro exige codigo. A tela precisa saber para nao rotular o
+        # campo como "(opcional)" numa instalacao onde ele e obrigatorio --
+        # formulario que mente sobre o que exige produz um 403 que parece
+        # defeito. Nao vaza segredo: diz que EXISTE exigencia, nunca qual.
+        "cadastro_exige_codigo": ctx.codigo_convite is not None,
+    }
+
+
+def _confere_codigo(oferecido: str | None, esperado: str | None) -> bool:
+    """Comparacao em tempo constante que trata ausencia como recusa."""
+    if not oferecido or not esperado:
+        return False
+    return hmac.compare_digest(
+        oferecido.encode("utf-8"), esperado.encode("utf-8")
+    )
+
+
+def papel_do_cadastro(ctx: Contexto, codigo: str | None) -> str:
+    """Com qual papel esta conta nasce -- ou 403 se ela nao pode nascer.
+
+    DOIS CODIGOS, DOIS PRIVILEGIOS DIFERENTES:
+
+    * `FRAUS_CODIGO_DEV` promove a `dev`, e sempre foi assim;
+    * `FRAUS_CODIGO_CONVITE` decide se a pessoa PODE CRIAR CONTA. Ele nasceu
+      em 02/09/2026, quando a API saiu do `localhost` para um tunel publico.
+
+    POR QUE O SEGUNDO PRECISOU EXISTIR. `POST /auth/registrar` e isento de
+    credencial por desenho -- tem de ser, porque quem se cadastra ainda nao tem
+    nenhuma. Isso era inofensivo enquanto a API so existia na maquina de quem a
+    roda. Publicada, virava isto: qualquer pessoa que descobrisse o endereco
+    fazia um POST, recebia um JWT e passava a LER todos os atendimentos --
+    porque `acesso_autorizado` aceita qualquer sessao valida do mesmo jeito que
+    aceita a mestra. A mestra protegia a leitura contra o anonimo, e deixar de
+    ser anonimo era de graca. Reproduzido contra a instalacao publicada antes
+    deste conserto.
+
+    SEM `FRAUS_CODIGO_CONVITE` NADA MUDA: a instalacao segue aberta, que e o
+    comportamento certo para quem roda em casa e nao quer digitar codigo para
+    entrar na propria ferramenta. A exigencia e uma decisao de quem publica.
+
+    A recusa e SEMPRE a mesma mensagem, para codigo errado, codigo ausente e
+    variavel nao definida. Diferenciar contaria a configuracao do servidor a
+    quem esta do lado de fora.
+    """
+    if _confere_codigo(codigo, ctx.codigo_dev):
+        return "dev"
+    # Codigo oferecido que nao e o de dev so pode ser o de convite. Oferecer um
+    # codigo errado NUNCA rebaixa em silencio: quem digitou queria algo.
+    if codigo and not _confere_codigo(codigo, ctx.codigo_convite):
+        raise HTTPException(status_code=403, detail="codigo de convite invalido")
+    if ctx.codigo_convite is not None and not codigo:
+        raise HTTPException(
+            status_code=403,
+            detail="esta instalacao exige um codigo de convite para criar conta",
+        )
+    return "usuario"
 
 
 @router.post("/auth/registrar", status_code=201)
 def registrar(pedido: PedidoCadastro, ctx: Contexto = Depends(obter_contexto)) -> dict:
-    papel = "usuario"
-    if pedido.codigo_dev:
-        # Codigo errado e 403 explicito, nao rebaixamento silencioso: quem
-        # digitou o codigo queria ser dev, e nascer usuario sem aviso e a
-        # falha silenciosa da casa. Sem FRAUS_CODIGO_DEV definida a recusa e a
-        # MESMA -- dizer "a variavel nao esta definida" a um anonimo
-        # descreveria a configuracao do servidor para quem esta de fora.
-        confere = ctx.codigo_dev is not None and hmac.compare_digest(
-            pedido.codigo_dev.encode("utf-8"), ctx.codigo_dev.encode("utf-8")
-        )
-        if not confere:
-            raise HTTPException(status_code=403, detail="codigo de convite invalido")
-        papel = "dev"
+    papel = papel_do_cadastro(ctx, pedido.codigo_dev)
     agora = datetime.now(timezone.utc).isoformat()
     try:
         return ctx.banco.criar_usuario(
