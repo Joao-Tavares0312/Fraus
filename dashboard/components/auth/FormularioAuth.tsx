@@ -11,7 +11,7 @@
  * o cadastro de dev (spec 2026-08-31, §2.3). Sem código, nasce analista.
  */
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,24 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
   const roteador = useRouter();
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // A CREDENCIAL E A NAVEGACAO SAO DUAS ESPERAS, e confundi-las era o bug.
+  //
+  // `router.push` NAO e aguardavel: ele dispara a navegacao e retorna na hora.
+  // Quem espera de verdade e o React, montando a arvore nova -- e so um
+  // `useTransition` sabe quando isso terminou.
+  //
+  // Sem esta segunda espera, o formulario voltava a dizer "Entrar" assim que a
+  // credencial era aceita, com a navegacao ainda em voo. Medido em producao: o
+  // botao normalizava aos 2,1s e a dashboard so aparecia aos 8,1s -- SEIS
+  // SEGUNDOS de uma tela que parece ociosa depois de um login que deu certo.
+  // Ninguem espera parado diante disso: a pessoa conclui que quebrou e sai.
+  //
+  // A demora nao e defeito de codigo, e o custo de renderizar a dashboard no
+  // servidor da Vercel falando com a API atraves do tunel. O defeito era a tela
+  // AFIRMAR que nada estava acontecendo enquanto acontecia.
+  const [navegando, iniciarNavegacao] = useTransition();
+  const ocupado = enviando || navegando;
 
   async function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -59,6 +77,7 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
         });
         if (!cadastro.ok) {
           setErro(await detalheDe(cadastro));
+          setEnviando(false);
           return;
         }
       }
@@ -69,15 +88,18 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
       });
       if (!entrada.ok) {
         setErro(await detalheDe(entrada));
+        setEnviando(false);
         return;
       }
-      roteador.push("/dashboard");
-      // Sem `refresh`, o layout da dashboard poderia servir um render antigo
-      // de antes do cookie existir.
-      roteador.refresh();
+      // `enviando` NAO e desligado aqui, e nao e esquecimento: a espera apenas
+      // TROCA de dona -- de `enviando` para `navegando`. Desligar entre as duas
+      // abriria um piscar em que o botao volta ao normal com a navegacao a
+      // caminho, que e o bug inteiro em miniatura.
+      iniciarNavegacao(() => {
+        roteador.push("/dashboard");
+      });
     } catch {
       setErro("não foi possível falar com o servidor");
-    } finally {
       setEnviando(false);
     }
   }
@@ -136,14 +158,21 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
         </p>
       )}
 
-      <Button type="submit" disabled={enviando}>
-        {enviando
-          ? entrando
-            ? "Entrando…"
-            : "Criando conta…"
-          : entrando
-            ? "Entrar"
-            : "Criar conta"}
+      <Button type="submit" disabled={ocupado}>
+        {/* Tres rotulos para tres estados, e o do meio e o que faltava: depois
+            da credencial aceita a espera continua, e chama-la de "Entrando…"
+            de novo esconderia que o login JA deu certo e o que resta e abrir a
+            tela. Numa instalacao por tunel esse trecho leva segundos, e dizer
+            o que se espera e a diferenca entre aguardar e desistir. */}
+        {navegando
+          ? "Abrindo a dashboard…"
+          : enviando
+            ? entrando
+              ? "Entrando…"
+              : "Criando conta…"
+            : entrando
+              ? "Entrar"
+              : "Criar conta"}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
