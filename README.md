@@ -186,7 +186,7 @@ uv run pytest -q       # ou -v para ver caso a caso
 ### 3. API
 
 ```bash
-uv run python -m uvicorn fraus.api.main:app --reload   # http://localhost:8000
+uv run python -m uvicorn fraus.api.main:app --reload   # http://127.0.0.1:8000
 ```
 
 > `python -m uvicorn`, e não `uv run uvicorn`: o segundo passa pelo trampolim
@@ -210,7 +210,9 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
 | `FRAUS_CAMINHO_CHAVES` | `.fraus-chaves.txt` | onde a **primeira subida** grava a mestra e a chave de acesso que ela gera. Única cópia em claro delas; fora do git, e criado com permissão **`0600`** — só o dono lê (em POSIX; no Windows quem manda é a ACL herdada da pasta) |
-| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra ou uma chave de acesso — exceto `POST /ingestao` (chave de fonte) e `GET /acesso/estado` (pública) |
+| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra, uma chave de acesso ou um **token de sessão** — exceto `POST /ingestao` (chave de fonte), o webhook (assinatura própria) e as públicas (`/saude`, `/acesso/estado`, `/auth/estado`, `/auth/registrar`, `/auth/entrar`) |
+| `FRAUS_JWT_SEGREDO` | (nenhum) | assina o **JWT de sessão** do login de usuário (`POST /auth/entrar`). Sem ela, o login responde 503 dizendo o que falta, `/auth/estado` anuncia `disponivel: false` e a dashboard abre **sem exigir login** — o modo aberto local, mesmo contrato da API sem mestra |
+| `FRAUS_CODIGO_DEV` | (nenhum) | o código de convite que permite um cadastro nascer com papel **`dev`** (administra Integrações, Modelo, Configurações, importação e léxico). Sem ela, nenhum cadastro nasce dev — todo mundo nasce `usuario` (analista: Visão geral e Atendimentos). Código errado é 403 explícito, nunca rebaixamento silencioso |
 
 #### A autenticação já vem ligada
 
@@ -263,7 +265,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 FRAUS_CHAVE_MESTRA=<segredo> uv run python -m uvicorn fraus.api.main:app
 
 # 3. Toda rota agora exige chave. Gere uma chave de ACESSO para a dashboard:
-curl -X POST localhost:8000/acesso/chaves \
+curl -X POST 127.0.0.1:8000/acesso/chaves \
   -H "Authorization: Bearer <segredo>" \
   -H 'content-type: application/json' -d '{"nome": "dashboard"}'
 # → devolve a chave fra_... UMA única vez; o banco guarda só o hash.
@@ -340,7 +342,7 @@ Para importar um CSV, coloque o arquivo dentro de `dados_brutos/` e mande o
 caminho relativo a ela:
 
 ```bash
-curl -X POST localhost:8000/conversas/importar \
+curl -X POST 127.0.0.1:8000/conversas/importar \
   -H 'content-type: application/json' \
   -d '{"caminho": "atendimentos.csv"}'
 ```
@@ -358,7 +360,7 @@ chave de acesso levam 401 aqui, de propósito: uma credencial por rota. O
 **canal** é o da fonte cadastrada, não o que vier no corpo.
 
 ```bash
-curl -X POST localhost:8000/ingestao \
+curl -X POST 127.0.0.1:8000/ingestao \
   -H "Authorization: Bearer frs_..." \
   -H 'content-type: application/json' \
   -d '{"id":"atendimento-123","mensagens":[
@@ -382,7 +384,7 @@ $corpo = @{
   )
 } | ConvertTo-Json -Depth 5
 
-Invoke-RestMethod -Uri http://localhost:8000/ingestao -Method Post `
+Invoke-RestMethod -Uri http://127.0.0.1:8000/ingestao -Method Post `
   -Headers @{ Authorization = "Bearer frs_..." } `
   -ContentType "application/json; charset=utf-8" `
   -Body ([System.Text.Encoding]::UTF8.GetBytes($corpo))
@@ -400,6 +402,139 @@ Nos outros exemplos deste README vale a mesma tradução; e para definir variáv
 de ambiente, `$env:FRAUS_CHAVE_MESTRA = "..."` antes do comando, já que
 `VAR=valor comando` é sintaxe de bash.
 
+#### Recebendo atendimento por webhook (`POST /integracoes/webhook/{fonte_id}`)
+
+É o segundo caminho de escrita pela rede, ao lado de `POST /ingestao`. A
+diferença é a credencial: `/ingestao` pede uma chave `frs_` no cabeçalho
+`Authorization`, e este endpoint confere uma **assinatura HMAC** sobre o corpo,
+no padrão [Standard Webhooks](https://www.standardwebhooks.com/) — quem integra
+usa biblioteca de prateleira, em vez de ler a nossa documentação. Depois de
+autenticar, o que as duas rotas fazem é o **mesmo código**
+(`fraus/api/registro.py`): o canal vem da fonte cadastrada, e o veredito é
+derivado no servidor.
+
+**1. Cadastre a fonte, com `tipo: "webhook"` e o nome de uma variável de
+ambiente** (ela ainda não precisa existir no ambiente — só o nome):
+
+```bash
+curl -X POST 127.0.0.1:8000/integracoes/fontes \
+  -H 'content-type: application/json' \
+  -d '{"nome":"WhatsApp","canal":"whatsapp","tipo":"webhook","variavel_segredo":"FRAUS_SEGREDO_WHATSAPP"}'
+```
+
+**2. Gere o segredo** (privilégio da mestra, como as demais rotas de
+credencial):
+
+```bash
+curl -X POST 127.0.0.1:8000/integracoes/fontes/1/segredo \
+  -H "Authorization: Bearer <mestra>"
+# → {"segredo": "whsec_...", "variavel": "FRAUS_SEGREDO_WHATSAPP", "aviso": "..."}
+```
+
+O segredo sai em claro **uma única vez** — o Fraus não grava essa resposta em
+lugar nenhum, nem o hash: HMAC exige o segredo em claro no servidor toda vez
+que uma assinatura é conferida, e guardar valor recuperável no SQLite desfaria
+a propriedade que faz um backup vazado não levar credencial junto. Perder o
+segredo custa gerar outro.
+
+**3. Defina a variável no ambiente da API — e REINICIE o processo.**
+`os.environ` é lido pelo processo em execução; escrever a variável e continuar
+com a mesma API no ar não muda nada que ela enxerga. Sem reiniciar, o operador
+vê **503** com o segredo aparentemente "definido" (definido no terminal onde
+ele rodou o `export`, não no processo que está de pé):
+
+```bash
+export FRAUS_SEGREDO_WHATSAPP=whsec_...
+uv run python -m uvicorn fraus.api.main:app --reload
+```
+
+**4. Entregue a URL e o segredo à plataforma**, e assine cada evento antes de
+mandar.
+
+O contrato:
+
+- **URL:** `POST /integracoes/webhook/{fonte_id}`, o id devolvido no cadastro
+  da fonte.
+- **Três cabeçalhos**, no padrão Standard Webhooks: `webhook-id` (identifica o
+  evento — é a chave da deduplicação), `webhook-timestamp` (segundos desde a
+  época) e `webhook-signature` (`v1,<assinatura em base64>`; pode trazer mais
+  de uma assinatura separada por espaço, para rotação de segredo sem janela de
+  indisponibilidade).
+- **O que se assina:** `{webhook-id}.{webhook-timestamp}.{corpo}`, os três
+  concatenados nessa ordem, com o corpo em **bytes crus** — nunca o
+  dict/JSON re-serializado, porque HMAC é byte-exato e reordenar uma chave ou
+  mudar um espaço muda a assinatura.
+- **Corpo:** o mesmo contrato de `POST /ingestao` (`PedidoIngestao`) — `id`,
+  `mensagens` (com `autor`, `texto`, `enviada_em` timezone-aware) e os campos
+  opcionais `encerrada_em`/`escalou_para_humano`. O canal não entra: é o da
+  fonte cadastrada.
+
+Exemplo de assinar em Python, curto o bastante para colar direto — a chave
+HMAC é o **base64 decodificado** do segredo, não a string `whsec_...` inteira
+(usar a string inteira mataria o único motivo de adotar o padrão: a biblioteca
+do outro lado faz o decode, geraria outra assinatura, e nada bateria):
+
+```python
+import base64
+import hashlib
+import hmac
+import time
+
+segredo = "whsec_..."          # o valor gerado no passo 2
+webhook_id = "evt-001"         # um id por evento, único por fonte
+timestamp = str(int(time.time()))
+corpo = b'{"id":"atendimento-123","mensagens":[...]}'   # bytes exatos do POST
+
+chave = base64.b64decode(segredo.removeprefix("whsec_"))
+conteudo = f"{webhook_id}.{timestamp}.".encode() + corpo
+assinatura = base64.b64encode(
+    hmac.new(chave, conteudo, hashlib.sha256).digest()
+).decode()
+
+headers = {
+    "webhook-id": webhook_id,
+    "webhook-timestamp": timestamp,
+    "webhook-signature": f"v1,{assinatura}",
+    "content-type": "application/json",
+}
+# requests.post(f"http://127.0.0.1:8000/integracoes/webhook/1", data=corpo, headers=headers)
+```
+
+A conferência dos status, na ordem em que o porteiro os produz — identidade,
+depois autoridade, depois parse, nunca o contrário:
+
+| Status | Quando |
+|---|---|
+| **201** | aceito: a conversa foi gravada, o corpo da resposta traz o veredito |
+| **200** | reentrega: mesmo `webhook-id` já **aceito** antes para esta fonte — o Standard Webhooks manda a plataforma retentar diante de qualquer resposta fora de 2xx, então responder erro a uma reentrega legítima poria a integração em laço |
+| **400** | corpo fora do contrato, `webhook-timestamp` fora da janela de 5 minutos, ou um dos três cabeçalhos ausente |
+| **401** | assinatura não confere |
+| **403** | fonte cadastrada e desativada |
+| **404** | `fonte_id` inexistente |
+| **503** | variável de ambiente ausente, ou com valor que não é um segredo válido |
+
+**Por que o último é 503 e não 401.** Variável ausente é defeito da **máquina
+que hospeda a API**, não de quem chamou — a assinatura de quem integra pode
+estar perfeita e a resposta seria a mesma. Responder 401 mandaria o integrador
+caçar um problema que não é dele: reconferir a assinatura, gerar segredo novo,
+reler a própria implementação — quando o conserto real é reiniciar o processo
+da API com a variável definida.
+
+**A ressalva honesta: HMAC prova origem e integridade, não confidencialidade.**
+A assinatura garante que o corpo veio de quem tem o segredo e não foi alterado
+no caminho — não que ninguém no caminho o leu. O corpo trafega **legível**
+para qualquer um posicionado entre a plataforma e a API, e ele carrega fala
+real de cliente. Quem publica a API precisa de TLS; ver
+[docs/hospedagem.md](docs/hospedagem.md), que já descreve o túnel Cloudflare
+usado para demonstração.
+
+**Limitação declarada: não há adaptador de plataforma nenhuma.** O Fraus
+recebe eventos num **contrato documentado** — o mesmo de `PedidoIngestao` —, e
+não há tradutor embutido para o formato de Zendesk, Meta (WhatsApp Business),
+Twilio ou qualquer outra plataforma nomeada. Traduzir o payload da plataforma
+para este contrato, e assinar com o segredo dela, é trabalho de quem integra.
+Não é plug-and-play.
+
 ### 4. Dashboard
 
 ```bash
@@ -412,11 +547,11 @@ npm run build    # build de produção
 A dashboard não fala com a API direto: toda chamada de `lib/api.ts` sai por um
 proxy no servidor Next (`app/api/fraus/[...caminho]/route.ts`), que repassa
 método, corpo, query string e status para `FRAUS_API_URL` (padrão
-`http://localhost:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
+`http://127.0.0.1:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
 quando essa variável existe. A chave de acesso nunca toca o navegador.
 
 ```bash
-FRAUS_API_URL=http://localhost:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
+FRAUS_API_URL=http://127.0.0.1:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
 ```
 
 O proxy monta o header com `FRAUS_CHAVE_ACESSO` **ou**, na falta dela, com a
@@ -550,7 +685,18 @@ navegador, e requisição de servidor não faz preflight de CORS.
   redeployar. Para um endereço fixo, é preciso túnel nomeado com domínio.
 - **Defina `FRAUS_CHAVE_MESTRA` ANTES de abrir o túnel.** Sem ela a API sobe
   aberta, e o túnel publica na internet uma API que grava no seu banco. Com ela,
-  quem chegar no endereço esbarra em **401**.
+  quem chegar no endereço esbarra em **401** — em toda rota menos duas, que têm
+  credencial própria e por isso não passam pela chave: `POST /ingestao` (chave
+  de fonte `frs_`) e `POST /integracoes/webhook/{fonte_id}` (assinatura HMAC).
+- **A rota do webhook é anônima por desenho, e continua sendo uma porta pública
+  de escrita.** Ela não pede `Authorization` porque a credencial dela é a
+  assinatura do corpo: a plataforma que entrega ali não tem, nem pode ter, uma
+  chave `fra_`. Quem não souber o segredo daquela fonte não consegue gravar nada
+  — sem assinatura válida a entrega para no porteiro, e cada tentativa fica no
+  histórico de entregas da fonte. O que fica exposto é o endereço: com o túnel
+  aberto, qualquer um pode **chamar** `/integracoes/webhook/{id}` e gerar
+  tentativas recusadas. Publique sabendo disso, e guarde o segredo com o mesmo
+  cuidado da chave mestra.
 - A mestra protege a **API**, não a **dashboard**: a dashboard publicada não tem
   login, e quem tem o link lê os dados por ela. Para demonstrar com atendimento
   real, ligue também a **Vercel Deployment Protection**.
@@ -864,7 +1010,7 @@ banco temporário com conversas do simulador, incluindo atendimentos **sem fala
 do cliente** para exercitar o estado "sem sinal":
 
 ```bash
-uv run python scripts/api_demo.py   # http://localhost:8000
+uv run python scripts/api_demo.py   # http://127.0.0.1:8000
 ```
 
 **Nunca use `scripts/api_demo.py` em produção.** Os números que ele devolve não

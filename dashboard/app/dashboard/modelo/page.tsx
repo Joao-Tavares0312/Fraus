@@ -85,7 +85,7 @@ export default async function PaginaModelo() {
                 abra o atendimento: lá está <code className="num">contribuicoes</code>
                 , que tem sinal e é específica daquela conversa.{" "}
                 <Link
-                  href="/atendimentos"
+                  href="/dashboard/atendimentos"
                   className="inline-flex items-center gap-0.5 text-primary underline underline-offset-4"
                 >
                   Ir para Atendimentos

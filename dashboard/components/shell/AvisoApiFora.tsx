@@ -64,6 +64,8 @@ export function AvisoApiFora() {
   const [segundos, setSegundos] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  /** A copia falhou -- ver o `catch` de `copiar`. */
+  const [falhouCopia, setFalhouCopia] = useState(false);
   const cancelado = useRef(false);
 
   useEffect(() => {
@@ -151,8 +153,17 @@ export function AvisoApiFora() {
 
   async function copiar() {
     if (!modo?.comando) return;
-    await navigator.clipboard.writeText(modo.comando);
-    setCopiado(true);
+    try {
+      await navigator.clipboard.writeText(modo.comando);
+      setCopiado(true);
+      setFalhouCopia(false);
+    } catch {
+      // `navigator.clipboard` so existe em contexto seguro (HTTPS ou
+      // localhost). Num IP de LAN por HTTP a promise rejeita, e sem isto o
+      // botao ficava mudo -- justamente nesta faixa, que ja e a tela de quando
+      // algo nao esta funcionando.
+      setFalhouCopia(true);
+    }
   }
 
   if (estado !== "fora-do-ar") return null;
@@ -233,6 +244,13 @@ export function AvisoApiFora() {
                 {copiado ? "Copiado" : "Copiar"}
               </Button>
             </div>
+            {falhouCopia ? (
+              <p role="status" className="mt-2 text-xs text-muted-foreground">
+                O navegador não deixou copiar — a área de transferência só
+                funciona em HTTPS ou em <span className="num">localhost</span>.
+                Selecione o comando acima e copie à mão.
+              </p>
+            ) : null}
             {modo.motivo ? (
               <p className="mt-2 text-xs text-muted-foreground">
                 O botão não aparece porque {modo.motivo}.

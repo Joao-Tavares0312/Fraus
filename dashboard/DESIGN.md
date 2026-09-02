@@ -6,7 +6,7 @@ ser.
 
 **Mundo:** *Pauta* — a conversa notada como partitura.
 **Chassi:** shadcn/ui sobre Tailwind v4, tokens em OKLCH, **dois temas, ambos
-escuros** — grafite (padrão de fábrica) e chuva de neon (ver seção 8).
+escuros** — espaço profundo (padrão de fábrica) e chuva de neon (ver seção 8).
 
 ---
 
@@ -344,6 +344,19 @@ só por cor — sempre acompanham rótulo textual.
 Uma família só, sans de sistema. O modo Operate tem permissão para isso, e o
 analista lê em DPI consistente: fonte de display em rótulo e dado é proibida.
 
+> **Emenda de 31/08/2026 — a sans deixou de ser a de sistema.** Etapa 1 do
+> Pauta evoluído (`docs/superpowers/specs/2026-08-31-pauta-evoluido-design.md`),
+> por decisão do dono do projeto: **Inter** variável na frente da pilha, com
+> `font-feature-settings: "cv01", "ss03"` no body (o ajuste do Linear), e
+> **JetBrains Mono** como `--fonte-mono` — o `.num` continua sendo quem liga
+> numeral tabular por elemento. As duas entram por `next/font` no layout raiz:
+> baixadas **no build** e servidas do próprio deploy, zero chamada de rede em
+> runtime, que é a regra da casa. A pilha de sistema fica atrás como fallback.
+> O que a regra original defendia sobrevive: continua sendo UMA família para
+> rótulo e dado, e fonte de display segue proibida — a exceção nomeada é a
+> **LP** (`app/page.tsx`), vitrine fora do modo Operate, onde o display usa a
+> própria Inter em corpo grande com tracking até −0.02em.
+
 - **Escala fixa em rem**, razão apertada (1.125–1.2). Nada fluido.
 - **Numeral tabular e monoespaçado em todo número que se compara** (`.num`).
   Número que dança ao atualizar é ruído, não dado.
@@ -466,7 +479,7 @@ congelaria no último ponto tocado — pior que não existir.
 
 ---
 
-## 8. Os dois temas
+## 8. Os temas
 
 **Emenda de 24/08/2026.** Até aqui este documento dizia "tema escuro único, sem
 alternador", e a §3.1 chama o fundo de *papel de ensaio*, com o argumento
@@ -474,8 +487,28 @@ explícito de que preto puro "transforma dado em neon". Passa a haver um segundo
 tema, **chuva de neon**, por decisão do dono do projeto — e ele é exatamente a
 estética que aquele parágrafo recusava.
 
-O grafite continua sendo o **padrão de fábrica** e a posição de projeto. A chuva
-é opção, não substituição.
+**Emenda de 01/09/2026, em dois tempos no mesmo dia.** Primeiro entrou um
+terceiro tema, **espaço profundo**, pela mesma porta e pela mesma decisão. Ele
+não custou arquitetura nenhuma: `aplicarTema` já limpava a classe de todos os
+temas prevendo o caso, e os dois gates (`contraste.mjs` e `pisos.mjs`) descobrem
+os blocos `.tema-*` por regex — ele entrou na verificação sem uma linha de
+mudança nos scripts.
+
+**Depois o grafite foi DESCARTADO**, também por decisão do dono do projeto, e o
+espaço tomou o lugar dele como padrão de fábrica. Padrão de fábrica mora no
+`:root` e é a AUSÊNCIA de classe (ver `lib/tema.ts`), então a promoção foi mover
+os 54 valores de chassi do bloco `.tema-espacial` para o `:root` e apagar o
+bloco. Quem tinha `"grafite"` no `localStorage` cai no padrão sozinho:
+`temaValido` só aceita o que existe, então a migração não precisou de código.
+
+**O que do grafite sobreviveu**, porque a pergunta foi feita explicitamente:
+o **papel pautado** (`--pauta-*`), que era a tese dele e aqui vira linha de
+varredura de instrumento; e o **ouro fosco da marca** (`--primary`, croma 0,085,
+rampa medida do SVG), que não só sobreviveu como parou de precisar de
+justificativa — no espaço, a luz quente é literalmente uma estrela. Morreu só o
+chassi cinza-quente: fundo, superfície e borda.
+
+Hoje são dois: **espaço profundo** (padrão) e **chuva de neon** (opção).
 
 ### 8.1 A tese do tema chuva
 
@@ -724,6 +757,72 @@ uma superfície que não existe.
 > decisão de outra ordem: fica registrado aqui como a fronteira, não como
 > pendência.
 
+### 8.7 O padrão de fábrica: espaço profundo (01/09/2026)
+
+**A tese: o vazio visto de dentro de uma cabine.** Não é "fundo preto com
+estrelinhas". A cena tem três corpos, e cada peça do ateliê já existente virou um
+deles — **nenhuma peça nova foi criada** exceto o campo de estrelas:
+
+| corpo | peça | por quê |
+|---|---|---|
+| a **estrela** | mancha da marca (`--atelie-marca`) | no espaço a luz quente é literalmente uma estrela. A chuva precisou argumentar que o ouro era a lâmpada de sódio; aqui o ouro **é** o corpo luminoso, sem empréstimo |
+| a **nebulosa** | mancha fria (`--atelie-fria`) | croma alto pode, porque esta camada não carrega dado |
+| o **planeta** | sol listrado (`--sol-*`) | o disco com faixas lê como gigante gasoso assim que a paleta esfria. Mesma geometria, outra leitura |
+
+**Como ele não vira "chuva 2"** — o risco real de um terceiro tema escuro e
+roxo: a chuva é urbana, saturada e **cheia**; este é vasto, escuro e **vazio**. O
+croma do chassi cai, a densidade de luz cai (`--atelie-op-*` são os menores dos
+três) e o que ocupa a tela é o espaço negativo entre poucos corpos. São opostos
+de temperamento, não vizinhos de matiz.
+
+As **três regras da §8.2 valem sem emenda**: camada de dado intacta, dourado fora
+de dado, todo par de texto cruzando AA por cálculo — nos dois temas vigentes.
+
+**O vidro deste tema é o mais FINO dos três** (56%, contra 61/64/82 no grafite e
+68/68/86 na chuva), e isso inverte a §8.6 sem contradizê-la. A regra continua a
+mesma — a espessura responde ao piso, o portão manda no vidro. O que mudou foi o
+piso: ateliê menos aceso significa composto mais escuro, e composto mais escuro
+deixa o vidro afinar sem ameaçar texto nenhum. O número saiu do exercício,
+descendo de 4 em 4 e remedindo a cada passo: 68% → 64% → 60% → **56%** (último
+que passa) → 52% (reprova).
+
+**Duas correções pagas na tela, e não no token** — as duas invisíveis para os
+gates, que é exatamente o que a §9 avisa:
+
+1. **O planeta chegou cinza.** As faixas do disco são `oklch(0 0 0 / 0.85)`
+   cravadas no `Atelier.tsx` — barras pretas quase opacas. Sobre um azul-gelo de
+   croma 0,065 elas produzem uma média dessaturada, e o disco lia como borrão
+   listrado atrás da manchete. Corrigido subindo o croma (a cor que passa por
+   peneira preta tem que entrar mais forte do que se quer ver), engrossando a
+   faixa de 9px para 15px (nove pixels nesta escala viram moiré, banda larga lê
+   como gigante gasoso) e baixando a opacidade de 0,26 para 0,15, porque cenário
+   não disputa leitura com o único texto que a página precisa entregar.
+2. **O campo de partículas da LP nasceu tímido demais** para ser percebido, e
+   subiu de 170/62 para 260/105 em contagem e tamanho de base.
+
+**O campo de estrelas** é a única peça nova, e ela é CSS estático: três tiles de
+períodos primos entre si (137, 191, 89 px) com brilhos diferentes. Períodos sem
+divisor comum só repetem o conjunto a cada 137×191×89 px — ou seja, nunca dentro
+de uma tela —, e um `background-repeat` único ladrilharia visivelmente. O brilho
+variado é o que dá profundidade: estrela toda do mesmo peso lê como ruído de
+sensor.
+
+Ele é **estático** pela §6, como a chuva e a grade. O espetáculo em WebGL existe
+— `components/lp/CampoDeParticulas.tsx` —, mas **só na LP**, e a distinção é de
+contrato, não de gosto: a ferramenta é lida por horas e não pode ter GPU girando
+atrás do dado; a vitrine é visita de 40 segundos com a atenção inteira na tela, e
+ali o espetáculo *é* o produto. Quem pede `prefers-reduced-motion: reduce` não
+recebe uma versão mais lenta — recebe `null`, porque campo de partículas lento
+continua sendo campo de partículas.
+
+> **Nota para `pisos.mjs`.** O campo de estrelas entrou na lista de camadas com a
+> contribuição **ponderada pela cobertura areal** (~8×10⁻⁵), e não pela
+> opacidade do token. As outras camadas são lavagens de tela cheia, onde a
+> opacidade já é a contribuição; esta são três pontos de ~1,5px² em tiles de
+> ~18.800px². A média é o número certo porque o que o script modela é o fundo
+> visto através de `backdrop-filter: blur()`, e blur devolve a média local —
+> medir a estrela pelo pico seria medir um pixel que o vidro nunca entrega.
+
 ---
 
 ## 9. O ciclo de verificação, e o que cada gate NÃO vê
@@ -734,7 +833,7 @@ seção existe porque **quatro deles já devolveram verde com o build quebrado**
 | Comando | O que ele vê | O que ele **não** vê |
 |---|---|---|
 | `npm run pisos` | se o piso gravado no CSS bate com o pior caso medido do ateliê | qualquer coisa fora dos tokens que ele casa por regex |
-| `npm run contraste` | todo par de cor que carrega texto ou marca, nos dois temas | cor escrita em notação que o parser não lê; matiz; a tela |
+| `npm run contraste` | todo par de cor que carrega texto ou marca, em todos os temas | cor escrita em notação que o parser não lê; matiz; a tela |
 | `npx tsc --noEmit` | tipos do TypeScript | CSS, imagem, qualquer asset |
 | `npm run lint` | as regras do ESLint | CSS, imagem, qualquer asset |
 | `npm run build` | **compila o CSS e processa os assets de verdade** | a tela |

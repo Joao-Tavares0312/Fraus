@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import {
   Activity,
   BarChart3,
+  LogOut,
   MessagesSquare,
   PlugZap,
   ScanText,
@@ -39,19 +41,24 @@ import { SeletorTema } from "./SeletorTema";
  * nunca e o unico canal.
  */
 const SECOES = [
-  { href: "/", rotulo: "Visão geral", Icone: BarChart3 },
-  { href: "/atendimentos", rotulo: "Atendimentos", Icone: MessagesSquare },
+  { href: "/dashboard", rotulo: "Visão geral", Icone: BarChart3 },
+  { href: "/dashboard/atendimentos", rotulo: "Atendimentos", Icone: MessagesSquare },
   // Fica no grupo de OLHAR, e nao no de mexer, porque analisar nao grava nada:
   // nem conversa, nem nota, nem arquivo. Nenhum indicador se move por causa
   // dela, e e por isso que ela nao pertence ao lado das telas que alteram
   // configuracao e fonte de dado.
-  { href: "/analisar", rotulo: "Analisar", Icone: ScanText },
-  { href: "/modelo", rotulo: "Modelo", Icone: Activity },
+  { href: "/dashboard/analisar", rotulo: "Analisar", Icone: ScanText },
+  { href: "/dashboard/modelo", rotulo: "Modelo", Icone: Activity },
   // Tambem fica em OLHAR, nao em AJUSTES: o grafo mostra o que o sistema
   // guarda, e nao grava nada -- nenhuma configuracao ou fonte muda por causa
   // dele.
-  { href: "/grafo", rotulo: "Grafo", Icone: Share2 },
+  { href: "/dashboard/grafo", rotulo: "Grafo", Icone: Share2 },
 ] as const;
+
+// O que o papel `usuario` VE: visao geral e atendimentos -- decisao de
+// produto de 31/08/2026 (dev administra, usuario analisa). Esconder aqui e
+// cortesia de interface; quem nega mesmo e o middleware da API, com 403.
+const SECOES_DO_USUARIO = new Set(["/dashboard", "/dashboard/atendimentos"]);
 
 /**
  * As telas de MEXER, separadas das de olhar por um grupo proprio: elas mudam o
@@ -59,17 +66,75 @@ const SECOES = [
  * essa diferenca no unico lugar onde ela e obvia de graca.
  */
 const AJUSTES = [
-  { href: "/configuracoes", rotulo: "Configurações", Icone: SlidersHorizontal },
-  { href: "/integracoes", rotulo: "Integrações", Icone: PlugZap },
+  { href: "/dashboard/configuracoes", rotulo: "Configurações", Icone: SlidersHorizontal },
+  { href: "/dashboard/integracoes", rotulo: "Integrações", Icone: PlugZap },
 ] as const;
 
-function estaAtiva(href: string, caminho: string): boolean {
-  return href === "/" ? caminho === "/" : caminho.startsWith(href);
+/**
+ * Quem esta logado e a porta de saida. So renderiza com sessao ativa: no modo
+ * aberto (sem FRAUS_JWT_SEGREDO na API) nao ha de quem sair, e um botao
+ * "Sair" que nao muda nada seria promessa vazia.
+ */
+function SessaoNoRodape({
+  usuario,
+  papel,
+}: {
+  usuario: { nome: string; email: string };
+  papel: "dev" | "usuario";
+}) {
+  const roteador = useRouter();
+  const [saindo, setSaindo] = useState(false);
+
+  async function sair() {
+    setSaindo(true);
+    try {
+      await fetch("/api/sessao/sair", { method: "POST" });
+    } finally {
+      // Mesmo se a chamada falhar, ir para a raiz -- e `refresh` para o
+      // servidor re-renderizar sem o cookie: sem ele, o cache do roteador
+      // ainda mostraria a LP "logada".
+      roteador.push("/");
+      roteador.refresh();
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
+      <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
+        <span className="truncate text-xs font-medium">{usuario.nome}</span>
+        <span className="truncate text-xs text-muted-foreground">
+          {papel === "dev" ? "desenvolvedor" : "analista"}
+        </span>
+      </span>
+      <button
+        type="button"
+        onClick={sair}
+        disabled={saindo}
+        aria-label="Sair da conta"
+        title="Sair da conta"
+        className="ml-auto rounded-md p-1.5 text-muted-foreground transition-colors duration-150 ease-fluid hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 group-data-[collapsible=icon]:ml-0"
+      >
+        <LogOut aria-hidden className="size-4" />
+      </button>
+    </div>
+  );
 }
 
-export function NavegacaoLateral() {
+function estaAtiva(href: string, caminho: string): boolean {
+  return href === "/dashboard" ? caminho === "/dashboard" : caminho.startsWith(href);
+}
+
+export function NavegacaoLateral({
+  papel,
+  usuario,
+}: {
+  papel: "dev" | "usuario";
+  usuario: { nome: string; email: string } | null;
+}) {
   const caminho = usePathname();
   const parametros = useSearchParams();
+  const secoes =
+    papel === "dev" ? SECOES : SECOES.filter((s) => SECOES_DO_USUARIO.has(s.href));
 
   const consulta = new URLSearchParams();
   for (const chave of ["de", "ate"] as const) {
@@ -117,7 +182,7 @@ export function NavegacaoLateral() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <Link
-          href={`/${sufixo}`}
+          href={`/dashboard${sufixo}`}
           aria-label="Fraus — voltar para a visão geral"
           className="flex items-center gap-2.5 rounded-md px-1 py-1.5 outline-none transition-colors duration-150 ease-fluid hover:bg-sidebar-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -142,19 +207,24 @@ export function NavegacaoLateral() {
         <SidebarGroup>
           <SidebarGroupLabel>Seções</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>{SECOES.map(itemDaSecao)}</SidebarMenu>
+            <SidebarMenu>{secoes.map(itemDaSecao)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Ajustes</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{AJUSTES.map(itemDaSecao)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* O grupo inteiro some para o papel `usuario`: mostrar o rotulo
+            "Ajustes" sem nenhum item seria uma promessa vazia. */}
+        {papel === "dev" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Ajustes</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{AJUSTES.map(itemDaSecao)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        {usuario && <SessaoNoRodape usuario={usuario} papel={papel} />}
         <SidebarMenu>
           <SidebarMenuItem>
             <SeletorTema />

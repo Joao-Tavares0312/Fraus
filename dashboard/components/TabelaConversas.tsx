@@ -170,7 +170,7 @@ export function TabelaConversas({
             return (
               <div className="min-w-0">
                 <Link
-                  href={`/atendimentos/${encodeURIComponent(linha.id)}${sufixoDeQuery}`}
+                  href={`/dashboard/atendimentos/${encodeURIComponent(linha.id)}${sufixoDeQuery}`}
                   className="num rounded-sm text-foreground underline decoration-border underline-offset-4 outline-none transition-colors duration-150 hover:decoration-primary focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {linha.id}
@@ -542,7 +542,7 @@ export function TabelaConversas({
                     const alvo = evento.target as HTMLElement;
                     if (alvo.closest("a, button")) return;
                     navegar(
-                      `/atendimentos/${encodeURIComponent(linha.original.id)}${sufixoDeQuery}`,
+                      `/dashboard/atendimentos/${encodeURIComponent(linha.original.id)}${sufixoDeQuery}`,
                     );
                   }}
                   className="cursor-pointer transition-colors duration-150 ease-fluid hover:bg-muted/50"

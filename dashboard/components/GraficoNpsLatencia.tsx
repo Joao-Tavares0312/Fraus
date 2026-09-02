@@ -63,7 +63,7 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
     if (indice == null || Number.isNaN(indice)) return;
     const ponto = serie[indice];
     if (!ponto || ponto.atendimentos === 0) return;
-    roteador.push(`/atendimentos?de=${ponto.dia}&ate=${ponto.dia}`);
+    roteador.push(`/dashboard/atendimentos?de=${ponto.dia}&ate=${ponto.dia}`);
   };
 
   if (serie.length === 0) {

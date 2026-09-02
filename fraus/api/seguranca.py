@@ -13,12 +13,14 @@ uma chave que pode emitir outra chave nao seria um posto menor.
 """
 
 import hmac
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
-from fraus import acesso, credencial
+from fraus import acesso, credencial, token_acesso
 from fraus.api.contexto import Contexto
+from fraus.api.rotas.webhook import PREFIXO_WEBHOOK
 from fraus.db import Banco
 
 
@@ -34,7 +36,24 @@ from fraus.db import Banco
 #   opera procurar servidor derrubado quando o que faltava era uma chave. Ela
 #   nao devolve dado nenhum: o corpo e `{"status": "ok"}`, o mesmo fato que
 #   qualquer um confirma abrindo uma conexao TCP na porta.
-ISENTAS = ("/ingestao", "/acesso/estado", "/saude")
+# - `/auth/registrar` e `/auth/entrar` sao as rotas de quem ainda nao tem
+#   credencial NENHUMA -- o mesmo argumento de `/acesso/estado`. Elas tem
+#   defesa propria: o cadastro exige o codigo de convite para privilegio, e o
+#   login so devolve token a quem prova a senha.
+# - `/integracoes/webhook/{id}` tem credencial propria (a ASSINATURA do corpo),
+#   e a plataforma externa nao tem -- nem pode ter -- uma chave de acesso
+#   `fra_`. Sem esta linha o defeito e silencioso e so aparece em producao: com
+#   a mestra definida, toda chamada de webhook levaria 401 aqui antes de a
+#   assinatura ser olhada, e o log de entregas ficaria vazio dizendo "nao
+#   chegou nada" enquanto a plataforma recebe 401 em cada tentativa.
+ISENTAS = (
+    "/ingestao",
+    "/acesso/estado",
+    "/saude",
+    "/auth/estado",
+    "/auth/registrar",
+    "/auth/entrar",
+)
 
 
 def chave_bearer(authorization: str | None) -> str | None:
@@ -136,13 +155,52 @@ def e_mestra(ctx: Contexto, chave: str) -> bool:
 
 
 def acesso_autorizado(ctx: Contexto, chave: str) -> bool:
-    """Mestra ou chave de acesso valida. Mensagem de recusa e uniforme
-    la fora: daqui so sai sim ou nao."""
+    """Mestra, chave de acesso ou JWT de usuario valido. Mensagem de recusa e
+    uniforme la fora: daqui so sai sim ou nao."""
     if e_mestra(ctx, chave):
         return True
     chave_id = acesso.id_da_chave(chave)
     guardado = ctx.banco.hash_da_chave_acesso(chave_id) if chave_id is not None else None
-    return credencial.confere(chave, guardado)
+    if credencial.confere(chave, guardado):
+        return True
+    return sessao_do_jwt(ctx, chave) is not None
+
+
+def sessao_do_jwt(ctx: Contexto, chave: str | None) -> dict | None:
+    """A sessao de usuario, quando o bearer e um JWT valido; None para o resto.
+
+    Chave `fra_` e mestra nao parecem JWT e caem no None sem custo. Sem
+    `jwt_segredo` configurado nao existe token valido possivel -- e a resposta
+    e None, nunca excecao: quem chama esta no meio de decidir uma requisicao.
+    """
+    if chave is None or ctx.jwt_segredo is None:
+        return None
+    return token_acesso.conferir(
+        chave, ctx.jwt_segredo, agora=datetime.now(timezone.utc)
+    )
+
+
+def rota_administrativa(metodo: str, caminho: str) -> bool:
+    """As rotas que so o papel `dev` alcanca (spec 2026-08-31, §2.2).
+
+    O corte e o da decisao de produto: dev administra (integracoes, modelo,
+    configuracoes, importacao, curadoria do lexico), usuario analisa. Leitura
+    que a tela de analise usa -- conversas, indicadores, lexico curado LIDO --
+    fica fora de proposito.
+
+    `/integracoes/webhook/{id}` nunca chega aqui: o middleware isenta o
+    prefixo do webhook ANTES deste teste, e a plataforma externa nao carrega
+    JWT de qualquer jeito.
+    """
+    if caminho.startswith("/integracoes") or caminho == "/modelo" or caminho.startswith("/modelo/"):
+        return True
+    if caminho in ("/conversas/importar", "/conversas/repontuar"):
+        return True
+    if caminho == "/configuracoes" and metodo != "GET":
+        return True
+    if caminho.startswith("/lexico") and metodo != "GET":
+        return True
+    return False
 
 
 def exigir_mestra(ctx: Contexto, authorization: str | None) -> None:
@@ -179,8 +237,6 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
 
     @app.middleware("http")
     async def exigir_chave_de_acesso(request, call_next):
-        if not ctx.autenticacao_ligada():
-            return await call_next(request)
         # /ingestao tem credencial propria (chave de FONTE): uma credencial
         # por rota. /acesso/estado e publica por necessidade -- a tela precisa
         # dela justamente quando ainda nao ha credencial nenhuma. OPTIONS e o
@@ -190,10 +246,32 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
         # para ela), e comparar o path exato mandava o integrador que
         # configurou a URL com barra final para o 401 daqui em vez da
         # credencial de fonte.
-        if request.url.path.rstrip("/") in ISENTAS or request.method == "OPTIONS":
+        caminho = request.url.path.rstrip("/")
+        if (
+            caminho in ISENTAS
+            or caminho.startswith(f"{PREFIXO_WEBHOOK}/")
+            or request.method == "OPTIONS"
+        ):
             return await call_next(request)
         cabecalho = request.headers.get("authorization")
         chave_recebida = chave_bearer(cabecalho)
+        # O portao de PAPEL vem antes do interruptor da mestra, porque vale
+        # nos dois modos: a API aberta continua aberta para quem nao se
+        # identifica, mas um JWT de usuario apresentado E identidade valida --
+        # e identidade de usuario nao administra em modo nenhum. 403, nao 401:
+        # a credencial esta certa, o privilegio e que falta.
+        sessao = sessao_do_jwt(ctx, chave_recebida)
+        if (
+            sessao is not None
+            and sessao["papel"] != "dev"
+            and rota_administrativa(request.method, caminho)
+        ):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "esta rota exige o papel dev"},
+            )
+        if not ctx.autenticacao_ligada():
+            return await call_next(request)
         if chave_recebida is None:
             return JSONResponse(
                 status_code=401,

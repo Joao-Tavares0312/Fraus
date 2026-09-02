@@ -14,7 +14,7 @@ export default function NaoEncontrado() {
       />
       <p>
         <Link
-          href="/atendimentos"
+          href="/dashboard/atendimentos"
           className="text-sm text-primary underline underline-offset-4"
         >
           ← Todos os atendimentos

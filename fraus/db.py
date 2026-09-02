@@ -89,6 +89,23 @@ CREATE TABLE IF NOT EXISTS chave_mestra (
     criada_em TEXT NOT NULL
 );
 
+-- Usuario da DASHBOARD: identidade de quem olha a tela, nao credencial
+-- tecnica -- as chaves fra_/frs_ autenticam processos e fontes e continuam
+-- existindo ao lado. `senha_hash` e scrypt (ver fraus/usuarios.py), nunca a
+-- senha. `papel` decide o que a pessoa PODE: 'dev' administra, 'usuario'
+-- analisa -- e o CHECK faz do vocabulario garantia do banco, como o id=1 da
+-- chave_mestra. `email` compara sem caixa: Ana@ e ana@ sao a mesma pessoa,
+-- e tratar como duas criaria duas contas irmas.
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    senha_hash TEXT NOT NULL,
+    papel TEXT NOT NULL CHECK (papel IN ('dev', 'usuario')),
+    ativo INTEGER NOT NULL DEFAULT 1,
+    criado_em TEXT NOT NULL
+);
+
 -- O que o analista ensinou ao lexico: termos que o SentiLex-PT02 e o Emoji
 -- Sentiment Ranking nao trazem, ou trazem com polaridade errada para o dominio
 -- de atendimento. Ver fraus/sinais/curadoria.py.
@@ -108,7 +125,54 @@ CREATE TABLE IF NOT EXISTS lexico_curado (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_lexico_curado_termo
     ON lexico_curado(tipo, termo);
+
+-- Cada chamada de webhook, aceita ou recusada. Sem ela, um webhook recusado nao
+-- deixa rastro em lugar nenhum -- e falha silenciosa e o modo de falha numero
+-- um dessa integracao.
+--
+-- Guardar SO as recusas parece economico e quebra o diagnostico central: sem as
+-- aceitas, "nao chegou nada" e "chegou e foi tudo recusado" viram a mesma tela
+-- vazia.
+--
+-- O CORPO NUNCA ENTRA AQUI. Seria PII de cliente real parada em disco sem
+-- proposito -- e o proposito de depurar e servido pelo veredito e pelo motivo.
+--
+-- `ON DELETE CASCADE` ao contrario das CONVERSAS, que sobrevivem a fonte:
+-- entrega e registro operacional DA fonte, nao dado de atendimento medido.
+CREATE TABLE IF NOT EXISTS entregas_webhook (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fonte_id INTEGER NOT NULL REFERENCES fontes_integracao(id) ON DELETE CASCADE,
+    webhook_id TEXT,
+    recebida_em TEXT NOT NULL,
+    veredito TEXT NOT NULL,
+    motivo TEXT,
+    conversa_id TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_entregas_fonte ON entregas_webhook(fonte_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_entregas_dedupe ON entregas_webhook(fonte_id, webhook_id);
 """
+
+# Os vereditos possiveis de uma entrega, num lugar so. A tela pinta cada um de
+# um jeito e a rota escolhe um deles; uma segunda lista digitada em outro
+# arquivo so ficaria errada no dia em que um veredito novo entrasse -- sem erro
+# nenhum, so sumindo da vista.
+#
+# `sem_segredo` e o unico que NAO e culpa de quem chamou: a variavel de ambiente
+# da fonte sumiu do ambiente da API. Ele vira 503, nao 401.
+#
+# `tipo_incompativel` e a fonte que existe mas nao e do tipo `webhook`. Ele
+# existe para que a recusa apareca no historico: o `tipo` ramificava so na tela,
+# e uma fonte `csv` com variavel de segredo aceitava entrega assinada.
+VEREDITOS = (
+    "aceita",
+    "assinatura",
+    "fora_da_janela",
+    "duplicada",
+    "corpo_invalido",
+    "fonte_inativa",
+    "sem_segredo",
+    "tipo_incompativel",
+)
 
 
 class Banco:
@@ -118,6 +182,13 @@ class Banco:
     def _conectar(self) -> sqlite3.Connection:
         conexao = sqlite3.connect(self._caminho)
         conexao.row_factory = sqlite3.Row
+        # SQLite ignora chave estrangeira por padrao, e o pragma vale por
+        # CONEXAO -- ligar uma vez na criacao do esquema nao teria efeito
+        # nenhum nas seguintes. Sem isto, o ON DELETE CASCADE de
+        # `entregas_webhook` seria documentacao, nao comportamento: apagar a
+        # fonte deixaria as entregas orfas apontando para um id que ninguem
+        # mais consegue consultar.
+        conexao.execute("PRAGMA foreign_keys = ON")
         return conexao
 
     # Colunas acrescentadas depois que a tabela ja existia em disco.
@@ -331,6 +402,101 @@ class Banco:
             )
             return cursor.rowcount > 0
 
+    # Quantas entregas cada fonte guarda. Registrar recusa de assinatura e
+    # exatamente o que o operador precisa ver -- alguem esta batendo com o
+    # segredo errado -- e e tambem como um atacante enche o SQLite. A poda e o
+    # que permite manter a primeira propriedade sem pagar a segunda.
+    #
+    # Ela e TAMBEM a memoria do dedupe (`entrega_ja_vista` consulta esta
+    # tabela), entao uma fonte que receba 200 recusas seguidas esquece as
+    # aceitas anteriores. O efeito pratico e limitado: `salvar` grava com
+    # INSERT OR REPLACE pelo id da conversa, entao reprocessar nao duplica
+    # atendimento, so o repontua. E por isso que a poda pode ser simples.
+    ENTREGAS_POR_FONTE = 200
+
+    def registrar_entrega(
+        self,
+        fonte_id: int,
+        webhook_id: str | None,
+        veredito: str,
+        recebida_em: str,
+        motivo: str | None = None,
+        conversa_id: str | None = None,
+    ) -> None:
+        """Registra a tentativa e poda as antigas DAQUELA fonte, numa transacao.
+
+        A poda anda junto com o insert de proposito: separada, ela dependeria de
+        alguem lembrar de chama-la, e o dia em que ninguem lembrasse seria o dia
+        em que a tabela cresce sem teto.
+        """
+        with self._conectar() as conexao:
+            conexao.execute(
+                "INSERT INTO entregas_webhook "
+                "(fonte_id, webhook_id, recebida_em, veredito, motivo, conversa_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (fonte_id, webhook_id, recebida_em, veredito, motivo, conversa_id),
+            )
+            # O corte usa o MESMO criterio de `listar_entregas`
+            # (`recebida_em DESC, id DESC`), de proposito: `recebida_em` e
+            # carimbado pelo servidor no instante em que a chamada chega (a
+            # rota grava `datetime.now(timezone.utc)`, nunca um campo do
+            # corpo) -- e tao interno quanto o `id`, entao nao ha razao para
+            # os dois criterios divergirem. Com o mesmo criterio nos dois
+            # lados, "as 200 que ficam" e "as 200 que aparecem" sao
+            # literalmente o mesmo conjunto, na mesma ordem, por construcao.
+            # `id` entra so como desempate, porque duas entregas podem
+            # carimbar o mesmo instante ISO.
+            conexao.execute(
+                "DELETE FROM entregas_webhook WHERE fonte_id = ? AND id NOT IN ("
+                "  SELECT id FROM entregas_webhook WHERE fonte_id = ? "
+                "  ORDER BY recebida_em DESC, id DESC LIMIT ?"
+                ")",
+                (fonte_id, fonte_id, self.ENTREGAS_POR_FONTE),
+            )
+
+    def listar_entregas(self, fonte_id: int) -> list[dict]:
+        """Entregas da fonte, mais recente primeiro.
+
+        Ordena por `recebida_em` -- o horario que a chamada de fato chegou --
+        com `id` como desempate. So por `id` colocaria a ordem de insercao na
+        frente do horario real quando as duas divergem (ex.: reprocessamento
+        fora de ordem), e e o horario que o operador espera ver no topo.
+        """
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT id, fonte_id, webhook_id, recebida_em, veredito, motivo, "
+                "conversa_id FROM entregas_webhook WHERE fonte_id = ? "
+                "ORDER BY recebida_em DESC, id DESC",
+                (fonte_id,),
+            ).fetchall()
+        return [dict(linha) for linha in linhas]
+
+    def entrega_ja_vista(self, fonte_id: int, webhook_id: str) -> bool:
+        """Se aquele evento ja foi ACEITO por aqui. O dedupe e POR FONTE.
+
+        Duas plataformas podem numerar eventos igual, e tratar o `msg_1` de uma
+        como reentrega da outra descartaria atendimento em silencio.
+
+        So conta veredito "aceita" -- de proposito. Uma RECUSA registrada
+        (assinatura errada, variavel de ambiente ausente, fonte desativada) nao
+        e uma entrega ja processada, e uma tentativa. Contar qualquer veredito
+        aqui abre duas portas: um anonimo manda `webhook-id` alheio com
+        assinatura lixo so para "queimar" aquele id antes da plataforma
+        legitima entregar (a rota e ISENTA de chave de acesso, e o formato do
+        id costuma ser previsivel); e, sem atacante nenhum, um operador que
+        corrige a variavel de ambiente ou reativa a fonte depois de um 503/403
+        veria a propria retentativa cair como "duplicada" e o atendimento se
+        perder para sempre -- exatamente o caminho de recuperacao que a
+        integracao existe para oferecer.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT 1 FROM entregas_webhook WHERE fonte_id = ? AND webhook_id = ? "
+                "AND veredito = 'aceita' LIMIT 1",
+                (fonte_id, webhook_id),
+            ).fetchone()
+        return linha is not None
+
     @staticmethod
     def _fonte(linha: sqlite3.Row) -> dict:
         """Fonte como ela pode circular. O HASH DA CHAVE NAO SAI POR AQUI.
@@ -412,6 +578,60 @@ class Banco:
                 "DELETE FROM chaves_acesso WHERE id = ?", (identificador,)
             )
             return cursor.rowcount > 0
+
+    @staticmethod
+    def _usuario(linha: sqlite3.Row) -> dict:
+        """Usuario como ele pode circular. O HASH DA SENHA NAO SAI POR AQUI --
+        mesma regra de `_fonte`: removido na origem, nao na borda HTTP."""
+        registro = dict(linha)
+        registro["ativo"] = bool(registro["ativo"])
+        registro.pop("senha_hash", None)
+        return registro
+
+    def criar_usuario(
+        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str
+    ) -> dict:
+        """E-mail duplicado deixa o IntegrityError propagar: a unicidade e
+        garantia do banco, e a borda HTTP traduz em 409 -- o mesmo desenho da
+        coluna ausente no driver de CSV."""
+        with self._conectar() as conexao:
+            cursor = conexao.execute(
+                "INSERT INTO usuarios (nome, email, senha_hash, papel, criado_em) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (nome, email, senha_hash, papel, criado_em),
+            )
+            identificador = cursor.lastrowid
+        return {
+            "id": identificador,
+            "nome": nome,
+            "email": email,
+            "papel": papel,
+            "ativo": True,
+            "criado_em": criado_em,
+        }
+
+    def buscar_usuario(self, identificador: int) -> dict | None:
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT * FROM usuarios WHERE id = ?", (identificador,)
+            ).fetchone()
+        return self._usuario(linha) if linha is not None else None
+
+    def buscar_usuario_por_email(self, email: str) -> dict | None:
+        # A coluna e COLLATE NOCASE, entao o = ja compara sem caixa.
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT * FROM usuarios WHERE email = ?", (email,)
+            ).fetchone()
+        return self._usuario(linha) if linha is not None else None
+
+    def hash_da_senha(self, identificador: int) -> str | None:
+        """O unico caminho para ler o hash -- explicito no nome, uso unico."""
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT senha_hash FROM usuarios WHERE id = ?", (identificador,)
+            ).fetchone()
+        return linha["senha_hash"] if linha is not None else None
 
     def gravar_chave_mestra(self, chave_hash: str, dica: str, criada_em: str) -> None:
         """Grava a mestra NO LUGAR da anterior, se houver.

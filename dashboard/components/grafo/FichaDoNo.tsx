@@ -96,7 +96,7 @@ export function FichaDoNo({ no }: { no: NoDoGrafo | null }) {
               </div>
 
               <Link
-                href={`/atendimentos/${encodeURIComponent(idDaConversa(no.id))}`}
+                href={`/dashboard/atendimentos/${encodeURIComponent(idDaConversa(no.id))}`}
                 className="rounded-sm text-xs text-primary underline-offset-4 transition-colors duration-150 ease-fluid hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Abrir o atendimento →

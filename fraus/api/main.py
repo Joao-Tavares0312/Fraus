@@ -36,9 +36,9 @@ from fraus.api.contexto import Contexto
 from fraus.api.primeiro_uso import ligar_no_primeiro_uso
 from fraus.api.limites import TETO_CORPO, registrar_middleware_de_corpo  # TETO_CORPO reexportado para os testes
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
-from fraus.api.rotas import (acesso, analise, configuracoes, conversas,
+from fraus.api.rotas import (acesso, analise, auth, configuracoes, conversas,
                              grafo, indicadores, ingestao, integracoes, lexico,
-                             modelo, saude)
+                             modelo, saude, webhook)
 # Reexportados: os testes os importam daqui desde antes da quebra em modulos,
 # e mudar de onde se importa um teto seria mexer no contrato de quem consome
 # sem nenhum ganho.
@@ -90,6 +90,8 @@ def criar_app(
     motor,
     raiz_importacao: Path | None = None,
     chave_mestra: str | None = None,
+    jwt_segredo: str | None = None,
+    codigo_dev: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Fraus", version="0.1.0")
 
@@ -100,6 +102,9 @@ def criar_app(
         # Vazia e ausente sao a mesma coisa: "Bearer " autorizando seria a pior
         # combinacao possivel de configuracao errada com acesso liberado.
         chave_mestra=chave_mestra or None,
+        # Mesma regra para os segredos da autenticacao de usuario.
+        jwt_segredo=jwt_segredo or None,
+        codigo_dev=codigo_dev or None,
     )
     # Como as rotas alcancam o contexto: `Depends(obter_contexto)` le daqui.
     app.state.contexto = ctx
@@ -135,6 +140,8 @@ def criar_app(
     app.include_router(analise.router)
     app.include_router(grafo.router)
     app.include_router(lexico.router)
+    app.include_router(webhook.router)
+    app.include_router(auth.router)
 
     return app
 
@@ -185,7 +192,16 @@ def criar_app_padrao() -> FastAPI:
             f"defina FRAUS_CHAVE_MESTRA."
         )
 
-    return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
+    return criar_app(
+        banco=banco,
+        motor=motor,
+        chave_mestra=chave_mestra,
+        # Autenticacao de usuario (spec 2026-08-31): segredos do ambiente,
+        # nunca do banco. Sem FRAUS_JWT_SEGREDO o login responde 503 dizendo o
+        # que falta; sem FRAUS_CODIGO_DEV nenhum cadastro nasce dev.
+        jwt_segredo=os.environ.get("FRAUS_JWT_SEGREDO") or None,
+        codigo_dev=os.environ.get("FRAUS_CODIGO_DEV") or None,
+    )
 
 
 def __getattr__(nome: str):

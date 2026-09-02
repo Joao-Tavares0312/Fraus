@@ -17,7 +17,7 @@ O `app` de producao vive em `fraus.api.main` e falha alto sem `modelos/`.
 
 Como rodar:
     uv run python scripts/api_demo.py
-    # -> http://localhost:8000  (banco temporario, recriado a cada boot)
+    # -> http://127.0.0.1:8000  (banco temporario, recriado a cada boot)
 =============================================================================
 """
 
@@ -374,13 +374,29 @@ def montar_app():
             "[api_demo] API FECHADA pela FRAUS_CHAVE_MESTRA do ambiente.\n"
             "  Nenhuma chave de acesso existe ainda -- a dashboard levara 401.\n"
             "  Emita uma e entregue a ela:\n"
-            "    curl -X POST localhost:8000/acesso/chaves \\\n"
+            "    curl -X POST 127.0.0.1:8000/acesso/chaves \\\n"
             "      -H \"Authorization: Bearer $FRAUS_CHAVE_MESTRA\" \\\n"
             "      -H 'content-type: application/json' -d '{\"nome\": \"dashboard\"}'\n"
             "    cd dashboard && FRAUS_CHAVE_ACESSO=<a chave fra_...> npm run dev\n"
             "  A chave morre junto com este banco: a demo o recria a cada boot."
         )
-    return criar_app(banco=banco, motor=motor, chave_mestra=chave_mestra)
+    # As variaveis da autenticacao de USUARIO seguem a mesma regra da mestra
+    # logo acima: a doc promete que defini-las liga o login, e a demo que as
+    # ignorasse quebraria a promessa em silencio -- o mesmo defeito ja pago
+    # com a FRAUS_CHAVE_MESTRA.
+    jwt_segredo = os.environ.get("FRAUS_JWT_SEGREDO") or None
+    if jwt_segredo is None:
+        print(
+            "[api_demo] Login de usuario DESLIGADO (FRAUS_JWT_SEGREDO ausente): "
+            "a dashboard abre sem exigir conta."
+        )
+    return criar_app(
+        banco=banco,
+        motor=motor,
+        chave_mestra=chave_mestra,
+        jwt_segredo=jwt_segredo,
+        codigo_dev=os.environ.get("FRAUS_CODIGO_DEV") or None,
+    )
 
 
 app = montar_app()

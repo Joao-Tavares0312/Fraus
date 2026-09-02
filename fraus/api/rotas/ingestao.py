@@ -1,22 +1,21 @@
 """POST /ingestao -- atendimento vindo de um sistema EXTERNO, pela rede.
 
-E o unico caminho de escrita que nao exige acesso ao disco da maquina: a
-importacao le arquivo de uma pasta local, e isto aqui aceita a conversa pela
-rede, autenticada por chave de FONTE (`frs_...`).
+E um dos dois caminhos de escrita que nao exigem acesso ao disco da maquina --
+o outro e `POST /integracoes/webhook/{fonte_id}`, que autentica por ASSINATURA
+em vez de chave. A importacao le arquivo de uma pasta local; estes dois aceitam
+a conversa pela rede.
 
-O CANAL e o da fonte cadastrada, nao o que veio no corpo, e o score e
-derivado aqui: quem manda o dado nao escolhe em que canal ele e
-contabilizado, do mesmo jeito que nao escolhe a propria nota.
+O que os dois fazem com a conversa depois de autenticada e o MESMO codigo
+(`fraus/api/registro.py`), de proposito: o canal vem da fonte cadastrada e o
+score e derivado no servidor, e duas copias dessa regra divergiriam.
 """
 
-from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import ValidationError
+from fastapi import APIRouter, Depends, Header
 
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoIngestao
+from fraus.api.registro import registrar_conversa
 from fraus.api.seguranca import chave_do_cabecalho, fonte_autorizada
-from fraus.indicadores import nota_0_10
-from fraus.modelos import Conversa
 
 router = APIRouter()
 
@@ -27,48 +26,14 @@ def ingerir(
     authorization: str | None = Header(default=None),
     ctx: Contexto = Depends(obter_contexto),
 ) -> dict:
-    """Recebe atendimento de um sistema EXTERNO, autenticado por chave.
+    """Recebe atendimento de um sistema EXTERNO, autenticado por chave de fonte.
 
-    E o unico caminho de escrita que nao exige acesso ao disco da maquina:
-    a importacao le arquivo de uma pasta local, e isto aqui aceita a
-    conversa pela rede.
+    Fonte desativada recusa com 403 (dentro de `fonte_autorizada`) -- o
+    interruptor da tela de Integracoes precisa de fato desligar alguma coisa.
 
-    O CANAL e o da FONTE cadastrada, nao o que veio no corpo: quem manda o
-    dado nao escolhe em que canal ele e contabilizado, do mesmo jeito que
-    nao escolhe o proprio score. Fonte desativada recusa -- o interruptor
-    da tela de Integracoes precisa de fato desligar alguma coisa.
-
-    Score e categoria sao derivados aqui, como em toda entrada.
+    Score, nota e categoria sao derivados em `registrar_conversa`, como em toda
+    entrada, e ignorados se vierem no corpo.
     """
     chave = chave_do_cabecalho(authorization)
     fonte = fonte_autorizada(ctx.banco, chave)
-
-    try:
-        conversa = Conversa(
-            id=pedido.id,
-            canal=fonte["canal"],
-            iniciada_em=pedido.mensagens[0].enviada_em,
-            encerrada_em=pedido.encerrada_em,
-            escalou_para_humano=pedido.escalou_para_humano,
-            mensagens=sorted(pedido.mensagens, key=lambda m: m.enviada_em),
-        )
-    except ValidationError as erro:
-        raise HTTPException(status_code=400, detail=str(erro)) from erro
-
-    # UMA leitura de curadoria, e e a MESMA que grava a versao: reler abriria
-    # janela para pontuar com um lexico e marcar com a versao de outro.
-    curadoria = ctx.curadoria_vigente()
-    score = ctx.motor.pontuar_conversa(conversa, curadoria)
-    # UMA leitura de faixa por requisicao: derivar a categoria duas vezes
-    # abria janela para a gravacao e a resposta lerem configuracoes
-    # diferentes, e as duas precisam contar a mesma historia.
-    categoria = ctx.categoria_de(score, ctx.faixas_vigentes())
-    ctx.banco.salvar(conversa, score, categoria, lexico_versao=curadoria.versao)
-    return {
-        "id": conversa.id,
-        "canal": conversa.canal,
-        "score": score,
-        "nota": nota_0_10(score) if score is not None else None,
-        "categoria": categoria,
-        "fonte": fonte["nome"],
-    }
+    return registrar_conversa(ctx, pedido, fonte)

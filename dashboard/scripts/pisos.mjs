@@ -123,7 +123,7 @@ function lerCores(bloco) {
 }
 
 /**
- * Resolve os tokens escritos como `--a: var(--b)` -- e ha varios: no grafite
+ * Resolve os tokens escritos como `--a: var(--b)` -- e ha varios: na base
  * `--atelie-marca` e `var(--primary)` e `--marca-cor` e `var(--atelie-marca)`.
  * Sem isto o alias sumiria em silencio do calculo, que e o modo de falha que
  * `contraste.mjs` documenta na lista `fundos`.
@@ -185,7 +185,7 @@ function lerMistura(bloco, nome) {
 const SELETOR_BASE = /:root\s*,\s*\.dark\s*\{/;
 const corpoBase = recortarBloco(css, SELETOR_BASE) ?? "";
 
-const temas = [{ nome: "grafite (base)", corpo: corpoBase }];
+const temas = [{ nome: "espacial (base)", corpo: corpoBase }];
 for (const m of css.matchAll(/^(\.tema-[a-z0-9-]+)\s*\{/gim)) {
   const corpo = recortarBloco(css, m[1]);
   if (corpo) temas.push({ nome: m[1].replace(".tema-", ""), corpo });
@@ -195,6 +195,29 @@ for (const m of css.matchAll(/^(\.tema-[a-z0-9-]+)\s*\{/gim)) {
 // vez de vir de token -- ela e textura, nao luz de tema. Repetida aqui, e o
 // arquivo diz de onde vem para o dia em que mudar.
 const COR_CHUVA = [0.92, 0.08, 250]; // Atelier.tsx, camada da chuva
+
+// O CAMPO DE ESTRELAS (tema "espaco profundo", 01/09/2026) tem cor cravada no
+// `Atelier.tsx` pelo mesmo motivo da chuva: e textura, nao luz de tema. A mais
+// CLARA das tres camadas de ponto, porque piso otimista e pior que piso nenhum.
+const COR_ESTRELAS = [0.98, 0.02, 230]; // Atelier.tsx, camada das estrelas
+
+// A COBERTURA AREAL das estrelas, e sem ela esta camada seria modelada errado
+// por ordens de grandeza -- para MAIS, o que aqui e o lado caro: um piso
+// pessimista demais engrossa vidro que nao precisava engrossar, e vidro grosso
+// apaga exatamente a cena que o tema existe para mostrar.
+//
+// Todas as outras camadas desta lista sao lavagens de tela CHEIA, entao para
+// elas a opacidade do token JA e a contribuicao. As estrelas nao: sao tres
+// tiles com UM ponto cada (raio ~1,2px, com queda para transparente) em
+// periodos de 137, 191 e 89 pixels. A area pintada e ~1,5px^2 num tile de
+// ~18.800px^2 -- da ordem de um decimo de milesimo.
+//
+// E POR QUE A MEDIA E O NUMERO CERTO, e nao o brilho do ponto: o que este
+// script modela e o fundo visto ATRAVES de `backdrop-filter: blur()`. O blur
+// borra o backdrop, ou seja, ele devolve a media local -- pontos isolados
+// viram uma lavagem uniforme do valor medio. Medir a estrela pelo pico seria
+// medir um pixel que o vidro nunca entrega a superficie nenhuma.
+const COBERTURA_ESTRELAS = 0.00008;
 
 const ESPESSURAS = [
   ["fino", "--vidro-fino-fundo", "--vidro-fino-piso"],
@@ -260,6 +283,12 @@ for (const tema of temas) {
   const compor = (ligadas) => {
     const camadas = [
       ["papel pautado", cor("--pauta-cor"), op("--pauta-op")],
+      // Ver COBERTURA_ESTRELAS: a contribuicao e opacidade x area pintada, e
+      // nao a opacidade do token. Entra sempre (nao e alternativa) porque a
+      // mascara dela cobre a tela toda menos o rodape -- ela se sobrepoe a
+      // qualquer uma das duas alternativas abaixo. Somar sempre e a leitura
+      // pessimista, e com uma contribuicao desta ordem ela nao custa nada.
+      ["estrelas", COR_ESTRELAS, op("--estrelas-op") * COBERTURA_ESTRELAS],
       ["mancha da marca", cor("--atelie-marca"), op("--atelie-op-marca")],
       ["mancha fria", cor("--atelie-fria"), op("--atelie-op-fria")],
       // O sol listrado herdou o posto da mancha quente (ver Atelier.tsx). A

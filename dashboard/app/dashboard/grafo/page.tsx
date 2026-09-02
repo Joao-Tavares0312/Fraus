@@ -22,7 +22,7 @@ import { GrafoDaMemoria } from "@/components/grafo/GrafoDaMemoria";
 
 export const dynamic = "force-dynamic";
 
-export default async function PaginaGrafo(props: PageProps<"/grafo">) {
+export default async function PaginaGrafo(props: PageProps<"/dashboard/grafo">) {
   const parametros = await props.searchParams;
   const periodo = lerPeriodo(parametros);
   const grafo = await obterGrafo(periodo.de, periodo.ate);
