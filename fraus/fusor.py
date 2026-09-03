@@ -19,18 +19,24 @@ from fraus.modelos import Conversa
 from fraus.sinais.emocao import features_emocao
 from fraus.sinais.emoji import features_emoji
 from fraus.sinais.estilo import features_estilo
+from fraus.sinais.incongruencia import features_incongruencia
 from fraus.sinais.ironia import features_ironia
 from fraus.sinais.lexico import features_lexico
 from fraus.sinais.tempo import features_tempo
 from fraus.sinais.texto import features_texto
 
-# Ordem canonica das 35 features, agrupadas por familia de sinal. A ordem
+# Ordem canonica das 40 features, agrupadas por familia de sinal. A ordem
 # importa: `vetorizar` produz o vetor nesta sequencia e o fusor treinado espera
 # exatamente ela. Reordenar sem retreinar troca os pesos de lugar em silencio.
 #
 # Subiu de 16 para 35 em 21/08/2026: emocao, lexico e ironia ja existiam e
 # estavam FORA do vetor esperando os notebooks 03 e 04, que agora existem;
 # estilo nasceu junto. Ver a spec de 21/08/2026.
+#
+# Subiu de 35 para 40 em 03/09/2026: a familia `incongruencia_*` entrou para
+# complementar o classificador de ironia, cuja transferencia de dominio
+# (IDPT 2021, tweet e noticia) nunca foi verificada em atendimento. Ver a
+# spec de 03/09/2026 e a bibliografia dela.
 NOMES_FEATURES = [
     # texto (4)
     "texto_prob_insatisfeito_media",
@@ -74,6 +80,12 @@ NOMES_FEATURES = [
     "estilo_palavrao_intensidade",
     "estilo_palavrao_dirigido",
     "estilo_frac_censurado",
+    # incongruencia (5)
+    "incongruencia_polaridade",
+    "incongruencia_emoji_texto",
+    "incongruencia_marcador_contraste",
+    "incongruencia_hiperbole",
+    "incongruencia_aspas_ironicas",
 ]
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
@@ -111,7 +123,7 @@ def montar_features(
     classificador_ironia,
     curadoria=None,
 ) -> dict[str, float]:
-    """Junta os sete sinais numa linha unica de features.
+    """Junta as oito familias de sinal numa linha unica de features.
 
     Os tres classificadores sao OBRIGATORIOS desde que o contrato subiu para 35:
     emocao e ironia deixaram de ser leitura decorativa e passaram a mover a
@@ -120,10 +132,12 @@ def montar_features(
     para o lugar errado.
 
     `curadoria` e opcional e chega POR PARAMETRO, nunca por estado global: e o
-    que o analista ensinou ao lexico, lido a cada requisicao. Ela alcanca as
-    duas familias lexicais e MAIS NENHUMA -- o contrato continua de 35 chaves
-    (invariante 9), e o que ela muda e o VALOR de `lexico_*` e `emoji_*`, jamais
-    o conjunto de features.
+    que o analista ensinou ao lexico, lido a cada requisicao. Ela alcanca TRES
+    familias -- `lexico_*`, `emoji_*` e, desde a subida para 40 features,
+    `incongruencia_*`, que le os dois lexicos por dentro e portanto herda a
+    curadoria deles -- e MAIS NENHUMA: o contrato continua de 40 chaves
+    (invariante 9), e o que ela muda e o VALOR dessas familias, jamais o
+    conjunto de features.
     """
     return {
         **features_texto(conversa, classificador),
@@ -133,6 +147,7 @@ def montar_features(
         **features_lexico(conversa, curadoria),
         **features_ironia(conversa, classificador_ironia),
         **features_estilo(conversa),
+        **features_incongruencia(conversa, curadoria),
     }
 
 

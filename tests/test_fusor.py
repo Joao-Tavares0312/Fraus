@@ -129,8 +129,13 @@ def test_prever_devolve_uma_das_tres_classes():
     assert fusor.prever(_features(texto_prob_satisfeito_media=0.9)) in (0, 1, 2)
 
 
-def test_contrato_tem_trinta_e_cinco_features():
-    assert len(NOMES_FEATURES) == 35
+def test_contrato_tem_quarenta_features_com_incongruencia():
+    from fraus.sinais.incongruencia import CHAVES
+
+    assert len(NOMES_FEATURES) == 40
+    assert len(set(NOMES_FEATURES)) == 40, "nome de feature duplicado"
+    for chave in CHAVES:
+        assert chave in NOMES_FEATURES
 
 
 def test_contrato_nao_tem_duplicata():
@@ -138,11 +143,11 @@ def test_contrato_nao_tem_duplicata():
 
 
 def test_contrato_cobre_todos_os_prefixos_esperados():
-    """Onze prefixos, sete familias: tempo sozinho usa cinco deles."""
+    """Doze prefixos, oito familias: tempo sozinho usa cinco deles."""
     prefixos = {nome.split("_")[0] for nome in NOMES_FEATURES}
     assert prefixos == {
         "texto", "emoji", "latencia", "duracao", "qtd", "escalou",
-        "abandonou", "emocao", "lexico", "ironia", "estilo",
+        "abandonou", "emocao", "lexico", "ironia", "estilo", "incongruencia",
     }
 
 
@@ -235,7 +240,7 @@ def _conversa_com(texto: str) -> Conversa:
 def test_curadoria_atravessa_montar_features():
     """O elo que faltava: sem passar aqui, curar palavra nao moveria o score.
 
-    As 35 chaves continuam as mesmas (invariante 9) -- o que muda e o VALOR de
+    As 40 chaves continuam as mesmas (invariante 9) -- o que muda e o VALOR de
     `lexico_polaridade_media`, nunca o conjunto de features.
     """
     conversa = _conversa_com("o app ta lentissimo")
@@ -263,6 +268,12 @@ def test_curadoria_de_emoji_atravessa_montar_features():
 
     assert sem["emoji_score_medio"] == 0.0
     assert com["emoji_score_medio"] == -0.8
+
+
+def test_montar_features_entrega_o_contrato_completo():
+    conversa = _conversa_com("o atendimento foi otimo")
+    features = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble())
+    assert set(features) == set(NOMES_FEATURES)
 
 
 def test_sem_curadoria_o_vetor_e_o_de_antes():
