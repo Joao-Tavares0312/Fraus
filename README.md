@@ -720,7 +720,7 @@ ordem lá é a ordem de importância.
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as sete famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia e estilo), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
-| **Fusor** | ✅ | contrato e artefato **finalmente batem**: 35 features, sete famílias (texto, emoji, tempo, emoção, léxico, ironia, estilo). O `notebooks/02_treino_fusor.ipynb` rodou em 24/08/2026 e `modelos/fusor.joblib` é o artefato de 35 — `n_features_in_ = 35`, na ordem de `NOMES_FEATURES`. A API real sobe e pontua. `sinais_fora_do_score` continua no payload, vazio |
+| **Fusor** | ⚠️ | contrato e artefato **voltaram a divergir em 03/09/2026**: `NOMES_FEATURES` subiu de 35 para 40 (família `incongruencia_*`), e `modelos/fusor.joblib` continua sendo o artefato de 35 treinado em 24/08/2026 — `n_features_in_ = 35`. Carregar esse artefato contra o vetor novo levanta `ValueError` no `StandardScaler` (comportamento correto, invariante 7); a API real não sobe até o retreino descrito em [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026) rodar de novo no Colab |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -923,7 +923,7 @@ atendimento carrega esse vazamento até este notebook rodar de novo. Não é um
 risco resolvido nem neutro — é um risco que já está dentro do número que a
 tela mostra.
 
-### 2. Retreinar o fusor no contrato de 35
+### 2. Retreinar o fusor no contrato vigente (agora 40, era 35)
 
 São duas coisas distintas, e só uma está feita.
 
@@ -945,13 +945,21 @@ modelo incompatível como falha alta e explícita. Servir predição com um fuso
 que ignora dezenove features seria pior que estar fora do ar — e a falha
 apareceu na carga, não em silêncio no meio de um relatório.
 
-O artefato vigente tem `n_features_in_ = 35` e classes `[0 1 2]`
+O artefato daquela época tinha `n_features_in_ = 35` e classes `[0 1 2]`
 (insatisfeito, neutro, satisfeito — invariante 8). Verificado ponta a ponta
 com os três BERTimbau carregados, sobre conversas do simulador: rótulo
 insatisfeito pontua ~0, neutro ~73–75, satisfeito ~99, e as três categorias de
 NPS saem certas. **Essa separação limpa não é evidência de qualidade**: são
 conversas do próprio gerador sintético, e o número honesto continua sendo os
 **0,93** do conjunto de teste separado.
+
+**Isto voltou a ser dívida em 03/09/2026.** O contrato subiu de novo, para
+**40 features** (a família `incongruencia_*` — ver [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026)),
+e o artefato em `modelos/` **continua sendo o de 35** treinado em 24/08/2026.
+Eles não batem agora: `n_features_in_` do artefato vigente é 35,
+`len(NOMES_FEATURES)` é 40, e a API real não sobe enquanto o notebook 02 não
+rodar de novo com o corpus regenerado. Isto não é histórico — é o estado
+atual, até o retreino acontecer.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),

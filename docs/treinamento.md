@@ -211,17 +211,21 @@ novas em duas levas para curar dois vazamentos de rotulo — o mesmo tipo de
 falha silenciosa que ja custou o primeiro fusor (ver acima), so que desta vez
 em features que ainda nao estavam no vetor:
 
-- **Intensificadores.** Antes, `incongruencia_hiperbole` era nao-zero em
-  45/60 conversas do rotulo satisfeito e ZERO nos rotulos insatisfeito e
-  neutro — um previsor unilateral perfeito de "satisfeito". A literatura
-  inclui hiperbole na deteccao de ironia justamente porque elogio hiperbolico
-  e a forma classica da ironia, entao o fusor teria aprendido a feature ao
-  contrario do que ela significa. Depois da correcao: `insatisfeito 34/60 |
-  neutro 0/60 | satisfeito 45/60`.
-- **Negacao.** `lexico_frac_negados` era 15/60 no rotulo insatisfeito e ZERO
-  nos outros dois — previsor unilateral de "insatisfeito", pre-existente
+- **Intensificadores.** Antes, `incongruencia_hiperbole` era nao-zero na
+  maior parte das conversas do rotulo satisfeito e ZERO nos rotulos
+  insatisfeito e neutro — um previsor unilateral quase perfeito de
+  "satisfeito". A literatura inclui hiperbole na deteccao de ironia
+  justamente porque elogio hiperbolico e a forma classica da ironia, entao o
+  fusor teria aprendido a feature ao contrario do que ela significa. Depois
+  da correcao, medido com `gerar_lote(FRASES_POR_ROTULO, 180, semente=7)` —
+  o mesmo lote e semente da guarda `test_nenhuma_feature_e_previsor_unilateral`
+  em `tests/test_simulador.py`: `insatisfeito 34/60 | neutro 0/60 | satisfeito
+  39/60`.
+- **Negacao.** `lexico_frac_negados` era nao-zero so no rotulo insatisfeito e
+  ZERO nos outros dois — previsor unilateral de "insatisfeito", pre-existente
   desde antes da familia `incongruencia_*` e nunca notado por falta de guarda
-  na familia `lexico_*`. Depois: `insatisfeito 15 | neutro 17 | satisfeito 21`.
+  na familia `lexico_*`. Depois, medido com o mesmo lote e semente acima:
+  `insatisfeito 15/60 | neutro 17/60 | satisfeito 21/60`.
 
 **Consequencia pratica: o notebook 02 precisa REGERAR o corpus sintetico, nao
 reusar um lote cacheado de uma execucao anterior.** O notebook 02 ja gera o
@@ -233,7 +237,9 @@ antiga do Colab e tentar reaproveitar: um lote assim traz os dois vazamentos
 de volta.
 
 **O notebook ja importa o contrato do pacote, nao repete a lista.** A celula
-5 faz `from fraus.fusor import NOMES_FEATURES, montar_features` e chama
+marcada com o comentario `# 5. Os SETE sinais de cada conversa, pelo MESMO
+codigo que a API usa` (indice 8 do `.ipynb`, contando a partir de 0) faz
+`from fraus.fusor import NOMES_FEATURES, montar_features` e chama
 `montar_features` com os tres classificadores — as cinco features novas
 entram sozinhas, sem editar o notebook. Isso ja era assim antes desta rodada
 (o vazamento do ramo obsoleto registrado na celula 2 foi outra causa, a de
