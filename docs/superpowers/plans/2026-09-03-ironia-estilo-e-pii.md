@@ -840,72 +840,128 @@ git commit -m "feat(fusor): contrato sobe para 40 features com a familia incongr
 
 ---
 
-### Task 6: Guarda contra vazamento de rótulo nas features novas
+### Task 6: Guarda contra vazamento de rotulo nas features novas
 
 **Files:**
-- Create: `tests/test_incongruencia_nao_vaza_rotulo.py`
+- Modify: `tests/test_simulador.py`
 
 **Interfaces:**
-- Consumes: `features_incongruencia` da Task 4; o simulador de `fraus/ingest/simulador.py`.
-- Produces: nada consumido por outras tasks — é uma guarda.
+- Consumes: `features_incongruencia` e `CHAVES` da Task 4; `FRASES_POR_ROTULO`, `gerar_lote` de `fraus/ingest/simulador.py`.
+- Produces: nada consumido por outras tasks -- e uma guarda.
 
-**Por quê:** o invariante 10 do projeto existe porque uma faixa de latência disjunta por classe fez o primeiro fusor marcar 99,3% lendo só o relógio. Feature nova entra no vetor com essa suspeita até prova em contrário: se `incongruencia_*` tiver distribuição disjunta por rótulo no corpus de treino, o retreino da Task 7 aprende a ler a feature em vez do texto e ninguém percebe.
+**Por que esta task existe:** o invariante 10 do projeto existe porque uma faixa
+de latencia disjunta por classe fez o primeiro fusor marcar 99,3% lendo so o
+relogio, com o BERTimbau apagado. Feature nova entra no vetor sob suspeita: se
+`incongruencia_*` separar as classes sozinha no corpus sintetico, o retreino da
+Task 7 aprende a ler a feature em vez do texto e ninguem percebe.
 
-- [ ] **Step 1: Write the failing test**
+**IMPORTANTE -- siga o padrao que ja existe.** `tests/test_simulador.py` ja faz
+esta guarda para a familia `estilo_*`, e faz melhor do que o rascunho anterior
+desta task. Leia os testes existentes (`agrupado_por_rotulo`,
+`test_estilo_varia_dentro_de_cada_rotulo`,
+`test_distribuicoes_de_estilo_se_sobrepoem_entre_rotulos`) e ESPELHE a forma
+deles. Nao invente uma terceira maneira de fazer a mesma pergunta.
 
-Crie `tests/test_incongruencia_nao_vaza_rotulo.py`:
+A API real do simulador:
+```python
+from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_lote
+# gerar_lote(frases_por_rotulo: dict[int, list[str]], quantidade: int, semente: int)
+#   -> list[tuple[Conversa, int]]     # (conversa, rotulo)
+```
+
+Duas perguntas diferentes, ambas importam:
+
+1. **A feature varia dentro de cada rotulo?** Feature constante no treino nasce
+   com peso zero -- e o bug do emoji na v1, ja documentado no arquivo.
+2. **As distribuicoes se sobrepoem entre rotulos?** Disjuncao e o vazamento.
+
+- [ ] **Step 1: Write the test**
+
+Acrescente a `tests/test_simulador.py`, no registro do arquivo:
 
 ```python
-"""As cinco features novas nao podem separar as classes sozinhas.
+@pytest.fixture(scope="module")
+def incongruencia_por_rotulo() -> dict[int, list[dict]]:
+    """Mesmo lote e mesma semente da guarda de estilo -- comparavel de proposito."""
+    agrupado: dict[int, list[dict]] = {0: [], 1: [], 2: []}
+    for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, 180, semente=7):
+        agrupado[rotulo].append(features_incongruencia(conversa))
+    return agrupado
 
-Invariante 10 do projeto: corpus de treino nao entrega o rotulo. Faixa
-disjunta por classe ja fez um fusor deste projeto marcar 99,3% lendo so o
-relogio, com o BERTimbau apagado. Feature nova chega sob suspeita.
-"""
 
-from fraus.sinais.incongruencia import CHAVES, features_incongruencia
+def test_nenhuma_incongruencia_separa_as_classes_sozinha(incongruencia_por_rotulo):
+    """Invariante 10: corpus de treino nao entrega o rotulo.
 
-
-def test_nenhuma_feature_separa_as_classes_sozinha():
-    from fraus.ingest.simulador import gerar_conversas
-
-    # Consulte a assinatura real de `gerar_conversas` antes de rodar: o
-    # simulador devolve conversas com rotulo conhecido. Agrupe por rotulo.
-    conversas_por_rotulo = gerar_conversas(n=90, semente=42)
-
-    for chave in CHAVES:
-        faixas = {}
-        for rotulo, conversas in conversas_por_rotulo.items():
-            valores = [features_incongruencia(c)[chave] for c in conversas]
-            faixas[rotulo] = (min(valores), max(valores))
-
-        # Disjuncao = o maximo de uma classe abaixo do minimo de outra.
-        rotulos = sorted(faixas)
-        for i, a in enumerate(rotulos):
-            for b in rotulos[i + 1:]:
+    Disjuncao = o maximo de uma classe abaixo do minimo de outra. Se isto
+    falhar, a feature acusada NAO pode entrar no vetor como esta, e a cura e
+    mexer no CORPUS (como se fez com a latencia log-normal), NUNCA afrouxar
+    esta asercao.
+    """
+    for chave in CHAVES_INCONGRUENCIA:
+        faixas = {
+            rotulo: (
+                min(linha[chave] for linha in linhas),
+                max(linha[chave] for linha in linhas),
+            )
+            for rotulo, linhas in incongruencia_por_rotulo.items()
+        }
+        for a in sorted(faixas):
+            for b in sorted(faixas):
+                if a >= b:
+                    continue
                 assert not (faixas[a][1] < faixas[b][0]), (
-                    f"{chave} separa {a} de {b} sozinha: "
-                    f"{faixas[a]} nao encosta em {faixas[b]}"
+                    f"{chave} separa {a} de {b}: {faixas[a]} nao encosta em {faixas[b]}"
+                )
+                assert not (faixas[b][1] < faixas[a][0]), (
+                    f"{chave} separa {b} de {a}: {faixas[b]} nao encosta em {faixas[a]}"
                 )
 ```
 
-**Antes de rodar:** abra `fraus/ingest/simulador.py` e ajuste a chamada `gerar_conversas` à assinatura real (nome da função, parâmetros, e como o rótulo vem junto). O simulador é determinístico por semente — use uma semente fixa para o teste não oscilar.
+`CHAVES_INCONGRUENCIA` vem de `from fraus.sinais.incongruencia import CHAVES`.
+Use o nome que couber no registro do arquivo (ele ja tem `CHAVES_ESTILO`).
 
-- [ ] **Step 2: Run test to verify it fails or passes meaningfully**
+- [ ] **Step 2: Rodar e INTERPRETAR**
 
-Run: `uv run pytest tests/test_incongruencia_nao_vaza_rotulo.py -v`
-Expected: PASS se as features se sobrepõem entre classes (o desejado). **Se FALHAR**, isso é um achado real, não um teste ruim: a feature acusada não pode entrar no vetor como está. Pare, relate ao João qual feature separou quais classes e com que faixas, e não prossiga para a Task 7 sem decisão dele.
+Run: `uv run pytest tests/test_simulador.py -v -k incongruencia`
 
-O simulador não gera emoji nem aspas irônicas, então `incongruencia_emoji_texto` e `incongruencia_aspas_ironicas` provavelmente saem constantes em zero para todas as classes. Isso **não** é vazamento — é o oposto: feature constante no treino nasce com peso zero, e o próprio CLAUDE.md já registra isso. Se o teste acusar disjunção por conta de faixas degeneradas `(0.0, 0.0)` iguais em todas as classes, a asserção `faixas[a][1] < faixas[b][0]` não dispara (0.0 não é menor que 0.0), então o caso já está tratado.
+Tres desfechos, e o que fazer em cada:
 
-- [ ] **Step 3: Commit**
+- **PASSA:** as features se sobrepoem. Siga para o Step 3.
+- **FALHA por disjuncao:** achado REAL, nao teste ruim. **PARE e reporte** qual
+  feature separou quais rotulos e com que faixas. Nao afrouxe a asercao, nao
+  mexa no codigo pra fazer passar, e nao siga adiante.
+- **Faixa degenerada `(0.0, 0.0)` em todas as classes:** feature constante no
+  sintetico. NAO e vazamento -- e o oposto, e nasce com peso zero. A asercao
+  nao dispara. Mas ANOTE quais features ficaram constantes: e limitacao
+  declarada que a Task 7 registra em `docs/treinamento.md`.
+
+- [ ] **Step 3: Levantar a distribuicao real**
+
+A Task 7 precisa desta saida no relatorio:
 
 ```bash
-git add tests/test_incongruencia_nao_vaza_rotulo.py
-git commit -m "test(incongruencia): guarda contra vazamento de rotulo nas features novas"
+uv run python -c "
+from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_lote
+from fraus.sinais.incongruencia import CHAVES, features_incongruencia
+import statistics
+por_rotulo = {0: [], 1: [], 2: []}
+for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, 180, semente=7):
+    por_rotulo[rotulo].append(features_incongruencia(conversa))
+for chave in CHAVES:
+    partes = []
+    for rotulo, linhas in sorted(por_rotulo.items()):
+        v = [l[chave] for l in linhas]
+        partes.append(f'{rotulo}: med={statistics.mean(v):.3f} dp={statistics.pstdev(v):.3f} max={max(v):.3f}')
+    print(f'{chave:38} ' + ' | '.join(partes))
+"
 ```
 
----
+- [ ] **Step 4: Commit**
+
+```bash
+git add tests/test_simulador.py
+git commit -m "test(incongruencia): guarda contra vazamento de rotulo nas features novas"
+```
 
 ### Task 7: Documentar o retreino do fusor
 
