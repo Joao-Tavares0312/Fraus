@@ -224,3 +224,50 @@ def test_lexicon_nao_tem_termo_multipalavra_nem_hifen():
     for termo in carregar_palavroes():
         assert " " not in termo, termo
         assert "-" not in termo, termo
+
+
+def test_estilo_da_mensagem_le_uma_fala_por_vez():
+    from fraus.sinais.estilo import estilo_da_mensagem
+
+    # "ABSURDO" nao serve de exemplo aqui: esta no lexicon de palavrao (leve),
+    # o que faria este teste de gritaria/alongamento tropecar sem querer no
+    # teste de palavrao. Ver test_estilo_da_mensagem_marca_palavrao_com_intensidade.
+    leitura = estilo_da_mensagem("ISSO E TERRIVEL!!! naaaao acredito")
+    assert leitura["caixa_alta"] is True
+    assert leitura["alongamento"] is True
+    assert leitura["pontuacao_enfatica"] == 1
+    assert leitura["palavrao"] is None
+    assert leitura["censura"] is False
+
+
+def test_estilo_da_mensagem_sem_marca_nenhuma():
+    from fraus.sinais.estilo import estilo_da_mensagem
+
+    leitura = estilo_da_mensagem("bom dia, preciso de ajuda com o pedido")
+    assert leitura["caixa_alta"] is False
+    assert leitura["alongamento"] is False
+    assert leitura["pontuacao_enfatica"] == 0
+    assert leitura["palavrao"] is None
+    assert leitura["palavrao_dirigido"] is False
+    assert leitura["censura"] is False
+
+
+def test_estilo_da_mensagem_marca_palavrao_com_intensidade():
+    from fraus.sinais.estilo import estilo_da_mensagem
+
+    leitura = estilo_da_mensagem("que droga de sistema")
+    assert leitura["palavrao"] == 0.33
+    assert leitura["palavrao_dirigido"] is False
+
+
+def test_estilo_da_mensagem_marca_censura():
+    from fraus.sinais.estilo import estilo_da_mensagem
+
+    leitura = estilo_da_mensagem("que p*rra e essa")
+    assert leitura["censura"] is True
+
+
+def test_sigla_nao_conta_como_grito_na_leitura_por_mensagem():
+    from fraus.sinais.estilo import estilo_da_mensagem
+
+    assert estilo_da_mensagem("preciso do CPF")["caixa_alta"] is False

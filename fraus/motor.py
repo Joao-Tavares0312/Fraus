@@ -9,6 +9,7 @@ from fraus.fusor import Fusor, montar_features
 from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
                                  desprezo_derivado)
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji
+from fraus.sinais.estilo import estilo_da_mensagem
 from fraus.sinais.ironia import IRONICO, ClassificadorIronia
 from fraus.sinais.palavras import pesos_das_palavras, vocabulario
 from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
@@ -145,6 +146,11 @@ class Motor:
                     ),
                     "emocao": emocao_por_indice.get(indice),
                     "prob_ironia": ironia_por_indice.get(indice),
+                    # Estilo e deterministico e nao depende de classificador:
+                    # sai para TODA mensagem, inclusive as do bot, e a tela
+                    # decide o que mostrar. As features do fusor continuam
+                    # lendo so o cliente -- `features_estilo` nao mudou.
+                    "estilo": estilo_da_mensagem(mensagem.texto),
                 }
             )
 
@@ -237,4 +243,5 @@ class Motor:
             # separada em vez de mais uma classe de satisfacao.
             "emocao": emocoes[0] if emocoes else None,
             "prob_ironia": ironias[0] if ironias else None,
+            "estilo": estilo_da_mensagem(texto),
         }

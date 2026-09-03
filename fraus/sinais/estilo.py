@@ -237,6 +237,55 @@ def _tem_alongamento(palavra: str) -> bool:
     return False
 
 
+def estilo_da_mensagem(texto: str) -> dict:
+    """A leitura de estilo de UMA fala, para a tela mostrar onde ela aconteceu.
+
+    `features_estilo` agrega a conversa inteira -- e o que o fusor consome, e
+    e a media que pesa na nota. Esta funcao responde outra pergunta: em QUAL
+    mensagem a marca apareceu. Uma conversa com 5% de caixa alta pode ser uma
+    fala gritada entre dezenove calmas ou vinte falas levemente enfaticas, e a
+    media nao distingue as duas.
+
+    As duas leituras compartilham as MESMAS funcoes auxiliares de proposito:
+    duas implementacoes da pergunta "isto e um grito?" divergiriam na
+    fronteira, e a tela passaria a marcar o que a feature nao marcou.
+    """
+    palavras = PALAVRA.findall(texto)
+    lexicon = carregar_palavroes()
+
+    intensidade_maxima = None
+    dirigido = False
+    censurada = False
+
+    for palavra in palavras:
+        if tem_censura(palavra):
+            entrada = casar_censurado(palavra, lexicon)
+            if any(c.isalpha() for c in palavra):
+                if entrada is not None:
+                    censurada = True
+            else:
+                censurada = True
+        else:
+            entrada = lexicon.get(normalizar(palavra))
+        if entrada is not None:
+            valor, alvo_pessoa = entrada
+            if intensidade_maxima is None or valor > intensidade_maxima:
+                intensidade_maxima = valor
+            dirigido = dirigido or alvo_pessoa
+
+    return {
+        "caixa_alta": any(_e_grito(p) for p in palavras),
+        "alongamento": any(_tem_alongamento(p) for p in palavras),
+        "pontuacao_enfatica": len(PONTUACAO_ENFATICA.findall(texto)),
+        # O MAXIMO e nao a media: numa fala so, a media diluiria o xingamento
+        # pesado entre os leves da mesma frase, e o que a tela precisa
+        # mostrar e o pior que apareceu ali.
+        "palavrao": intensidade_maxima,
+        "palavrao_dirigido": dirigido,
+        "censura": censurada,
+    }
+
+
 def features_estilo(conversa: Conversa) -> dict[str, float]:
     """Agrega a FORMA da escrita das mensagens DO CLIENTE.
 
