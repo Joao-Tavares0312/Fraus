@@ -9,8 +9,20 @@ CPF virando token que o BERTimbau tenta interpretar.
 POR QUE checksum onde da para ter: numero de pedido, protocolo e valor sao os
 tokens mais comuns de um chat de atendimento, e apagar todos eles empobrece o
 texto que alimenta os sinais -- o mesmo raciocinio que `fraus/sinais/estilo.py`
-ja documenta para digito puro. CPF e cartao tem digito verificador, entao para
-esses dois a duvida nao existe: ou o numero fecha a conta ou nao e um deles.
+ja documenta para digito puro. CPF e cartao tem digito verificador, o que
+reduz a duvida mas NAO a elimina: o digito verificador do CPF (`_cpf_valido`)
+e exato -- so 11 digitos entre 10^10 fecham a conta, entao aceitar por engano
+uma sequencia arbitraria e raro na pratica. Luhn (`_luhn_valido`), usado para
+cartao, e mais fraco: aceita cerca de 1 em cada 10 sequencias de digitos
+arbitrarias (o digito de checagem tem 10 valores possiveis e so um fecha a
+conta). Um protocolo ou timestamp que por acaso bater no Luhn passa por
+cartao. Exemplo real: "protocolo 20260903120000 aberto" (um timestamp
+AAAAMMDDHHMMSS de 14 digitos, formato comum de protocolo de atendimento) vira
+"protocolo [CARTAO] aberto" porque a sequencia fecha o Luhn por coincidencia.
+Isso e falso-positivo aceito, nao bug: mascarar um protocolo custa uma feature
+de estilo levemente mais pobre; deixar passar um cartao de verdade custa um
+dado sensivel vazado. A assimetria de custo e o motivo de manter o checksum
+mesmo sabendo que ele erra por excesso de zelo.
 
 TELEFONE NAO TEM CHECKSUM, e ai a duvida e real: "12345678901" e um protocolo
 ou um celular com DDD digitado corrido? Sao indistinguiveis. A decisao do Joao
@@ -51,6 +63,25 @@ MARCADORES = {
     "cartao": "[CARTAO]",
     "endereco": "[ENDERECO]",
 }
+
+# O miolo de cada marcador, sem colchetes -- "CPF", "EMAIL", etc. Derivado de
+# `MARCADORES`, nunca digitado de novo: uma segunda lista aqui divergiria no
+# dia em que alguem acrescentasse um marcador novo e esquecesse desta.
+#
+# Existe porque o regex de palavra dos sinais (`PALAVRA` em
+# `fraus/sinais/estilo.py`, `_TOKEN` em `fraus/sinais/lexico.py`) nao inclui
+# `[` nem `]` -- os colchetes caem fora do token, e o miolo maiusculo sobra
+# como uma palavra de 3+ letras isupper(). Sem exclusao explicita, isso e
+# contado como grito (`estilo_frac_caixa_alta`) e infla o denominador de toda
+# fracao de estilo e de `lexico_cobertura`, mesmo o `[CPF]` nao sendo fala do
+# cliente -- e uma cicatriz que o proprio sistema deixou no texto ao censurar.
+# "[CPF]" escapava disso POR ACIDENTE ate agora, porque "CPF" ja estava em
+# `SIGLAS` (o cliente escreve "meu CPF") -- os outros quatro marcadores nao
+# tinham essa sorte. Nao remova esta exclusao achando-a redundante com
+# `SIGLAS`: o acoplamento entre `sinais/` e `seguranca/` e deliberado, porque
+# o silencio (duas listas que deveriam concordar e nao concordam) e pior do
+# que o import explicito.
+TOKENS_MARCADORES = frozenset(marcador.strip("[]") for marcador in MARCADORES.values())
 
 # Formato do CPF: 11 digitos, com ou sem os separadores usuais. A validacao
 # do digito verificador acontece depois, em `_cpf_valido`.

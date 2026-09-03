@@ -52,6 +52,17 @@ def test_mistura_de_tipos_na_mesma_mensagem():
     assert resultado == "cpf [CPF] e email [EMAIL]"
 
 
+def test_protocolo_em_formato_de_timestamp_falso_positivo_do_luhn():
+    """Achado 3 da revisao final: a docstring do modulo dizia que CPF e
+    cartao "nao tem duvida" por ter digito verificador -- falso para Luhn, que
+    aceita ~1 em 10 sequencias arbitrarias. Este e o contraexemplo citado na
+    docstring: um protocolo em formato de timestamp (AAAAMMDDHHMMSS) que bate
+    no Luhn por coincidencia. E falso-positivo ACEITO (privacidade vence
+    sinal), nao regressao -- este teste trava o exemplo citado, nao pede para
+    mudar o comportamento."""
+    assert censurar_pii("protocolo 20260903120000 aberto") == "protocolo [CARTAO] aberto"
+
+
 def test_prosa_com_rua_solta_nao_e_mascarada_como_endereco():
     """Regressao: 'rua'/'avenida' soltas na prosa, seguidas de numero que
     nao e endereco (hora, minutos), nao podem comer o relato de sentimento.

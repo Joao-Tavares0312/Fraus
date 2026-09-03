@@ -18,6 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from fraus.modelos import Conversa
+from fraus.seguranca.pii import TOKENS_MARCADORES
 
 CAMINHO_PALAVROES = Path(__file__).parent.parent / "dados" / "palavroes_ptbr.csv"
 
@@ -250,7 +251,10 @@ def estilo_da_mensagem(texto: str) -> dict:
     duas implementacoes da pergunta "isto e um grito?" divergiriam na
     fronteira, e a tela passaria a marcar o que a feature nao marcou.
     """
-    palavras = PALAVRA.findall(texto)
+    # Marcador de censura de PII ("[CPF]", "[EMAIL]" etc.) perde os colchetes
+    # neste tokenizador e sobra maiusculo -- excluido aqui para nao contar
+    # como grito nem como fala do cliente (ver `TOKENS_MARCADORES`).
+    palavras = [p for p in PALAVRA.findall(texto) if p not in TOKENS_MARCADORES]
     lexicon = carregar_palavroes()
 
     intensidade_maxima = None
@@ -308,7 +312,11 @@ def features_estilo(conversa: Conversa) -> dict[str, float]:
     lexicon = carregar_palavroes()
     palavras: list[str] = []
     for texto in textos:
-        palavras.extend(PALAVRA.findall(texto))
+        # Mesma exclusao de `estilo_da_mensagem`: marcador de censura de PII
+        # nao entra nem no numerador nem no denominador -- ele nao e palavra
+        # do cliente, e conta-lo aqui inflaria toda fracao de estilo com uma
+        # cicatriz que o proprio sistema deixou no texto ao censurar.
+        palavras.extend(p for p in PALAVRA.findall(texto) if p not in TOKENS_MARCADORES)
 
     if not palavras:
         return vazio

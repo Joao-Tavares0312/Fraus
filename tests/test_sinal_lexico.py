@@ -177,3 +177,24 @@ def test_sem_curadoria_o_comportamento_e_o_de_antes():
     """A garantia de que esta mudanca nao mexeu no que ja funcionava."""
     conversa = _conversa(["o atendimento foi otimo"])
     assert features_lexico(conversa) == features_lexico(conversa, None)
+
+
+# Achado 1 da revisao final (03/09/2026): marcador de censura de PII entrava
+# como token no denominador de `lexico_cobertura` e em `anotar_texto`. Ver
+# `fraus.seguranca.pii.TOKENS_MARCADORES` e o mesmo achado em test_sinal_estilo.py.
+def test_marcador_de_pii_nao_aparece_em_anotar_texto():
+    achados = anotar_texto("otimo atendimento [TELEFONE]")
+    assert all(termo != "telefone" for termo, _, _ in achados)
+
+
+def test_marcador_de_pii_nao_move_a_cobertura_lexica():
+    """O marcador de censura, sozinho, nao pode inflar o denominador. Nao
+    compara texto cru com censurado -- o telefone cru ja contribuia tokens
+    proprios (`11`, `91234-5678`) para o denominador antes de virar marcador,
+    entao a comparacao correta e contra a MESMA frase sem PII nenhuma."""
+    sem_pii = _conversa(["otimo atendimento"])
+    com_marcador = _conversa(["otimo atendimento [TELEFONE]"])
+    assert (
+        features_lexico(sem_pii)["lexico_cobertura"]
+        == features_lexico(com_marcador)["lexico_cobertura"]
+    )

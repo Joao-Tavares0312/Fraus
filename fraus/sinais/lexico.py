@@ -32,6 +32,7 @@ from pathlib import Path
 from fraus.modelos import Conversa
 from fraus.sinais.curadoria import CURADORIA_VAZIA, Curadoria
 from fraus.sinais.normalizacao import sem_acento
+from fraus.seguranca.pii import TOKENS_MARCADORES
 
 CAMINHO_LEXICON = Path(__file__).parent.parent / "dados" / "sentilex_pt02.csv"
 
@@ -55,6 +56,14 @@ MAIOR_NGRAMA = 5
 _TOKEN = re.compile(r"[0-9a-zà-ÿA-ZÀ-Ý\-]+")
 # Pontuacao forte encerra o escopo da negacao: "nao chegou. otimo atendimento".
 _FRONTEIRA = re.compile(r"[.!?;]")
+
+# Miolo minusculo dos marcadores de censura de PII ("cpf", "email", ...):
+# `_segmentos` reduz o texto a minusculas antes de tokenizar, entao
+# `TOKENS_MARCADORES` (maiusculo, vindo de `fraus/seguranca/pii.py`) precisa
+# ser comparado em minusculas aqui. Mesmo raciocinio de `estilo.py`: o
+# marcador nao e palavra do cliente, e contá-lo infla `lexico_cobertura`
+# (mesmo sem achar polaridade -- ele ainda entraria no denominador de tokens).
+_TOKENS_MARCADORES_MINUSCULOS = frozenset(t.lower() for t in TOKENS_MARCADORES)
 
 
 @lru_cache(maxsize=1)
@@ -143,7 +152,10 @@ def anotar_texto(
     """
     achados: list[tuple[str, int, bool]] = []
     for segmento in _segmentos(texto):
-        tokens = _TOKEN.findall(segmento)
+        tokens = [
+            t for t in _TOKEN.findall(segmento)
+            if t not in _TOKENS_MARCADORES_MINUSCULOS
+        ]
         negacao_ate = -1
         indice = 0
         while indice < len(tokens):
@@ -185,7 +197,12 @@ def features_lexico(
         }
 
     achados = [a for texto in textos for a in anotar_texto(texto, curadoria)]
-    total_tokens = sum(len(_TOKEN.findall(texto.lower())) for texto in textos)
+    # Mesma exclusao de `anotar_texto`: marcador de censura de PII nao entra
+    # no denominador de `lexico_cobertura` -- nao e token do cliente.
+    total_tokens = sum(
+        sum(1 for t in _TOKEN.findall(texto.lower()) if t not in _TOKENS_MARCADORES_MINUSCULOS)
+        for texto in textos
+    )
 
     if not achados:
         return {
