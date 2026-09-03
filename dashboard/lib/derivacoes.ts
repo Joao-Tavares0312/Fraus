@@ -60,10 +60,33 @@ export const CSAT_SAUDAVEL = { de: 75, ate: 85 };
  * mesma linha em que a categoria dizia "Detrator". Uma fonte so.
  */
 
-export function categoriaDaNota(nota: number): Categoria {
-  if (nota <= 6) return "detrator";
-  if (nota <= 8) return "neutro";
-  return "promotor";
+/**
+ * Categoria de uma nota SEGUNDO AS FAIXAS VIGENTES.
+ *
+ * As faixas chegam por parametro, exatamente como no servidor: a invariante 4
+ * diz que a faixa vigente e passada para `categoria_nps`/`calcular_nps`, nunca
+ * lida de estado global nem digitada de novo em outro lugar. Ate 03/09/2026
+ * esta funcao tinha `nota <= 6` e `nota <= 8` escritos no corpo, e isso valia
+ * no caminho FELIZ -- entao um operador que movesse as faixas em Configuracoes
+ * fazia a mesma tela dar dois vereditos para o mesmo atendimento: a etiqueta da
+ * linha vinha do servidor, com as faixas novas, e a cor da barra vinha daqui,
+ * com as antigas.
+ *
+ * `FAIXAS_NPS` continua existindo como PADRAO DE FABRICA, e e o que sobra
+ * quando `GET /configuracoes` falha -- e o mesmo padrao do resto da tela:
+ * degradar para o de fabrica declarado, nunca para um numero inventado.
+ */
+export function categoriaDaNota(
+  nota: number,
+  faixas?: Record<string, [number, number]>,
+): Categoria {
+  if (faixas) {
+    for (const [categoria, [de, ate]] of Object.entries(faixas)) {
+      if (nota >= de && nota <= ate) return categoria as Categoria;
+    }
+  }
+  const fabrica = FAIXAS_NPS.find(({ de, ate }) => nota >= de && nota <= ate);
+  return fabrica?.categoria ?? "detrator";
 }
 
 export function npsDeCategorias(categorias: Categoria[]): number | null {
@@ -316,7 +339,10 @@ export type BarraDistribuicao = {
   quantidade: number;
 };
 
-export function distribuicaoDeNotas(resumos: ResumoConversa[]): {
+export function distribuicaoDeNotas(
+  resumos: ResumoConversa[],
+  faixas?: Record<string, [number, number]>,
+): {
   barras: BarraDistribuicao[];
   semSinal: number;
 } {
@@ -335,7 +361,7 @@ export function distribuicaoDeNotas(resumos: ResumoConversa[]): {
     barras: contagem.map((quantidade, nota) => ({
       nota,
       rotulo: String(nota),
-      categoria: categoriaDaNota(nota),
+      categoria: categoriaDaNota(nota, faixas),
       quantidade,
     })),
     semSinal,
