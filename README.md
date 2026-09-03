@@ -39,8 +39,9 @@ por um classificador leve:
 | **Ironia** ⚠️ | cabeça binária sobre o IDPT 2021 | texto positivo com sentido negativo derruba a leitura dos outros sinais |
 | **Estilo** | caixa alta, pontuação, alongamento, palavrão, censura | a forma de escrever carrega afeto que a palavra sozinha não carrega |
 
-As sete famílias somam **35 features** e todas entram no vetor desde 21/08/2026
-— ver [contrato de features](docs/treinamento.md#contrato-de-features).
+As sete famílias somam **40 features** (as cinco de `incongruencia_*` entraram
+em 03/09/2026) e todas entram no vetor desde 21/08/2026 — ver [contrato de
+features](docs/treinamento.md#contrato-de-features).
 
 ⚠️ *a cabeça de ironia tem vazamento de corpus medido e pontua assim mesmo — é
 dívida assumida, não pendência de integração; ver [pendência 1](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida).*
@@ -137,8 +138,8 @@ léxico anterior") em vez de esconder, e a contagem ignora o filtro de período 
 propósito: a régua misturada é propriedade do banco, não da semana que se olha.
 
 `POST /conversas/repontuar` zera a divergência. **Limitação declarada:** ele roda
-os três BERTimbau de novo por conversa — o vetor é de 35 features e o fusor exige
-as 35, então não existe recalcular só as três léxicas e as cinco de emoji. Em
+os três BERTimbau de novo por conversa — o vetor é de 40 features e o fusor exige
+as 40, então não existe recalcular só as três léxicas e as cinco de emoji. Em
 dezenas de atendimentos são segundos; em milhares vira trabalho de fila, e a fila
 não existe. A rota é **síncrona de propósito**: uma fila que ninguém observa
 seria pior que uma espera que se vê.

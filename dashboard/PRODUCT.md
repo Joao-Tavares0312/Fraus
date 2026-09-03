@@ -29,7 +29,7 @@ precisão o que nele é medido e o que é estimado.
 
 ## Positioning
 
-Fusão de **35 features, sete famílias de sinal** — texto (BERTimbau
+Fusão de **40 features, sete famílias de sinal** — texto (BERTimbau
 fine-tunado), emoji (Emoji Sentiment Ranking, com a posição relativa na
 mensagem como feature), tempo (latência como feature aprendida, não
 penalidade linear), emoção (sete classes + desprezo derivado), léxico

@@ -24,7 +24,7 @@ CSV / Discord / WhatsApp
  │por      │+ posi-  │escala-  │ses +    │-PT02 +  │binária  │         │
  │mensagem │ção      │ção      │desprezo │negação  │         │palavrão │
  └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┘
-            ↓  35 features
+            ↓  40 features
       Fusor (LogisticRegression + StandardScaler)
             ↓  score 0–100
    nota 0–10 → categoria NPS → indicadores agregados
