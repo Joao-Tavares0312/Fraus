@@ -50,3 +50,21 @@ def test_texto_sem_pii_fica_intacto():
 def test_mistura_de_tipos_na_mesma_mensagem():
     resultado = censurar_pii("cpf 529.982.247-25 e email joao@exemplo.com")
     assert resultado == "cpf [CPF] e email [EMAIL]"
+
+
+def test_prosa_com_rua_solta_nao_e_mascarada_como_endereco():
+    """Regressao: 'rua'/'avenida' soltas na prosa, seguidas de numero que
+    nao e endereco (hora, minutos), nao podem comer o relato de sentimento.
+    """
+    assert (
+        censurar_pii("a rua estava cheia hoje as 20h e o pedido numero 55 chegou")
+        == "a rua estava cheia hoje as 20h e o pedido numero 55 chegou"
+    )
+    assert (
+        censurar_pii(
+            "andei pela avenida inteira e cheguei enrolado demorou "
+            "45 minutos no total 2026"
+        )
+        == "andei pela avenida inteira e cheguei enrolado demorou "
+        "45 minutos no total 2026"
+    )

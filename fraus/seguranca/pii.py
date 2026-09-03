@@ -17,10 +17,29 @@ ou um celular com DDD digitado corrido? Sao indistinguiveis. A decisao do Joao
 em 03/09/2026 foi MASCARAR -- privacidade vence sinal, e um protocolo perdido
 custa menos que um telefone vazado. E limitacao declarada, nao descuido.
 
-LIMITACAO DECLARADA: endereco e heuristica de "tipo de logradouro + numero" e
-tem falso-negativo alto (endereco sem essas palavras nao e pego). Nome
-proprio sozinho NAO e coberto: exigiria NER, que e modelo a mais e esta fora
-do escopo. O que esta aqui e o que se identifica por padrao deterministico.
+LIMITACAO DECLARADA (falso-negativo): endereco e heuristica de "tipo de
+logradouro + numero" e tem falso-negativo alto (endereco sem essas palavras
+nao e pego). Nome proprio sozinho NAO e coberto: exigiria NER, que e modelo
+a mais e esta fora do escopo. O que esta aqui e o que se identifica por
+padrao deterministico.
+
+LIMITACAO DECLARADA (falso-positivo): a primeira versao do padrao de endereco
+casava a palavra solta ("rua", "avenida" etc.) e comia ate 60 caracteres
+livres ate o proximo digito -- o que capturava prosa inteira sempre que um
+numero aparecia depois, tipo hora do dia ou minutos de espera. Exemplo real:
+"a rua estava cheia hoje as 20h" virava "a [ENDERECO]h", apagando exatamente
+o relato de sentimento que os sete sinais leem. O texto do cliente e o
+produto deste sistema -- perder frase de queixa custa mais caro que deixar
+passar um endereco. Por isso o nome da via esta limitado a NO MAXIMO 3
+palavras (grupo de ate 3 palavras entre o tipo de logradouro e o numero) em
+vez de uma janela livre de caracteres: e esse limite que impede a
+heuristica de comer prosa. NAO troque de volta para uma janela de
+caracteres numa refatoracao futura -- e o falso-positivo
+documentado acima que essa escolha existe para evitar. Ainda sobra
+falso-positivo residual quando o nome da via tem 4+ palavras seguido de
+numero de verdade (ex.: "entrega na rua 15 de novembro 200" so mascara
+parte), mas isso e endereco de verdade sendo mascarado parcialmente, nao
+prosa de sentimento sendo destruida -- o risco aceitavel, nao o evitado.
 """
 
 import re
@@ -50,7 +69,9 @@ _TELEFONE = re.compile(r"(?<!\d)(?:\+55\s?)?(?:\(\d{2}\)|\d{2})[\s-]?\d{4,5}-?\d
 # Cartao: 13 a 19 digitos, com ou sem espaco/hifen a cada quatro.
 _CARTAO = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
 _ENDERECO = re.compile(
-    r"\b(?:rua|av|avenida|alameda|travessa|rodovia|praca)\b[^,.;\n]{0,60}?\d+",
+    r"(?:\b(?:rua|r|av|avenida|alameda|travessa|rodovia|praca)\.?\s+)"
+    r"(?:[a-zà-ÿ]+\s+){0,3}?"
+    r"(?:n[oº°.]*\s*)?\d{1,6}\b",
     re.IGNORECASE,
 )
 
