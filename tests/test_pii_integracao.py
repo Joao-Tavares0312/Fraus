@@ -74,3 +74,77 @@ def test_csv_driver_mascara_pii_na_leitura():
     texto = resultado.conversas[0].mensagens[0].texto
     assert "529.982.247-25" not in texto
     assert "[CPF]" in texto
+
+
+def test_totalk_mascara_pii_na_conversao():
+    """Terceira porta de entrada: export da Totalk, dado real de cliente.
+
+    `converter` recebe um Iterable[str] de linhas de CSV (o mesmo formato que
+    `csv.DictReader` consome), nao uma lista de dicts -- por isso o `linhas`
+    abaixo e montado como texto CSV com as colunas exigidas por `COLUNAS` e
+    `DIRECAO`/`ID_NA_URL` (`Mensagem/Quem enviou` no formato "De: X Para: Y",
+    e um id de conversa embutido na URL da coluna `Conversa`).
+    """
+    import io
+
+    from fraus.ingest import totalk
+
+    linhas = io.StringIO(
+        "Conta/Nome,Mensagem/Data de criação,Mensagem/Quem enviou,"
+        "Mensagem/Conteúdo,Conversa\n"
+        "Empresa X,09/03/2026 10:00:00,De: Joao Para: Empresa X,"
+        "meu cpf e 529.982.247-25,https://app.totalk.chat/c?id=abc-123\n",
+        newline="",
+    )
+
+    resultado = totalk.converter(linhas)
+
+    texto = resultado.conversas[0].mensagens[0].texto
+    assert "529.982.247-25" not in texto
+    assert "[CPF]" in texto
+
+
+def test_transcricao_mascara_pii_inclusive_em_linha_de_continuacao():
+    """Quarta armadilha: linha de continuacao e concatenada no texto ja montado.
+
+    Censurar so no `Mensagem(...)` deixaria passar a PII que cair na segunda
+    linha de uma fala que quebrou em duas.
+    """
+    from datetime import datetime, timezone
+
+    from fraus.ingest.transcricao import ler
+
+    inicio = datetime(2026, 9, 3, 10, 0, 0, tzinfo=timezone.utc)
+    texto_bruto = "Cliente: primeira linha\ne meu cpf e 529.982.247-25\n"
+    resultado = ler(texto_bruto, inicio)
+
+    juntado = " ".join(m.texto for m in resultado.mensagens)
+    assert "529.982.247-25" not in juntado
+    assert "[CPF]" in juntado
+
+
+def test_toda_origem_de_dado_real_censura_pii():
+    """Guarda contra a QUARTA porta que alguem abrir sem censura.
+
+    O furo que originou esta task foi exatamente isto: o plano cobriu duas
+    origens e existiam tres. Este teste falha quando surge uma quarta.
+    """
+    import pathlib
+    import re
+
+    raiz = pathlib.Path(__file__).parent.parent / "fraus" / "ingest"
+    # O simulador esta fora de proposito: corpus fixo de templates, sem PII.
+    isentos = {"simulador.py"}
+
+    sem_censura = []
+    for arquivo in raiz.glob("*.py"):
+        if arquivo.name in isentos:
+            continue
+        fonte = arquivo.read_text(encoding="utf-8")
+        if re.search(r"\bMensagem\(", fonte) and "censurar_pii" not in fonte:
+            sem_censura.append(arquivo.name)
+
+    assert not sem_censura, (
+        f"origem de dado real sem censura de PII: {sem_censura}. "
+        "Toda origem que monta Mensagem precisa chamar censurar_pii."
+    )
