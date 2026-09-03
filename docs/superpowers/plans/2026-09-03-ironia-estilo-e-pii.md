@@ -1284,3 +1284,146 @@ git commit -m "feat(dashboard): leitura de estilo por mensagem ao lado das cabec
 - [ ] **Suíte inteira verde:** `uv run pytest -q` e `cd dashboard && npm run build`
 - [ ] **Contrato conferido:** `uv run python -c "from fraus.fusor import NOMES_FEATURES; print(len(NOMES_FEATURES))"` → `40`
 - [ ] **Retreino do fusor:** pendente, manual, no Colab — ver `docs/treinamento.md`. Até ele acontecer, a API **não sobe** com o fusor antigo (dimensão incompatível), e isso é o comportamento correto (invariante 7). Não contorne com fallback.
+
+---
+
+### Task 3b: Fechar as portas de ingestão que o plano não previu
+
+**Files:**
+- Modify: `fraus/ingest/totalk.py:220`
+- Modify: `fraus/ingest/transcricao.py:95-97` e `:106-108`
+- Test: `tests/test_pii_integracao.py`
+
+**Interfaces:**
+- Consumes: `censurar_pii(texto: str) -> str` da Task 1.
+- Produces: cobertura completa de PII em todas as origens de dado real.
+
+**Por que esta task existe:** a revisão da Task 3 achou um furo do PLANO, não da
+implementação. As specs falavam em "as duas portas de entrada" (API e CSV), mas
+existem **três** origens de dado real de cliente que constroem `Mensagem`:
+`csv_driver.py` (coberta), `totalk.py:220` (adaptador do export da Totalk) e
+`transcricao.py:107` (prosa de `.docx`/`.pdf`). As duas descobertas são
+alcançadas por `fraus/ingest/arquivos.py` (`_de_tabela` → `totalk.converter`,
+`_de_prosa` → `ler_transcricao`) e alimentam as rotas `/analisar` e
+`/analisar/arquivo`, que rodam os classificadores sobre o texto e o exibem na
+tela — os dois destinos exatos que a censura existe para impedir.
+
+`fraus/ingest/simulador.py` permanece FORA de propósito: gera frases de um
+corpus fixo de templates, sem PII real. Verificado na revisão da Task 3.
+
+**Armadilha em `transcricao.py`, a não perder:** a linha 95-97 faz
+`model_copy(update={"texto": f"{anterior.texto}\n{linha.strip()}"})` para juntar
+linha de continuação a uma mensagem já montada. Censurar só no `Mensagem(...)`
+da linha 107 deixaria passar toda PII que caia numa linha de continuação. Os
+DOIS pontos precisam da censura.
+
+- [ ] **Step 1: Write the failing test**
+
+Acrescente a `tests/test_pii_integracao.py`:
+
+```python
+def test_totalk_mascara_pii_na_conversao():
+    """Terceira porta de entrada: export da Totalk, dado real de cliente."""
+    from fraus.ingest import totalk
+
+    # Monte o `linhas` no formato que `totalk.converter` espera -- leia a
+    # funcao para descobrir as colunas exatas antes de escrever isto.
+    # O texto da mensagem do cliente deve conter "meu cpf e 529.982.247-25".
+    resultado = totalk.converter(...)
+    texto = resultado.conversas[0].mensagens[0].texto
+    assert "529.982.247-25" not in texto
+    assert "[CPF]" in texto
+
+
+def test_transcricao_mascara_pii_inclusive_em_linha_de_continuacao():
+    """Quarta armadilha: linha de continuacao e concatenada no texto ja montado.
+
+    Censurar so no `Mensagem(...)` deixaria passar a PII que cair na segunda
+    linha de uma fala que quebrou em duas.
+    """
+    from datetime import datetime, timezone
+
+    from fraus.ingest.transcricao import ler
+
+    inicio = datetime(2026, 9, 3, 10, 0, 0, tzinfo=timezone.utc)
+    texto_bruto = "Cliente: primeira linha\ne meu cpf e 529.982.247-25\n"
+    resultado = ler(texto_bruto, inicio)
+
+    juntado = " ".join(m.texto for m in resultado.mensagens)
+    assert "529.982.247-25" not in juntado
+    assert "[CPF]" in juntado
+```
+
+Leia `fraus/ingest/totalk.py` e `fraus/ingest/transcricao.py` para acertar as
+assinaturas reais (`converter` recebe o quê; `ler` devolve o quê) antes de
+rodar. Ajuste os testes à realidade do código — não mude o código para caber
+num teste chutado.
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest tests/test_pii_integracao.py -v`
+Expected: FAIL nos dois testes novos, com a PII crua presente no texto.
+
+- [ ] **Step 3: Write minimal implementation**
+
+Em `fraus/ingest/totalk.py`, importe `from fraus.seguranca.pii import censurar_pii`
+e envolva o texto na construção:
+
+```python
+            mensagem = Mensagem(
+                autor=autor, texto=censurar_pii(texto), enviada_em=enviada_em
+            )
+```
+
+Em `fraus/ingest/transcricao.py`, importe o mesmo e censure nos DOIS pontos: na
+concatenação da linha de continuação e na construção da mensagem.
+
+Acrescente a cada um dos dois arquivos uma linha de comentário dizendo que a
+censura mora ali porque é onde `Mensagem` nasce, e que qualquer origem NOVA de
+dado real precisa da mesma chamada — no registro de comentário que cada arquivo
+já usa.
+
+- [ ] **Step 4: Guard against a fourth door**
+
+Acrescente a `tests/test_pii_integracao.py` um teste que trava a invariante para
+origens futuras:
+
+```python
+def test_toda_origem_de_dado_real_censura_pii():
+    """Guarda contra a QUARTA porta que alguem abrir sem censura.
+
+    O furo que originou esta task foi exatamente isto: o plano cobriu duas
+    origens e existiam tres. Este teste falha quando surge uma quarta.
+    """
+    import pathlib
+    import re
+
+    raiz = pathlib.Path(__file__).parent.parent / "fraus" / "ingest"
+    # O simulador esta fora de proposito: corpus fixo de templates, sem PII.
+    isentos = {"simulador.py"}
+
+    sem_censura = []
+    for arquivo in raiz.glob("*.py"):
+        if arquivo.name in isentos:
+            continue
+        fonte = arquivo.read_text(encoding="utf-8")
+        if re.search(r"\bMensagem\(", fonte) and "censurar_pii" not in fonte:
+            sem_censura.append(arquivo.name)
+
+    assert not sem_censura, (
+        f"origem de dado real sem censura de PII: {sem_censura}. "
+        "Toda origem que monta Mensagem precisa chamar censurar_pii."
+    )
+```
+
+- [ ] **Step 5: Run tests to verify they pass**
+
+Run: `uv run pytest tests/test_pii_integracao.py tests/test_csv_driver.py tests/test_api.py -v`
+Expected: PASS, sem regressão.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add fraus/ingest/totalk.py fraus/ingest/transcricao.py tests/test_pii_integracao.py
+git commit -m "fix(ingest): censura de PII nas outras duas origens de dado real"
+```
