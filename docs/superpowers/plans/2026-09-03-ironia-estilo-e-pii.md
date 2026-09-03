@@ -50,9 +50,16 @@ def test_mascara_cpf_valido():
     assert censurar_pii("cpf 52998224725 ok") == "cpf [CPF] ok"
 
 
-def test_nao_mascara_sequencia_de_11_digitos_que_nao_e_cpf():
-    # Numero de protocolo: 11 digitos, digito verificador invalido.
-    assert censurar_pii("protocolo 12345678901") == "protocolo 12345678901"
+def test_sequencia_de_11_digitos_que_nao_e_cpf_cai_como_telefone():
+    """Decisao do Joao em 03/09/2026: privacidade vence sinal.
+
+    "12345678901" tem digito verificador de CPF invalido, entao nao e CPF --
+    mas e indistinguivel de um celular com DDD digitado corrido. Mascarar
+    apaga numero de protocolo do texto que alimenta os sinais; nao mascarar
+    deixa passar telefone de cliente. A escolha foi mascarar.
+    """
+    assert censurar_pii("protocolo 12345678901") == "protocolo [TELEFONE]"
+    assert censurar_pii("meu fone 11987654321") == "meu fone [TELEFONE]"
 
 
 def test_mascara_email():
@@ -106,11 +113,16 @@ roda no ponto de entrada (ver `fraus/api/registro.py` e
 `Conversa` existir. Isso resolve os dois riscos de uma vez -- PII em disco e
 CPF virando token que o BERTimbau tenta interpretar.
 
-POR QUE checksum e nao so formato: numero de pedido, protocolo e valor sao os
-tokens mais comuns de um chat de atendimento. Mascarar toda sequencia de 11
-digitos apagaria protocolo legitimo do texto que alimenta os sinais -- o
-mesmo raciocinio que `fraus/sinais/estilo.py` ja documenta para digito puro.
-CPF e cartao tem digito verificador; usamos ele.
+POR QUE checksum onde da para ter: numero de pedido, protocolo e valor sao os
+tokens mais comuns de um chat de atendimento, e apagar todos eles empobrece o
+texto que alimenta os sinais -- o mesmo raciocinio que `fraus/sinais/estilo.py`
+ja documenta para digito puro. CPF e cartao tem digito verificador, entao para
+esses dois a duvida nao existe: ou o numero fecha a conta ou nao e um deles.
+
+TELEFONE NAO TEM CHECKSUM, e ai a duvida e real: "12345678901" e um protocolo
+ou um celular com DDD digitado corrido? Sao indistinguiveis. A decisao do Joao
+em 03/09/2026 foi MASCARAR -- privacidade vence sinal, e um protocolo perdido
+custa menos que um telefone vazado. E limitacao declarada, nao descuido.
 
 LIMITACAO DECLARADA: endereco e heuristica de "tipo de logradouro + numero" e
 tem falso-negativo alto (endereco sem essas palavras nao e pego). Nome
@@ -133,7 +145,15 @@ MARCADORES = {
 _CPF = re.compile(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
 # Telefone BR: +55 opcional, DDD opcional entre parenteses, 8 ou 9 digitos.
-_TELEFONE = re.compile(r"(?:\+55\s?)?(?:\(\d{2}\)|\d{2})[\s-]?\d{4,5}-?\d{4}\b")
+#
+# `(?<!\d)` e `(?!\d)` NAO sao decoracao, e `\b` no lugar deles nao serve:
+# digito e caractere de palavra, entao nao existe `\b` DENTRO de uma corrida
+# de digitos, e o padrao casava no meio de um numero maior. Um cartao de 16
+# digitos que falha no Luhn (numero de pedido longo, portanto) tinha os 11
+# ultimos digitos comidos como se fossem telefone, saindo como
+# "pedido 45395[TELEFONE]" -- mascaramento parcial, que e o pior dos dois
+# mundos: nao protege o que era PII nem preserva o que nao era.
+_TELEFONE = re.compile(r"(?<!\d)(?:\+55\s?)?(?:\(\d{2}\)|\d{2})[\s-]?\d{4,5}-?\d{4}(?!\d)")
 # Cartao: 13 a 19 digitos, com ou sem espaco/hifen a cada quatro.
 _CARTAO = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
 _ENDERECO = re.compile(
