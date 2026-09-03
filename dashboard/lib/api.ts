@@ -1028,6 +1028,25 @@ export const obterSaude = () =>
 const LOTE_DETALHES = 8;
 
 /**
+ * Teto de transcricoes que o PLANO B busca de uma vez.
+ *
+ * `obterDetalhes` so roda quando um agregado do servidor FALHOU -- e o
+ * periodo pedido pode ser "todos", sem limite de tamanho. Sem este teto, uma
+ * instalacao com milhares de atendimentos vira dezenas de lotes SEQUENCIAIS
+ * de `LOTE_DETALHES`, presos dentro do render da pagina: uma API ja
+ * DEGRADADA (nao caida, so lenta -- e foi exatamente a falha de um agregado
+ * que disparou o plano B) fica mais lenta ainda recebendo essa tempestade, e
+ * quem espera a tela ve isso como travamento, nao como "alguns dados nao
+ * carregaram".
+ *
+ * 200 cobre o recorte tipico de um mes sem gerar uma cadeia de mais de 25
+ * lotes. NENHUM CORTE E SILENCIOSO: `truncadas` volta para quem chama, para a
+ * tela poder dizer o que ficou de fora em vez de fingir que o recorte inteiro
+ * foi considerado.
+ */
+export const TETO_DETALHES_PLANO_B = 200;
+
+/**
  * Busca as transcricoes de varias conversas.
  *
  * A serie temporal SAIU daqui: ela vem agregada de `GET /serie-temporal`. O
@@ -1041,12 +1060,14 @@ const LOTE_DETALHES = 8;
  */
 export async function obterDetalhes(
   ids: string[],
-): Promise<{ detalhes: DetalheConversa[]; falhas: number }> {
+): Promise<{ detalhes: DetalheConversa[]; falhas: number; truncadas: number }> {
+  const considerados = ids.slice(0, TETO_DETALHES_PLANO_B);
+  const truncadas = ids.length - considerados.length;
   const detalhes: DetalheConversa[] = [];
   let falhas = 0;
 
-  for (let inicio = 0; inicio < ids.length; inicio += LOTE_DETALHES) {
-    const lote = ids.slice(inicio, inicio + LOTE_DETALHES);
+  for (let inicio = 0; inicio < considerados.length; inicio += LOTE_DETALHES) {
+    const lote = considerados.slice(inicio, inicio + LOTE_DETALHES);
     const resultados = await Promise.all(lote.map((id) => obterConversa(id)));
     for (const resultado of resultados) {
       if (resultado.ok) detalhes.push(resultado.dado);
@@ -1054,7 +1075,7 @@ export async function obterDetalhes(
     }
   }
 
-  return { detalhes, falhas };
+  return { detalhes, falhas, truncadas };
 }
 
 /**
