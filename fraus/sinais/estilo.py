@@ -173,10 +173,28 @@ SIGLAS = {
 
 # Piso de comprimento para uma palavra maiuscula contar como grito. Palavra de
 # 1-2 letras em caixa alta e quase sempre sigla ou digitacao apressada.
+#
+# Revisado em 03/09/2026 contra Burgers, van Mulken & Schellens (2012),
+# Ptacek, Habernal & Hong (COLING 2014) e Bouazizi & Ohtsuki: nenhum dos tres
+# fixa um piso numerico de comprimento para "palavra maiuscula". Burgers trata
+# capitalizacao como categoria qualitativa de marcador tipografico, sem
+# threshold. Ptacek usa contagem continua normalizada ("numero de palavras
+# maiusculas" / total de palavras) -- nao um corte binario por tamanho.
+# Bouazizi & Ohtsuki descrevem features de pontuacao e padrao sem detalhar um
+# piso de letras para maiuscula. Mantido o valor de tres por falta de fonte
+# que indique outro numero -- e limitacao declarada, nao calibracao.
 MINIMO_CAIXA_ALTA = 3
 
 # Quantas repeticoes seguidas do mesmo caractere marcam alongamento. Duas nao
 # bastam: "carro", "passar" e "nossa" sao grafia normal do portugues.
+#
+# Revisado em 03/09/2026 contra a mesma bibliografia: Ptacek et al. (2014) nao
+# lista alongamento de caractere entre as features de "Word-case" ou
+# "Punctuation-based" da Tabela 1 -- o fenomeno simplesmente nao aparece no
+# artigo. Burgers (2012) e Bouazizi & Ohtsuki tambem nao quantificam um numero
+# de repeticoes. Nenhuma das tres fontes contradiz ou sustenta o valor de
+# tres; ele fica como esta por nao haver base bibliografica para mudar, nao
+# porque a bibliografia o confirme.
 MINIMO_ALONGAMENTO = 3
 
 # Riso alongado e o marcador POSITIVO mais comum de chat brasileiro. Contar
@@ -184,6 +202,14 @@ MINIMO_ALONGAMENTO = 3
 # conversas, entao ele tem excecao explicita.
 LETRAS_DE_RISO = set("kh")
 
+# Revisado em 03/09/2026: Ptacek et al. (2014) tratam exclamacao e interrogacao
+# como contagens continuas (normalizadas pelo maximo observado), nao como um
+# corte de "2 ou mais sinais seguidos". Burgers (2012) cita pontuacao como
+# categoria de marcador tipografico sem numero. Bouazizi & Ohtsuki tratam "!"
+# e "?" como indicadores de hiperbole, tambem sem threshold de repeticao
+# consecutiva. Nenhuma fonte examinada especifica o corte de duas ou mais
+# ocorrencias seguidas -- mantido por ausencia de base para trocar, nao por
+# confirmacao bibliografica do numero exato.
 PONTUACAO_ENFATICA = re.compile(r"[!?]{2,}")
 
 
