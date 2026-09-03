@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { Play, RotateCcw } from "lucide-react";
 import { simularTexto, type Simulacao } from "@/lib/api";
-import { CabecasDeLeitura } from "@/components/CabecasDeLeitura";
+import { CabecasDeLeitura, LeituraDeEstilo } from "@/components/CabecasDeLeitura";
 import { formatarNumero } from "@/lib/formato";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -267,6 +267,7 @@ function OutrasCabecas({ resultado }: { resultado: Simulacao }) {
         emocao={resultado.emocao}
         ironia={resultado.prob_ironia}
       />
+      <LeituraDeEstilo estilo={resultado.estilo} />
     </div>
   );
 }

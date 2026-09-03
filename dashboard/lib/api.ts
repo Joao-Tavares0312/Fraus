@@ -208,6 +208,25 @@ export type MensagemAtribuida = {
    */
   emocao: Record<string, number> | null;
   prob_ironia: number | null;
+
+  /**
+   * A FORMA da escrita desta fala -- caixa alta, alongamento, enfase,
+   * palavrao. Determinista, calculada por regra em `fraus/sinais/estilo.py`,
+   * nao modelo -- por isso nao carrega ressalva de confiabilidade.
+   *
+   * `null` quando o servidor subiu sem essa cabeca (resposta de API mais
+   * antiga, ou motor dublê). Nao confundir com "tudo falso": ausencia de
+   * medida nao e medida negativa (invariante 2).
+   */
+  estilo: {
+    caixa_alta: boolean;
+    alongamento: boolean;
+    pontuacao_enfatica: number;
+    /** Intensidade do pior palavrao da fala, ou null se nao houve. */
+    palavrao: number | null;
+    palavrao_dirigido: boolean;
+    censura: boolean;
+  } | null;
 };
 
 /** Resposta de `GET /conversas/{id}/atribuicao`. */
@@ -308,6 +327,15 @@ export type Simulacao = {
   emocao: Record<string, number> | null;
   /** Ver a ressalva medida em `MensagemAtribuida.prob_ironia`. */
   prob_ironia: number | null;
+  /** Ver `MensagemAtribuida.estilo`. */
+  estilo: {
+    caixa_alta: boolean;
+    alongamento: boolean;
+    pontuacao_enfatica: number;
+    palavrao: number | null;
+    palavrao_dirigido: boolean;
+    censura: boolean;
+  } | null;
 };
 
 /**
