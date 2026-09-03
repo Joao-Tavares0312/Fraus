@@ -729,16 +729,29 @@ class Banco:
             )
             return cursor.rowcount > 0
 
-    # Quantas entregas cada fonte guarda. Registrar recusa de assinatura e
-    # exatamente o que o operador precisa ver -- alguem esta batendo com o
-    # segredo errado -- e e tambem como um atacante enche o SQLite. A poda e o
-    # que permite manter a primeira propriedade sem pagar a segunda.
+    # Quantas entregas cada fonte guarda EM CADA BALDE. Registrar recusa de
+    # assinatura e exatamente o que o operador precisa ver -- alguem esta
+    # batendo com o segredo errado -- e e tambem como um atacante enche o
+    # banco. A poda e o que permite manter a primeira propriedade sem pagar a
+    # segunda.
     #
-    # Ela e TAMBEM a memoria do dedupe (`entrega_ja_vista` consulta esta
-    # tabela), entao uma fonte que receba 200 recusas seguidas esquece as
-    # aceitas anteriores. O efeito pratico e limitado: `salvar` grava com
-    # INSERT OR REPLACE pelo id da conversa, entao reprocessar nao duplica
-    # atendimento, so o repontua. E por isso que a poda pode ser simples.
+    # SAO DOIS BALDES, aceitas e o resto, e isto e conserto de 03/09/2026. Antes
+    # a poda nao distinguia veredito, e as duas coisas disputavam as mesmas 200
+    # vagas. Como a rota de webhook e isenta de chave de acesso por desenho -- a
+    # plataforma externa nao tem como carregar uma `fra_` --, 210 requisicoes
+    # anonimas com assinatura lixo zeravam as aceitas de uma fonte. Reproduzido
+    # em 02/09/2026.
+    #
+    # O dano nao era so o historico: esta tabela e TAMBEM a memoria do dedupe
+    # (`entrega_ja_vista`), entao apagar as aceitas fazia reentrega legitima
+    # voltar a ser processada como nova. O comentario antigo aqui dizia que o
+    # efeito era "limitado" porque `salvar` usa INSERT OR REPLACE e reprocessar
+    # so repontua -- verdade para o dado, falsa para o custo: reprocessar e
+    # inferencia de BERTimbau, e era um anonimo quem decidia quando ela roda.
+    #
+    # Dois baldes, e nao um por veredito: por veredito o teto viraria
+    # 200 x len(VEREDITOS) e cresceria sozinho toda vez que alguem acrescentasse
+    # um motivo de recusa. Aqui o teto por fonte e 2 x ENTREGAS_POR_FONTE, fixo.
     ENTREGAS_POR_FONTE = 200
 
     def registrar_entrega(
@@ -773,12 +786,27 @@ class Banco:
             # literalmente o mesmo conjunto, na mesma ordem, por construcao.
             # `id` entra so como desempate, porque duas entregas podem
             # carimbar o mesmo instante ISO.
+            #
+            # OS DOIS BALDES sao selecionados separadamente e reunidos por
+            # UNION ALL: cada um preserva as suas N mais recentes, e nenhum pode
+            # despejar o outro. O `SELECT id FROM (...)` externo existe porque
+            # nem SQLite nem Postgres aceitam LIMIT direto num operando de UNION.
+            mais_recentes = (
+                "SELECT id FROM (SELECT id FROM entregas_webhook "
+                "WHERE fonte_id = ? AND veredito {comparador} 'aceita' "
+                f"ORDER BY {self._ordem('recebida_em')} DESC, id DESC LIMIT ?) AS _{{apelido}}"
+            )
             conexao.execute(
                 "DELETE FROM entregas_webhook WHERE fonte_id = ? AND id NOT IN ("
-                "  SELECT id FROM entregas_webhook WHERE fonte_id = ? "
-                f"  ORDER BY {self._ordem('recebida_em')} DESC, id DESC LIMIT ?"
-                ")",
-                (fonte_id, fonte_id, self.ENTREGAS_POR_FONTE),
+                + mais_recentes.format(comparador="=", apelido="aceitas")
+                + " UNION ALL "
+                + mais_recentes.format(comparador="<>", apelido="recusadas")
+                + ")",
+                (
+                    fonte_id,
+                    fonte_id, self.ENTREGAS_POR_FONTE,
+                    fonte_id, self.ENTREGAS_POR_FONTE,
+                ),
             )
 
     def listar_entregas(self, fonte_id: int) -> list[dict]:
