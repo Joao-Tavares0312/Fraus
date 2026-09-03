@@ -14,6 +14,7 @@ from fraus.api.contexto import Contexto
 from fraus.api.esquemas import PedidoIngestao
 from fraus.indicadores import nota_0_10
 from fraus.modelos import Conversa
+from fraus.seguranca.pii import censurar_pii
 
 
 def resumo_validacao(erro: ValidationError) -> str:
@@ -59,6 +60,16 @@ def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> di
     nao escolhe em que canal ele e contabilizado, do mesmo jeito que nao escolhe
     a propria nota.
     """
+    # PII morre AQUI, no ponto de entrada compartilhado pelas duas rotas --
+    # nao mais adiante. Depois deste ponto nao existe texto cru no processo:
+    # nem para o banco, nem para os sete sinais, nem para a tela. Este e o
+    # mesmo motivo pelo qual o miolo de derivacao mora neste modulo: uma
+    # segunda copia da regra em `/ingestao` e no webhook divergiria, e a que
+    # envelhece e sempre a que ninguem olha.
+    mensagens_limpas = [
+        mensagem.model_copy(update={"texto": censurar_pii(mensagem.texto)})
+        for mensagem in pedido.mensagens
+    ]
     try:
         conversa = Conversa(
             id=pedido.id,
@@ -66,7 +77,7 @@ def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> di
             iniciada_em=pedido.mensagens[0].enviada_em,
             encerrada_em=pedido.encerrada_em,
             escalou_para_humano=pedido.escalou_para_humano,
-            mensagens=sorted(pedido.mensagens, key=lambda m: m.enviada_em),
+            mensagens=sorted(mensagens_limpas, key=lambda m: m.enviada_em),
         )
     except ValidationError as erro:
         raise HTTPException(status_code=400, detail=resumo_validacao(erro)) from erro

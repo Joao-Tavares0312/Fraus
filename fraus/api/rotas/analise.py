@@ -278,7 +278,7 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
     for conversa in analisadas:
         analise = ctx.motor.analisar_conversa(conversa, referencia)
 
-        # SEM HORARIO, SEM NOTA. Latencia e uma das 35 features do
+        # SEM HORARIO, SEM NOTA. Latencia e uma das 40 features do
         # fusor, com peso aprendido. Numa transcricao de Word ou PDF sem
         # relogio, esses campos sairiam zerados -- e zero nao e neutro: o
         # modelo aprendeu que resposta rapida acompanha cliente satisfeito,

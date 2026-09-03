@@ -38,9 +38,11 @@ por um classificador leve:
 | **Léxico** | SentiLex-PT02 com escopo de **negação**, mais o [léxico curado](#léxico-curado) | polaridade de procedência independente do BERTimbau |
 | **Ironia** ⚠️ | cabeça binária sobre o IDPT 2021 | texto positivo com sentido negativo derruba a leitura dos outros sinais |
 | **Estilo** | caixa alta, pontuação, alongamento, palavrão, censura | a forma de escrever carrega afeto que a palavra sozinha não carrega |
+| **Incongruência** | polaridade emoji×texto, marcador de contraste, hipérbole, aspas irônicas | texto e emoji discordando é o formato clássico da ironia |
 
-As sete famílias somam **35 features** e todas entram no vetor desde 21/08/2026
-— ver [contrato de features](docs/treinamento.md#contrato-de-features).
+As oito famílias somam **40 features** (as cinco de `incongruencia_*` entraram
+em 03/09/2026) e todas entram no vetor desde 21/08/2026 — ver [contrato de
+features](docs/treinamento.md#contrato-de-features).
 
 ⚠️ *a cabeça de ironia tem vazamento de corpus medido e pontua assim mesmo — é
 dívida assumida, não pendência de integração; ver [pendência 1](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida).*
@@ -137,8 +139,8 @@ léxico anterior") em vez de esconder, e a contagem ignora o filtro de período 
 propósito: a régua misturada é propriedade do banco, não da semana que se olha.
 
 `POST /conversas/repontuar` zera a divergência. **Limitação declarada:** ele roda
-os três BERTimbau de novo por conversa — o vetor é de 35 features e o fusor exige
-as 35, então não existe recalcular só as três léxicas e as cinco de emoji. Em
+os três BERTimbau de novo por conversa — o vetor é de 40 features e o fusor exige
+as 40, então não existe recalcular só as três léxicas e as cinco de emoji. Em
 dezenas de atendimentos são segundos; em milhares vira trabalho de fila, e a fila
 não existe. A rota é **síncrona de propósito**: uma fila que ninguém observa
 seria pior que uma espera que se vê.
@@ -717,9 +719,9 @@ ordem lá é a ordem de importância.
 
 | Frente | Estado | O que existe |
 |---|---|---|
-| **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as sete famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia e estilo), e o score 0–100 → nota 0–10 → categoria de NPS |
+| **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
-| **Fusor** | ✅ | contrato e artefato **finalmente batem**: 35 features, sete famílias (texto, emoji, tempo, emoção, léxico, ironia, estilo). O `notebooks/02_treino_fusor.ipynb` rodou em 24/08/2026 e `modelos/fusor.joblib` é o artefato de 35 — `n_features_in_ = 35`, na ordem de `NOMES_FEATURES`. A API real sobe e pontua. `sinais_fora_do_score` continua no payload, vazio |
+| **Fusor** | ⚠️ | contrato e artefato **voltaram a divergir em 03/09/2026**: `NOMES_FEATURES` subiu de 35 para 40 (família `incongruencia_*`), e `modelos/fusor.joblib` continua sendo o artefato de 35 treinado em 24/08/2026 — `n_features_in_ = 35`. **`Fusor.carregar` é `joblib.load` puro, sem validação de forma — a API real SOBE normalmente com esse artefato desatualizado**, e `/modelo/simular` também funciona (não usa o fusor), o que engana quem está testando à mão. O `ValueError` do `StandardScaler` só aparece como 500 na primeira pontuação de verdade, em `/ingestao` ou `/conversas/importar` — é risco de demonstração ao vivo, não uma trava que impede o servidor de subir. Ver invariante 7 (a intenção é falha alta e explícita; o código hoje não garante isso na carga, só na primeira predição). Corrige quando o retreino descrito em [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026) rodar de novo no Colab |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -922,7 +924,7 @@ atendimento carrega esse vazamento até este notebook rodar de novo. Não é um
 risco resolvido nem neutro — é um risco que já está dentro do número que a
 tela mostra.
 
-### 2. Retreinar o fusor no contrato de 35
+### 2. Retreinar o fusor no contrato vigente (agora 40, era 35)
 
 São duas coisas distintas, e só uma está feita.
 
@@ -944,13 +946,36 @@ modelo incompatível como falha alta e explícita. Servir predição com um fuso
 que ignora dezenove features seria pior que estar fora do ar — e a falha
 apareceu na carga, não em silêncio no meio de um relatório.
 
-O artefato vigente tem `n_features_in_ = 35` e classes `[0 1 2]`
+O artefato daquela época tinha `n_features_in_ = 35` e classes `[0 1 2]`
 (insatisfeito, neutro, satisfeito — invariante 8). Verificado ponta a ponta
 com os três BERTimbau carregados, sobre conversas do simulador: rótulo
 insatisfeito pontua ~0, neutro ~73–75, satisfeito ~99, e as três categorias de
 NPS saem certas. **Essa separação limpa não é evidência de qualidade**: são
 conversas do próprio gerador sintético, e o número honesto continua sendo os
 **0,93** do conjunto de teste separado.
+
+**Isto voltou a ser dívida em 03/09/2026.** O contrato subiu de novo, para
+**40 features** (a família `incongruencia_*` — ver [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026)),
+e o artefato em `modelos/` **continua sendo o de 35** treinado em 24/08/2026.
+Eles não batem agora: `n_features_in_` do artefato vigente é 35,
+`len(NOMES_FEATURES)` é 40.
+
+**Isso NÃO impede a API de subir.** Diferente do episódio de 24/08/2026
+descrito acima — onde o vetor era exigido na carga —, `Fusor.carregar` (em
+`fraus/fusor.py`) é `joblib.load` puro, sem nenhuma validação de forma contra
+`NOMES_FEATURES`. Medido: `Fusor.carregar("modelos/fusor.joblib")` carrega
+sem erro mesmo com `n_features_in_ = 35` contra um contrato de 40. A API sobe
+normalmente, e `/modelo/simular` funciona e engana — essa rota não passa pelo
+fusor. **O `ValueError` do `StandardScaler` só estoura como HTTP 500 na
+primeira pontuação real**, em `/ingestao` ou em `/conversas/importar`, quando
+`vetorizar` monta um vetor de 40 posições e o scaler treinado para 35 rejeita.
+Isto é risco de demonstração ao vivo: um teste manual rápido pela API de
+simulação, ou só o servidor subir sem erro no log, pode convencer quem está
+validando de que está tudo certo quando não está. A invariante 7 pede falha
+alta e explícita para modelo ausente/incompatível; o comportamento atual
+cumpre a metade "explícita" (o 500 é claro) mas não a metade "na carga" — a
+falha só aparece quando alguém tenta pontuar de verdade. Isto não é
+histórico — é o estado atual, até o retreino acontecer.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),

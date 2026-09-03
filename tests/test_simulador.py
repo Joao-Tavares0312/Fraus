@@ -6,6 +6,9 @@ import pytest
 from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_conversa, gerar_lote
 from fraus.sinais.emoji import features_emoji
 from fraus.sinais.estilo import features_estilo
+from fraus.sinais.incongruencia import CHAVES as CHAVES_INCONGRUENCIA
+from fraus.sinais.incongruencia import features_incongruencia
+from fraus.sinais.lexico import features_lexico
 from fraus.sinais.tempo import features_tempo
 
 FRASES = {
@@ -134,6 +137,20 @@ CHAVES_ESTILO = [
     "estilo_frac_censurado",
 ]
 
+CHAVES_LEXICO = [
+    "lexico_polaridade_media",
+    "lexico_frac_negados",
+    "lexico_cobertura",
+]
+
+CHAVES_EMOJI = [
+    "emoji_score_medio",
+    "emoji_frac_positivos",
+    "emoji_frac_negativos",
+    "emoji_contagem",
+    "emoji_posicao_relativa_media",
+]
+
 
 @pytest.fixture(scope="module")
 def agrupado_por_rotulo() -> dict[int, list[dict]]:
@@ -213,4 +230,105 @@ def test_distribuicoes_de_estilo_se_sobrepoem_entre_rotulos(agrupado_por_rotulo)
         )
         assert len(comedidos_entre_insatisfeitos) >= 15, (
             f"{chave}: poucos insatisfeitos abaixo do quartil superior do satisfeito"
+        )
+
+
+@pytest.fixture(scope="module")
+def incongruencia_por_rotulo() -> dict[int, list[dict]]:
+    """Mesmo lote e mesma semente da guarda de estilo -- comparavel de proposito."""
+    agrupado: dict[int, list[dict]] = {0: [], 1: [], 2: []}
+    for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, 180, semente=7):
+        agrupado[rotulo].append(features_incongruencia(conversa))
+    return agrupado
+
+
+def test_nenhuma_incongruencia_separa_as_classes_sozinha(incongruencia_por_rotulo):
+    """Invariante 10: corpus de treino nao entrega o rotulo.
+
+    Disjuncao = o maximo de uma classe abaixo do minimo de outra. Se isto
+    falhar, a feature acusada NAO pode entrar no vetor como esta, e a cura e
+    mexer no CORPUS (como se fez com a latencia log-normal), NUNCA afrouxar
+    esta asercao.
+    """
+    for chave in CHAVES_INCONGRUENCIA:
+        faixas = {
+            rotulo: (
+                min(linha[chave] for linha in linhas),
+                max(linha[chave] for linha in linhas),
+            )
+            for rotulo, linhas in incongruencia_por_rotulo.items()
+        }
+        for a in sorted(faixas):
+            for b in sorted(faixas):
+                if a >= b:
+                    continue
+                assert not (faixas[a][1] < faixas[b][0]), (
+                    f"{chave} separa {a} de {b}: {faixas[a]} nao encosta em {faixas[b]}"
+                )
+                assert not (faixas[b][1] < faixas[a][0]), (
+                    f"{chave} separa {b} de {a}: {faixas[b]} nao encosta em {faixas[a]}"
+                )
+
+
+# Uma familia de features por chave-mestra: cada entrada e (funcao, chaves).
+# Usada pela guarda de previsor unilateral abaixo, generalizada para cobrir
+# lexico_*, emoji_* e estilo_* alem de incongruencia_* -- ate a Task 6c so
+# incongruencia_* tinha guarda, e foi assim que `lexico_frac_negados` (rotulo
+# 0: 15/60 conversas, rotulos 1 e 2: 0/60) sobreviveu sem ser notado. Latencia
+# fica de fora de proposito: e continua e sempre nao-zero, "dispara em um
+# rotulo so" nao faz sentido para ela, e ela ja tem guarda propria de
+# sobreposicao (`test_faixas_de_latencia_se_sobrepoem_entre_os_rotulos`).
+FAMILIAS_UNILATERAL: dict[str, tuple[object, list[str]]] = {
+    "lexico": (features_lexico, CHAVES_LEXICO),
+    "emoji": (features_emoji, CHAVES_EMOJI),
+    "estilo": (features_estilo, CHAVES_ESTILO),
+    "incongruencia": (features_incongruencia, CHAVES_INCONGRUENCIA),
+}
+
+
+@pytest.fixture(scope="module")
+def features_por_familia_e_rotulo() -> dict[str, dict[int, list[dict]]]:
+    """Um unico lote (mesma semente/tamanho das guardas de estilo/incongruencia)
+    com as features das quatro familias sujeitas a guarda de previsor unilateral.
+
+    Calcular as quatro no mesmo laco evita gerar o lote de 180 conversas quatro
+    vezes so para reler os mesmos campos com funcoes diferentes.
+    """
+    agrupado: dict[str, dict[int, list[dict]]] = {
+        familia: {0: [], 1: [], 2: []} for familia in FAMILIAS_UNILATERAL
+    }
+    for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, 180, semente=7):
+        for familia, (funcao, _chaves) in FAMILIAS_UNILATERAL.items():
+            agrupado[familia][rotulo].append(funcao(conversa))
+    return agrupado
+
+
+@pytest.mark.parametrize("familia", sorted(FAMILIAS_UNILATERAL))
+def test_nenhuma_feature_e_previsor_unilateral(features_por_familia_e_rotulo, familia):
+    """Invariante 10, segunda metade: disjuncao nao pega previsor unilateral.
+
+    Nenhuma feature de lexico_*, emoji_*, estilo_* ou incongruencia_* pode
+    disparar em UM UNICO rotulo. Disjuncao nao pega este caso -- se as tres
+    faixas incluem zero, "max de A < min de B" nunca e verdade -- mas uma
+    feature que so e nao-zero numa classe prediz aquela classe sozinha com
+    certeza, que e exatamente o vazamento que o invariante 10 proibe. Foi
+    assim que `incongruencia_hiperbole` escapou em 03/09/2026 e
+    `lexico_frac_negados` escapou antes disso, sem guarda nenhuma.
+
+    Cuidado: feature constante em ZERO nos tres rotulos deste corpus (por
+    exemplo `incongruencia_marcador_contraste` e `incongruencia_aspas_ironicas`)
+    e feature ausente do corpus, que nasce com peso zero, e limitacao
+    declarada -- nao previsor unilateral. So falha quando UM rotulo dispara e
+    os outros ficam mudos.
+    """
+    agrupado = features_por_familia_e_rotulo[familia]
+    _funcao, chaves = FAMILIAS_UNILATERAL[familia]
+    for chave in chaves:
+        rotulos_com_disparo = {
+            rotulo: sum(1 for linha in linhas if linha[chave] > 0)
+            for rotulo, linhas in agrupado.items()
+        }
+        rotulos_que_disparam = [r for r, contagem in rotulos_com_disparo.items() if contagem > 0]
+        assert len(rotulos_que_disparam) != 1, (
+            f"{familia}.{chave} so dispara no rotulo {rotulos_que_disparam}: previsor unilateral"
         )

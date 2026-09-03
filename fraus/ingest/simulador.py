@@ -120,6 +120,35 @@ RESPOSTAS_BOT = [
 #
 # O neutro e o caso que da nome ao trabalho: "ok, obrigado 🙂" e uma despedida
 # educada que nao declara satisfacao nenhuma.
+#
+# CRUZAMENTO de intensificador (`incongruencia_hiperbole`): a versao anterior
+# tinha "muito obrigado", "rapidos demais" e "valeu mesmo" no rotulo 2 e ZERO
+# intensificador colado a termo polar nos rotulos 0/1. Formalmente a guarda de
+# disjuncao passava -- as tres faixas incluiam 0 -- mas na pratica
+# `hiperbole > 0` so acontecia no rotulo 2: 45/60 conversas satisfeitas contra
+# 0/60 nas outras duas classes, um previsor unilateral com 100% de certeza. O
+# fusor aprenderia "hiperbole implica satisfeito", o INVERSO do que a feature
+# existe para detectar -- elogio hiperbolico ("atendimento maravilhoso, so
+# esperei 3 horas") e a forma classica da ironia, nao da satisfacao genuina.
+# E a latencia disjunta do invariante 10 com outra roupa.
+#
+# "muito ruim" e tao natural em portugues quanto "muito bom": a ausencia era
+# lacuna do corpus, nao fato da lingua. Removê-la de novo reintroduz o mesmo
+# vazamento.
+#
+# CRUZAMENTO de negacao (`lexico_frac_negados`): a versao anterior so usava
+# negacao em frases do rotulo 0 ("nao me ajudou", "nao foi isso que eu
+# perguntei", "ninguem resolve") -- os rotulos 1 e 2 nao tinham nenhuma frase
+# com marcador de negacao perto de termo do lexico. Medido: 15/60 conversas do
+# rotulo 0 disparavam `lexico_frac_negados > 0` contra 0/60 nos rotulos 1 e 2,
+# um previsor unilateral com 100% de certeza -- `lexico_frac_negados > 0`
+# bastava para acertar "insatisfeito" sem ler o resto do texto.
+#
+# E vazamento e nao sinal legitimo porque cliente satisfeito tambem nega
+# ("nao tive problema nenhum", "nao precisei esperar", "nao demorou nada") --
+# zero em 60 conversas era artefato de um corpus de 6 frases por rotulo, nao
+# fato da lingua. Remover a negacao dos rotulos 1/2 de novo reintroduz o mesmo
+# vazamento com outra roupa -- a latencia disjunta do invariante 10, de novo.
 FRASES_POR_ROTULO: dict[int, list[str]] = {
     0: [
         "ja e a terceira vez que eu explico a mesma coisa e ninguem resolve 😡",
@@ -128,6 +157,8 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "voces cobraram duas vezes no meu cartao e ninguem me da retorno 😤",
         "pessimo, fiquei quase uma hora esperando por uma resposta automatica",
         "nao foi isso que eu perguntei, voce esta lendo o que eu escrevo?",
+        "atendimento muito ruim, demorou demais e nao resolveu nada",
+        "extremamente decepcionado, isso foi pessimo demais",
     ],
     1: [
         "ok, obrigado 🙂",
@@ -136,6 +167,9 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "certo, e quanto tempo costuma demorar?",
         "so isso mesmo, valeu",
         "hmm, acho que da pra tentar assim",
+        "demorou um pouco demais, mas tudo bem",
+        "nao era bem isso mas ja ajuda",
+        "sem problema, entendi",
     ],
     2: [
         "perfeito, resolveu na hora, muito obrigado! 😄",
@@ -144,6 +178,9 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "otimo, ja consegui acompanhar meu pedido, valeu mesmo",
         "nossa, que rapidez, adorei o suporte de voces 😍",
         "resolvido! obrigado pela atencao e paciencia",
+        "nao tive problema nenhum, obrigado",
+        "nem precisei esperar, resolveu rapido",
+        "nao demorou nada, valeu",
     ],
 }
 

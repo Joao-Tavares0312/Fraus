@@ -11,6 +11,7 @@ import {
 import {
   BarraDeClasses,
   CabecasDeLeitura,
+  LeituraDeEstilo,
 } from "@/components/CabecasDeLeitura";
 import {
   EXPLICACAO_DESFECHO,
@@ -561,6 +562,7 @@ function SinaisDeLeitura({
           compacto
           ressalvas={false}
         />
+        <LeituraDeEstilo estilo={mensagem.estilo} />
       </div>
     </details>
   );

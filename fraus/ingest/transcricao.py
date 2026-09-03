@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from fraus.modelos import Autor, Mensagem
+from fraus.seguranca.pii import censurar_pii
 
 # Como cada papel costuma aparecer escrito. A chave e o autor canonico.
 ALIASES: dict[Autor, tuple[str, ...]] = {
@@ -90,10 +91,17 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
 
         if autor is None:
             if mensagens:
-                # Continuacao da fala anterior.
+                # Continuacao da fala anterior. Censura aqui tambem: esta
+                # linha concatena a UM `Mensagem` ja construido, e censurar
+                # so na construcao original (abaixo) deixaria passar PII que
+                # caia numa linha de continuacao -- a armadilha que esta task
+                # existe para fechar. Qualquer origem NOVA de dado real
+                # precisa da mesma chamada.
                 anterior = mensagens[-1]
                 mensagens[-1] = anterior.model_copy(
-                    update={"texto": f"{anterior.texto}\n{linha.strip()}"}
+                    update={
+                        "texto": censurar_pii(f"{anterior.texto}\n{linha.strip()}")
+                    }
                 )
             elif achado and achado.group("autor").strip():
                 ignorados.append(achado.group("autor").strip()[:40])
@@ -103,8 +111,11 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
         if not conteudo:
             continue
 
+        # `Mensagem` nasce aqui -- ponto principal de construcao de dado real
+        # de cliente neste modulo. Censura tambem no ponto de continuacao
+        # acima, senao PII que cai numa segunda linha de fala passa direto.
         mensagens.append(
-            Mensagem(autor=autor, texto=conteudo, enviada_em=inicio)
+            Mensagem(autor=autor, texto=censurar_pii(conteudo), enviada_em=inicio)
         )
         horas.append(achado.group("hora"))
 

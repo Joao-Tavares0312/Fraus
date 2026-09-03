@@ -172,11 +172,13 @@ def criar_app_padrao() -> FastAPI:
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)  # propaga ModeloAusenteError
     fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
 
-    # Emocao e ironia entram no vetor de 35 features desde a subida do
-    # contrato (21/08/2026): sao tao obrigatorias quanto o classificador de
+    # Emocao e ironia entram no vetor desde a subida do contrato para 35
+    # features (21/08/2026): sao tao obrigatorias quanto o classificador de
     # texto. Ausencia de qualquer uma delas propaga ModeloAusenteError, do
     # mesmo jeito que ClassificadorTexto ja faz -- servir predicao com vetor
-    # incompleto e pior que estar fora do ar (invariante 7).
+    # incompleto e pior que estar fora do ar (invariante 7). O contrato subiu
+    # de novo, para 40, em 03/09/2026 com a familia `incongruencia_*` -- essa
+    # nao exige modelo, entao nao muda nada aqui.
     emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO)
     ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA)
 

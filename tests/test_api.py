@@ -6,6 +6,7 @@ from fraus.db import Banco
 from fraus.fusor import NOMES_FEATURES
 from fraus.indicadores import FAIXAS_NPS
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji
+from fraus.sinais.estilo import estilo_da_mensagem
 from fraus.sinais.palavras import PALAVRA, vocabulario
 
 CSV = (
@@ -109,6 +110,9 @@ class AtribuicaoDuble:
             "prob_neutro": p[1],
             "prob_satisfeito": p[2],
             "emojis": emojis,
+            # Estilo e deterministico (regra, nao classificador), entao o
+            # duble usa a funcao real -- nao ha o que dublar.
+            "estilo": estilo_da_mensagem(texto),
         }
 
 
@@ -334,24 +338,24 @@ def test_atribuicao_de_conversa_inexistente_e_404(cliente):
     assert cliente.get("/conversas/nao-existe/atribuicao").status_code == 404
 
 
-def test_atribuicao_traz_as_35_importancias(cliente, tmp_path):
+def test_atribuicao_traz_as_quarenta_importancias(cliente, tmp_path):
     caminho = tmp_path / "entrada.csv"
     caminho.write_text(CSV, encoding="utf-8")
     cliente.post("/conversas/importar", json={"caminho": str(caminho)})
 
     importancias = cliente.get("/conversas/c1/atribuicao").json()["importancias"]
-    assert len(importancias) == 35
+    assert len(importancias) == 40
     assert set(importancias) == set(NOMES_FEATURES)
 
 
-def test_atribuicao_traz_as_35_contribuicoes(cliente, tmp_path):
+def test_atribuicao_traz_as_quarenta_contribuicoes(cliente, tmp_path):
     caminho = tmp_path / "entrada.csv"
     caminho.write_text(CSV, encoding="utf-8")
     cliente.post("/conversas/importar", json={"caminho": str(caminho)})
 
     contribuicoes = cliente.get("/conversas/c1/atribuicao").json()["contribuicoes"]
     assert contribuicoes is not None
-    assert len(contribuicoes) == 35
+    assert len(contribuicoes) == 40
     assert set(contribuicoes) == set(NOMES_FEATURES)
 
 
@@ -438,9 +442,9 @@ def test_caminho_relativo_dentro_da_raiz_e_aceito(cliente, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_modelo_traz_as_35_importancias_e_as_faixas_corretas(cliente):
+def test_modelo_traz_as_quarenta_importancias_e_as_faixas_corretas(cliente):
     corpo = cliente.get("/modelo").json()
-    assert len(corpo["importancias"]) == 35
+    assert len(corpo["importancias"]) == 40
     assert set(corpo["importancias"]) == set(NOMES_FEATURES)
     assert corpo["classes"] == ["insatisfeito", "neutro", "satisfeito"]
     assert corpo["faixas_nps"] == {
@@ -535,6 +539,18 @@ def test_simular_no_teto_exato_e_aceito(cliente):
     texto_no_teto = "a" * 2000
     resposta = cliente.post("/modelo/simular", json={"texto": texto_no_teto})
     assert resposta.status_code == 200
+
+
+def test_simular_devolve_estilo_da_frase(cliente):
+    """A rota escolhia as chaves a dedo e esquecia `estilo` -- o motor ja o
+    calculava (`fraus.motor.Motor.simular_texto`), mas a rota nunca o
+    repassava. O Simulador da dashboard depende deste campo (Task 10)."""
+    corpo = cliente.post(
+        "/modelo/simular", json={"texto": "ISSO E UM ABSURDO!!! naaaao acredito"}
+    ).json()
+    assert corpo["estilo"]["caixa_alta"] is True
+    assert corpo["estilo"]["alongamento"] is True
+    assert corpo["estilo"]["pontuacao_enfatica"] >= 1
 
 
 def test_simular_com_emoji_devolve_posicao_relativa(cliente):
@@ -1040,7 +1056,7 @@ def test_modelo_publica_as_tres_cabecas_marcando_quem_pontua(cliente):
 
     O campo continua existindo mesmo que hoje seja unanime: se uma cabeca
     nova nascer sem entrar no vetor (o mesmo estado que emocao e ironia
-    tiveram antes das 35 features), a tela precisa distinguir na hora, nao
+    tiveram antes das 40 features), a tela precisa distinguir na hora, nao
     descobrir depois.
     """
     corpo = cliente.get("/modelo").json()
@@ -1102,7 +1118,7 @@ def test_upload_de_csv_analisa_sem_gravar(cliente_com_sinal):
 def test_transcricao_sem_horario_nao_recebe_nota(cliente_com_sinal):
     """Zerar a latencia faria o fusor ler como resposta instantanea.
 
-    Latencia e uma das 35 features, com peso aprendido: sem horario o
+    Latencia e uma das 40 features, com peso aprendido: sem horario o
     modelo veria toda resposta como imediata e a nota sairia melhor do que a
     verdade, sem erro nenhum aparecer. A ausencia da nota E a resposta honesta.
     """

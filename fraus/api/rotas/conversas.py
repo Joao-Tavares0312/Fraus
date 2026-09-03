@@ -104,7 +104,7 @@ def repontuar(ctx: Contexto = Depends(obter_contexto)) -> dict:
     que existe para acabar com ela.
 
     LIMITACAO DECLARADA: repontuar roda os TRES BERTimbau de novo por conversa.
-    O vetor e de 35 features e o fusor exige as 35 -- nao existe recalcular so
+    O vetor e de 40 features e o fusor exige as 40 -- nao existe recalcular so
     as tres lexicas e as cinco de emoji sem o resto. Em dezenas de atendimentos
     sao segundos; em milhares vira trabalho de fila, e a fila nao existe aqui.
     A rota e SINCRONA de proposito: uma fila que ninguem observa seria pior que

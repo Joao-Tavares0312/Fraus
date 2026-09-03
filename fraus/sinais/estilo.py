@@ -18,6 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from fraus.modelos import Conversa
+from fraus.seguranca.pii import TOKENS_MARCADORES
 
 CAMINHO_PALAVROES = Path(__file__).parent.parent / "dados" / "palavroes_ptbr.csv"
 
@@ -173,10 +174,28 @@ SIGLAS = {
 
 # Piso de comprimento para uma palavra maiuscula contar como grito. Palavra de
 # 1-2 letras em caixa alta e quase sempre sigla ou digitacao apressada.
+#
+# Revisado em 03/09/2026 contra Burgers, van Mulken & Schellens (2012),
+# Ptacek, Habernal & Hong (COLING 2014) e Bouazizi & Ohtsuki: nenhum dos tres
+# fixa um piso numerico de comprimento para "palavra maiuscula". Burgers trata
+# capitalizacao como categoria qualitativa de marcador tipografico, sem
+# threshold. Ptacek usa contagem continua normalizada ("numero de palavras
+# maiusculas" / total de palavras) -- nao um corte binario por tamanho.
+# Bouazizi & Ohtsuki descrevem features de pontuacao e padrao sem detalhar um
+# piso de letras para maiuscula. Mantido o valor de tres por falta de fonte
+# que indique outro numero -- e limitacao declarada, nao calibracao.
 MINIMO_CAIXA_ALTA = 3
 
 # Quantas repeticoes seguidas do mesmo caractere marcam alongamento. Duas nao
 # bastam: "carro", "passar" e "nossa" sao grafia normal do portugues.
+#
+# Revisado em 03/09/2026 contra a mesma bibliografia: Ptacek et al. (2014) nao
+# lista alongamento de caractere entre as features de "Word-case" ou
+# "Punctuation-based" da Tabela 1 -- o fenomeno simplesmente nao aparece no
+# artigo. Burgers (2012) e Bouazizi & Ohtsuki tambem nao quantificam um numero
+# de repeticoes. Nenhuma das tres fontes contradiz ou sustenta o valor de
+# tres; ele fica como esta por nao haver base bibliografica para mudar, nao
+# porque a bibliografia o confirme.
 MINIMO_ALONGAMENTO = 3
 
 # Riso alongado e o marcador POSITIVO mais comum de chat brasileiro. Contar
@@ -184,6 +203,14 @@ MINIMO_ALONGAMENTO = 3
 # conversas, entao ele tem excecao explicita.
 LETRAS_DE_RISO = set("kh")
 
+# Revisado em 03/09/2026: Ptacek et al. (2014) tratam exclamacao e interrogacao
+# como contagens continuas (normalizadas pelo maximo observado), nao como um
+# corte de "2 ou mais sinais seguidos". Burgers (2012) cita pontuacao como
+# categoria de marcador tipografico sem numero. Bouazizi & Ohtsuki tratam "!"
+# e "?" como indicadores de hiperbole, tambem sem threshold de repeticao
+# consecutiva. Nenhuma fonte examinada especifica o corte de duas ou mais
+# ocorrencias seguidas -- mantido por ausencia de base para trocar, nao por
+# confirmacao bibliografica do numero exato.
 PONTUACAO_ENFATICA = re.compile(r"[!?]{2,}")
 
 
@@ -211,6 +238,58 @@ def _tem_alongamento(palavra: str) -> bool:
     return False
 
 
+def estilo_da_mensagem(texto: str) -> dict:
+    """A leitura de estilo de UMA fala, para a tela mostrar onde ela aconteceu.
+
+    `features_estilo` agrega a conversa inteira -- e o que o fusor consome, e
+    e a media que pesa na nota. Esta funcao responde outra pergunta: em QUAL
+    mensagem a marca apareceu. Uma conversa com 5% de caixa alta pode ser uma
+    fala gritada entre dezenove calmas ou vinte falas levemente enfaticas, e a
+    media nao distingue as duas.
+
+    As duas leituras compartilham as MESMAS funcoes auxiliares de proposito:
+    duas implementacoes da pergunta "isto e um grito?" divergiriam na
+    fronteira, e a tela passaria a marcar o que a feature nao marcou.
+    """
+    # Marcador de censura de PII ("[CPF]", "[EMAIL]" etc.) perde os colchetes
+    # neste tokenizador e sobra maiusculo -- excluido aqui para nao contar
+    # como grito nem como fala do cliente (ver `TOKENS_MARCADORES`).
+    palavras = [p for p in PALAVRA.findall(texto) if p not in TOKENS_MARCADORES]
+    lexicon = carregar_palavroes()
+
+    intensidade_maxima = None
+    dirigido = False
+    censurada = False
+
+    for palavra in palavras:
+        if tem_censura(palavra):
+            entrada = casar_censurado(palavra, lexicon)
+            if any(c.isalpha() for c in palavra):
+                if entrada is not None:
+                    censurada = True
+            else:
+                censurada = True
+        else:
+            entrada = lexicon.get(normalizar(palavra))
+        if entrada is not None:
+            valor, alvo_pessoa = entrada
+            if intensidade_maxima is None or valor > intensidade_maxima:
+                intensidade_maxima = valor
+            dirigido = dirigido or alvo_pessoa
+
+    return {
+        "caixa_alta": any(_e_grito(p) for p in palavras),
+        "alongamento": any(_tem_alongamento(p) for p in palavras),
+        "pontuacao_enfatica": len(PONTUACAO_ENFATICA.findall(texto)),
+        # O MAXIMO e nao a media: numa fala so, a media diluiria o xingamento
+        # pesado entre os leves da mesma frase, e o que a tela precisa
+        # mostrar e o pior que apareceu ali.
+        "palavrao": intensidade_maxima,
+        "palavrao_dirigido": dirigido,
+        "censura": censurada,
+    }
+
+
 def features_estilo(conversa: Conversa) -> dict[str, float]:
     """Agrega a FORMA da escrita das mensagens DO CLIENTE.
 
@@ -233,7 +312,11 @@ def features_estilo(conversa: Conversa) -> dict[str, float]:
     lexicon = carregar_palavroes()
     palavras: list[str] = []
     for texto in textos:
-        palavras.extend(PALAVRA.findall(texto))
+        # Mesma exclusao de `estilo_da_mensagem`: marcador de censura de PII
+        # nao entra nem no numerador nem no denominador -- ele nao e palavra
+        # do cliente, e conta-lo aqui inflaria toda fracao de estilo com uma
+        # cicatriz que o proprio sistema deixou no texto ao censurar.
+        palavras.extend(p for p in PALAVRA.findall(texto) if p not in TOKENS_MARCADORES)
 
     if not palavras:
         return vazio

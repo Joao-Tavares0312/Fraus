@@ -194,13 +194,115 @@ Nao e falha do treino. O score e `100 * (P(satisfeito) + 0.5 * P(neutro))`, enta
 
 **Decisao de projeto: manter e declarar.** A alternativa avaliada era subir o peso do neutro de 0,5 para 0,75 (o centro da faixa passiva do NPS), o que faria neutro puro pontuar 75, virar nota 8 e cair em neutro — alinhando as tres classes as tres categorias. Ficou registrada aqui e na docstring de `Fusor.pontuar` para nao ser "corrigida" por engano.
 
+### Retreino do fusor apos as features de incongruencia (03/09/2026)
+
+O contrato subiu de 35 para 40 features: a familia `incongruencia_*` (`incongruencia_polaridade`,
+`incongruencia_emoji_texto`, `incongruencia_marcador_contraste`, `incongruencia_hiperbole`,
+`incongruencia_aspas_ironicas`) entrou em `NOMES_FEATURES`, anexada ao FIM da
+lista para preservar a ordem das 35 antigas. O fusor salvo em `modelos/`
+foi treinado com 35 e `vetorizar` agora produz 40 — ele NAO serve mais.
+`Fusor.carregar` (`joblib.load` puro, sem validacao de forma) carrega esse
+artefato sem erro nenhum -- a API real SOBE com ele. O erro de dimensao no
+`StandardScaler` so aparece na primeira pontuacao de verdade (`/ingestao` ou
+`/conversas/importar`), como HTTP 500, nao na carga do servidor. Isso e risco
+de demonstracao ao vivo, nao uma trava de subida -- ver a tabela do Fusor no
+README para o detalhe medido. A intencao da invariante 7 (falha alta e
+explicita) so se cumpre na metade "explicita"; a metade "na carga" fica para
+o retreino resolver o descompasso, nao para uma validacao que este codigo
+ainda nao tem.
+
+**O corpus sintetico tambem mudou, e isso importa mais do que a contagem de
+features.** `FRASES_POR_ROTULO`, em `fraus/ingest/simulador.py`, ganhou frases
+novas em duas levas para curar dois vazamentos de rotulo — o mesmo tipo de
+falha silenciosa que ja custou o primeiro fusor (ver acima), so que desta vez
+em features que ainda nao estavam no vetor:
+
+- **Intensificadores.** Antes, `incongruencia_hiperbole` era nao-zero na
+  maior parte das conversas do rotulo satisfeito e ZERO nos rotulos
+  insatisfeito e neutro — um previsor unilateral quase perfeito de
+  "satisfeito". A literatura inclui hiperbole na deteccao de ironia
+  justamente porque elogio hiperbolico e a forma classica da ironia, entao o
+  fusor teria aprendido a feature ao contrario do que ela significa. Depois
+  da correcao, medido com `gerar_lote(FRASES_POR_ROTULO, 180, semente=7)` —
+  o mesmo lote e semente da guarda `test_nenhuma_feature_e_previsor_unilateral`
+  em `tests/test_simulador.py`: `insatisfeito 34/60 | neutro 0/60 | satisfeito
+  39/60`.
+- **Negacao.** `lexico_frac_negados` era nao-zero so no rotulo insatisfeito e
+  ZERO nos outros dois — previsor unilateral de "insatisfeito", pre-existente
+  desde antes da familia `incongruencia_*` e nunca notado por falta de guarda
+  na familia `lexico_*`. Depois, medido com o mesmo lote e semente acima:
+  `insatisfeito 15/60 | neutro 17/60 | satisfeito 21/60`.
+
+**Consequencia pratica: o notebook 02 precisa REGERAR o corpus sintetico, nao
+reusar um lote cacheado de uma execucao anterior.** O notebook 02 ja gera o
+lote do zero a cada execucao — `gerar_lote` roda na propria celula, com
+semente fixa, e nao le nenhum artefato salvo de rodada passada — entao rodar
+o notebook de novo, sem alterar nada, ja traz o corpus corrigido. O risco e
+so para quem tiver guardado um `.csv`/`.pkl` de conversas de uma sessao
+antiga do Colab e tentar reaproveitar: um lote assim traz os dois vazamentos
+de volta.
+
+**O notebook ja importa o contrato do pacote, nao repete a lista.** A celula
+marcada com o comentario `# 5. Os SETE sinais de cada conversa, pelo MESMO
+codigo que a API usa` (indice 8 do `.ipynb`, contando a partir de 0) faz
+`from fraus.fusor import NOMES_FEATURES, montar_features` e chama
+`montar_features` com os tres classificadores — as cinco features novas
+entram sozinhas, sem editar o notebook. Isso ja era assim antes desta rodada
+(o vazamento do ramo obsoleto registrado na celula 2 foi outra causa, a de
+importar de um ramo desatualizado do repositorio, nao de reimplementar a
+lista) — nao ha lista duplicada para divergir aqui.
+
+Passos, no Colab:
+
+1. Conferir que a celula do clone do repositorio (`RAMO`) aponta para `main`
+   com a Task 5 mergeada, e rodar o notebook do inicio — sem tentar
+   reaproveitar nenhum lote de conversas salvo de uma execucao anterior.
+2. Antes de subir ao Colab (ou depois, localmente), rodar as guardas de
+   vazamento: `uv run pytest tests/test_simulador.py -k unilateral`. Elas
+   cobrem as familias `lexico_*`, `emoji_*`, `estilo_*` e `incongruencia_*`
+   contra previsor unilateral e precisam estar verdes antes do treino valer
+   a pena.
+3. Conferir a acuracia contra a do fusor de 35 features (0,93). **Acuracia
+   alta demais e sintoma, nao vitoria** — se saltar muito acima do valor
+   anterior, suspeite de vazamento antes de comemorar, releia a secao "O
+   vazamento do primeiro fusor" acima e confira os PESOS, nao so o numero:
+   se as features que lideram forem as de conteudo (texto, emoji), o modelo
+   aprendeu; se forem as circunstanciais, procure o vazamento.
+4. Conferir os coeficientes das cinco features novas em `Fusor.importancias()`
+   / `Fusor.eixo_global()`. Espere peso proximo de zero em
+   `incongruencia_marcador_contraste` e `incongruencia_aspas_ironicas`: o
+   simulador nao produz marcador de contraste entre polaridades opostas nem
+   aspas ironicas, entao as duas ficam constantes no corpus de treino e
+   feature constante nasce com peso zero — limitacao declarada, nao defeito.
+   Elas continuam sendo calculadas e valem em dado real; so nao tem o que
+   aprender no sintetico. `incongruencia_polaridade` tem sinal nos tres
+   rotulos e deve aparecer com peso real. `incongruencia_hiperbole` melhorou
+   mas nao chegou aos tres: depois da correcao ela dispara em DOIS dos tres
+   rotulos — `insatisfeito 34/60` e `satisfeito 39/60` (numeros medidos
+   acima, na secao do retreino) —, e `neutro` continua em `0/60`. Isso e
+   limitacao declarada, nao vazamento remanescente: fala neutra raramente
+   intensifica termo polar com hiperbole, e a decisao foi nao forcar uma
+   frase artificial no gerador so para a classe deixar de ficar muda. A
+   guarda `test_nenhuma_feature_e_previsor_unilateral`
+   (`tests/test_simulador.py`) tolera isso por construcao — ela so falha
+   quando a feature dispara em EXATAMENTE UM rotulo, entao 2-de-3 passa
+   verde. Isso e posicao aceita sobre o corpus sintetico atual, nao
+   descuido: fica registrado aqui para o proximo leitor nao achar que a
+   guarda promete "sinal nos tres rotulos" quando ela so promete "nao
+   previsor unilateral de UM rotulo so". A guarda nao foi alterada.
+5. Copiar `fusor.joblib` e `importancias.json` para `modelos/` na raiz do
+   repositorio local e rodar `uv run pytest -q` inteiro.
+
 ## Contrato de features
 
 `NOMES_FEATURES`, em `fraus/fusor.py`, e a lista canonica. `vetorizar` levanta `KeyError` se faltar chave — nunca zero silencioso (invariante 9).
 
-Hoje sao **35 features**, das sete familias. O contrato subiu de 16 para 35 em
+Hoje sao **40 features**, de oito familias. O contrato subiu de 16 para 35 em
 21/08/2026, quando os notebooks 03 e 04 passaram a existir e a condicao que
-justificava a espera acabou.
+justificava a espera acabou, e de 35 para 40 em 03/09/2026, quando a familia
+`incongruencia_*` entrou (ver [Retreino do fusor apos as features de
+incongruencia](#retreino-do-fusor-apos-as-features-de-incongruencia-03092026)
+acima).
 
 | sinal | modulo | features | no vetor? |
 |---|---|---|---|
@@ -211,6 +313,7 @@ justificava a espera acabou.
 | lexico | `fraus/sinais/lexico.py` | 3 | sim |
 | ironia | `fraus/sinais/ironia.py` | 2 | sim |
 | estilo | `fraus/sinais/estilo.py` | 6 | sim |
+| incongruencia | `fraus/sinais/incongruencia.py` | 5 | sim |
 
 **Consequencia:** `montar_features` exige TRES classificadores, e a API nao sobe
 sem os tres artefatos em `modelos/`. E o comportamento correto da invariante 7.

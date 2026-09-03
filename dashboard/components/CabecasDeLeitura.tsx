@@ -123,6 +123,67 @@ export function CabecasDeLeitura({
 }
 
 /**
+ * A FORMA da escrita de uma fala -- caixa alta, alongamento, ênfase, palavrão.
+ *
+ * Irmão de `CabecasDeLeitura` e mora no mesmo arquivo pelo mesmo motivo que
+ * ela: painel que explica um modelo, duplicado, envelhece separado.
+ *
+ * Diferente das duas cabeças de leitura, estilo não é modelo -- é
+ * determinístico, calculado por regra em `fraus/sinais/estilo.py`. Por isso
+ * não leva ressalva de confiabilidade: não há probabilidade para calibrar,
+ * a marca ou está no texto ou não está. O que ele NÃO diz é o quanto isso
+ * pesou na nota: quem pesa é a média da conversa inteira, nas features
+ * `estilo_*` do fusor.
+ */
+export function LeituraDeEstilo({
+  estilo,
+}: {
+  estilo: {
+    caixa_alta: boolean;
+    alongamento: boolean;
+    pontuacao_enfatica: number;
+    palavrao: number | null;
+    palavrao_dirigido: boolean;
+    censura: boolean;
+  } | null;
+}) {
+  if (!estilo) return null;
+
+  const marcas: string[] = [];
+  if (estilo.caixa_alta) marcas.push("caixa alta");
+  if (estilo.alongamento) marcas.push("alongamento");
+  if (estilo.pontuacao_enfatica > 0) {
+    marcas.push(`ênfase ×${estilo.pontuacao_enfatica}`);
+  }
+  if (estilo.palavrao !== null) {
+    const grau =
+      estilo.palavrao >= 1 ? "pesado" : estilo.palavrao >= 0.66 ? "médio" : "leve";
+    marcas.push(
+      estilo.palavrao_dirigido ? `palavrão ${grau}, dirigido` : `palavrão ${grau}`,
+    );
+  }
+  if (estilo.censura) marcas.push("autocensura");
+
+  // Nenhuma marca é resultado legítimo, não estado vazio: a fala foi medida e
+  // não tem ênfase nenhuma. Some da tela em vez de anunciar "nada" vinte
+  // vezes numa página que repete o painel por mensagem.
+  if (marcas.length === 0) return null;
+
+  return (
+    <ul className="flex flex-wrap gap-1.5" aria-label="marcas de estilo da fala">
+      {marcas.map((marca) => (
+        <li
+          key={marca}
+          className="rounded-sm bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+        >
+          {marca}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
  * As tres probabilidades de satisfacao como barra empilhada.
  *
  * A largura E a probabilidade -- nao ha eixo escondido. Ordem fixa das classes

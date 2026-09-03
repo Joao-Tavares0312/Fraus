@@ -38,6 +38,7 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, ValidationError
 
 from fraus.modelos import Conversa, Mensagem
+from fraus.seguranca.pii import censurar_pii
 
 COLUNAS = (
     "Conta/Nome",
@@ -217,7 +218,12 @@ def converter(
             continue
 
         try:
-            mensagem = Mensagem(autor=autor, texto=texto, enviada_em=enviada_em)
+            # `Mensagem` nasce aqui -- e o unico ponto deste adaptador que
+            # constroi dado real de cliente, entao e aqui que a censura mora.
+            # Qualquer origem NOVA de dado real precisa da mesma chamada.
+            mensagem = Mensagem(
+                autor=autor, texto=censurar_pii(texto), enviada_em=enviada_em
+            )
         except ValidationError as erro:
             ignoradas.append(LinhaIgnorada(numero_linha=numero_linha, motivo=str(erro)))
             continue

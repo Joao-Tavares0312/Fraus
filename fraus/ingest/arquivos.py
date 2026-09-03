@@ -286,7 +286,7 @@ def _de_prosa(texto: str, nome: str, origem: str) -> Extracao:
     if not transcricao.tem_tempo:
         avisos.append(
             "Sem horário nas mensagens: não há latência para medir, e latência "
-            "é uma das 35 features do fusor. Por isso esta conversa NÃO "
+            "é uma das 40 features do fusor. Por isso esta conversa NÃO "
             "recebe nota — preencher o tempo com zero faria o modelo ler como se "
             "toda resposta tivesse sido instantânea, e a nota sairia melhor do "
             "que a verdade. A leitura por mensagem (classificação, emoção, ironia "
