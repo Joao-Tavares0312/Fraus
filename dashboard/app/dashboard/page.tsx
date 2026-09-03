@@ -72,6 +72,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   // caminho feliz esta tela nao le transcricao nenhuma.
   let detalhes: DetalheConversa[] = [];
   let falhasDeDetalhe = 0;
+  let truncadasNoPlanoB = 0;
   if (
     (!serieDaApi.ok || !indicadoresDoServidor.ok || !lexicoDaApi.ok) &&
     !recorte.erro
@@ -79,6 +80,12 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
     const baixados = await obterDetalhes(recorte.resumos.map((r) => r.id));
     detalhes = baixados.detalhes;
     falhasDeDetalhe = baixados.falhas;
+    // `obterDetalhes` corta em TETO_DETALHES_PLANO_B para o periodo "todos" nao
+    // virar uma cadeia de dezenas de lotes sequenciais dentro do render. O
+    // corte E sobre o RECORTE, entao os agregados derivados aqui (serie,
+    // lexico, tempo mediano) passam a valer so para uma AMOSTRA do periodo --
+    // e a tela precisa dizer isso, nao fingir que cobriu tudo.
+    truncadasNoPlanoB = baixados.truncadas;
   }
 
   // As faixas de referencia da latencia sao as VIGENTES, nao constantes do
@@ -325,6 +332,15 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
               ? formatarDataHora(detalhes[detalhes.length - 1].iniciada_em)
               : "—"}
             .
+          </p>
+        ) : null}
+
+        {truncadasNoPlanoB > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {rotulo} tem mais atendimentos do que a agregação de reserva
+            consegue processar de uma vez: {truncadasNoPlanoB} ficaram de fora
+            dos indicadores, da série e do léxico derivados aqui. Isto só afeta
+            o plano B — a tabela de atendimentos continua completa.
           </p>
         ) : null}
       </div>
