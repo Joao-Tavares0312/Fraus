@@ -138,4 +138,5 @@ def simular(
         "emojis": resultado["emojis"],
         "emocao": resultado.get("emocao"),
         "prob_ironia": resultado.get("prob_ironia"),
+        "estilo": resultado.get("estilo"),
     }

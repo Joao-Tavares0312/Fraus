@@ -6,6 +6,7 @@ from fraus.db import Banco
 from fraus.fusor import NOMES_FEATURES
 from fraus.indicadores import FAIXAS_NPS
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji
+from fraus.sinais.estilo import estilo_da_mensagem
 from fraus.sinais.palavras import PALAVRA, vocabulario
 
 CSV = (
@@ -109,6 +110,9 @@ class AtribuicaoDuble:
             "prob_neutro": p[1],
             "prob_satisfeito": p[2],
             "emojis": emojis,
+            # Estilo e deterministico (regra, nao classificador), entao o
+            # duble usa a funcao real -- nao ha o que dublar.
+            "estilo": estilo_da_mensagem(texto),
         }
 
 
@@ -535,6 +539,18 @@ def test_simular_no_teto_exato_e_aceito(cliente):
     texto_no_teto = "a" * 2000
     resposta = cliente.post("/modelo/simular", json={"texto": texto_no_teto})
     assert resposta.status_code == 200
+
+
+def test_simular_devolve_estilo_da_frase(cliente):
+    """A rota escolhia as chaves a dedo e esquecia `estilo` -- o motor ja o
+    calculava (`fraus.motor.Motor.simular_texto`), mas a rota nunca o
+    repassava. O Simulador da dashboard depende deste campo (Task 10)."""
+    corpo = cliente.post(
+        "/modelo/simular", json={"texto": "ISSO E UM ABSURDO!!! naaaao acredito"}
+    ).json()
+    assert corpo["estilo"]["caixa_alta"] is True
+    assert corpo["estilo"]["alongamento"] is True
+    assert corpo["estilo"]["pontuacao_enfatica"] >= 1
 
 
 def test_simular_com_emoji_devolve_posicao_relativa(cliente):
