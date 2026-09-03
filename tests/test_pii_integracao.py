@@ -57,3 +57,20 @@ def test_registrar_conversa_grava_texto_mascarado(ctx_de_teste):
     assert "joao@exemplo.com" not in texto
     assert "[CPF]" in texto
     assert "[EMAIL]" in texto
+
+
+def test_csv_driver_mascara_pii_na_leitura():
+    """A outra porta de entrada. Mesma regra, senao ela vira o furo."""
+    import io
+
+    from fraus.ingest.csv_driver import carregar_linhas
+
+    conteudo = (
+        "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
+        "c1,csv,cliente,meu cpf e 529.982.247-25,2026-09-03T10:00:00+00:00,false\n"
+    )
+    resultado = carregar_linhas(io.StringIO(conteudo, newline=""))
+
+    texto = resultado.conversas[0].mensagens[0].texto
+    assert "529.982.247-25" not in texto
+    assert "[CPF]" in texto

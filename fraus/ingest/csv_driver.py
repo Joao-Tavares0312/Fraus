@@ -1,4 +1,9 @@
-"""Driver de ingestao CSV. Uma linha por mensagem, agrupada por conversa_id."""
+"""Driver de ingestao CSV. Uma linha por mensagem, agrupada por conversa_id.
+
+O texto de cada mensagem passa por `censurar_pii` AQUI, na leitura, e nao
+depois: esta e a segunda porta de entrada do sistema (a outra e
+`fraus/api/registro.py`), e uma porta sem a censura torna a outra inutil.
+"""
 
 import csv
 import io
@@ -10,6 +15,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from fraus.modelos import Conversa, Mensagem
+from fraus.seguranca.pii import censurar_pii
 
 VERDADEIROS = {"true", "1", "sim", "yes"}
 
@@ -87,7 +93,7 @@ def carregar_linhas(arquivo: Iterable[str]) -> ResultadoIngestao:
         try:
             mensagem = Mensagem(
                 autor=_exigir(linha, "autor", numero_linha),
-                texto=_exigir(linha, "texto", numero_linha),
+                texto=censurar_pii(_exigir(linha, "texto", numero_linha)),
                 enviada_em=datetime.fromisoformat(
                     _exigir(linha, "enviada_em", numero_linha)
                 ),
