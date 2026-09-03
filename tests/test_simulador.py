@@ -253,3 +253,28 @@ def test_nenhuma_incongruencia_separa_as_classes_sozinha(incongruencia_por_rotul
                 assert not (faixas[b][1] < faixas[a][0]), (
                     f"{chave} separa {b} de {a}: {faixas[b]} nao encosta em {faixas[a]}"
                 )
+
+
+def test_nenhuma_incongruencia_e_previsor_unilateral(incongruencia_por_rotulo):
+    """Invariante 10, segunda metade: disjuncao nao pega previsor unilateral.
+
+    Nenhuma feature pode disparar em UM UNICO rotulo. Disjuncao nao pega este
+    caso -- se as tres faixas incluem zero, "max de A < min de B" nunca e
+    verdade -- mas uma feature que so e nao-zero na classe 2 prediz a classe 2
+    sozinha com certeza, que e exatamente o vazamento que o invariante 10
+    proibe. Foi assim que `incongruencia_hiperbole` escapou em 03/09/2026.
+
+    Cuidado: `incongruencia_marcador_contraste` e `incongruencia_aspas_ironicas`
+    sao constantes em ZERO nos tres rotulos deste corpus -- feature ausente do
+    corpus, que nasce com peso zero, e limitacao declarada, nao previsor
+    unilateral. So falha quando UM rotulo dispara e os outros ficam mudos.
+    """
+    for chave in CHAVES_INCONGRUENCIA:
+        rotulos_com_disparo = {
+            rotulo: sum(1 for linha in linhas if linha[chave] > 0)
+            for rotulo, linhas in incongruencia_por_rotulo.items()
+        }
+        rotulos_que_disparam = [r for r, contagem in rotulos_com_disparo.items() if contagem > 0]
+        assert len(rotulos_que_disparam) != 1, (
+            f"{chave} so dispara no rotulo {rotulos_que_disparam}: previsor unilateral"
+        )
