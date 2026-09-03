@@ -6,6 +6,8 @@ import pytest
 from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_conversa, gerar_lote
 from fraus.sinais.emoji import features_emoji
 from fraus.sinais.estilo import features_estilo
+from fraus.sinais.incongruencia import CHAVES as CHAVES_INCONGRUENCIA
+from fraus.sinais.incongruencia import features_incongruencia
 from fraus.sinais.tempo import features_tempo
 
 FRASES = {
@@ -214,3 +216,40 @@ def test_distribuicoes_de_estilo_se_sobrepoem_entre_rotulos(agrupado_por_rotulo)
         assert len(comedidos_entre_insatisfeitos) >= 15, (
             f"{chave}: poucos insatisfeitos abaixo do quartil superior do satisfeito"
         )
+
+
+@pytest.fixture(scope="module")
+def incongruencia_por_rotulo() -> dict[int, list[dict]]:
+    """Mesmo lote e mesma semente da guarda de estilo -- comparavel de proposito."""
+    agrupado: dict[int, list[dict]] = {0: [], 1: [], 2: []}
+    for conversa, rotulo in gerar_lote(FRASES_POR_ROTULO, 180, semente=7):
+        agrupado[rotulo].append(features_incongruencia(conversa))
+    return agrupado
+
+
+def test_nenhuma_incongruencia_separa_as_classes_sozinha(incongruencia_por_rotulo):
+    """Invariante 10: corpus de treino nao entrega o rotulo.
+
+    Disjuncao = o maximo de uma classe abaixo do minimo de outra. Se isto
+    falhar, a feature acusada NAO pode entrar no vetor como esta, e a cura e
+    mexer no CORPUS (como se fez com a latencia log-normal), NUNCA afrouxar
+    esta asercao.
+    """
+    for chave in CHAVES_INCONGRUENCIA:
+        faixas = {
+            rotulo: (
+                min(linha[chave] for linha in linhas),
+                max(linha[chave] for linha in linhas),
+            )
+            for rotulo, linhas in incongruencia_por_rotulo.items()
+        }
+        for a in sorted(faixas):
+            for b in sorted(faixas):
+                if a >= b:
+                    continue
+                assert not (faixas[a][1] < faixas[b][0]), (
+                    f"{chave} separa {a} de {b}: {faixas[a]} nao encosta em {faixas[b]}"
+                )
+                assert not (faixas[b][1] < faixas[a][0]), (
+                    f"{chave} separa {b} de {a}: {faixas[b]} nao encosta em {faixas[a]}"
+                )
