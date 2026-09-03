@@ -200,10 +200,16 @@ O contrato subiu de 35 para 40 features: a familia `incongruencia_*` (`incongrue
 `incongruencia_emoji_texto`, `incongruencia_marcador_contraste`, `incongruencia_hiperbole`,
 `incongruencia_aspas_ironicas`) entrou em `NOMES_FEATURES`, anexada ao FIM da
 lista para preservar a ordem das 35 antigas. O fusor salvo em `modelos/`
-foi treinado com 35 e `vetorizar` agora produz 40 — ele NAO serve mais, e
-carregar o artefato antigo com o vetor novo levanta erro de dimensao no
-`StandardScaler`. Isso e o comportamento certo, nao um bug: falha alta e
-explicita, invariante 7.
+foi treinado com 35 e `vetorizar` agora produz 40 — ele NAO serve mais.
+`Fusor.carregar` (`joblib.load` puro, sem validacao de forma) carrega esse
+artefato sem erro nenhum -- a API real SOBE com ele. O erro de dimensao no
+`StandardScaler` so aparece na primeira pontuacao de verdade (`/ingestao` ou
+`/conversas/importar`), como HTTP 500, nao na carga do servidor. Isso e risco
+de demonstracao ao vivo, nao uma trava de subida -- ver a tabela do Fusor no
+README para o detalhe medido. A intencao da invariante 7 (falha alta e
+explicita) so se cumpre na metade "explicita"; a metade "na carga" fica para
+o retreino resolver o descompasso, nao para uma validacao que este codigo
+ainda nao tem.
 
 **O corpus sintetico tambem mudou, e isso importa mais do que a contagem de
 features.** `FRASES_POR_ROTULO`, em `fraus/ingest/simulador.py`, ganhou frases
@@ -269,9 +275,21 @@ Passos, no Colab:
    aspas ironicas, entao as duas ficam constantes no corpus de treino e
    feature constante nasce com peso zero — limitacao declarada, nao defeito.
    Elas continuam sendo calculadas e valem em dado real; so nao tem o que
-   aprender no sintetico. `incongruencia_hiperbole` e `incongruencia_polaridade`,
-   ao contrario, agora tem sinal nos tres rotulos e devem aparecer com peso
-   real.
+   aprender no sintetico. `incongruencia_polaridade` tem sinal nos tres
+   rotulos e deve aparecer com peso real. `incongruencia_hiperbole` melhorou
+   mas nao chegou aos tres: depois da correcao ela dispara em DOIS dos tres
+   rotulos — `insatisfeito 34/60` e `satisfeito 39/60` (numeros medidos
+   acima, na secao do retreino) —, e `neutro` continua em `0/60`. Isso e
+   limitacao declarada, nao vazamento remanescente: fala neutra raramente
+   intensifica termo polar com hiperbole, e a decisao foi nao forcar uma
+   frase artificial no gerador so para a classe deixar de ficar muda. A
+   guarda `test_nenhuma_feature_e_previsor_unilateral`
+   (`tests/test_simulador.py`) tolera isso por construcao — ela so falha
+   quando a feature dispara em EXATAMENTE UM rotulo, entao 2-de-3 passa
+   verde. Isso e posicao aceita sobre o corpus sintetico atual, nao
+   descuido: fica registrado aqui para o proximo leitor nao achar que a
+   guarda promete "sinal nos tres rotulos" quando ela so promete "nao
+   previsor unilateral de UM rotulo so". A guarda nao foi alterada.
 5. Copiar `fusor.joblib` e `importancias.json` para `modelos/` na raiz do
    repositorio local e rodar `uv run pytest -q` inteiro.
 

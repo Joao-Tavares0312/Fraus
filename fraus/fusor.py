@@ -1,4 +1,4 @@
-"""Fusor das sete familias de sinal.
+"""Fusor das oito familias de sinal.
 
 LogisticRegression com padronizacao: interpretavel de proposito -- o trabalho
 precisa defender POR QUE um atendimento recebeu a nota, e coeficiente de
