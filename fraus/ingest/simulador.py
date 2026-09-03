@@ -135,6 +135,20 @@ RESPOSTAS_BOT = [
 # "muito ruim" e tao natural em portugues quanto "muito bom": a ausencia era
 # lacuna do corpus, nao fato da lingua. Removê-la de novo reintroduz o mesmo
 # vazamento.
+#
+# CRUZAMENTO de negacao (`lexico_frac_negados`): a versao anterior so usava
+# negacao em frases do rotulo 0 ("nao me ajudou", "nao foi isso que eu
+# perguntei", "ninguem resolve") -- os rotulos 1 e 2 nao tinham nenhuma frase
+# com marcador de negacao perto de termo do lexico. Medido: 15/60 conversas do
+# rotulo 0 disparavam `lexico_frac_negados > 0` contra 0/60 nos rotulos 1 e 2,
+# um previsor unilateral com 100% de certeza -- `lexico_frac_negados > 0`
+# bastava para acertar "insatisfeito" sem ler o resto do texto.
+#
+# E vazamento e nao sinal legitimo porque cliente satisfeito tambem nega
+# ("nao tive problema nenhum", "nao precisei esperar", "nao demorou nada") --
+# zero em 60 conversas era artefato de um corpus de 6 frases por rotulo, nao
+# fato da lingua. Remover a negacao dos rotulos 1/2 de novo reintroduz o mesmo
+# vazamento com outra roupa -- a latencia disjunta do invariante 10, de novo.
 FRASES_POR_ROTULO: dict[int, list[str]] = {
     0: [
         "ja e a terceira vez que eu explico a mesma coisa e ninguem resolve 😡",
@@ -154,6 +168,8 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "so isso mesmo, valeu",
         "hmm, acho que da pra tentar assim",
         "demorou um pouco demais, mas tudo bem",
+        "nao era bem isso mas ja ajuda",
+        "sem problema, entendi",
     ],
     2: [
         "perfeito, resolveu na hora, muito obrigado! 😄",
@@ -162,6 +178,9 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "otimo, ja consegui acompanhar meu pedido, valeu mesmo",
         "nossa, que rapidez, adorei o suporte de voces 😍",
         "resolvido! obrigado pela atencao e paciencia",
+        "nao tive problema nenhum, obrigado",
+        "nem precisei esperar, resolveu rapido",
+        "nao demorou nada, valeu",
     ],
 }
 
