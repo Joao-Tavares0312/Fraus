@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 
 from fraus.ingest.csv_driver import carregar_csv
@@ -74,3 +75,50 @@ def test_coluna_ausente_levanta_keyerror(tmp_path):
         assert False, "Esperava KeyError para coluna ausente"
     except KeyError:
         pass  # Comportamento esperado
+
+
+# --- linha CURTA: o TypeError que virava 500 --------------------------------
+#
+# `csv.DictReader` devolve None para a coluna que a linha nao alcancou, e
+# `datetime.fromisoformat(None)` levanta TypeError -- que NAO estava no except.
+# Ele escapava tambem das bordas HTTP (rotas/conversas.py e rotas/analise.py so
+# traduzem KeyError), entao um CSV com uma linha truncada virava 500 na tela de
+# upload -- contradizendo o docstring deste modulo: "uma linha malformada nunca
+# derruba o lote inteiro".
+#
+# E DIFERENTE do teste acima: la falta a coluna no CABECALHO (defeito do
+# arquivo, causa unica, KeyError de proposito); aqui o cabecalho esta correto e
+# so UMA linha acabou cedo.
+
+
+def test_linha_truncada_e_rejeitada_sem_derrubar_o_lote(tmp_path):
+    caminho = _escrever(tmp_path, (
+        "c1,webchat,cliente,oi,2026-05-14T10:00:00+00:00,false\n"
+        "c1,webchat,cliente\n"
+        "c1,webchat,bot,ola,2026-05-14T10:00:20+00:00,false\n"
+    ))
+    resultado = carregar_csv(caminho)
+
+    assert [linha.numero_linha for linha in resultado.rejeitadas] == [3]
+    assert len(resultado.conversas) == 1
+    assert len(resultado.conversas[0].mensagens) == 2
+
+
+def test_o_motivo_da_rejeicao_nomeia_a_coluna_que_faltou(tmp_path):
+    """`str(TypeError)` cru diria "fromisoformat: argument must be str", que
+    nao ajuda ninguem a consertar a planilha."""
+    caminho = _escrever(tmp_path, "c1,webchat,cliente,oi\n")
+    motivo = carregar_csv(caminho).rejeitadas[0].motivo
+    assert "enviada_em" in motivo and "linha 2" in motivo
+
+
+def test_linha_curta_na_ULTIMA_coluna_tambem_e_isolada(tmp_path):
+    """`escalou_para_humano` e lida FORA do try, no `.strip()` -- o mesmo
+    TypeError, num lugar que o except original nem alcancava."""
+    caminho = _escrever(tmp_path, (
+        "c1,webchat,cliente,oi,2026-05-14T10:00:00+00:00\n"
+        "c1,webchat,bot,ola,2026-05-14T10:00:20+00:00,false\n"
+    ))
+    resultado = carregar_csv(caminho)
+    assert [linha.numero_linha for linha in resultado.rejeitadas] == [2]
+    assert len(resultado.conversas) == 1

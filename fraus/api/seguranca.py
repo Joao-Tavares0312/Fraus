@@ -172,12 +172,41 @@ def sessao_do_jwt(ctx: Contexto, chave: str | None) -> dict | None:
     Chave `fra_` e mestra nao parecem JWT e caem no None sem custo. Sem
     `jwt_segredo` configurado nao existe token valido possivel -- e a resposta
     e None, nunca excecao: quem chama esta no meio de decidir uma requisicao.
+
+    O TOKEN NAO E A ULTIMA PALAVRA, e isto e conserto de 03/09/2026. Antes daqui
+    saia a sessao assim que assinatura e `exp` batessem, sem olhar o banco. Duas
+    consequencias, as duas reproduzidas:
+
+    - Conta DESATIVADA seguia lendo tudo. So `/auth/eu` consultava `usuarios`,
+      entao a tela dizia "sessao invalida" -- e quem opera acreditava ter
+      cortado o acesso -- enquanto `/conversas` respondia 200 por ate 12 horas,
+      a validade do token.
+    - O `papel` viajava DENTRO do token. Rebaixar `dev` -> `usuario` no banco so
+      surtia efeito na expiracao, e `rota_administrativa` continuava aberta.
+
+    Agora a assinatura decide QUEM esta falando e o banco decide o que essa
+    pessoa PODE -- que e a unica divisao em que revogar significa alguma coisa.
+    A ordem importa: o usuario so e carregado DEPOIS de a assinatura conferir,
+    senao qualquer token nomeando um id existente entraria.
+
+    O custo e uma leitura por requisicao, a mesma que `faixas_vigentes()` ja
+    paga. (O middleware e `acesso_autorizado` chamam esta funcao em sequencia,
+    entao sao duas -- consulta por chave primaria, e o preco de nao mentir
+    sobre quem tem acesso.)
     """
     if chave is None or ctx.jwt_segredo is None:
         return None
-    return token_acesso.conferir(
+    sessao = token_acesso.conferir(
         chave, ctx.jwt_segredo, agora=datetime.now(timezone.utc)
     )
+    if sessao is None:
+        return None
+    usuario = ctx.banco.buscar_usuario(sessao["usuario_id"])
+    if usuario is None or not usuario["ativo"]:
+        return None
+    # O papel vem do BANCO, nao do payload: e o que faz promover e rebaixar
+    # valerem na hora, nos dois sentidos.
+    return {**sessao, "papel": usuario["papel"]}
 
 
 def rota_administrativa(metodo: str, caminho: str) -> bool:

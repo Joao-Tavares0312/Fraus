@@ -47,6 +47,22 @@ def carregar_texto(conteudo: str) -> ResultadoIngestao:
     return carregar_linhas(io.StringIO(conteudo, newline=""))
 
 
+def _exigir(linha: dict, coluna: str, numero_linha: int) -> str:
+    """O valor da coluna, recusando a linha que acabou antes dela.
+
+    `linha[coluna]` levanta KeyError quando a coluna nao existe no cabecalho --
+    e esse KeyError e deixado passar de proposito (ver o laco). O None e outra
+    coisa: e a linha que terminou cedo, e vira ValueError porque e assim que
+    este modulo rejeita UMA linha sem derrubar as outras.
+    """
+    valor = linha[coluna]
+    if valor is None:
+        raise ValueError(
+            f"a linha {numero_linha} termina antes da coluna '{coluna}'"
+        )
+    return valor
+
+
 def carregar_linhas(arquivo: Iterable[str]) -> ResultadoIngestao:
     """Nucleo compartilhado: agrupa mensagens por conversa e isola o que falhou."""
     por_conversa: dict[str, list[Mensagem]] = defaultdict(list)
@@ -55,27 +71,37 @@ def carregar_linhas(arquivo: Iterable[str]) -> ResultadoIngestao:
 
     leitor = csv.DictReader(arquivo)
     for numero_linha, linha in enumerate(leitor, start=2):
+        # KeyError NAO e capturado em lugar nenhum deste laco, de proposito:
+        # coluna ausente no CABECALHO e defeito do ARQUIVO, nao da linha. Toda
+        # linha estaria errada pelo mesmo motivo, e transformar isso em milhares
+        # de rejeicoes individuais esconderia a causa unica. A API converte esse
+        # KeyError num 400 que nomeia a coluna.
+        #
+        # Linha CURTA e o caso oposto, e por isso `_exigir` existe: o cabecalho
+        # esta certo e so ESTA linha acabou cedo. O `DictReader` devolve None
+        # para o que ela nao alcancou, e ate 03/09/2026 esse None seguia adiante
+        # -- `fromisoformat(None)` levantava TypeError, que nao estava no except
+        # nem nas bordas HTTP, e uma linha truncada derrubava o lote inteiro com
+        # 500. Agora vira ValueError nomeando a coluna, que e a mesma rejeicao
+        # por linha que uma data invalida ja recebia.
         try:
-            enviada_em = datetime.fromisoformat(linha["enviada_em"])
             mensagem = Mensagem(
-                autor=linha["autor"],
-                texto=linha["texto"],
-                enviada_em=enviada_em,
+                autor=_exigir(linha, "autor", numero_linha),
+                texto=_exigir(linha, "texto", numero_linha),
+                enviada_em=datetime.fromisoformat(
+                    _exigir(linha, "enviada_em", numero_linha)
+                ),
             )
+            conversa_id = _exigir(linha, "conversa_id", numero_linha)
+            canal = _exigir(linha, "canal", numero_linha)
+            escalou = _exigir(linha, "escalou_para_humano", numero_linha)
         except (ValueError, ValidationError) as erro:
             rejeitadas.append(LinhaRejeitada(numero_linha=numero_linha, motivo=str(erro)))
             continue
 
-        # KeyError aqui NAO e capturado, de proposito: coluna ausente e defeito
-        # do ARQUIVO, nao da linha. Toda linha estaria errada pelo mesmo motivo,
-        # e transformar isso em milhares de rejeicoes individuais esconderia a
-        # causa unica. A API converte esse KeyError num 400 que nomeia a coluna.
-        conversa_id = linha["conversa_id"]
         por_conversa[conversa_id].append(mensagem)
-        meta = metadados.setdefault(
-            conversa_id, {"canal": linha["canal"], "escalou": False}
-        )
-        if linha["escalou_para_humano"].strip().lower() in VERDADEIROS:
+        meta = metadados.setdefault(conversa_id, {"canal": canal, "escalou": False})
+        if escalou.strip().lower() in VERDADEIROS:
             meta["escalou"] = True
 
     conversas = []

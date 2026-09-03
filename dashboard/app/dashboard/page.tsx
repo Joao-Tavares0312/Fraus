@@ -23,6 +23,7 @@ import {
 import { carregarRecorte } from "@/lib/carregar";
 import {
   distribuicaoDeNotas,
+  FAIXAS_NPS,
   indicadoresDoPeriodo,
   limiaresDe,
   lexicoPorClasse,
@@ -116,7 +117,33 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   const serie = serieDaApi.ok
     ? serieDoServidor(serieDaApi.dado.pontos)
     : serieDiaria(detalhes);
-  const distribuicao = distribuicaoDeNotas(resumos);
+
+  /*
+   * QUANDO A SERIE VAZIA NAO SIGNIFICA "NAO HOUVE ATENDIMENTO".
+   *
+   * `GraficoNpsLatencia` so recebe `serie`, entao serie vazia era sempre
+   * traduzida como "Nenhum atendimento no período selecionado". Isso e verdade
+   * quando a listagem respondeu e veio vazia -- e mentira quando
+   * `/serie-temporal` caiu, o plano B tambem caiu, e a lista ao lado esta
+   * cheia de atendimentos. A tela afirmava ausencia sem ter como saber, e com
+   * a confianca de quem sabe.
+   *
+   * O ramo do `erro` (falha da LISTAGEM) ja existia; este cobre o buraco entre
+   * ele e o grafico -- a mesma correcao que a distribuicao e o lexico ja
+   * tinham recebido, aplicada ao unico painel que dependia de um agregado
+   * proprio. O criterio e o plano B ter REPOSTO o que faltava: se todas as
+   * transcricoes do recorte foram baixadas, a serie derivada e completa e o
+   * grafico pode falar normalmente.
+   */
+  const erroDaSerie = serieDaApi.ok ? null : serieDaApi.erro;
+  const serieIncompleta = erroDaSerie !== null && detalhes.length < resumos.length;
+  // As faixas VIGENTES governam a cor de cada barra, do mesmo jeito que
+  // governam a categoria gravada. Digitadas aqui, a tela dava dois vereditos
+  // para o mesmo atendimento assim que alguem mexesse em Configuracoes.
+  const faixasVigentes = configuracoes.ok
+    ? configuracoes.dado.vigente.faixas_nps
+    : undefined;
+  const distribuicao = distribuicaoDeNotas(resumos, faixasVigentes);
   const classes = lexicoDaApi.ok
     ? lexicoDaApi.dado.classes
     : lexicoPorClasse(detalhes);
@@ -176,6 +203,14 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
                 titulo="Série indisponível"
                 explicacao={`Não foi possível listar os atendimentos: ${erro}. A série temporal é derivada dessa lista.`}
               />
+            ) : serieIncompleta ? (
+              /* Nomeia o que falhou em vez de afirmar ausência de dado. A
+                 contagem ao lado é a prova de que houve atendimento: sem ela,
+                 "indisponível" pareceria o mesmo "vazio" de sempre. */
+              <EstadoVazio
+                titulo="Série indisponível"
+                explicacao={`GET /serie-temporal não respondeu (${erroDaSerie}), e a agregação de reserva não conseguiu ler as transcrições. Não é ausência de atendimento: ${resumos.length} foram listados no período. Os outros painéis desta tela seguem valendo.`}
+              />
             ) : (
               <GraficoNpsLatencia serie={serie} />
             )}
@@ -185,7 +220,16 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           <Painel
             titulo="Distribuição das notas inferidas"
-            legenda="Faixas canônicas de NPS: 0–6 detrator, 7–8 neutro, 9–10 promotor — lidas de GET /modelo, não digitadas aqui."
+            legenda={
+              faixasVigentes
+                ? `Faixas vigentes: ${FAIXAS_NPS.map(({ categoria }) => {
+                    const faixa = faixasVigentes[categoria];
+                    return faixa
+                      ? `${faixa[0]}–${faixa[1]} ${categoria}`
+                      : categoria;
+                  }).join(", ")} — lidas de GET /configuracoes, não digitadas aqui.`
+                : "Faixas de fábrica: 0–6 detrator, 7–8 neutro, 9–10 promotor. GET /configuracoes não respondeu, então as faixas vigentes não puderam ser confirmadas."
+            }
             semPadding
           >
             {/* Sem este ramo, a distribuição recebia zero barras e anunciava

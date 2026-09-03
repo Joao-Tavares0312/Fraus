@@ -17,6 +17,7 @@ recusa nesta camada nomeia o que se esperava e o que se achou.
 
 import csv
 import io
+import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -40,6 +41,30 @@ COLUNAS_CANONICAS = {
 # Teto de celulas lidas de uma planilha. Sem ele, uma pasta com uma coluna
 # esticada ate a linha um milhao viraria um milhao de linhas vazias.
 TETO_LINHAS_PLANILHA = 50_000
+
+# --- guarda de bomba zip ----------------------------------------------------
+#
+# xlsx e docx sao pacotes ZIP, e ZIP declara no cabecalho quanto cada membro vai
+# ocupar DEPOIS de descomprimido. Os tetos de upload (`TETO_CORPO`,
+# `TETO_ARQUIVO_ANALISE`) medem o arquivo comprimido e por isso nao veem nada:
+# 190 KB legitimos e 190 KB de bomba tem o mesmo tamanho na porta de entrada.
+# Medido em 02/09/2026 contra a instalacao publicada: 190 KB -> 64,8 MB -> 20,4 s
+# de CPU. `TETO_LINHAS_PLANILHA` chegava tarde -- o `load_workbook` parseia
+# `xl/sharedStrings.xml` inteiro antes de a primeira linha existir.
+#
+# 40 MB descomprimidos: uma planilha de 50k linhas de conversa fica uma ordem de
+# grandeza abaixo disso; e o teto e do PACOTE, nao de um membro, porque distribuir
+# a carga entre muitos arquivinhos e o jeito obvio de escapar de um teto por membro.
+TETO_DESCOMPRIMIDO = 40 * 1024 * 1024
+
+# XML de planilha comprime bem de verdade -- 20x ou 30x e rotina em documento
+# legitimo. 200x nao e documento, e alavanca: e o ponto em que alguem paga bytes
+# de menos por CPU nossa de mais.
+RAZAO_MAXIMA_ZIP = 200
+
+_MEMBRO_MINIMO_PARA_RAZAO = 64 * 1024
+"""Abaixo disto a razao nao diz nada: um membro de 200 bytes que comprime a 2
+tem razao 100 e custa nada. So o total manda nos arquivos pequenos."""
 
 
 class ArquivoIlegivelError(ValueError):
@@ -72,7 +97,47 @@ def _extensao(nome: str) -> str:
     return EXTENSOES[sufixo]
 
 
+def _recusar_bomba_zip(dados: bytes, formato: str) -> None:
+    """Recusa o pacote pelo CABECALHO, sem descomprimir um byte.
+
+    O `zipfile` le o diretorio central, que ja traz `file_size` e
+    `compress_size` de cada membro -- e o custo disso e proporcional ao numero
+    de membros, nao ao conteudo. E por isso que a guarda pode vir antes do
+    parse, que e onde o dano acontece.
+
+    ZIP QUEBRADO NAO E PROBLEMA DAQUI: quem sabe explicar 'planilha ilegivel' e
+    o `load_workbook`, com a mensagem que ja existe. Aqui o `BadZipFile` volta
+    calado para nao sequestrar aquela recusa.
+    """
+    try:
+        with zipfile.ZipFile(io.BytesIO(dados)) as pacote:
+            membros = pacote.infolist()
+    except zipfile.BadZipFile:
+        return
+
+    total = sum(membro.file_size for membro in membros)
+    if total > TETO_DESCOMPRIMIDO:
+        raise ArquivoIlegivelError(
+            f"este {formato} declara {total / 1024 / 1024:.1f} MB descomprimidos, "
+            f"acima do teto de {TETO_DESCOMPRIMIDO // 1024 // 1024} MB. Um arquivo "
+            "de conversas fica muito abaixo disso -- confira se a exportacao nao "
+            "trouxe planilha inteira junto."
+        )
+    for membro in membros:
+        if membro.compress_size <= 0 or membro.file_size < _MEMBRO_MINIMO_PARA_RAZAO:
+            continue
+        razao = membro.file_size / membro.compress_size
+        if razao > RAZAO_MAXIMA_ZIP:
+            raise ArquivoIlegivelError(
+                f"este {formato} tem um item ('{membro.filename}') que infla "
+                f"{razao:.0f}x ao ser aberto -- {membro.file_size / 1024 / 1024:.1f} MB "
+                f"vindos de {membro.compress_size / 1024:.0f} kB. Acima da razao "
+                f"maxima de {RAZAO_MAXIMA_ZIP}x, o arquivo e recusado sem ser lido."
+            )
+
+
 def _linhas_da_planilha(dados: bytes) -> list[list[str]]:
+    _recusar_bomba_zip(dados, "xlsx")
     try:
         from openpyxl import load_workbook
     except ImportError as erro:  # pragma: no cover - dependencia declarada
@@ -103,6 +168,9 @@ def _linhas_da_planilha(dados: bytes) -> list[list[str]]:
 
 
 def _texto_do_docx(dados: bytes) -> str:
+    # docx e o MESMO pacote ZIP do xlsx -- guardar so um lado deixaria a porta
+    # aberta trocando a extensao.
+    _recusar_bomba_zip(dados, "docx")
     try:
         import docx
     except ImportError as erro:  # pragma: no cover

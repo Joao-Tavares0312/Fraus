@@ -47,6 +47,7 @@ from fraus.api.rotas.analise import (TETO_ARQUIVO_ANALISE,
                                      TETO_CONVERSAS_ANALISE)
 from fraus.api.rotas.modelo import TETO_LEXICON, TETO_TEXTO_SIMULACAO
 from fraus.api.seguranca import registrar_middleware_de_acesso
+from fraus.api.vazao import registrar_middleware_de_vazao
 from fraus.db import Banco
 from fraus.fusor import Fusor
 from fraus.motor import Motor  # reexportado: `from fraus.api.main import Motor` segue valendo
@@ -121,6 +122,15 @@ def criar_app(
     # o parse, nao a autenticacao, e um 413 respondido antes do 401 diria a
     # quem nao tem chave o tamanho que a API aceita.
     registrar_middleware_de_corpo(app)
+
+    # Por DENTRO do teto de corpo (registrado antes, logo mais externo) e por
+    # FORA do de acesso (registrado depois, logo mais interno): a vazao barra
+    # a tentativa cara -- o scrypt -- antes dela rodar, mas depois de o corpo
+    # ja ter passado pelo teto de tamanho. `/auth/entrar` e `/auth/registrar`
+    # sao isentas do middleware de chave de qualquer forma, entao a ordem
+    # entre os dois nao muda o resultado para elas; importa e vir antes das
+    # ROTAS, onde o custo de fato acontece.
+    registrar_middleware_de_vazao(app)
 
     registrar_middleware_de_acesso(app, ctx)
 

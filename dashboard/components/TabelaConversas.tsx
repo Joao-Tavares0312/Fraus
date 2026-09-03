@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
 import { EstadoVazio } from "./EstadoVazio";
+import { ausenciaNoFim } from "@/lib/ordenacao";
 
 export type LinhaConversa = {
   id: string;
@@ -82,20 +83,12 @@ function escaparCampo(campo: string): string {
   return `"${seguro.replaceAll('"', '""')}"`;
 }
 
-/**
- * Ordenacao que manda AUSENCIA para o fim nos dois sentidos.
- *
- * Vale para nota e para tempo de espera, pelo mesmo motivo: ordenar por espera
- * crescente nao pode fazer a conversa que nunca teve resposta humana aparecer
- * como a mais rapida da operacao, do mesmo jeito que ordenar por nota nao pode
- * fazer o atendimento mudo aparecer como o pior.
+/*
+ * A ordenacao que manda ausencia para o fim mora em `lib/ordenacao.ts`, com o
+ * porque e com teste. Ela precisa saber o SENTIDO: o motor do TanStack inverte
+ * o comparador inteiro no descendente, e o sentinela do nulo ia junto -- "sem
+ * sinal" subia para o topo justamente no primeiro clique.
  */
-function ausenciaPorUltimo(a: number | null, b: number | null): number {
-  if (a === null && b === null) return 0;
-  if (a === null) return 1;
-  if (b === null) return -1;
-  return a - b;
-}
 
 /** Uma medida pequena com rotulo, para as celulas de duas linhas. */
 function Miudo({ children }: { children: React.ReactNode }) {
@@ -159,9 +152,18 @@ export function TabelaConversas({
   const [desfecho, setDesfecho] = useState<string>("todos");
   const [ordenacao, setOrdenacao] = useState([{ id: "data", desc: true }]);
 
-  const definicoes = useMemo(
-    () =>
-      [
+  /*
+   * O comparador precisa saber o SENTIDO, e o motor nao o passa: `sortFn`
+   * recebe (linhaA, linhaB, idDaColuna). Por isso `ordenacao` entra na
+   * dependencia do `useMemo` -- reconstruir as definicoes a cada clique de
+   * ordenacao e barato (sao onze colunas), e ler um ref DENTRO do `sortFn`
+   * nao e seguro: ele roda durante a fase de render (o proprio
+   * `getSortedRowModel`), e ref e valor de FORA do render por definicao.
+   */
+  const definicoes = useMemo(() => {
+    const descendenteEm = (coluna: string) =>
+      ordenacao.some((entrada) => entrada.id === coluna && entrada.desc);
+    return [
         colunas.accessor("ordenacao", {
           id: "data",
           header: "Atendimento",
@@ -207,9 +209,10 @@ export function TabelaConversas({
           id: "espera",
           header: "Espera",
           sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) =>
-            ausenciaPorUltimo(
+            ausenciaNoFim(
               a.original.latencia_primeira_resposta_s,
               b.original.latencia_primeira_resposta_s,
+              descendenteEm("espera"),
             ),
           cell: (contexto) => {
             const linha = contexto.row.original;
@@ -253,7 +256,7 @@ export function TabelaConversas({
         colunas.accessor("nota", {
           header: "Nota inferida",
           sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) =>
-            ausenciaPorUltimo(a.original.nota, b.original.nota),
+            ausenciaNoFim(a.original.nota, b.original.nota, descendenteEm("nota")),
           cell: (contexto) => {
             const nota = contexto.getValue();
             const linha = contexto.row.original;
@@ -267,9 +270,8 @@ export function TabelaConversas({
             );
           },
         }),
-      ] as LegacyColumnDef<LinhaConversa>[],
-    [sufixoDeQuery],
-  );
+    ] as LegacyColumnDef<LinhaConversa>[];
+  }, [sufixoDeQuery, ordenacao]);
 
   // Os recortes acontecem antes da tabela para que o contador, a paginacao e o
   // EXPORT falem todos do mesmo conjunto.

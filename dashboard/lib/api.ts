@@ -375,11 +375,53 @@ export type Resultado<T> =
   | { ok: true; dado: T }
   | { ok: false; erro: string };
 
+/*
+ * TETOS DE ESPERA. Sem eles, `fetch` no servidor espera indefinidamente: uma
+ * API que aceita a conexao e nunca responde -- o modo de falha que esta
+ * instalacao de fato teve, com o processo vivo, a porta aberta e nenhuma
+ * resposta em 60 s -- prendia o render inteiro, e o tratamento de erro do
+ * projeto (`proteger`) nunca chegava a rodar. Pior que um erro na tela: uma
+ * tela que nunca chega.
+ *
+ * A leitura tem o teto mais curto porque a pagina inteira espera por ela. A
+ * escrita e mais tolerante: ela ja e uma acao explicita de quem opera, com
+ * botao em estado de espera. E o upload de analise e a excecao larga --
+ * inferencia de BERTimbau em CPU mediu 21,8 s para um arquivo no teto, entao
+ * um teto curto ali recusaria trabalho legitimo.
+ */
+const ESPERA_LEITURA_MS = 15_000;
+const ESPERA_ESCRITA_MS = 30_000;
+const ESPERA_ANALISE_MS = 120_000;
+
+/**
+ * Status que so podem ter vindo do PROXY, nunca da API do Fraus.
+ *
+ * A API nao emite nenhum deles: o unico 5xx que ela produz e o 503 de
+ * `/auth/entrar` sem `FRAUS_JWT_SEGREDO`, que e falha de CONFIGURACAO e tem de
+ * continuar dizendo isso. Ja um 502 ou 504 significa que o tunel/proxy nao
+ * conseguiu falar com a API -- ou seja, exatamente "API fora do ar", que a tela
+ * so reconhecia por `ECONNREFUSED`. Publicada por tunel, a API caida passou a
+ * chegar como 502, e a tela mostrava "/conversas respondeu 502" no lugar da
+ * regua que ensina a levantar a API.
+ *
+ * 52x sao do Cloudflare, pelo mesmo motivo (523 "origin is unreachable", 524
+ * "a timeout occurred").
+ */
+const STATUS_DE_PROXY = new Set([502, 504, 521, 522, 523, 524]);
+
+function falhouNoProxy(status: number): boolean {
+  return STATUS_DE_PROXY.has(status);
+}
+
 async function buscar<T>(rota: string): Promise<T> {
   const resposta = await fetch(urlDaApi(rota), {
     cache: "no-store",
     headers: await cabecalhosDaApi(),
+    signal: AbortSignal.timeout(ESPERA_LEITURA_MS),
   });
+  if (falhouNoProxy(resposta.status)) {
+    throw new Error(`${MARCA_API_FORA} ${urlDaApi("")}`);
+  }
   if (!resposta.ok) throw new Error(`${rota} respondeu ${resposta.status}`);
   return (await resposta.json()) as T;
 }
@@ -403,8 +445,14 @@ async function escrever<T>(
     ),
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
     cache: "no-store",
+    signal: AbortSignal.timeout(ESPERA_ESCRITA_MS),
   });
 
+  if (falhouNoProxy(resposta.status)) {
+    // Antes do `!ok`: o corpo de um 502 e HTML do proxy, e `detail` nao existe
+    // nele -- a mensagem sairia como "PUT /configuracoes respondeu 502".
+    throw new Error(`${MARCA_API_FORA} ${urlDaApi("")}`);
+  }
   if (!resposta.ok) {
     const dado = (await resposta.json().catch(() => null)) as
       | { detail?: unknown }
@@ -447,9 +495,20 @@ export function ehFalhaDeConexao(explicacao: string): boolean {
 }
 
 function mensagemDeErro(erro: unknown): string {
+  // Estouro de teto de espera. O `AbortSignal.timeout` levanta um
+  // `TimeoutError`, e a frase que ele merece e literalmente a marca que ja
+  // existe: a API nao respondeu. `AbortError` entra junto porque o Node usa um
+  // ou outro conforme a versao, e distinguir os dois aqui nao muda nada para
+  // quem le a tela.
+  if (
+    erro instanceof DOMException &&
+    (erro.name === "TimeoutError" || erro.name === "AbortError")
+  ) {
+    return `${MARCA_API_FORA} ${urlDaApi("")}`;
+  }
   if (erro instanceof Error) {
     // `fetch` recusado dá "fetch failed" — inútil para quem está na banca.
-    if (/fetch failed|ECONNREFUSED/i.test(erro.message)) {
+    if (/fetch failed|ECONNREFUSED|aborted|timeout/i.test(erro.message)) {
       return `${MARCA_API_FORA} ${urlDaApi("")}`;
     }
     return erro.message;
@@ -914,7 +973,15 @@ export async function analisarUpload(
         method: "POST",
         headers: await cabecalhosDaApi(),
         body: corpo,
+        // Teto largo: a inferencia roda em CPU e mediu 21,8 s no arquivo maior
+        // que o teto de mensagens deixa passar. Mas nao INFINITO -- foi
+        // exatamente aqui que a tela ficou 60 s presa esperando uma API que
+        // havia travado, e o 502 do proxy chegou antes de qualquer aviso nosso.
+        signal: AbortSignal.timeout(ESPERA_ANALISE_MS),
       });
+      if (falhouNoProxy(resposta.status)) {
+        throw new Error(`${MARCA_API_FORA} ${urlDaApi("")}`);
+      }
       if (!resposta.ok) {
         // O `detail` do FastAPI e a mensagem que NOMEIA o que se esperava --
         // ela e o produto principal de uma recusa, e perde-la deixaria o

@@ -195,3 +195,105 @@ def test_os_vereditos_possiveis_estao_declarados_num_lugar_so(tmp_path):
         "aceita", "assinatura", "fora_da_janela", "duplicada",
         "corpo_invalido", "fonte_inativa", "sem_segredo", "tipo_incompativel",
     )
+
+
+# --- a poda nao pode apagar o historico legitimo ----------------------------
+#
+# ATE 03/09/2026 A PODA NAO DISTINGUIA VEREDITO, e recusa anonima disputava as
+# mesmas vagas que entrega aceita. A rota de webhook e ISENTA de chave de acesso
+# por desenho (a plataforma externa nao tem como carregar uma `fra_`), entao
+# qualquer um que descobrisse a URL mandava 210 requisicoes com assinatura lixo
+# e zerava as aceitas da fonte. Reproduzido em 02/09/2026.
+#
+# E o dano nao era so o historico: esta tabela e TAMBEM a memoria do dedupe
+# (`entrega_ja_vista`). Apagar as aceitas faz reentrega legitima voltar a ser
+# processada como nova.
+#
+# A poda agora e por BALDE -- aceitas de um lado, o resto do outro -- e nao por
+# veredito individual, para que a tabela siga com teto fixo por fonte mesmo que
+# `VEREDITOS` cresca.
+
+
+def _encher(banco, fonte_id, veredito, quantas, inicio=0):
+    base = datetime(2026, 8, 27, 10, 0, tzinfo=timezone.utc)
+    for n in range(inicio, inicio + quantas):
+        banco.registrar_entrega(
+            fonte_id=fonte_id, webhook_id=f"{veredito}_{n}", veredito=veredito,
+            recebida_em=(base + timedelta(seconds=n)).isoformat(),
+        )
+
+
+def test_enxurrada_de_recusas_nao_apaga_as_aceitas(tmp_path):
+    """O ataque em si. Este e o teste que impede a regressao."""
+    banco = _banco(tmp_path)
+    fonte_id = _fonte(banco)
+    _encher(banco, fonte_id, "aceita", 5)
+
+    _encher(banco, fonte_id, "assinatura", banco.ENTREGAS_POR_FONTE + 10, inicio=1000)
+
+    entregas = banco.listar_entregas(fonte_id)
+    assert sum(1 for e in entregas if e["veredito"] == "aceita") == 5
+
+
+def test_a_enxurrada_nao_apaga_a_memoria_do_dedupe(tmp_path):
+    """O dano menos visivel: sem as aceitas, uma reentrega legitima volta a ser
+    processada como se fosse nova."""
+    banco = _banco(tmp_path)
+    fonte_id = _fonte(banco)
+    banco.registrar_entrega(
+        fonte_id=fonte_id, webhook_id="msg_importante", veredito="aceita",
+        recebida_em="2026-08-27T10:00:00+00:00", conversa_id="c1",
+    )
+    assert banco.entrega_ja_vista(fonte_id, "msg_importante") is True
+
+    _encher(banco, fonte_id, "assinatura", banco.ENTREGAS_POR_FONTE + 10, inicio=1000)
+
+    assert banco.entrega_ja_vista(fonte_id, "msg_importante") is True
+
+
+def test_as_aceitas_tambem_tem_teto(tmp_path):
+    """Separar os baldes nao pode virar crescimento sem limite do outro lado --
+    uma fonte movimentada e legitima nao pode encher o banco."""
+    banco = _banco(tmp_path)
+    fonte_id = _fonte(banco)
+    _encher(banco, fonte_id, "aceita", banco.ENTREGAS_POR_FONTE + 25)
+
+    entregas = banco.listar_entregas(fonte_id)
+    assert len(entregas) == banco.ENTREGAS_POR_FONTE
+    # As que ficam sao as MAIS RECENTES, o mesmo criterio da listagem.
+    assert entregas[0]["webhook_id"] == f"aceita_{banco.ENTREGAS_POR_FONTE + 24}"
+
+
+def test_o_balde_de_recusas_tambem_tem_teto(tmp_path):
+    banco = _banco(tmp_path)
+    fonte_id = _fonte(banco)
+    _encher(banco, fonte_id, "assinatura", banco.ENTREGAS_POR_FONTE + 25)
+    assert len(banco.listar_entregas(fonte_id)) == banco.ENTREGAS_POR_FONTE
+
+
+def test_o_teto_por_fonte_nao_depende_de_quantos_vereditos_existem(tmp_path):
+    """Podar por veredito INDIVIDUAL faria o teto virar 200 x len(VEREDITOS), e
+    crescer sozinho toda vez que alguem acrescentasse um motivo de recusa. Sao
+    dois baldes, e continuam dois."""
+    banco = _banco(tmp_path)
+    fonte_id = _fonte(banco)
+    for indice, veredito in enumerate(VEREDITOS):
+        if veredito == "aceita":
+            continue
+        _encher(banco, fonte_id, veredito, 60, inicio=indice * 1000)
+
+    assert len(banco.listar_entregas(fonte_id)) == banco.ENTREGAS_POR_FONTE
+
+
+def test_a_poda_e_por_fonte_e_nao_alcanca_a_vizinha(tmp_path):
+    banco = _banco(tmp_path)
+    primeira = _fonte(banco)
+    segunda = banco.criar_fonte(
+        nome="Intercom", canal="webchat", tipo="webhook",
+        variavel_segredo="FRAUS_WEBHOOK_INT", criada_em="2026-08-27T10:00:00+00:00",
+    )["id"]
+    _encher(banco, segunda, "aceita", 3)
+
+    _encher(banco, primeira, "assinatura", banco.ENTREGAS_POR_FONTE + 10, inicio=1000)
+
+    assert len(banco.listar_entregas(segunda)) == 3
