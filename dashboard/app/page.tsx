@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowDown,
   ArrowRight,
   Clock3,
   Drama,
@@ -324,41 +323,55 @@ export default async function PaginaInicial() {
             recortar. E o `py` encolhe em tela baixa pelo mesmo motivo que o
             corpo do display encolhe -- ver `.display-vitrine` no globals.css,
             onde esta o defeito que isto conserta. */}
-        <section className="relative flex min-h-[88svh] items-center">
+        {/* O HEROI DE QUINAS, 04/09/2026.
+
+            O QUE ELE ERA: manchete grande alinhada a esquerda, o argumento
+            inteiro embaixo dela, dois botoes e uma seta de rolagem, tudo
+            centrado verticalmente. Nao estava errado -- estava CONVENCIONAL, e
+            era por isso que a pagina lia como landing de produto e nao como as
+            referencias fixadas pelo dono do projeto.
+
+            O QUE ELE E AGORA: o centro fica VAZIO, com so o campo de
+            particulas, e o conteudo ancora nas quinas -- a licao da
+            landonorris.com, onde a primeira tela e quase toda espaco negativo.
+            A confianca esta em nao preencher.
+
+            A MARCA NAO SE REPETE AQUI. O <header> fixo logo acima ja a mantem
+            na quina superior esquerda durante toda a rolagem, e duplicar seria
+            o aparato repetido que a PR #31 acabou de remover em outro lugar.
+
+            A SETA DE ROLAGEM SAIU: ela vivia centralizada na base, onde agora
+            esta a acao primaria. Um centro vazio ja convida a rolar. */}
+        <section className="relative flex min-h-[92svh] flex-col justify-between">
           <div className="pointer-events-none absolute inset-0 -z-10">
             <CampoDeParticulas />
           </div>
 
-          <div className={`${COLUNA} py-14 lg:py-20`}>
-            <Revelar className="max-w-4xl">
-              <p className="etiqueta-vitrine mb-7 inline-flex items-center gap-2.5 text-muted-foreground">
-                {/* O ponto NÃO pisca. Indicador pulsante sem mudança de estado
-                    por trás é ruído com cara de alerta — DESIGN.md §6. */}
-                <span aria-hidden className="size-1.5 rounded-full bg-primary" />
-                satisfação inferida · sem pesquisa
-              </p>
+          {/* QUINA SUPERIOR DIREITA. O ponto NAO pisca: indicador pulsante sem
+              mudanca de estado por tras e ruido com cara de alerta -- §6. */}
+          <div className={`${COLUNA} flex justify-end pt-8 lg:pt-12`}>
+            <p className="etiqueta-vitrine inline-flex items-center gap-2.5 text-right text-muted-foreground">
+              <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+              satisfação inferida · sem pesquisa
+            </p>
+          </div>
 
-              {/* O GLITCH, e só nesta frase.
-                  `enableOnHover` porque glitch perpétuo atrás de um `<h1>` é
-                  exatamente a decoração-pela-decoração que o DESIGN.md §6
-                  proíbe — e porque no repouso a frase precisa ser lida sem
-                  esforço, já que ela É a manchete. No hover ela se descola, que
-                  é o gesto: a frase educada não é o que parece.
-                  É `<span>` dentro do `<h1>` e o texto é real (`data-text` +
-                  conteúdo), então busca e leitor de tela recebem a manchete
-                  inteira — não há canvas nem imagem aqui. */}
-              {/* SEM `.display-aurora` AQUI, e a tentativa está registrada porque o
-                  defeito é sutil e alguém vai querer tentar de novo: gradiente
-                  em texto usa `background-clip: text` com
-                  `-webkit-text-fill-color: transparent`, e isso recorta TODO o
-                  conteúdo do elemento — inclusive os filhos. Aplicado neste
-                  `<h1>` ele fez duas coisas erradas de uma vez: transformou o
-                  🙂 numa bolha branca (o emoji é colorido pela fonte, e a
-                  fonte perde para o recorte) e apagou o âmbar do
-                  `text-dito-texto` da frase citada, que é o encoding do
-                  PRODUCT.md e não decoração. A aurora vive nos
-                  `.titulo-vitrine`, que são texto puro. */}
-              <h1 className="display-vitrine">
+          {/* A BASE. Em telas estreitas as quinas se desfazem numa pilha:
+              quina em 390px de largura e um empilhamento com nome pomposo, e o
+              espaco negativo que da o efeito nao existe ali para ser gasto. */}
+          <div className={`${COLUNA} pb-14 lg:pb-20`}>
+            <Revelar className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between sm:gap-12">
+              {/* O GLITCH, e so nesta frase. `enableOnHover` porque glitch
+                  perpetuo atras de um <h1> e a decoracao-pela-decoracao que o
+                  DESIGN.md §6 proibe -- e porque no repouso a frase precisa ser
+                  lida sem esforco, ja que ela E a manchete. E <span> dentro do
+                  <h1> com texto real, entao busca e leitor de tela recebem a
+                  manchete inteira.
+                  SEM `.display-aurora` AQUI: background-clip: text recorta TODO
+                  o conteudo do elemento, inclusive os filhos -- transformava o
+                  🙂 numa bolha branca e apagava o ambar do text-dito-texto, que
+                  e o encoding do PRODUCT.md e nao decoracao. */}
+              <h1 className="display-vitrine max-w-3xl">
                 O cliente escreve{" "}
                 <GlitchText
                   enableOnHover
@@ -372,14 +385,7 @@ export default async function PaginaInicial() {
                 e sai insatisfeito.
               </h1>
 
-              <p className="mt-7 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
-                A nota declarada mente. O Fraus lê o atendimento inteiro — o que
-                foi <span className="text-dito-texto">dito</span> e o que pôde
-                ser <span className="text-medido-texto">medido</span> — e estima
-                a satisfação sem perguntar nada.
-              </p>
-
-              <div className="mt-9 flex flex-wrap items-center gap-3">
+              <div className="flex shrink-0 flex-wrap items-center gap-3 sm:pb-2">
                 <BotaoEstelar href={acaoPrimaria.href}>
                   {acaoPrimaria.rotulo}
                 </BotaoEstelar>
@@ -390,17 +396,6 @@ export default async function PaginaInicial() {
                 )}
               </div>
             </Revelar>
-          </div>
-
-          {/* A dica de rolagem só existe de `sm` para cima: num hero de 92svh
-              no celular a próxima seção já encosta na dobra, então ela
-              resolveria um problema que ali não existe e roubaria altura de
-              quem tem menos. */}
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-8 hidden justify-center sm:flex"
-          >
-            <ArrowDown className="size-4 text-muted-foreground/60" />
           </div>
         </section>
 
@@ -447,6 +442,19 @@ export default async function PaginaInicial() {
               opacity: "calc(var(--atelie-op-fria) * 0.8)",
             }}
           />
+
+          {/* O ARGUMENTO, que ate 04/09/2026 morava no heroi. Ele saiu de la
+              porque o heroi de quinas vive do espaco negativo -- e ganhou
+              com a mudanca: aqui ele LEGENDA o cartao que aparece logo
+              abaixo, em vez de disputar largura com a manchete. */}
+          <div className={COLUNA}>
+            <p className="mb-14 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
+              A nota declarada mente. O Fraus lê o atendimento inteiro — o que
+              foi <span className="text-dito-texto">dito</span> e o que pôde ser{" "}
+              <span className="text-medido-texto">medido</span> — e estima a
+              satisfação sem perguntar nada.
+            </p>
+          </div>
 
           <Revelar className={`${COLUNA} max-w-3xl text-center`}>
             <p className="etiqueta-vitrine mb-5 text-primary">o veredito</p>
