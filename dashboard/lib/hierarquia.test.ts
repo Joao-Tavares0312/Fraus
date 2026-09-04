@@ -9,6 +9,7 @@ import {
 describe("classesDoNivel", () => {
   it("da ao dominante uma superficie mais densa que a do apoio", () => {
     expect(classesDoNivel("dominante")).toContain("vidro");
+    expect(classesDoNivel("dominante")).not.toContain("vidro-fino");
     expect(classesDoNivel("apoio")).toContain("vidro-fino");
   });
 
@@ -28,7 +29,11 @@ describe("dominanteDaTela", () => {
       "/dashboard/configuracoes",
     ];
     for (const rota of rotas) {
-      expect(dominanteDaTela(rota), rota).toBeTruthy();
+      const id = dominanteDaTela(rota);
+      expect(id, rota).toBeTruthy();
+      // Identificador estavel: sem espaco e sem maiuscula. E o que impede
+      // alguem de reintroduzir titulo de exibicao aqui sem perceber.
+      expect(id, rota).toMatch(/^[a-z0-9-]+$/);
     }
   });
 
