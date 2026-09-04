@@ -61,7 +61,10 @@ const ROTULO_CABECA: Record<string, string> = {
  * 10 falas sinceras de atendimento. Exibir "100%" sem a ressalva colada seria
  * a mentira mais eficaz desta tela inteira.
  */
-const LIMIAR_SUSPEITO = 0.999;
+// Exportado: o veredito no topo da tela (`EstadoDoModelo.tsx`) precisa do
+// mesmo corte para decidir se cola o rotulo "suspeito" no F1 da ironia --
+// duplicar o numero literal ali criaria dois limiares que podem divergir.
+export const LIMIAR_SUSPEITO = 0.999;
 
 function comoFracao(valor: unknown): number | null {
   if (typeof valor !== "number" || !Number.isFinite(valor)) return null;
@@ -125,7 +128,6 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
 
   const ehSuspeita = (chave: string, valor: number) =>
     chave !== "exemplos_treino" && valor >= LIMIAR_SUSPEITO;
-  const temSuspeita = numericas.some(({ chave, valor }) => ehSuspeita(chave, valor));
 
   const porClasse =
     metricas && metricas.f1_por_classe && typeof metricas.f1_por_classe === "object"
@@ -192,17 +194,11 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
             })}
           </dl>
 
-          {/* O aviso vale para a CABECA, nao para cada cartao: repetido tres
-              vezes ele vira ruido e para de ser lido, que e o oposto do que
-              ele existe para fazer. */}
-          {temSuspeita ? (
-            <p className="text-xs leading-relaxed text-warning-rich-text">
-              Métrica perfeita em tarefa de linguagem quase nunca significa
-              modelo bom — significa que o conjunto de teste se parece demais
-              com o de treino. Leia a limitação abaixo antes de citar estes
-              números.
-            </p>
-          ) : null}
+          {/* A explicacao completa do rotulo "suspeito" -- por que metrica
+              perfeita nao e boa noticia -- subiu para o veredito no topo da
+              tela (`EstadoDoModelo.tsx`, 04/09/2026). Aqui ficou so o rotulo
+              curto colado ao numero: repetir o paragrafo em cada cabeca virava
+              ruido e a mesma frase lida tres vezes na mesma tela. */}
 
           {porClasse.length > 0 ? (
             <div>

@@ -142,3 +142,22 @@ def test_a_cabeca_vazada_carrega_rotulo_textual():
     caminho = RAIZ / "dashboard" / "components" / "CabecaVazada.tsx"
     fonte = caminho.read_text(encoding="utf-8")
     assert "sem sinal" in fonte
+
+
+def test_a_tela_modelo_abre_pelo_veredito():
+    """O que o avaliador precisa ler primeiro nao pode estar no meio da pagina.
+
+    As tres ressalvas estruturais do modelo -- ironia fora do vetor, metricas
+    suspeitas e corpus de tempo sintetico -- sobem para um sistema dominante
+    no topo.
+    """
+    painel = RAIZ / "dashboard"
+    componente = painel / "components" / "modelo" / "EstadoDoModelo.tsx"
+    assert componente.is_file()
+
+    pagina = (painel / "app" / "dashboard" / "modelo" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "EstadoDoModelo" in pagina
+    # O veredito vem ANTES do simulador na ordem do arquivo.
+    assert pagina.index("EstadoDoModelo") < pagina.index("Simulador")

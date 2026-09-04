@@ -19,6 +19,7 @@ import { obterModelo } from "@/lib/api";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
+import { EstadoDoModelo } from "@/components/modelo/EstadoDoModelo";
 import { LexiconEmoji } from "@/components/modelo/LexiconEmoji";
 import { LexicoCurado } from "@/components/modelo/LexicoCurado";
 import { MetricasTreino } from "@/components/modelo/MetricasTreino";
@@ -65,6 +66,8 @@ export default async function PaginaModelo() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+        <EstadoDoModelo modelo={modelo} />
+
         <Painel
           titulo="Simulador ao vivo"
           legenda="Escreva uma fala de cliente e veja a resposta do classificador agora. Nada é persistido, nada é inventado: as três probabilidades e os emojis detectados vêm inteiros de POST /modelo/simular."
