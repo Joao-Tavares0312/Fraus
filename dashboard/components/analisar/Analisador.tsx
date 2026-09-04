@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Painel } from "@/components/Painel";
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { TextoComPesos } from "./TextoComPesos";
 
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
@@ -328,7 +329,7 @@ function Analise({
     <div className="flex flex-col gap-4">
       <Painel
         titulo={`Resultado — ${analise.conversa.id}`}
-        legenda="A nota sai do fusor, que aprendeu com 35 medidas das sete famílias — texto, emoji, tempo, emoção, léxico, ironia e estilo. Emoção e ironia aparecem na transcrição abaixo e também entram nessa conta, desde 21/08/2026."
+        legenda="A nota sai do fusor, que aprendeu com 38 medidas das sete famílias do vetor — texto, emoji, tempo, emoção, léxico, estilo e incongruência. Emoção aparece na transcrição abaixo e também entra nessa conta; a ironia aparece junto, mas é leitura por mensagem — desde 04/09/2026 não pesa mais na nota."
       >
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-4">
           <div className="flex min-w-0 flex-col gap-1">
@@ -382,8 +383,20 @@ function Analise({
       </Painel>
 
       <Painel
+        titulo="Contribuições das features nesta conversa"
+        legenda="Com sinal, ordenadas por magnitude. Isto é `contribuicoes` — o que pesou NESTA conversa —, não `importancias`, que é o peso global do modelo."
+        semPadding
+      >
+        <PainelContribuicoes
+          contribuicoes={analise.contribuicoes}
+          sinaisForaDoScore={analise.sinais_fora_do_score}
+          totalDeFeatures={Object.keys(analise.importancias).length}
+        />
+      </Painel>
+
+      <Painel
         titulo="A conversa, palavra a palavra"
-        legenda="O grifo é medido por oclusão: apaga-se a palavra e pergunta-se de novo ao modelo. Verde empurrou a leitura para satisfeito, vermelho puxou para insatisfeito, e a força da cor é o tamanho do efeito. Ressalva do método: apagar uma palavra de dentro de uma expressão fixa deixa um fragmento que ninguém escreveria — o peso é verdadeiro sobre o que o modelo faz, e não deve ser lido como “esta palavra significa insatisfação”. Só a fala do cliente recebe peso: o classificador foi treinado em texto de cliente, e pontuar o roteiro do bot seria número sem lastro. Abrindo os sinais de uma fala aparecem as três probabilidades de satisfação e as oito emoções. Duas ressalvas valem para todas elas: o “desprezo” não é classe treinada — nenhum corpus em português a anota, e ele é derivado da díade raiva + nojo (Plutchik, 1980) pela média geométrica, que exige as duas emoções juntas; e a “ironia” acerta o caso de manual mas marca 6 em 10 falas sinceras de atendimento como irônicas, com 0,999 de confiança, então leia como indício e nunca como veredito. Nenhuma das duas entra na nota."
+        legenda="O grifo é medido por oclusão: apaga-se a palavra e pergunta-se de novo ao modelo. Verde empurrou a leitura para satisfeito, vermelho puxou para insatisfeito, e a força da cor é o tamanho do efeito. Ressalva do método: apagar uma palavra de dentro de uma expressão fixa deixa um fragmento que ninguém escreveria — o peso é verdadeiro sobre o que o modelo faz, e não deve ser lido como “esta palavra significa insatisfação”. Só a fala do cliente recebe peso: o classificador foi treinado em texto de cliente, e pontuar o roteiro do bot seria número sem lastro. Abrindo os sinais de uma fala aparecem as três probabilidades de satisfação e as oito emoções. Duas ressalvas valem para todas elas: o “desprezo” não é classe treinada — nenhum corpus em português a anota, e ele é derivado da díade raiva + nojo (Plutchik, 1980) pela média geométrica, que exige as duas emoções juntas; e a “ironia” acerta o caso de manual mas marca 6 em 10 falas sinceras de atendimento como irônicas, com 0,999 de confiança, então leia como indício e nunca como veredito. A emoção entra na nota — a ironia, não: desde 04/09/2026 ela é só leitura por mensagem, tirada do vetor do fusor porque em resenha vira detector de sentimento positivo."
         semPadding
       >
         {/* Abre as oito emoções de TODAS as falas de uma vez. Existe porque a

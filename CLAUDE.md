@@ -23,7 +23,7 @@ CSV / Discord / WhatsApp
  │BERTimbau│lexicon  │latência │7 clas-  │SentiLex │cabeça   │caixa    │ência    │
  │por      │+ posi-  │escala-  │ses +    │-PT02 +  │binária  │alta +   │emoji×   │
  │mensagem │ção      │ção      │desprezo │negação  │(*)      │palavrão │texto    │
- └────┬────┴────┬────┴─────────┴────┬────┴────┬────┴─────────┴────┬────┴────┬────┘
+ └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴─────────┴────┬────┴────┬────┘
             ↓  38 features                                     (*) por mensagem,
       Fusor (LogisticRegression + StandardScaler)                   direto p/ dashboard
             ↓  score 0–100
