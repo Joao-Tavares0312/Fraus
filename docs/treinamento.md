@@ -80,7 +80,7 @@ Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 2. clona este repositorio e instala o pacote `fraus` — a extracao de features usa o MESMO codigo da API (`fraus.fusor.montar_features`), nunca uma reimplementacao;
 3. carrega o B2W-Reviews01 e rotula por `recommend_to_a_friend` (ver abaixo);
 4. costura as frases em conversas sinteticas com `fraus.ingest.simulador.gerar_lote`, deterministico por semente, com latencia log-normal e emoji calibrados por rotulo;
-5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **35** (ver [Contrato de features](#contrato-de-features));
+5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **39** (ver [Contrato de features](#contrato-de-features));
 6. treina o `Fusor` (`treinar(exemplos, rotulos)`);
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).
@@ -150,7 +150,7 @@ O mesmo teste de sanidade que expos o vazamento — mesmo texto, so mudando o re
 
 O contrato subiu de 16 para 35 features em 21/08 (emocao, lexico, ironia e estilo entraram no vetor) e o **artefato ficou tres dias para tras**. Nesse intervalo a API real nao subia: o `StandardScaler` de 16 rejeitava o vetor de 35 na carga. Falha alta e explicita, que e o comportamento que as invariantes 7 e 9 pedem — mas ainda assim tres dias de API parada por artefato desatualizado.
 
-O notebook 02 rodou de novo e o artefato vigente tem `n_features_in_ = 35`, na ordem exata de `NOMES_FEATURES`.
+O notebook 02 rodou de novo e o artefato daquele momento passou a ter `n_features_in_ = 35`, na ordem exata de `NOMES_FEATURES`. (Historico: o artefato vigente hoje tem 38 — ver as secoes de 03/09 e 04/09 abaixo.)
 
 **A acuracia caiu de 0,96 para 0,93, e a queda e o resultado saudavel.** O fusor de 16 features media um problema mais facil. Dezenove features novas entraram, tres delas vindas de uma cabeca de ironia com vazamento de corpus conhecido e nao consertado — um numero MENOR e o esperado. Pela regra desta secao, o que decide nao e o numero e sim onde os pesos foram parar:
 
@@ -315,7 +315,11 @@ Passos, no Colab:
    guarda promete "sinal nos tres rotulos" quando ela so promete "nao
    previsor unilateral de UM rotulo so". A guarda nao foi alterada.
 5. Copiar `fusor.joblib` e `importancias.json` para `modelos/` na raiz do
-   repositorio local e rodar `uv run pytest -q` inteiro.
+   repositorio local (guardando o artefato anterior como `.bak-<N>`, onde N e
+   o numero de features dele) e entao, nesta ordem:
+   `uv run python scripts/conferir_fusor.py` e `uv run pytest -q` inteiro. O
+   laudo faz automaticamente os passos 3 e 4 desta lista — ver "Conferencia do
+   artefato" abaixo.
 
 ### A ironia sai do vetor (04/09/2026)
 
@@ -351,17 +355,140 @@ ela nao adiciona sinal, duplica `texto_prob_satisfeito_*` com ruido, e inverte
 o caso que o projeto usa como exemplo de manual. A cabeca de ironia CONTINUA
 carregada e obrigatoria (invariante 7) e continua sendo lida por mensagem e
 exibida na dashboard, onde e honesta e ja vem com a ressalva de confiabilidade
-que a tela mostra — o que muda e que ela para de pontuar. O retreino do fusor
-com 38 features fica pendente (proximo passo, dono do projeto); ate la
-`modelos/fusor.joblib` continua sendo o artefato de 40, e a API volta a subir
-e falhar na primeira pontuacao (mesma situacao descrita na secao anterior,
-so que pelo motivo inverso — features A MAIS no artefato do que no contrato).
+que a tela mostra — o que muda e que ela para de pontuar. O retreino com 38
+features foi executado no mesmo dia; ver a secao seguinte.
+
+**Nota sobre a janela entre a mudanca do contrato e o artefato novo.** Enquanto
+`modelos/fusor.joblib` era o artefato de 40 e o contrato ja estava em 38, a API
+**nao subia** — `Fusor.carregar` passou a comparar `n_features_in_` com
+`len(NOMES_FEATURES)` e levantar `FusorIncompativelError` (PR #29, 04/09/2026).
+Antes dessa validacao, o mesmo desencontro deixava a API subir normalmente e
+estourar HTTP 500 so na primeira pontuacao real — falha tardia, no pior momento
+possivel. A validacao troca isso por falha alta e explicita na subida, que e o
+que a invariante 7 pede.
+
+### O fusor de 38 features — 04/09/2026
+
+Notebook 02 rodado de novo com a ironia fora do vetor. **Acuracia 0,9433**
+(f1_macro 0,9436), contra 0,9467 do fusor de 40. A queda de ~0,003 e o
+resultado saudavel e esperado: as duas features removidas *estavam* ajudando
+o classificador — so que como detectores de sentimento positivo duplicando
+`texto_prob_satisfeito_*`, nao como medida de ironia. Perder um pouco de
+acuracia trocando uma feature que mente por nenhuma feature e o negocio certo.
+
+Conferido com `uv run python scripts/conferir_fusor.py` (ver secao
+"Conferencia do artefato" abaixo): contrato 38/38, `classes_ = [0, 1, 2]`
+(invariante 8), nenhuma feature com peso perto de zero, e as cinco de
+incongruencia mantiveram a direcao negativa que a literatura preve:
+
+| feature | fusor de 40 | fusor de 38 |
+|---|---|---|
+| `incongruencia_emoji_texto` | −0,95 | −1,03 |
+| `incongruencia_hiperbole` | −0,65 | −0,64 |
+| `incongruencia_polaridade` | −0,37 | −0,37 |
+| `incongruencia_marcador_contraste` | −0,38 | −0,27 |
+| `incongruencia_aspas_ironicas` | −0,15 | −0,19 |
+
+**Tres pesos com sinal aparentemente invertido, e por que NAO sao vazamento.**
+O laudo sinaliza `texto_prob_satisfeito_ultima` (−0,50),
+`emoji_frac_positivos` (−0,18) e `emoji_frac_negativos` (+0,60) como suspeitos,
+porque o nome promete o sinal contrario. Conferidos contra os artefatos de 40 e
+de 35, os tres ja estavam assim nos dois — nao e efeito da remocao da ironia.
+A explicacao e **colinearidade**: `texto_prob_satisfeito_media` pesa +2,81 e
+`emoji_score_medio` +1,56, e features fortemente correlacionadas com elas
+recebem coeficiente negativo de correcao na regressao logistica. E o
+comportamento normal do modelo com features redundantes, nao inversao de
+semantica como a de `ironia_prob_media`. A diferenca entre os dois casos e
+verificavel: a ironia foi medida diretamente no corpus e provou medir outra
+coisa; estas tres continuam medindo o que o nome diz, so nao carregam
+informacao independente das dominantes. Fica registrado aqui porque o laudo
+vai sinalizar as tres em todo retreino futuro, e o proximo leitor precisa
+saber que ja foram investigadas.
+
+**O que este retreino NAO resolveu.** A frase canonica do projeto continua
+pontuando alto:
+
+```
+"que atendimento maravilhoso, so esperei 3 horas"   score 99,95  nota 10
+"otimo, mais uma vez ninguem resolveu nada"          score 99,74  nota 10
+"resolveu rapido, muito obrigado! adorei"            score 97,82  nota 10
+```
+
+As cinco features de incongruencia dao **0,0 nas duas frases ironicas** e
+disparam na satisfeita de verdade (`polaridade` 0,5, `hiperbole` 0,5) — ou
+seja, hoje elas pegam entusiasmo genuino e nao pegam ironia. Nao e regressao:
+e o limite estrutural das cinco, todas funcao de `anotar_texto`/emoji, e
+"so esperei 3 horas" nao tem nenhuma palavra polar no SentiLex — e negativo
+por pragmatica. O diagnostico completo e a rota proposta
+(`incongruencia_situacao_negativa`, que levaria o vetor a 39 e exige mais um
+retreino) estao em
+`docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md`.
+
+Corrigindo a previsao registrada na secao anterior: esperava-se que a frase
+deixasse de ser empurrada para cima com a saida da ironia. Nao foi o que
+aconteceu — o `texto_prob_satisfeito_media` da propria cabeca de texto e 0,858
+nela, e domina o eixo sozinho. A remocao consertou o vetor; nao tocou nesta
+frase.
+
+### O contrato sobe para 39: incongruencia implicita (04/09/2026)
+
+`incongruencia_situacao_negativa` entrou em `NOMES_FEATURES` -- elogio
+convivendo com situacao negativa de atendimento na mesma fala. E a unica das
+seis que alcanca a frase canonica do projeto, porque nao depende de um segundo
+termo polar no lexicon.
+
+**O retreino do notebook 02 e OBRIGATORIO antes de a API voltar a subir.** O
+artefato de 38 nao carrega mais: `Fusor.carregar` valida a dimensao e levanta
+`FusorIncompativelError`. Isso e o comportamento desejado, nao um bug.
+
+Medido ANTES de aceitar, no B2W-Reviews01 (2000 resenhas por rotulo, semente
+20260904) -- que e o corpus que da o TEXTO do treino:
+
+```
+insatisfeito  82/2000 = 4,10%
+neutro        53/2000 = 2,65%
+satisfeito    35/2000 = 1,75%
+```
+
+Dispara nos tres rotulos, gradiente suave, razao 2,3:1 entre os extremos.
+Compare com a cabeca de ironia que saiu do vetor no mesmo dia (74% contra 9%,
+razao 8:1): aquilo era disjuncao pratica, isto e sinal.
+
+**Uma armadilha de metodo que quase repeti.** Medir esta feature no corpus do
+SIMULADOR dava zero nos tres rotulos, e eu quase concluí que ela nasceria com
+peso zero. Errado, e pelo mesmo motivo registrado na correcao de 04/09 mais
+acima: `FRASES_POR_ROTULO` **nao treina o fusor**. O notebook 02 usa 400 frases
+do B2W por classe e pega do simulador so a ESTRUTURA da conversa. O simulador
+importa para a guarda `test_nenhuma_feature_e_previsor_unilateral`, nao para o
+peso aprendido. As frases dos tres rotulos foram cruzadas mesmo assim -- sem
+isso a feature ficava constante em zero la e a guarda passaria por vacuidade,
+que e o modo de falha silencioso dela.
+
+### Conferencia do artefato
+
+```bash
+uv run python scripts/conferir_fusor.py              # laudo completo
+uv run python scripts/conferir_fusor.py --sem-sonda  # pula as frases-sonda
+```
+
+Laudo do artefato vigente em `modelos/`, em seis itens: contrato, ordem das
+classes, sinal dos pesos por familia, pesos perto de zero, tres frases-sonda e
+as metricas do treino. Instrumento, nao botao — nao escreve nada, no modelo de
+`scripts/medir_faixas.py`.
+
+Ele existe porque **acuracia nao denuncia** os dois defeitos que esta semana
+custaram dois retreinos: o peso invertido de `ironia_prob_media` e o vazamento
+de `incongruencia_hiperbole`. Os dois so apareceram porque alguem olhou o sinal
+dos coeficientes e a distribuicao por rotulo — exatamente o que uma pessoa
+cansada depois de um treino longo pula. Por isso a acuracia nunca e impressa
+sozinha no laudo: vem sempre com o lembrete da invariante 10, e com alerta
+explicito acima de 0,97.
 
 ## Contrato de features
 
 `NOMES_FEATURES`, em `fraus/fusor.py`, e a lista canonica. `vetorizar` levanta `KeyError` se faltar chave — nunca zero silencioso (invariante 9).
 
-Hoje sao **38 features**, de SETE familias no vetor (OITO sinais existem no
+Hoje sao **39 features**, de SETE familias no vetor (OITO sinais existem no
 sistema — a ironia continua existindo e sendo lida por mensagem, so nao entra
 mais aqui, ver a secao acima). O contrato subiu de 16 para 35 em 21/08/2026,
 quando os notebooks 03 e 04 passaram a existir e a condicao que justificava a

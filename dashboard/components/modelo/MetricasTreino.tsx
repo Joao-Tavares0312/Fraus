@@ -136,11 +136,13 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
     <section className="flex flex-col gap-3 border-t border-linha pt-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h3 className="text-sm font-medium text-foreground">{nome}</h3>
-        {/* `pontua` existe para o caso deixar de ser unanime de novo -- hoje as
-            tres cabecas valem `true`. Se uma cabeca nova nascer sem entrar no
-            fusor (o estado que emocao e ironia tiveram antes das 35
-            features), esta linha e o que evita tres cartoes iguais escondendo
-            a diferenca. */}
+        {/* `pontua` NAO e unanime desde 04/09/2026: satisfacao e emocao valem
+            `true`, ironia vale `false` -- ela continua carregada e lida por
+            mensagem, mas saiu do vetor do fusor porque, medida no corpus de
+            treino, funcionava como detector de sentimento positivo. Este campo
+            existe exatamente para este caso: sem ele, tres cartoes iguais
+            esconderiam a diferenca entre a cabeca que move a nota e a que so
+            descreve. Ver `fraus/api/rotas/modelo.py` e `docs/treinamento.md`. */}
         <span className="text-xs text-muted-foreground">
           {cabeca.pontua
             ? "entra no fusor — é esta cabeça que move a nota"

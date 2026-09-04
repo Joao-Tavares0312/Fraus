@@ -10,7 +10,7 @@
  * bloco que qualquer produto SaaS tem, e que não diz nada sobre ESTE produto.
  *
  * O que o sistema de fato faz é: sete famílias de sinal lêem a conversa por
- * ângulos independentes e um fusor combina as 35 features num único score. Isso
+ * ângulos independentes e um fusor combina as 39 features num único score. Isso
  * não é uma lista — é uma TOPOLOGIA, sete nós convergindo em um. E num tema cuja
  * tese é o espaço, uma topologia de sete pontos luminosos ligados a um centro
  * tem um nome próprio: constelação.

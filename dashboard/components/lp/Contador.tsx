@@ -15,7 +15,7 @@ import { animate, useInView, useReducedMotion } from "motion/react";
  * `SeletorTema` usa `useSyncExternalStore` em vez de efeito com setState.
  *
  * O QUE ELE CONTA, E O QUE ISSO CUSTA EM HONESTIDADE: os quatro números da
- * faixa são FATOS DO CÓDIGO (35 features, 7 famílias, 3 BERTimbau, 0 LLMs em
+ * faixa são FATOS DO CÓDIGO (39 features, 7 famílias, 3 BERTimbau, 0 LLMs em
  * runtime), e a animação não pode sugerir que são medições ao vivo — por isso a
  * etiqueta "fatos do código · fraus.fusor.NOMES_FEATURES" fica logo abaixo,
  * como já ficava. O movimento aqui chama atenção para um número estático; ele
@@ -46,7 +46,7 @@ export function Contador({ valor }: { valor: number }) {
     // ZERA ANTES DE ENTRAR NA TELA, e sem isto há um salto visível: o HTML do
     // servidor traz o valor final (de propósito — ver a nota do `return`), e
     // começar a contagem em zero só quando o elemento aparece faria o número
-    // pular de 35 para 0 na frente de quem acabou de olhar para ele. A faixa
+    // pular de 38 para 0 na frente de quem acabou de olhar para ele. A faixa
     // fica a ~1.900px do topo, muito abaixo da dobra, então este zero acontece
     // longe de qualquer olho.
     if (!naTela) {

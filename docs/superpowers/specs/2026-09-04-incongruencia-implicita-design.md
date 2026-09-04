@@ -1,7 +1,69 @@
 # Incongruência implícita — desenho para a frase que as 5 features atuais não pegam
 
 Data: 2026-09-04
-Status: proposta, sem implementação
+Status: IMPLEMENTADO em 04/09/2026, com uma correção de desenho — ver
+"Correção: o SentiLex não dá polaridade a 'gostei'" abaixo antes de ler o
+resto. A Abordagem A recomendada aqui, **como estava escrita**, erraria o
+primeiro caso real que um usuário digitou.
+
+## Correção: o SentiLex não dá polaridade a "gostei"
+
+Escrito depois de o dono do projeto testar o simulador com uma frase própria,
+antes de qualquer implementação:
+
+```
+"Nossa, eu realmente gostei de ficar 5h esperando para ser atendida"
+    -> satisfeito 76,4% / alegria 97,4% / ironia 99,9%
+```
+
+A Abordagem A, como desenhada abaixo, exigia `positivos > 0` a partir de
+`anotar_texto` para aceitar o lado do elogio. Medido nessa frase:
+
+```
+anotar_texto(...)  ->  [('gostei', 0, False)]      <- polaridade ZERO
+```
+
+O SentiLex-PT02 é léxico de **julgamento social** e é neutro em verbo de afeto
+do próprio falante — limitação que `fraus/sinais/lexico.py` já declara no topo,
+e que este documento não levou em conta. Ele sabe que "maravilhoso" é positivo
+e não sabe que "gostei" é. A feature teria acertado a frase de manual do
+projeto (que usa "maravilhoso") e errado a primeira frase real.
+
+**Conserto aplicado na implementação:** o lado positivo tem DUAS fontes, não
+uma — termo positivo não negado do SentiLex **ou** um verbo de
+`VERBOS_AFETO_FALANTE` (gostei, adorei, amei, curti…), lista curta que cobre
+exatamente o que o SentiLex deixa em zero. Não é uma cópia do léxico: é o
+complemento do buraco declarado dele. `tests/test_sinal_situacao_negativa.py`
+trava a premissa (`test_gostei_tem_polaridade_zero_no_sentilex`), para que a
+lista seja revista conscientemente se o lexicon mudar.
+
+**Lição de método, que vale além desta feature:** o furo apareceu porque o
+desenho foi validado contra a frase canônica do projeto — a que já
+conhecíamos. Uma frase escolhida por outra pessoa, sem esse viés, quebrou o
+desenho em um teste. Vale repetir isso antes de aceitar qualquer feature
+lexical nova.
+
+## Medição no corpus real, feita antes de aceitar (invariante 10)
+
+Taxa de disparo de `incongruencia_situacao_negativa` no B2W-Reviews01
+(amostra de 2000 resenhas por rótulo, semente 20260904):
+
+```
+insatisfeito  82/2000 = 4,10%
+neutro        53/2000 = 2,65%
+satisfeito    35/2000 = 1,75%
+```
+
+Dispara nos TRÊS rótulos, com gradiente suave — razão 2,3:1 entre os extremos.
+É sinal, não vazamento. Compare com a cabeça de ironia que saiu do vetor no
+mesmo dia: 74% contra 9%, razão 8:1, disjunção prática.
+
+No corpus do simulador (que fornece só a ESTRUTURA temporal, mas é onde a
+guarda `test_nenhuma_feature_e_previsor_unilateral` mede): 16/60, 22/60 e
+14/60 depois do cruzamento das frases nos três rótulos. Sem esse cruzamento a
+feature era constante em zero no simulador, e a guarda passaria **sem ter
+medido nada** — passar por vacuidade é o modo de falha silencioso desta
+guarda, e está registrado no comentário dela.
 
 ## O problema
 

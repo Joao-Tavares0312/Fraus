@@ -62,7 +62,7 @@ import { loginDisponivel, usuarioDaSessao } from "@/lib/sessao";
  *     como tudo que a ferramenta lê.
  *
  * O QUE NÃO MUDOU, e é a linha que separa reescrita de invenção: **nenhum fato
- * foi tocado**. 35 features, 7 sinais, 3 BERTimbau e 0 LLMs em runtime continuam
+ * foi tocado**. 39 features, 7 sinais, 3 BERTimbau e 0 LLMs em runtime continuam
  * sendo fatos do código; o cartão continua ilustrativo e continua DIZENDO isso;
  * as três honestidades metodológicas estão palavra por palavra. A cor continua
  * obedecendo o encoding — âmbar = dito, azul = medido, dourado = ação — e
@@ -125,7 +125,7 @@ const SINAIS = [
 ] as const;
 
 const FATOS = [
-  { numero: 35, rotulo: "features no fusor" },
+  { numero: 39, rotulo: "features no fusor" },
   { numero: 7, rotulo: "famílias de sinal" },
   { numero: 3, rotulo: "BERTimbau fine-tunados" },
   { numero: 0, rotulo: "LLMs em runtime" },
@@ -163,7 +163,7 @@ const ATRIBUICOES = [
 
 /**
  * AS QUATRO CHAMADAS que anotam o cartão do produto, na ORDEM DO PIPELINE — a
- * mesma da faixa `7 sinais → 35 features → regressão logística → score`.
+ * mesma da faixa `7 sinais → 39 features → regressão logística → score`.
  *
  * Cada uma herda a cor da camada de que fala, e isso é o encoding, não escolha:
  * as duas primeiras são âmbar porque comentam o que foi DITO; as duas últimas
@@ -424,7 +424,7 @@ export default async function PaginaInicial() {
             de vitrine em explicação.
 
             A NUMERAÇÃO NÃO É ENFEITE: é a ordem do pipeline, a mesma da faixa
-            `7 sinais → 35 features → regressão → score` mais abaixo.
+            `7 sinais → 39 features → regressão → score` mais abaixo.
 
             AS CHAMADAS SÓ EXISTEM DE `lg` PARA CIMA, e a alternativa foi
             considerada e rejeitada: empilhá-las acima e abaixo do cartão no
@@ -599,7 +599,7 @@ export default async function PaginaInicial() {
             <div className="vidro mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-6 py-6 font-mono text-xs text-muted-foreground sm:text-sm">
               <span className="text-dito-texto">7 sinais</span>
               <ArrowRight aria-hidden className="size-3.5 shrink-0" />
-              <span>35 features</span>
+              <span>39 features</span>
               <ArrowRight aria-hidden className="size-3.5 shrink-0" />
               <span>regressão logística</span>
               <ArrowRight aria-hidden className="size-3.5 shrink-0" />

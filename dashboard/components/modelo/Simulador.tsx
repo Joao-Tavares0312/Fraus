@@ -250,14 +250,18 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
  * arquivo: as duas telas leem os mesmos campos da mesma API, e manter duas
  * copias faria uma delas envelhecer sem a ressalva que a outra ja tem.
  *
- * Elas entram DEPOIS de uma linha e nunca dentro da barra de classes: a media
- * delas por conversa e que entra nas 35 features do fusor (desde
- * 21/08/2026), nao o numero desta frase isolada. Encostar "ironia 99%" na
- * barra de satisfacao convidaria a ler esta frase como causa direta da nota.
+ * Elas entram DEPOIS de uma linha e nunca dentro da barra de classes. Para a
+ * emocao, a media por conversa e que entra nas 39 features do fusor (desde
+ * 21/08/2026), nao o numero desta frase isolada. Para a IRONIA a separacao e
+ * ainda mais literal: desde 04/09/2026 ela nao entra no vetor de jeito nenhum
+ * -- e leitura, nao nota. Encostar "ironia 99%" na barra de satisfacao
+ * convidaria a ler esta frase como causa direta de uma nota que ela nao move.
  *
  * E aqui que a frase ironica se denuncia ao vivo: "que atendimento
  * maravilhoso, so esperei 3 horas" sai com satisfeito ALTO e ironia ALTA ao
- * mesmo tempo. As duas coisas juntas sao a informacao.
+ * mesmo tempo. As duas coisas juntas sao a informacao -- e a divergencia entre
+ * elas e justamente o que o fusor ainda NAO sabe usar (ver a pendencia da
+ * incongruencia implicita em docs/superpowers/specs/).
  */
 function OutrasCabecas({ resultado }: { resultado: Simulacao }) {
   if (!resultado.emocao && resultado.prob_ironia === null) return null;

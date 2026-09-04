@@ -108,8 +108,14 @@ export function CabecasDeLeitura({
             <span className="num text-sm text-foreground">
               {formatarNumero(ironia * 100)}%
             </span>
+            {/* "cabeca pouco confiavel", nao "pouco confiavel" solto: colado
+                no numero, o adjetivo era lido como se qualificasse a
+                PROBABILIDADE -- "99,9% de ironia, mas pouco provavel", que e o
+                oposto do que a frase diz. O sujeito da desconfianca e a cabeca,
+                que erra 6 em 10 falas sinceras; este numero especifico pode
+                estar certo, e no caso ironico geralmente esta. */}
             <span className="text-[11px] text-muted-foreground opacity-70">
-              pouco confiável
+              cabeça pouco confiável
             </span>
           </div>
           {ressalvas ? (
