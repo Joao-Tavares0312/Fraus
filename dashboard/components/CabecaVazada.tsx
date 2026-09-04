@@ -30,7 +30,7 @@ export function CabecaVazada({
     <span className={cn("inline-flex items-center gap-1.5", className)}>
       <span
         aria-hidden
-        className="inline-block size-2.5 shrink-0 rounded-full border border-muted-foreground bg-transparent"
+        className="inline-block size-2 shrink-0 rounded-full border border-muted-foreground bg-transparent"
       />
       <span className={cn("text-xs", rotuloVisivel ? "text-muted-foreground" : "sr-only")}>
         {rotulo}

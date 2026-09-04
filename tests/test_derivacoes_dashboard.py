@@ -123,7 +123,12 @@ def test_sem_sinal_e_notacao_e_nao_so_texto():
     componentes = RAIZ / "dashboard" / "components"
     assert (componentes / "CabecaVazada.tsx").is_file()
 
-    for arquivo in ("TabelaConversas.tsx", "DistribuicaoScores.tsx"):
+    # EtiquetaCategoria entrou aqui no fix round 1: categoria == null desenhava
+    # um ponto CHEIO cinza no mesmo slot dos tres pontos cheios coloridos --
+    # "cinza dentro da escala" que a DESIGN.md §5 probe por nome. E a
+    # instancia mais vista da peca (toda linha sem sinal da tabela e da lista
+    # de piores atendimentos), entao a guarda cobre ela tambem.
+    for arquivo in ("TabelaConversas.tsx", "DistribuicaoScores.tsx", "EtiquetaCategoria.tsx"):
         fonte = (componentes / arquivo).read_text(encoding="utf-8")
         assert "CabecaVazada" in fonte, f"{arquivo} ainda imprime sem sinal cru"
 
