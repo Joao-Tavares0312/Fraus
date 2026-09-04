@@ -48,8 +48,17 @@ a API na internet precisa saber que ela existe. Ver `README.md` e
 
 **A raiz virou vitrine.** `/` descreve o produto (tese, sete sinais,
 honestidade metodológica) e as telas moram em `/dashboard/*`, com redirect das
-rotas antigas. Nenhum número da LP é inventado — 35 features e sete sinais são
-fatos do código, e não há acurácia fabricada nem depoimento.
+rotas antigas. Nenhum número da LP é inventado — 38 features e sete sinais são
+fatos do código, e não há acurácia fabricada nem depoimento. **Isso impõe uma
+obrigação:** quando `NOMES_FEATURES` mudar, os números da LP mudam junto
+(`dashboard/app/page.tsx`, `lp/Contador.tsx`, `lp/Constelacao.tsx`). Em
+04/09/2026 o contrato foi a 38 e a LP ficou anunciando 35 — número falso numa
+tela pública, exatamente o que esta seção promete que não acontece. Agora há
+guarda: `tests/test_derivacoes_dashboard.py::test_a_vitrine_anuncia_o_numero_real_de_features`
+lê o `page.tsx` como texto e compara com `NOMES_FEATURES`. Ela cobre só o
+contador principal — as menções em prosa (`lp/Contador.tsx`,
+`lp/Constelacao.tsx`, o texto corrido da própria página) continuam sendo
+conferência manual.
 
 **Usuário é identidade, não credencial técnica.** Tabela `usuarios` (senha
 scrypt em `fraus/usuarios.py`), JWT HS256 (`fraus/token_acesso.py`, PyJWT —
@@ -113,7 +122,7 @@ sentidos** (`TabelaConversas.ausenciaPorUltimo`).
 
 ### 3.2 Sem horário, sem nota
 
-Latência é uma das 35 features do fusor, com peso aprendido. Uma transcrição de
+Latência é uma das 38 features do fusor, com peso aprendido. Uma transcrição de
 `.docx`/`.pdf` sem relógio não recebe nota, e a tela diz por quê.
 
 Zerar os campos de tempo seria o caminho fácil e **zero não é neutro**: o modelo
@@ -132,14 +141,23 @@ A `nota` é derivada no Python e o front só exibe. Recalcular no JavaScript já
 divergiu nas fronteiras 6/7 e 8/9 (arredondamento bancário contra meio-para-cima)
 e fazia a tabela mostrar nota 7 ao lado de "Detrator".
 
-### 3.4 Emoção e ironia também pontuam, desde 21/08/2026
+### 3.4 Emoção pontua; ironia NÃO pontua mais, desde 04/09/2026
 
-O fusor tem **35 features** (confira `fraus.fusor.NOMES_FEATURES`), e emoção e
-ironia estão entre elas desde que os notebooks 03 e 04 produziram os modelos —
-`sinais_fora_do_score` continua no payload, mas vem vazio. A interface mantém
-as duas leituras **visualmente separadas** da nota mesmo assim — encostar
-"ironia 99%" na barra de satisfação convida a ler uma como causa da outra, e
-isso vale independente de a feature pontuar ou não.
+O fusor tem **38 features** (confira `fraus.fusor.NOMES_FEATURES`), de SETE
+famílias. Emoção entrou no vetor em 21/08/2026 e continua lá. A **ironia
+entrou junto e saiu em 04/09/2026**: medida no próprio corpus de treino
+(B2W-Reviews01), a cabeça marca 74% das resenhas satisfeitas como irônicas
+contra 9% das insatisfeitas — no corpus do fusor ela é um detector de
+sentimento positivo, não de ironia, e o fusor aprendeu peso **+0,77** para
+`ironia_prob_media`, empurrando ironia para SATISFEITO. Feature que mede outra
+coisa que não o nome dela é pior que feature ausente. Ver
+`docs/treinamento.md`, seção "A ironia sai do vetor".
+
+A cabeça de ironia **continua carregada e obrigatória** (invariante 7) e
+continua sendo lida por mensagem e exibida na dashboard — o que mudou é que
+ela não pontua. A interface sempre manteve as leituras **visualmente separadas**
+da nota, e isso vale independente de a feature pontuar ou não: encostar
+"ironia 99%" na barra de satisfação convida a ler uma como causa da outra.
 
 ### 3.5 O que ficou de fora é relatado
 
@@ -262,15 +280,14 @@ discurso no gerador. **O gerador já foi corrigido**; falta rodar
 `notebooks/04_treino_ironia.ipynb` no Colab e substituir
 `modelos/bertimbau-ironia/`.
 
-**Isto deixou de ser um risco evitado e passou a ser um risco assumido.** A
-ironia entra no score desde 21/08/2026 (contrato de 35 features, `ironia_*`).
-O aviso antigo era "não treinar o fusor sobre uma cabeça de ironia que erra 6
-em 10 injetaria o vazamento dela no score" — e é exatamente isso que
-acontece hoje: **o score carrega esse vazamento** enquanto o notebook 04 não
-rodar de novo. Retreinar a ironia não é mais bloqueio de outra coisa (item
-"P0 — Retreinar o fusor" abaixo depende do contrato, não deste retreino
-específico), mas o número que sai do fusor está pontuando com uma cabeça que
-a gente já sabe que erra 6 em 10.
+**O risco voltou a ser evitado em 04/09/2026, e não por causa deste retreino.**
+Entre 21/08 e 04/09 a ironia pontuava, e o score carregava esse vazamento. Ela
+saiu do vetor em 04/09 por um motivo diferente e mais grave (ver §3.4): no
+corpus de treino do fusor ela funciona como detector de sentimento positivo.
+Com ela fora, **o vazamento da cabeça não se propaga mais para a nota** — mas
+ela continua obrigatória para a API subir e continua sendo exibida por
+mensagem na dashboard, com a ressalva de confiabilidade que a tela já mostra.
+Rodar o notebook 04 continua valendo; só deixou de ser urgente.
 
 Verificação: `uv run pytest tests/test_ironia_dominio.py`. Se o modelo melhorar,
 **aperte os limiares desse arquivo junto** — limiar frouxo que nunca falha não
@@ -278,23 +295,38 @@ mede nada. E se `test_acuracia_perfeita_do_relatorio_vale_so_no_corpus_gerado`
 passar a falhar, a limitação foi superada e os textos de ressalva na interface
 precisam ser reescritos, não mantidos por inércia.
 
-### P0 — Retreinar o fusor no contrato de 35
+### P0 — A ironia continua escapando do score
 
-O contrato subiu de 16 para 35 features (sete famílias) em 21/08/2026, e o
-código está pronto: `montar_features` monta o vetor de 35, `vetorizar` exige
-as 35 chaves. **O fusor NÃO foi retreinado.** O retreino é o
-`notebooks/02_treino_fusor.ipynb`, roda no Colab, exige os três artefatos
-fine-tunados e não rodou nesta sessão — é a Task 7 do plano de
-21/08/2026, fora de escopo aqui porque depende de GPU e do Drive do João.
+O fusor está em dia: contrato e artefato batem em **38 features** desde
+04/09/2026, acurácia 0,943. Confira a qualquer momento com
+`uv run python scripts/conferir_fusor.py`.
 
-**Enquanto isso não acontece, `modelos/fusor.joblib` — se existir na
-máquina — ainda é o fusor treinado sobre as 16 features antigas.** Ele NÃO
-serve mais: `Fusor.pontuar` chama `vetorizar`, que espera as 35 chaves de
-`NOMES_FEATURES` e levanta `KeyError` para um artefato de 16. A API não sobe
-com o artefato velho — **isto é o comportamento correto da invariante 7**
-(modelo ausente/incompatível é falha alta e explícita), não um bug a
-consertar. Rodar o notebook 02 de novo é o que destrava a API real de
-novo. Ver `docs/treinamento.md`, seção "Contrato de features".
+O que continua aberto é o caso que deu origem a tudo isto. A frase canônica do
+projeto pontua **99,95 / nota 10 / promotor**:
+
+```
+"que atendimento maravilhoso, so esperei 3 horas"
+```
+
+As cinco features de `incongruencia_*` dão **0,0** nela e disparam numa frase
+de satisfação genuína — hoje elas pegam entusiasmo, não ironia. A causa é
+estrutural, não bug: todas são função de `anotar_texto`/emoji, e "só esperei 3
+horas" não tem palavra polar no SentiLex; é negativo por **pragmática**. E a
+cabeça de texto classifica a frase como satisfeito com 0,858, dominando o eixo.
+
+Rota proposta, já pesquisada e desenhada:
+`docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md` —
+`incongruencia_situacao_negativa`, lista curada de padrões de queixa de
+atendimento (espera, transferência, cobrança) que só dispara quando há elogio
+léxico na mesma fala. Custo: vetor vai a 39 features, **exige rodar o notebook
+02 de novo**, e exige frases novas no simulador nos três rótulos para não
+repetir o vazamento unilateral que já pegou `incongruencia_hiperbole`.
+
+**A regra que vale sempre que o contrato mudar:** `Fusor.carregar` valida
+`n_features_in_` contra `len(NOMES_FEATURES)` e levanta `FusorIncompativelError`
+— a API não sobe com artefato desatualizado, e isso é o comportamento correto
+da invariante 7, não um bug a consertar. Rodar o notebook 02 e substituir
+`modelos/fusor.joblib` é o que destrava. Ver `docs/treinamento.md`.
 
 ### Feita — Autenticação, antes de hospedar
 

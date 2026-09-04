@@ -24,9 +24,9 @@ import re
 
 from fraus.fusor import NOMES_FEATURES
 
-CAMINHO_DERIVACOES = (
-    pathlib.Path(__file__).parent.parent / "dashboard" / "lib" / "derivacoes.ts"
-)
+RAIZ = pathlib.Path(__file__).parent.parent
+CAMINHO_DERIVACOES = RAIZ / "dashboard" / "lib" / "derivacoes.ts"
+CAMINHO_VITRINE = RAIZ / "dashboard" / "app" / "page.tsx"
 
 
 def _prefixo_de(nome: str) -> str:
@@ -80,4 +80,33 @@ def test_toda_feature_de_nomes_features_tem_rotulo_no_dashboard():
         f"feature(s) sem entrada em ROTULO_FEATURE (dashboard/lib/derivacoes.ts): "
         f"{sem_rotulo}. Sem rotulo, o usuario ve o nome tecnico em snake_case cru "
         "na tela."
+    )
+
+
+def test_a_vitrine_anuncia_o_numero_real_de_features():
+    """A landing page promete "nenhum numero inventado" -- isto e o que cobra.
+
+    `dashboard/app/page.tsx` mostra a contagem de features ao visitante, e
+    `docs/handoff.md` declara que os numeros da LP sao fatos do codigo. Em
+    04/09/2026 o contrato caiu de 40 para 38 e a LP continuou anunciando 35:
+    numero falso numa tela publica, que e exatamente o que a promessa exclui.
+    Nenhum teste pegava porque a contagem e um literal em TypeScript, do outro
+    lado da fronteira de linguagem.
+
+    A honestidade metodologica do projeto nao vale menos por estar na vitrine
+    em vez de estar num sinal -- vale MAIS, porque e a parte que o visitante ve
+    antes de qualquer ressalva.
+    """
+    fonte = CAMINHO_VITRINE.read_text(encoding="utf-8")
+
+    anunciado = re.search(r"\{\s*numero:\s*(\d+),\s*rotulo:\s*\"features no fusor\"", fonte)
+    assert anunciado, (
+        "nao encontrei o contador de features em dashboard/app/page.tsx. Se o "
+        "formato mudou, atualize esta busca -- nao apague a guarda."
+    )
+
+    assert int(anunciado.group(1)) == len(NOMES_FEATURES), (
+        f"a vitrine anuncia {anunciado.group(1)} features, mas NOMES_FEATURES tem "
+        f"{len(NOMES_FEATURES)}. Atualize dashboard/app/page.tsx -- e as outras "
+        "mencoes do numero em lp/Contador.tsx e lp/Constelacao.tsx junto."
     )

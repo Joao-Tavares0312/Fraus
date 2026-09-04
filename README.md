@@ -98,6 +98,7 @@ A medida se reproduz, e é para isso que o script existe:
 ```bash
 uv run python scripts/medir_faixas.py                    # a régua vigente
 uv run python scripts/medir_faixas.py --peso-neutro 0.5  # a régua antiga
+uv run python scripts/conferir_fusor.py                  # laudo do artefato vigente
 ```
 
 O peso é **constante** (`fraus.fusor.PESO_NEUTRO_NO_SCORE`), não configuração,
@@ -725,7 +726,7 @@ ordem lá é a ordem de importância.
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável e, desde 04/09/2026, não pontua mais** — ver pendência 1 |
-| **Fusor** | ⚠️ | **contrato e artefato voltaram a divergir em 04/09/2026.** `NOMES_FEATURES` caiu de 40 para 38 (as duas `ironia_*` saíram — ver [docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026)), mas `modelos/fusor.joblib` continua sendo o artefato de 40 features, treinado em 04/09/2026 antes desta decisão. A API sobe normalmente e **falha na primeira pontuação real** (`StandardScaler` esperando 40, recebendo 38) — o mesmo padrão de risco já descrito abaixo, agora pela razão oposta (features A MAIS no artefato). Retreinar com `notebooks/02_treino_fusor.ipynb` é o próximo passo, ainda não feito. **Dívida remanescente, independente deste artefato:** `Fusor.carregar` é `joblib.load` puro, sem validação de forma — é por isso que a divergência só aparece na pontuação, não no boot. Ver invariante 7 e [docs/treinamento.md](docs/treinamento.md#contrato-de-features) |
+| **Fusor** | ✅ | contrato e artefato batem em **38 features** desde 04/09/2026. Acurácia 0,943 / F1-macro 0,944 (900 treino / 300 teste), conferido por `scripts/conferir_fusor.py`: classes `[0 1 2]`, nenhum peso zerado, as cinco `incongruencia_*` negativas. `Fusor.carregar` agora **valida a dimensão na carga** e levanta `FusorIncompativelError` — artefato desatualizado derruba a API na subida, em vez de estourar HTTP 500 na primeira pontuação. Ver [docs/treinamento.md](docs/treinamento.md#o-fusor-de-38-features--04092026). **Limitação conhecida:** a frase canônica de ironia continua pontuando nota 10 — ver a pendência abaixo |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -744,13 +745,16 @@ ordem lá é a ordem de importância.
 
 Em ordem, com o detalhe em [Pendências](#pendências):
 
-0. **Retreinar o fusor no contrato de 38 — bloqueio de subida.** A ironia saiu
-   de `NOMES_FEATURES` em 04/09/2026 (ver a linha do Fusor na tabela acima e
-   [docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026)),
-   mas `modelos/fusor.joblib` ainda é o artefato de 40 features. A API sobe e
-   falha na primeira pontuação real. Rodar `notebooks/02_treino_fusor.ipynb`
-   de novo (a chamada de `montar_features` já não passa mais o classificador
-   de ironia) e copiar o artefato novo para `modelos/`.
+0. **A ironia continua escapando do score — limitação declarada, não bug.** A
+   frase canônica do projeto, `"que atendimento maravilhoso, so esperei 3
+   horas"`, pontua **99,95 / nota 10 / promotor**. As cinco features de
+   incongruência dão 0,0 nela e disparam numa frase de satisfação genuína: hoje
+   elas pegam entusiasmo, não ironia. A causa é estrutural — todas são função
+   do SentiLex e de emoji, e "só esperei 3 horas" é negativo por pragmática,
+   sem nenhuma palavra polar. A rota proposta (`incongruencia_situacao_negativa`,
+   lista curada de situação negativa de atendimento) está desenhada em
+   [docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md](docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md);
+   custa levar o vetor a 39 features e mais um retreino do notebook 02.
 1. **Retreinar a cabeça de ironia — dívida assumida, não mais bloqueio de
    confiabilidade, mas continua obrigatória para a API subir.** O vazamento
    está medido em `tests/test_ironia_dominio.py` (6 em 10 falas sinceras
@@ -984,28 +988,30 @@ salto grande seria sintoma de vazamento, não vitória.
 (mediana 99,42), NPS −4,44 num lote equilibrado por construção. A régua
 continua de pé.
 
-**O que continua sendo dívida real, e não é sobre este artefato:**
-`Fusor.carregar` (em `fraus/fusor.py`) é `joblib.load` puro, **sem nenhuma
-validação de forma contra `NOMES_FEATURES`**. Enquanto contrato e artefato
-batem isso não aparece; na próxima vez que o contrato mudar, aparece do mesmo
-jeito que apareceu agora — a API sobe normalmente, `/modelo/simular` funciona
-e engana (não passa pelo fusor), e o `ValueError` do `StandardScaler` só
-estoura como HTTP 500 na primeira pontuação real, em `/ingestao` ou
-`/conversas/importar`. A invariante 7 pede falha alta e explícita para modelo
-incompatível; o comportamento atual cumpre a metade "explícita" (o 500 é
-claro) mas não a metade "na carga". Validar a dimensão em `Fusor.carregar` é
-o conserto, e continua pendente.
+**A dívida que essa história deixou, e o conserto — 04/09/2026.** O contrato
+caiu de 40 para 38 features quando `ironia_prob_media` e `ironia_prob_max`
+saíram de `NOMES_FEATURES` (ver
+[docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026)), e
+pela terceira vez em três semanas o artefato ficou para trás do contrato. O que
+tornava isso perigoso não era o desencontro em si — era que `Fusor.carregar`
+era `joblib.load` puro, **sem validação de forma**: a API subia normalmente,
+`/modelo/simular` funcionava e enganava (não passa pelo fusor), e o `ValueError`
+do `StandardScaler` só estourava como HTTP 500 na primeira pontuação real. A
+invariante 7 pede falha alta e explícita; o comportamento cumpria a metade
+"explícita" e não a metade "na carga".
 
-**A dívida voltou de novo em 04/09/2026, pelo motivo oposto.** O contrato
-CAIU de 40 para 38 features: `ironia_prob_media` e `ironia_prob_max` saíram de
-`NOMES_FEATURES` (ver o item 1 acima e
-[docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026)),
-mas `modelos/fusor.joblib` continua sendo o artefato de 40 features treinado
-mais cedo no mesmo dia. A falta de validação de forma em `Fusor.carregar`
-significa exatamente o mesmo sintoma descrito acima: a API sobe normalmente e
-só falha na primeira pontuação real, agora com `StandardScaler` esperando 40 e
-recebendo 38. **Retreinar `notebooks/02_treino_fusor.ipynb` com o contrato de
-38 é o próximo passo, ainda não feito** — ver o item 0 da seção "Falta" acima.
+**Consertado:** `Fusor.carregar` compara `n_features_in_` com
+`len(NOMES_FEATURES)` e levanta `FusorIncompativelError` nomeando os dois
+números e apontando o notebook. Artefato desatualizado agora derruba a API na
+subida. `vetorizar` também passou a recusar chave EXTRA, não só chave faltando.
+
+O retreino com 38 features rodou no mesmo dia: **acurácia 0,943**, F1-macro
+0,944, contra 0,947 do fusor de 40. A queda é o resultado saudável — as duas
+features removidas estavam ajudando como detectores de sentimento positivo
+disfarçados, e trocar uma feature que mente por nenhuma feature é o negócio
+certo. Conferência completa em
+[docs/treinamento.md](docs/treinamento.md#o-fusor-de-38-features--04092026),
+reproduzível com `uv run python scripts/conferir_fusor.py`.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),
