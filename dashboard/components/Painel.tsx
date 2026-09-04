@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { entradaDeSistema } from "@/lib/movimento";
 import { useEspecular } from "@/hooks/useEspecular";
 import { classesDoNivel, type Nivel } from "@/lib/hierarquia";
-import { useRegistrarRessalva } from "./AparatoDaTela";
+import { RessalvaDaTela } from "./AparatoDaTela";
 
 /**
  * O SISTEMA: a unidade de composicao da interface.
@@ -22,9 +22,11 @@ import { useRegistrarRessalva } from "./AparatoDaTela";
  * explicacao foi removida -- ela virou APARATO, no rodape do sistema e na
  * tipografia menor, que e onde a partitura poe nota de editor.
  *
- * Recolher e permitido; remover nao. O aparato abre com um gesto, e os rotulos
- * curtos que qualificam o numero (`estimativa`, `observado`, `sem sinal`) NAO
- * sao aparato: ficam colados ao dado, sempre visiveis.
+ * Recolher e permitido; remover nao -- so o LUGAR mudou de novo: a ressalva
+ * ja nao abre no proprio painel, ela SOBE para o aparato da TELA, um so por
+ * pagina, no rodape (ver `AparatoDaTela.tsx`). Os rotulos curtos que
+ * qualificam o numero (`estimativa`, `observado`, `sem sinal`) NAO sao
+ * aparato: ficam colados ao dado, sempre visiveis.
  */
 export function Painel({
   titulo,
@@ -52,62 +54,61 @@ export function Painel({
   className?: string;
   children: ReactNode;
 }) {
-  // A ressalva sobe para o aparato da tela, identificada pelo titulo do
-  // painel. Os rotulos curtos ficam onde estao.
-  useRegistrarRessalva(
-    titulo,
-    legenda || rodape ? (
-      <>
-        {legenda}
-        {rodape}
-      </>
-    ) : null,
-  );
   const refEspecular = useEspecular<HTMLElement>();
 
   return (
-    <motion.section
-      ref={refEspecular}
-      // A ENTRADA. `whileInView` com `once` em vez de `animate` puro: o sistema
-      // sobe quando ENTRA em cena, e nao todos juntos no instante do primeiro
-      // quadro. Numa pagina que rola, isso da o escalonamento de graca, na
-      // ordem em que o olho chega -- sem precisar coordenar indice entre
-      // sistemas que moram em grades diferentes.
-      //
-      // `margin` negativo embaixo: o gatilho dispara pouco ANTES do sistema
-      // aparecer, senao ele entra ja animando e o movimento e visto pela
-      // metade.
-      variants={entradaDeSistema}
-      initial="oculto"
-      whileInView="presente"
-      viewport={{ once: true, margin: "0px 0px -64px 0px" }}
-      className={cn(
-        "especular chanfro quebra-evitar min-w-0 overflow-hidden rounded-lg",
-        classesDoNivel(nivel),
-        className,
-      )}
-    >
-      {/* A regua do sistema. Mais espaco acima do titulo do que abaixo. */}
-      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-linha pb-2">
-        <h2
-          className={cn(
-            "font-semibold tracking-tight text-foreground",
-            nivel === "dominante" ? "text-base" : "text-sm",
-          )}
-        >
-          {titulo}
-        </h2>
-        {acessorio ? <div className="shrink-0">{acessorio}</div> : null}
-      </header>
-
-      <div
+    <>
+      <motion.section
+        ref={refEspecular}
+        // A ENTRADA. `whileInView` com `once` em vez de `animate` puro: o sistema
+        // sobe quando ENTRA em cena, e nao todos juntos no instante do primeiro
+        // quadro. Numa pagina que rola, isso da o escalonamento de graca, na
+        // ordem em que o olho chega -- sem precisar coordenar indice entre
+        // sistemas que moram em grades diferentes.
+        //
+        // `margin` negativo embaixo: o gatilho dispara pouco ANTES do sistema
+        // aparecer, senao ele entra ja animando e o movimento e visto pela
+        // metade.
+        variants={entradaDeSistema}
+        initial="oculto"
+        whileInView="presente"
+        viewport={{ once: true, margin: "0px 0px -64px 0px" }}
         className={cn(
-          "min-w-0",
-          semPadding ? "-mx-4 pt-3 sm:-mx-5" : "pt-4",
+          "especular chanfro quebra-evitar min-w-0 overflow-hidden rounded-lg",
+          classesDoNivel(nivel),
+          className,
         )}
       >
-        {children}
-      </div>
-    </motion.section>
+        {/* A regua do sistema. Mais espaco acima do titulo do que abaixo. */}
+        <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-linha pb-2">
+          <h2
+            className={cn(
+              "font-semibold tracking-tight text-foreground",
+              nivel === "dominante" ? "text-base" : "text-sm",
+            )}
+          >
+            {titulo}
+          </h2>
+          {acessorio ? <div className="shrink-0">{acessorio}</div> : null}
+        </header>
+
+        <div
+          className={cn(
+            "min-w-0",
+            semPadding ? "-mx-4 pt-3 sm:-mx-5" : "pt-4",
+          )}
+        >
+          {children}
+        </div>
+      </motion.section>
+      {/* A ressalva sobe para o aparato da tela, identificada pelo titulo do
+          painel -- ela e filho de verdade deste componente, entao re-renderiza
+          quando `legenda`/`rodape` mudam, em vez de congelar num valor antigo
+          copiado para estado. Os rotulos curtos ficam onde estao. */}
+      <RessalvaDaTela titulo={titulo}>
+        {legenda}
+        {rodape}
+      </RessalvaDaTela>
+    </>
   );
 }

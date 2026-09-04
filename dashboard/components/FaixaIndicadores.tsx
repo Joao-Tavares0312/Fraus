@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useRegistrarRessalva } from "./AparatoDaTela";
+import { RessalvaDaTela } from "./AparatoDaTela";
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
 import { pilha } from "@/lib/movimento";
 import {
@@ -106,46 +106,13 @@ export function FaixaIndicadores({
 
   const refEspecular = useEspecular<HTMLElement>();
 
-  // O METODO dos quatro indicadores vira UM aparato so, no pe da tela --
-  // antes cada cartao carregava o proprio paragrafo e a pilha inteira gastava
-  // mais tela em prosa fixa do que em numero (regra ja paga duas vezes:
-  // ressalva repetida vira ruido e para de ser lida). O que continua colado
-  // ao numero e DADO do recorte -- a contagem de "com sinal" do NPS e a
-  // legenda de cortes do trilho -- porque muda com o filtro.
-  useRegistrarRessalva(
-    "Indicadores",
-    <dl className="flex max-w-[52ch] flex-col gap-1.5 text-[0.6875rem] leading-snug text-muted-foreground">
-      <div>
-        <dt className="inline font-medium">CSAT inferido:</dt>{" "}
-        <dd className="inline">
-          proporção de atendimentos com nota ≥ 7, a mesma regra do servidor.
-        </dd>
-      </div>
-      <div>
-        <dt className="inline font-medium">Taxa de contenção:</dt>{" "}
-        <dd className="inline">
-          atendimentos resolvidos sem passar para um humano. Não depende de
-          score.
-        </dd>
-      </div>
-      <div>
-        <dt className="inline font-medium">Latência mediana:</dt>{" "}
-        <dd className="inline">
-          mediana do intervalo entre a fala do cliente e a resposta seguinte,
-          derivada dos timestamps. Os cortes do trilho ({limiares.pico} s,{" "}
-          {limiares.saudavel} s e {emMinutos(limiares.degradando)} min) são
-          configuráveis em Configurações.
-        </dd>
-      </div>
-    </dl>,
-  );
-
   return (
-    // A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
-    // se rele a cada compasso. Ela mora a ESQUERDA da linha do tempo, entao a
-    // pilha vertical e a forma certa em tela larga -- a fileira de quatro
-    // colunas era o template de metrica-heroi, e ele empurrava a tese da tela
-    // para baixo da dobra.
+    <>
+    {/* A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
+        se rele a cada compasso. Ela mora a ESQUERDA da linha do tempo, entao a
+        pilha vertical e a forma certa em tela larga -- a fileira de quatro
+        colunas era o template de metrica-heroi, e ele empurrava a tese da tela
+        para baixo da dobra. */}
     <motion.section
       ref={refEspecular}
       aria-label={`Indicadores de ${rotuloDoPeriodo}`}
@@ -224,5 +191,44 @@ export function FaixaIndicadores({
         explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
       />
     </motion.section>
+    {/* O METODO dos quatro indicadores vira UM aparato so, no pe da tela --
+        antes cada cartao carregava o proprio paragrafo e a pilha inteira
+        gastava mais tela em prosa fixa do que em numero (regra ja paga duas
+        vezes: ressalva repetida vira ruido e para de ser lida). O que
+        continua colado ao numero e DADO do recorte -- a contagem de "com
+        sinal" do NPS e a legenda de cortes do trilho -- porque muda com o
+        filtro. Por ser filho de verdade (RessalvaDaTela via portal, nao
+        estado copiado), este texto acompanha `limiares` e `indicadores`
+        sempre que a tela re-renderiza, em vez de congelar no valor do
+        primeiro registro. */}
+    <RessalvaDaTela titulo="Indicadores">
+      <dl className="flex max-w-[52ch] flex-col gap-1.5 text-[0.6875rem] leading-snug text-muted-foreground">
+        <div>
+          <dt className="inline font-medium">CSAT inferido:</dt>{" "}
+          <dd className="inline">
+            proporção de atendimentos com nota ≥ 7, a mesma regra do
+            servidor.
+          </dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Taxa de contenção:</dt>{" "}
+          <dd className="inline">
+            atendimentos resolvidos sem passar para um humano. Não depende de
+            score.
+          </dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Latência mediana:</dt>{" "}
+          <dd className="inline">
+            mediana do intervalo entre a fala do cliente e a resposta
+            seguinte, derivada dos timestamps. Os cortes do trilho (
+            {limiares.pico} s, {limiares.saudavel} s e{" "}
+            {emMinutos(limiares.degradando)} min) são configuráveis em
+            Configurações.
+          </dd>
+        </div>
+      </dl>
+    </RessalvaDaTela>
+    </>
   );
 }

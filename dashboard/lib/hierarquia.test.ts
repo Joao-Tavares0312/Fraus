@@ -69,7 +69,7 @@ describe("aparato", () => {
     // da tela; os rotulos curtos continuam colados ao numero.
     const fonte = readFileSync("components/Painel.tsx", "utf8");
     expect(fonte).not.toContain("<Aparato");
-    expect(fonte).toContain("useRegistrarRessalva");
+    expect(fonte).toContain("RessalvaDaTela");
   });
 
   it("o layout monta o provedor e o aparato da tela para todas as paginas", () => {
