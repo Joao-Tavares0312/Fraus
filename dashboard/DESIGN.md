@@ -404,8 +404,12 @@ analista lê em DPI consistente: fonte de display em rótulo e dado é proibida.
 > **Mona Sans** variável em corpo grande com tracking até −0.02em. Ela entra
 > por `next/font/local` a partir de `app/fontes/`, versionada no repo, e
 > governa exatamente duas classes: `.display-vitrine` e `.titulo-vitrine`.
-> `lib/tipografia.test.ts` é o juiz desse escopo — nenhuma terceira regra pode
-> usá-la, porque rótulo e dado continuam sendo território da Inter.
+> `lib/tipografia.test.ts` varre o `globals.css` e barra qualquer TERCEIRA
+> REGRA CSS que use `var(--fonte-display)` — essa via está coberta. Ele não
+> pega classe utilitária arbitrária aplicada direto em JSX/TSX (algo como
+> `className="font-[var(--fonte-display)]"`); cobrir esse caminho exigiria um
+> harness de componente, que nenhuma dependência nova autoriza hoje. Essa via
+> fica de vigilância manual em revisão de código, não de teste.
 
 - **Escala fixa em rem**, razão apertada (1.125–1.2). Nada fluido.
 - **Numeral tabular e monoespaçado em todo número que se compara** (`.num`).
