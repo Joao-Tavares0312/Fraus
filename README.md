@@ -721,7 +721,7 @@ ordem lá é a ordem de importância.
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
-| **Fusor** | ⚠️ | contrato e artefato **voltaram a divergir em 03/09/2026**: `NOMES_FEATURES` subiu de 35 para 40 (família `incongruencia_*`), e `modelos/fusor.joblib` continua sendo o artefato de 35 treinado em 24/08/2026 — `n_features_in_ = 35`. **`Fusor.carregar` é `joblib.load` puro, sem validação de forma — a API real SOBE normalmente com esse artefato desatualizado**, e `/modelo/simular` também funciona (não usa o fusor), o que engana quem está testando à mão. O `ValueError` do `StandardScaler` só aparece como 500 na primeira pontuação de verdade, em `/ingestao` ou `/conversas/importar` — é risco de demonstração ao vivo, não uma trava que impede o servidor de subir. Ver invariante 7 (a intenção é falha alta e explícita; o código hoje não garante isso na carga, só na primeira predição). Corrige quando o retreino descrito em [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026) rodar de novo no Colab |
+| **Fusor** | ✅ | contrato e artefato batem desde 04/09/2026: `NOMES_FEATURES` tem 40 nomes (família `incongruencia_*` entrou em 03/09/2026) e `modelos/fusor.joblib` foi retreinado com `n_features_in_ = 40`, **acurácia 0,947 / F1-macro 0,947** contra 0,93 do fusor de 35. As cinco features novas aprenderam peso NEGATIVO no eixo satisfeito−insatisfeito (mais incongruência empurra para insatisfeito), que é a direção que a literatura prevê. **Dívida remanescente, independente deste artefato:** `Fusor.carregar` é `joblib.load` puro, sem validação de forma — na próxima vez que o contrato mudar, a API sobe com artefato incompatível e só falha na primeira pontuação real. Ver invariante 7 e [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026) |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -954,28 +954,30 @@ NPS saem certas. **Essa separação limpa não é evidência de qualidade**: sã
 conversas do próprio gerador sintético, e o número honesto continua sendo os
 **0,93** do conjunto de teste separado.
 
-**Isto voltou a ser dívida em 03/09/2026.** O contrato subiu de novo, para
-**40 features** (a família `incongruencia_*` — ver [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026)),
-e o artefato em `modelos/` **continua sendo o de 35** treinado em 24/08/2026.
-Eles não batem agora: `n_features_in_` do artefato vigente é 35,
-`len(NOMES_FEATURES)` é 40.
+**A dívida voltou em 03/09/2026 e foi fechada em 04/09/2026.** O contrato subiu
+para **40 features** (a família `incongruencia_*` — ver [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026))
+e por um dia o artefato em `modelos/` continuou sendo o de 35. O retreino
+rodou: `n_features_in_ = 40`, classes `[0 1 2]`, **acurácia 0,947** e
+**F1-macro 0,947** no conjunto de teste separado (900 treino / 300 teste),
+contra 0,93 do fusor de 35. A subida de ~1,7 ponto é modesta de propósito —
+salto grande seria sintoma de vazamento, não vitória.
 
-**Isso NÃO impede a API de subir.** Diferente do episódio de 24/08/2026
-descrito acima — onde o vetor era exigido na carga —, `Fusor.carregar` (em
-`fraus/fusor.py`) é `joblib.load` puro, sem nenhuma validação de forma contra
-`NOMES_FEATURES`. Medido: `Fusor.carregar("modelos/fusor.joblib")` carrega
-sem erro mesmo com `n_features_in_ = 35` contra um contrato de 40. A API sobe
-normalmente, e `/modelo/simular` funciona e engana — essa rota não passa pelo
-fusor. **O `ValueError` do `StandardScaler` só estoura como HTTP 500 na
-primeira pontuação real**, em `/ingestao` ou em `/conversas/importar`, quando
-`vetorizar` monta um vetor de 40 posições e o scaler treinado para 35 rejeita.
-Isto é risco de demonstração ao vivo: um teste manual rápido pela API de
-simulação, ou só o servidor subir sem erro no log, pode convencer quem está
-validando de que está tudo certo quando não está. A invariante 7 pede falha
-alta e explícita para modelo ausente/incompatível; o comportamento atual
-cumpre a metade "explícita" (o 500 é claro) mas não a metade "na carga" — a
-falha só aparece quando alguém tenta pontuar de verdade. Isto não é
-histórico — é o estado atual, até o retreino acontecer.
+`scripts/medir_faixas.py` com o artefato novo: insatisfeito 30/30 detrator
+(mediana 0,14), neutro 29/30 neutro (mediana 74,97), satisfeito 27/30 promotor
+(mediana 99,42), NPS −4,44 num lote equilibrado por construção. A régua
+continua de pé.
+
+**O que continua sendo dívida real, e não é sobre este artefato:**
+`Fusor.carregar` (em `fraus/fusor.py`) é `joblib.load` puro, **sem nenhuma
+validação de forma contra `NOMES_FEATURES`**. Enquanto contrato e artefato
+batem isso não aparece; na próxima vez que o contrato mudar, aparece do mesmo
+jeito que apareceu agora — a API sobe normalmente, `/modelo/simular` funciona
+e engana (não passa pelo fusor), e o `ValueError` do `StandardScaler` só
+estoura como HTTP 500 na primeira pontuação real, em `/ingestao` ou
+`/conversas/importar`. A invariante 7 pede falha alta e explícita para modelo
+incompatível; o comportamento atual cumpre a metade "explícita" (o 500 é
+claro) mas não a metade "na carga". Validar a dimensão em `Fusor.carregar` é
+o conserto, e continua pendente.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),

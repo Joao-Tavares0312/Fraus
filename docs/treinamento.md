@@ -269,14 +269,38 @@ Passos, no Colab:
    se as features que lideram forem as de conteudo (texto, emoji), o modelo
    aprendeu; se forem as circunstanciais, procure o vazamento.
 4. Conferir os coeficientes das cinco features novas em `Fusor.importancias()`
-   / `Fusor.eixo_global()`. Espere peso proximo de zero em
-   `incongruencia_marcador_contraste` e `incongruencia_aspas_ironicas`: o
-   simulador nao produz marcador de contraste entre polaridades opostas nem
-   aspas ironicas, entao as duas ficam constantes no corpus de treino e
-   feature constante nasce com peso zero — limitacao declarada, nao defeito.
-   Elas continuam sendo calculadas e valem em dado real; so nao tem o que
-   aprender no sintetico. `incongruencia_polaridade` tem sinal nos tres
-   rotulos e deve aparecer com peso real. `incongruencia_hiperbole` melhorou
+   / `Fusor.eixo_global()`.
+
+   **CORRECAO DE 04/09/2026, e a licao vale mais que o numero:** este passo
+   dizia para esperar peso proximo de zero em
+   `incongruencia_marcador_contraste` e `incongruencia_aspas_ironicas`,
+   porque as duas sao constantes em zero no corpus do SIMULADOR. A previsao
+   estava errada, e o erro foi confundir dois corpora diferentes. O simulador
+   fornece a ESTRUTURA temporal (latencia, turnos, escalacao) a partir de seis
+   frases por rotulo; o TEXTO do treino e o B2W-Reviews01, resenha real de
+   e-commerce, onde marcador de contraste e aspas ironicas ocorrem
+   normalmente. Medir uma feature de texto no gerador de estrutura e olhar
+   para o corpus errado.
+
+   Os pesos reais do primeiro retreino de 40 features, no eixo
+   satisfeito-menos-insatisfeito:
+
+   | feature | peso |
+   |---|---|
+   | `incongruencia_emoji_texto` | −0,95 |
+   | `incongruencia_hiperbole` | −0,65 |
+   | `incongruencia_marcador_contraste` | −0,38 |
+   | `incongruencia_polaridade` | −0,37 |
+   | `incongruencia_aspas_ironicas` | −0,15 |
+
+   As cinco sairam NEGATIVAS, que e a direcao que a literatura preve: mais
+   incongruencia empurra a nota para insatisfeito. A hiperbole em −0,65 e a
+   evidencia de que o cruzamento do corpus (secao acima) funcionou — sem ele
+   ela teria aprendido o sinal contrario.
+
+   O que continua valendo da versao anterior deste passo: as guardas de
+   vazamento medem o SIMULADOR e sao sobre a estrutura, nao sobre o texto do
+   B2W. `incongruencia_hiperbole` melhorou
    mas nao chegou aos tres: depois da correcao ela dispara em DOIS dos tres
    rotulos — `insatisfeito 34/60` e `satisfeito 39/60` (numeros medidos
    acima, na secao do retreino) —, e `neutro` continua em `0/60`. Isso e
