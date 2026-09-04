@@ -613,7 +613,14 @@ git commit -m "feat(dashboard): um aparato por tela no lugar de um por painel"
 
 **Files:**
 - Create: `dashboard/components/CabecaVazada.tsx`
-- Modify: `dashboard/components/TabelaConversas.tsx`, `dashboard/components/DistribuicaoScores.tsx`, `dashboard/components/PioresAtendimentos.tsx`
+- Modify: `dashboard/components/TabelaConversas.tsx`, `dashboard/components/DistribuicaoScores.tsx`, `dashboard/components/EtiquetaCategoria.tsx`
+
+> **Correcao de 04/09/2026.** A lista original citava `PioresAtendimentos.tsx`,
+> que so menciona "sem sinal" num comentario, e OMITIA
+> `EtiquetaCategoria.tsx`, que e a instancia mais vista da interface: para
+> `categoria: null` ela desenhava um ponto CHEIO cinza no mesmo slot dos tres
+> pontos da escala. A §5 do DESIGN.md proibe exatamente isso -- "nunca cinza
+> dentro da escala".
 - Test: `tests/test_derivacoes_dashboard.py` (acréscimo)
 
 **Interfaces:**
