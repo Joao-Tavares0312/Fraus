@@ -551,7 +551,16 @@ import { useRegistrarRessalva } from "./AparatoDaTela";
 E apague o `{temAparato ? (…) : null}` do final, junto com a variável
 `temAparato` e o import de `Aparato`.
 
-- [ ] **Step 4: Montar o provedor e o rodapé em cada tela**
+- [ ] **Step 4: A `FaixaIndicadores` também solta o aparato dela**
+
+Ela tem um `Aparato` próprio (`FaixaIndicadores.tsx:201`) além do vidro
+(`:126`). Troque o bloco `<Aparato>…</Aparato>` por uma chamada de
+`useRegistrarRessalva("Indicadores", …)` com o mesmo conteúdo, e apague o
+import de `Aparato`. **O vidro fica por enquanto** — quem o remove é a Task 6,
+que trata a armadura inteira; separar as duas mudanças mantém cada uma
+revisável sozinha.
+
+- [ ] **Step 5: Montar o provedor e o rodapé em cada tela**
 
 Em `dashboard/app/dashboard/layout.tsx`, envolva o conteúdo com
 `<ProvedorDeAparato>` e ponha `<AparatoDaTela className="mt-8" />` logo antes da
@@ -611,11 +620,11 @@ def test_sem_sinal_e_notacao_e_nao_so_texto():
     como texto. O que ela impede e a regressao silenciosa de alguem trocar a
     notacao de volta por uma string, que nenhum gate de front pegaria.
     """
-    raiz = Path(__file__).resolve().parent.parent / "dashboard" / "components"
-    assert (raiz / "CabecaVazada.tsx").is_file()
+    componentes = RAIZ / "dashboard" / "components"
+    assert (componentes / "CabecaVazada.tsx").is_file()
 
     for arquivo in ("TabelaConversas.tsx", "DistribuicaoScores.tsx"):
-        fonte = (raiz / arquivo).read_text(encoding="utf-8")
+        fonte = (componentes / arquivo).read_text(encoding="utf-8")
         assert "CabecaVazada" in fonte, f"{arquivo} ainda imprime sem sinal cru"
 
 
@@ -625,12 +634,7 @@ def test_a_cabeca_vazada_carrega_rotulo_textual():
     Um anel oco sem rotulo obrigaria o leitor a saber a convencao, e o
     PRODUCT.md exige o rotulo textual junto.
     """
-    caminho = (
-        Path(__file__).resolve().parent.parent
-        / "dashboard"
-        / "components"
-        / "CabecaVazada.tsx"
-    )
+    caminho = RAIZ / "dashboard" / "components" / "CabecaVazada.tsx"
     fonte = caminho.read_text(encoding="utf-8")
     assert "sem sinal" in fonte
 ```
@@ -1031,11 +1035,11 @@ def test_a_tela_modelo_abre_pelo_veredito():
     suspeitas e corpus de tempo sintetico -- sobem para um sistema dominante
     no topo.
     """
-    raiz = Path(__file__).resolve().parent.parent / "dashboard"
-    componente = raiz / "components" / "modelo" / "EstadoDoModelo.tsx"
+    painel = RAIZ / "dashboard"
+    componente = painel / "components" / "modelo" / "EstadoDoModelo.tsx"
     assert componente.is_file()
 
-    pagina = (raiz / "app" / "dashboard" / "modelo" / "page.tsx").read_text(
+    pagina = (painel / "app" / "dashboard" / "modelo" / "page.tsx").read_text(
         encoding="utf-8"
     )
     assert "EstadoDoModelo" in pagina
