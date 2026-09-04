@@ -1,3 +1,7 @@
+"use client";
+
+import { useProgressoDaCena } from "@/hooks/useProgressoDaCena";
+
 /**
  * O ATELIE: a luz que o vidro refrata.
  *
@@ -33,8 +37,18 @@
  *
  * `aria-hidden` e `pointer-events-none` porque isto nao e conteudo nem alvo:
  * e o papel de parede da sala.
+ *
+ * TRES CAMADAS (grade, sol, estrelas) ACOMPANHAM A ROLAGEM: `useProgressoDaCena`
+ * escreve `--cena-grade`/`--cena-planeta`/`--cena-estrelas` na raiz, e cada
+ * opacidade abaixo multiplica o token de opacidade do tema por essa variavel
+ * (`calc(var(--x-op) * var(--cena-x, 1))`). O fallback e 1, nao o valor de
+ * hoje: assim a primeira pintura, antes do hook montar, mostra a cena
+ * exatamente como ela e hoje, e o zero deliberado de `--estrelas-op` na chuva
+ * sobrevive por construcao (fator vezes zero e zero). Ver `lib/cena.ts`.
  */
 export function Atelier() {
+  useProgressoDaCena();
+
   return (
     <div
       aria-hidden
@@ -96,7 +110,7 @@ export function Atelier() {
       <div
         className="absolute inset-0"
         style={{
-          opacity: "var(--estrelas-op)",
+          opacity: "calc(var(--estrelas-op) * var(--cena-estrelas, 1))",
           backgroundImage: [
             "radial-gradient(1.2px 1.2px at 23px 31px, oklch(0.98 0.02 230 / 0.95), transparent 100%)",
             "radial-gradient(1px 1px at 118px 74px, oklch(0.96 0.03 250 / 0.75), transparent 100%)",
@@ -146,7 +160,7 @@ export function Atelier() {
       <div
         className="absolute bottom-[26vh] left-[52%] h-[38vmin] w-[38vmin] -translate-x-1/2 rounded-full blur-[2px]"
         style={{
-          opacity: "var(--sol-op)",
+          opacity: "calc(var(--sol-op) * var(--cena-planeta, 1))",
           background:
             "repeating-linear-gradient(to bottom, transparent 0 var(--sol-faixa), oklch(0 0 0 / 0.85) var(--sol-faixa) calc(var(--sol-faixa) * 1.5))," +
             "linear-gradient(to bottom, var(--sol-cor-alta), var(--sol-cor-baixa))",
@@ -267,7 +281,7 @@ export function Atelier() {
         <div
           className="absolute inset-x-[-50%] bottom-0 h-[200%]"
           style={{
-            opacity: "var(--grade-op)",
+            opacity: "calc(var(--grade-op) * var(--cena-grade, 1))",
             background:
               "repeating-linear-gradient(to right, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))," +
               "repeating-linear-gradient(to bottom, var(--grade-cor) 0 1px, transparent 1px var(--grade-espaco))",
