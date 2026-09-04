@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FATOR_MAXIMO_POR_CAMADA,
+  coreografiaValeEm,
   intensidadeDaCamada,
   type Camada,
 } from "./cena";
@@ -78,6 +79,32 @@ describe("intensidadeDaCamada", () => {
         maximo = Math.max(maximo, intensidadeDaCamada(camada, p));
       }
       expect(maximo).toBeCloseTo(FATOR_MAXIMO_POR_CAMADA[camada], 2);
+    }
+  });
+});
+
+describe("coreografiaValeEm", () => {
+  it("vale na LP", () => {
+    expect(coreografiaValeEm("/")).toBe(true);
+  });
+
+  it("nao vale em rota nenhuma do Operate", () => {
+    // Regressao do achado de 04/09/2026: o Atelier mora no layout raiz,
+    // compartilhado pela LP e pela ferramenta, e a coreografia so pode
+    // acender fora da vitrine se esta funcao disser que sim.
+    for (const rota of [
+      "/dashboard",
+      "/dashboard/atendimentos",
+      "/dashboard/atendimentos/123",
+      "/dashboard/modelo",
+      "/dashboard/grafo",
+      "/dashboard/analisar",
+      "/dashboard/integracoes",
+      "/dashboard/configuracoes",
+      "/entrar",
+      "/cadastrar",
+    ]) {
+      expect(coreografiaValeEm(rota)).toBe(false);
     }
   });
 });

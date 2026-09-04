@@ -31,6 +31,32 @@
 export type Camada = "grade" | "planeta" | "estrelas";
 
 /**
+ * ONDE A COREOGRAFIA VALE, e nao em outro lugar nenhum.
+ *
+ * ARMADILHA PAGA EM 04/09/2026: o `Atelier` mora no layout RAIZ
+ * (`app/layout.tsx`), compartilhado por toda a ferramenta e pela LP, e a
+ * primeira versao de `useProgressoDaCena` escutava `scroll` do `window`
+ * incondicionalmente. Isso fez a cena reagir tambem no Operate -- rolar
+ * `/dashboard/modelo` acendia e apagava grade, planeta e estrelas atras da
+ * tabela e do grafico, exatamente a "decoracao rodando o tempo todo" que a
+ * secao 6 do DESIGN.md proibe. O precedente da secao 8.7 que autoriza a
+ * coreografia e explicito sobre valer SO na vitrine ("a ferramenta e lida
+ * por horas e nao pode ter GPU girando atras do dado"); estar no layout
+ * raiz nao e a mesma coisa que estar so na LP, e o codigo confundiu as duas.
+ *
+ * A rota fica NOMEADA aqui, num lugar so, para quem precisar estender a
+ * lista quando surgir uma segunda pagina de vitrine nao precisar caçar um
+ * `if` anonimo dentro de um componente.
+ */
+export const ROTAS_COM_COREOGRAFIA: readonly string[] = ["/"];
+
+/** A cena so acompanha a rolagem nas rotas de vitrine; no resto ela fica
+ * parada no estado inicial (ver `useProgressoDaCena`). */
+export function coreografiaValeEm(pathname: string): boolean {
+  return ROTAS_COM_COREOGRAFIA.includes(pathname);
+}
+
+/**
  * Fator maximo (0..1) que cada camada assume em QUALQUER ponto da rolagem.
  * NAO e opacidade -- quem escala pelo token de opacidade do tema vigente e o
  * consumidor. Espelhado em `scripts/pisos.mjs`; mudar aqui obriga a remedir

@@ -521,6 +521,30 @@ respeitado em duas frentes, porque uma não alcança a outra: o bloco no fim do
 > a cena **parada no estado inicial** (`useProgressoDaCena` aplica o fator do
 > topo da rolagem e não escuta o evento de scroll). Cena de rolagem devagar
 > continua sendo cena de rolagem.
+>
+> **Correção da mesma emenda, 04/09/2026 — a armadilha do layout raiz.** O
+> parágrafo acima descrevia o desenho certo, mas o `Atelier` mora no layout
+> **raiz** (`app/layout.tsx`), compartilhado por toda a árvore, e a primeira
+> versão de `useProgressoDaCena` registrava o listener de `scroll`
+> incondicionalmente. Resultado: a coreografia valia na ferramenta inteira, não
+> só na vitrine — rolar `/dashboard/modelo` acendia e apagava grade, planeta e
+> campo de estrelas atrás da tabela e do gráfico, que é exatamente a
+> "decoração rodando o tempo todo" que esta seção proíbe, e o mesmo argumento
+> da §8.7 que autoriza a exceção ("a vitrine é visita de 40 segundos") a
+> condena fora dela. Estar no layout raiz não é a mesma coisa que estar só na
+> LP; o código confundiu as duas coisas.
+>
+> **O conserto ficou na rota, num lugar só e nomeado.**
+> `lib/cena.ts` ganhou `ROTAS_COM_COREOGRAFIA` (hoje só `"/"`) e
+> `coreografiaValeEm(pathname)`; `Atelier.tsx` lê `usePathname()` (ele já é
+> client component) e passa o resultado para
+> `useProgressoDaCena(ativo: boolean)`. Quando `ativo` é `false` — qualquer
+> rota do Operate —, a função nem registra o listener de scroll: desligado é
+> desligado, não "escutando e ignorando". Nos dois casos de desligamento (rota
+> fora da vitrine, ou `prefers-reduced-motion`) o destino é o mesmo:
+> `aplicar(0)`, o estado inicial em que os três fatores valem 1 — a cena de
+> hoje, parada. O `Atelier` continua sendo uma peça só, a mesma instância nas
+> duas bandas; só a reatividade é condicional.
 
 ---
 
