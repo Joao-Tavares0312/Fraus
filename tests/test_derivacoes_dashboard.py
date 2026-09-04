@@ -160,6 +160,21 @@ def test_a_tela_modelo_abre_pelo_veredito():
     )
     assert "EstadoDoModelo" in pagina
 
+    # Premissa desta guarda: os componentes sao importados SEM alias. A
+    # comparacao abaixo casa o nome literal `<EstadoDoModelo`/`<Simulador` no
+    # USO em JSX -- se algum dia um `import { EstadoDoModelo as X }` renomear
+    # o componente, o `index()` de baixo devolve -1 e falha de um jeito
+    # ilegivel (ValueError sem contexto). Esta asserção existe so para essa
+    # falha vir com o motivo escrito, em vez de obrigar quem le a caçar um
+    # -1. Acoplar a guarda ao identificador é o padrao ja usado em
+    # `dashboard/lib/hierarquia.test.ts`; nao vale parsear TypeScript aqui so
+    # para tolerar alias.
+    assert "EstadoDoModelo as" not in pagina, (
+        "esta guarda pressupoe `EstadoDoModelo` importado sem alias -- "
+        "se foi renomeado no import, atualize tambem o nome usado nesta "
+        "comparacao de ordem"
+    )
+
     # A comparacao tem que ser sobre o USO em JSX (`<EstadoDoModelo`,
     # `<Simulador`), nao sobre a primeira ocorrencia do nome no arquivo --
     # senao o teste passa so pela ordem alfabetica do bloco de import
