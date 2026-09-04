@@ -29,7 +29,7 @@ precisão o que nele é medido e o que é estimado.
 
 ## Positioning
 
-Fusão de **38 features, sete famílias no vetor** (oito famílias de sinal no
+Fusão de **39 features, sete famílias no vetor** (oito famílias de sinal no
 sistema — a ironia continua lida por mensagem, só não pontua mais) — texto
 (BERTimbau fine-tunado), emoji (Emoji Sentiment Ranking, com a posição relativa
 na mensagem como feature), tempo (latência como feature aprendida, não
@@ -52,8 +52,9 @@ de devolver um número opaco.
 - O analista filtra por período e desce da visão agregada para a transcrição de
   um atendimento.
 - A API é local, **sem autenticação**, destinada a uso na máquina do analista.
-- Cinco telas: Visão geral, Atendimentos (lista e transcrição), Modelo,
-  Configurações, Integrações.
+- Sete telas: Visão geral, Atendimentos (lista e transcrição), Modelo,
+  Configurações, Integrações, Grafo (a memória do fusor) e Analisar (upload
+  avulso, fora do banco e dos indicadores).
 
 ## Capabilities and Constraints
 

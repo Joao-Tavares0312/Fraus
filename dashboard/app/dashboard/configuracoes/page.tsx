@@ -71,13 +71,17 @@ export default async function PaginaConfiguracoes() {
     <>
       <CabecalhoPagina titulo="Configurações" subtitulo={SUBTITULO} />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx.
+          O ramo de erro logo acima continua com flex-1 -- o EstadoVazio
+          depende dele para se centralizar na coluna. */}
+      <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
         {acesso.ok ? <Autenticacao estado={acesso.dado} /> : null}
 
         {acesso.ok ? <ChavesDeAcesso estado={acesso.dado} /> : null}
 
         <Painel
           titulo="Faixas de NPS"
+          nivel="dominante"
           legenda="Qual nota é detrator, neutro e promotor. É a mesma faixa que o servidor usa para responder /indicadores e /conversas, no mesmo instante — não existe cópia dela na interface."
           semPadding
           rodape="A regra que o servidor cobra: as faixas precisam cobrir 0 a 10 inteiro, sem buraco e sem sobreposição. Ela não é reimplementada aqui — quando a configuração não fecha, a mensagem que aparece é a da API, que diz qual nota ficou de fora."

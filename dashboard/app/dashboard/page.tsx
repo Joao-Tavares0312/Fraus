@@ -176,7 +176,14 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
           saiu -- ela vive na NotaMetodologica e nos rotulos de estimativa. */}
       <CabecalhoPagina titulo="Visão geral" periodo={periodo} extensao={extensao} />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-7 px-4 py-5 sm:px-6">
+      {/* SEM flex-1: esta div so cresce ate onde o conteudo pede. Com
+          flex-1 ela esticava ate a altura de `main` (que o SidebarProvider
+          forca a no minimo min-h-svh), e como o conteudo real era mais baixo
+          que a tela, sobrava vazio DEPOIS do ultimo painel e ANTES da nota
+          metodologica -- o buraco de ~600px que a hierarquia veio fechar. O
+          buraco nunca foi a altura da barra lateral: ela e `fixed`, e ja
+          acompanha o viewport por conta propria (ver components/ui/sidebar.tsx). */}
+      <div className="flex min-w-0 flex-col gap-7 px-4 py-5 sm:px-6">
         {defasadas > 0 ? (
           <AvisoLexicoAntigo defasadas={defasadas} total={totalNoBanco} />
         ) : null}
@@ -203,6 +210,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
             titulo="NPS inferido × latência mediana, por dia"
             legenda="As duas séries aparecem sobrepostas de propósito: otimizar um indicador isolado costuma quebrar o outro — empurrar a deflexão para cima derruba a satisfação. Cada eixo tem domínio fixo, a latência é sempre tracejada, e a visão de tabela mostra os números exatos sem geometria entre eles."
             semPadding
+            nivel="dominante"
             rodape="As duas escalas são independentes: a altura de uma curva em relação à outra não significa nada, só o formato de cada uma ao longo do tempo. Dias sem nenhum atendimento pontuado ficam com a linha do NPS interrompida — nunca em zero."
           >
             {erro ? (

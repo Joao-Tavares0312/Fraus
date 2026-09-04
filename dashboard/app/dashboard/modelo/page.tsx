@@ -19,6 +19,7 @@ import { obterModelo } from "@/lib/api";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
+import { EstadoDoModelo } from "@/components/modelo/EstadoDoModelo";
 import { LexiconEmoji } from "@/components/modelo/LexiconEmoji";
 import { LexicoCurado } from "@/components/modelo/LexicoCurado";
 import { MetricasTreino } from "@/components/modelo/MetricasTreino";
@@ -43,6 +44,11 @@ export default async function PaginaModelo() {
           titulo="Modelo"
           subtitulo="Pesos, métricas, lexicon e simulador — a ficha da IA que pontua os atendimentos."
         />
+        {/* COM flex-1: ver o comentario identico em app/dashboard/configuracoes/page.tsx
+            e app/dashboard/grafo/page.tsx -- o EstadoVazio depende do pai
+            esticado ate a altura da tela para se centralizar verticalmente
+            (empty.tsx usa flex-1 ... justify-center). O ramo de SUCESSO logo
+            abaixo e que fica sem flex-1. */}
         <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
           <EstadoVazio
             titulo="A ficha do modelo não carregou"
@@ -64,7 +70,12 @@ export default async function PaginaModelo() {
         subtitulo="A ficha da IA que pontua os atendimentos: quanto cada sinal pesa, o que o treino mediu, que tabela de emoji está em uso e o que o classificador responde a uma frase nova."
       />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx.
+          O ramo de erro/vazio logo acima continua com flex-1 -- o EstadoVazio
+          depende dele para se centralizar na coluna. */}
+      <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
+        <EstadoDoModelo modelo={modelo} />
+
         <Painel
           titulo="Simulador ao vivo"
           legenda="Escreva uma fala de cliente e veja a resposta do classificador agora. Nada é persistido, nada é inventado: as três probabilidades e os emojis detectados vêm inteiros de POST /modelo/simular."

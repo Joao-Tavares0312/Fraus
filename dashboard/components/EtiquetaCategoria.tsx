@@ -1,6 +1,7 @@
 import type { Categoria } from "@/lib/api";
 import { ROTULO_CATEGORIA, ROTULO_SEM_SINAL } from "@/lib/formato";
 import { cn } from "@/lib/utils";
+import { CabecaVazada } from "./CabecaVazada";
 
 /**
  * Categoria de NPS como etiqueta.
@@ -11,8 +12,15 @@ import { cn } from "@/lib/utils";
  * 4.5:1 contra `--card`.
  *
  * `categoria: null` NAO cai numa quarta cor da escala de satisfacao: vira
- * "sem sinal" em cinza. Pintar ausencia de dado de vermelho seria afirmar
- * insatisfacao que ninguem mediu.
+ * `CabecaVazada` -- anel oco, nunca um quarto ponto cheio. Um ponto CHEIO
+ * cinza, no mesmo slot dos tres pontos cheios coloridos, seria "cinza dentro
+ * da escala" (DESIGN.md §5) -- exatamente o que a §1.1 probe.
+ *
+ * `comRotulo={false}`: esta etiqueta ja escreve `ROTULO_SEM_SINAL` por
+ * extenso logo depois do anel (linha de baixo), entao a `CabecaVazada` NAO
+ * imprime o proprio rotulo -- se imprimisse, o leitor de tela leria "sem
+ * sinal, sem sinal". O rotulo textual continua existindo e continua na
+ * arvore de acessibilidade; so quem o escreve mudou.
  */
 const APARENCIA: Record<Categoria, { ponto: string; texto: string }> = {
   detrator: { ponto: "bg-detrator", texto: "text-detrator-texto" },
@@ -37,13 +45,14 @@ export function EtiquetaCategoria({
         className,
       )}
     >
-      <span
-        aria-hidden
-        className={cn(
-          "size-2 shrink-0 rounded-full",
-          aparencia ? aparencia.ponto : "bg-sem-sinal",
-        )}
-      />
+      {aparencia ? (
+        <span
+          aria-hidden
+          className={cn("size-2 shrink-0 rounded-full", aparencia.ponto)}
+        />
+      ) : (
+        <CabecaVazada comRotulo={false} />
+      )}
       {categoria ? ROTULO_CATEGORIA[categoria] : ROTULO_SEM_SINAL}
     </span>
   );

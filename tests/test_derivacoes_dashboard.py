@@ -110,3 +110,76 @@ def test_a_vitrine_anuncia_o_numero_real_de_features():
         f"{len(NOMES_FEATURES)}. Atualize dashboard/app/page.tsx -- e as outras "
         "mencoes do numero em lp/Contador.tsx e lp/Constelacao.tsx junto."
     )
+
+
+def test_sem_sinal_e_notacao_e_nao_so_texto():
+    """A §1.1 do DESIGN.md promete cabeca vazada para o sem sinal.
+
+    Guarda que atravessa a fronteira de linguagem, no mesmo molde de
+    `test_a_vitrine_anuncia_o_numero_real_de_features`: o pytest le o TSX
+    como texto. O que ela impede e a regressao silenciosa de alguem trocar a
+    notacao de volta por uma string, que nenhum gate de front pegaria.
+    """
+    componentes = RAIZ / "dashboard" / "components"
+    assert (componentes / "CabecaVazada.tsx").is_file()
+
+    # EtiquetaCategoria entrou aqui no fix round 1: categoria == null desenhava
+    # um ponto CHEIO cinza no mesmo slot dos tres pontos cheios coloridos --
+    # "cinza dentro da escala" que a DESIGN.md §5 probe por nome. E a
+    # instancia mais vista da peca (toda linha sem sinal da tabela e da lista
+    # de piores atendimentos), entao a guarda cobre ela tambem.
+    for arquivo in ("TabelaConversas.tsx", "DistribuicaoScores.tsx", "EtiquetaCategoria.tsx"):
+        fonte = (componentes / arquivo).read_text(encoding="utf-8")
+        assert "CabecaVazada" in fonte, f"{arquivo} ainda imprime sem sinal cru"
+
+
+def test_a_cabeca_vazada_carrega_rotulo_textual():
+    """Categoria nunca e comunicada so por cor -- nem so por forma.
+
+    Um anel oco sem rotulo obrigaria o leitor a saber a convencao, e o
+    PRODUCT.md exige o rotulo textual junto.
+    """
+    caminho = RAIZ / "dashboard" / "components" / "CabecaVazada.tsx"
+    fonte = caminho.read_text(encoding="utf-8")
+    assert "sem sinal" in fonte
+
+
+def test_a_tela_modelo_abre_pelo_veredito():
+    """O que o avaliador precisa ler primeiro nao pode estar no meio da pagina.
+
+    As tres ressalvas estruturais do modelo -- ironia fora do vetor, metricas
+    suspeitas e corpus de tempo sintetico -- sobem para um sistema dominante
+    no topo.
+    """
+    painel = RAIZ / "dashboard"
+    componente = painel / "components" / "modelo" / "EstadoDoModelo.tsx"
+    assert componente.is_file()
+
+    pagina = (painel / "app" / "dashboard" / "modelo" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "EstadoDoModelo" in pagina
+
+    # Premissa desta guarda: os componentes sao importados SEM alias. A
+    # comparacao abaixo casa o nome literal `<EstadoDoModelo`/`<Simulador` no
+    # USO em JSX -- se algum dia um `import { EstadoDoModelo as X }` renomear
+    # o componente, o `index()` de baixo devolve -1 e falha de um jeito
+    # ilegivel (ValueError sem contexto). Esta asserção existe so para essa
+    # falha vir com o motivo escrito, em vez de obrigar quem le a caçar um
+    # -1. Acoplar a guarda ao identificador é o padrao ja usado em
+    # `dashboard/lib/hierarquia.test.ts`; nao vale parsear TypeScript aqui so
+    # para tolerar alias.
+    assert "EstadoDoModelo as" not in pagina, (
+        "esta guarda pressupoe `EstadoDoModelo` importado sem alias -- "
+        "se foi renomeado no import, atualize tambem o nome usado nesta "
+        "comparacao de ordem"
+    )
+
+    # A comparacao tem que ser sobre o USO em JSX (`<EstadoDoModelo`,
+    # `<Simulador`), nao sobre a primeira ocorrencia do nome no arquivo --
+    # senao o teste passa so pela ordem alfabetica do bloco de import
+    # (`EstadoDoModelo` importado antes de `Simulador`), que nao garante nada
+    # sobre a ordem de renderizacao no corpo da pagina. `<Simulador` so
+    # aparece uma vez no arquivo, como elemento; o titulo em prosa do Painel
+    # ("Simulador ao vivo") nao bate no prefixo `<Simulador`.
+    assert pagina.index("<EstadoDoModelo") < pagina.index("<Simulador")

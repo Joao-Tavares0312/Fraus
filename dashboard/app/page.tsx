@@ -461,6 +461,16 @@ export default async function PaginaInicial() {
             </p>
           </Revelar>
 
+          {/* A RÉGUA DE VERDADE, sangrando além da coluna de texto.
+              Esta é a ÚNICA seção da página cuja tese É a régua — deixá-la
+              contida dentro de `max-w-xl` seria enunciar a ideia sem mostrá-la.
+              A `<section>` que envolve isto não tem `COLUNA`, então esta linha
+              — sem wrapper de largura — herda a largura cheia da viewport, a
+              mesma técnica das seções full-bleed de baixo. */}
+          <Revelar>
+            <div aria-hidden className="mt-14 h-px w-full bg-linha lg:mt-20" />
+          </Revelar>
+
           {/* GRADE DE TRÊS COLUNAS — chamadas, cartão, chamadas. Grade e não
               posicionamento absoluto: absoluto exigiria saber a altura do cartão
               em cada largura, e ele cresce quando o texto quebra. A grade deixa
@@ -504,19 +514,28 @@ export default async function PaginaInicial() {
             aria-label="Números do sistema"
             className="border-y border-border/50"
           >
+            {/* ESCALA DE DISPLAY E MUITO VAZIO — esta é a seção de menor
+                densidade textual da página, e a que mais ganha com espaço em
+                volta: quatro números e nada mais. O tamanho sobe para a
+                mesma faixa do `.display-vitrine` (era `clamp(3.25rem,7vw,
+                5.5rem)`, do tamanho de um título de seção qualquer — sem
+                hierarquia nenhuma apesar de ser a prova mais dura que a
+                página tem), a medida de cada legenda encolhe para `max-w-40`
+                e o respiro entre os quatro cresce bem além do que o resto da
+                página usa. */}
             <div
-              className={`${COLUNA} grid grid-cols-2 gap-x-6 gap-y-10 py-16 lg:grid-cols-4 lg:py-20`}
+              className={`${COLUNA} grid grid-cols-2 gap-x-10 gap-y-16 py-24 lg:grid-cols-4 lg:gap-x-14 lg:py-36`}
             >
               {FATOS.map(({ numero, rotulo }) => (
                 <div key={rotulo}>
-                  <div className="num text-[clamp(3.25rem,7vw,5.5rem)] font-medium leading-[0.9] tracking-[-0.04em]">
+                  <div className="num text-[clamp(4rem,9vw,7.5rem)] font-medium leading-[0.88] tracking-[-0.045em]">
                     <Contador valor={numero} />
                   </div>
                   {/* A régua do sistema (`--linha`), a única linha da casa que
                       AFIRMA algo. Aqui ela afirma que o número acima e a
                       legenda abaixo são a mesma medida. */}
-                  <div className="mt-5 h-px w-full bg-linha" />
-                  <div className="mt-3 text-sm text-muted-foreground">
+                  <div className="mt-6 h-px w-full max-w-40 bg-linha" />
+                  <div className="mt-3 max-w-40 text-sm text-muted-foreground">
                     {rotulo}
                   </div>
                 </div>
@@ -551,22 +570,27 @@ export default async function PaginaInicial() {
 
               É `aria-hidden` porque é a figura da lista logo abaixo — os nomes
               e as descrições vivem lá, em HTML de verdade. */}
-          <Revelar className={`${COLUNA} mt-6`}>
-            <div className="mx-auto max-w-4xl">
+          {/* A CONSTELAÇÃO OCUPA A TELA — este é o momento de espetáculo da
+              página, e dividir espaço com a lista abaixo (o desenho preso ao
+              `max-w-4xl` da coluna de leitura) fazia as duas perderem: a
+              figura pequena demais para impressionar, a lista larga demais
+              para ler como texto. Sem `COLUNA`, o wrapper herda a largura
+              cheia da `<section>` — a mesma técnica full-bleed da régua da
+              seção anterior —, e o SVG (que já é `w-full h-auto` por dentro)
+              cresce até esse teto. */}
+          <Revelar className="mt-10 w-full px-4">
+            <div className="mx-auto max-w-[80rem]">
               <Constelacao />
             </div>
           </Revelar>
 
-          {/* A LISTA, e ela é editorial e não mais um cartão de vidro.
-              A figura acima já dá a estrutura (sete pontas, um centro); repetir
-              essa estrutura numa grade de caixas seria dizer a mesma coisa duas
-              vezes com menos elegância. Aqui o que importa é o TEXTO, então o
-              tratamento é o de texto: régua fina, nome grande, descrição.
-              O ponto colorido amarra cada linha à sua estrela lá em cima — é o
-              único elo entre a figura e a lista, e ele custa 10px. */}
-          <div
-            className={`${COLUNA} mt-16 grid gap-x-12 gap-y-px sm:grid-cols-2`}
-          >
+          {/* A LISTA DESCE PARA MEDIDA ESTREITA — de propósito, e é o outro
+              lado da mesma troca: a figura acima já deu a estrutura (sete
+              pontas, um centro) em grande escala, então a lista não precisa
+              mais competir por largura. Uma coluna só, `max-w-md`, lê como
+              legenda de rodapé de uma peça grande — não mais como uma segunda
+              grade repetindo a mesma informação. */}
+          <div className="mx-auto mt-16 w-full max-w-md px-6">
             {SINAIS.map(({ Icone, nome, descricao, cor }) => (
               <Revelar key={nome}>
                 <div className="group flex gap-5 border-t border-border/50 py-7">
@@ -625,28 +649,38 @@ export default async function PaginaInicial() {
             aria-label="A regra mestra da interface"
             className="border-y border-border/50"
           >
-            <div className={`${COLUNA} grid lg:grid-cols-2`}>
-              <div className="border-b border-linha py-16 lg:border-b-0 lg:border-r lg:py-24 lg:pr-14">
+            {/* PESOS DESIGUAIS, EMPILHADOS — não mais lado a lado. Duas
+                colunas simétricas diziam "estes dois são equivalentes", e a
+                tese desta seção é o oposto: a DISTÂNCIA entre o dito e o
+                medido é a informação. Empilhar com a régua HORIZONTAL entre
+                os dois — em vez da vertical de antes — faz a própria seção
+                repetir o gesto de "acima/abaixo da linha" que o texto
+                descreve, e não apenas nomeá-lo. O bloco de cima (dito) fica
+                contido e curto; o de baixo (medido) recebe medida mais larga
+                e mais espaço — o peso maior vai para o veredito, que é para
+                onde a leitura da página está caminhando. */}
+            <div className={`${COLUNA} flex flex-col`}>
+              <div className="max-w-lg border-b border-linha py-16 lg:py-20">
                 <p className="etiqueta-vitrine text-dito-texto">
                   acima da linha
                 </p>
-                <h3 className="mt-6 text-[clamp(1.9rem,3.4vw,3rem)] font-medium leading-[1.05] tracking-[-0.03em]">
+                <h3 className="mt-6 text-[clamp(1.7rem,2.8vw,2.5rem)] font-medium leading-[1.05] tracking-[-0.03em]">
                   O que foi <span className="text-dito-texto">dito</span>
                 </h3>
-                <p className="mt-5 max-w-md leading-relaxed text-muted-foreground">
+                <p className="mt-5 leading-relaxed text-muted-foreground">
                   Fala, texto, emoji — o que o cliente articulou, em âmbar. É o
                   material bruto, educado por natureza: quase ninguém xinga o
                   robô antes de desistir.
                 </p>
               </div>
-              <div className="py-16 lg:py-24 lg:pl-14">
+              <div className="max-w-3xl py-20 lg:py-28">
                 <p className="etiqueta-vitrine text-medido-texto">
                   abaixo da linha
                 </p>
-                <h3 className="mt-6 text-[clamp(1.9rem,3.4vw,3rem)] font-medium leading-[1.05] tracking-[-0.03em]">
+                <h3 className="mt-6 text-[clamp(2.2rem,4vw,3.5rem)] font-medium leading-[1.05] tracking-[-0.03em]">
                   O que foi <span className="text-medido-texto">medido</span>
                 </h3>
-                <p className="mt-5 max-w-md leading-relaxed text-muted-foreground">
+                <p className="mt-5 max-w-xl leading-relaxed text-muted-foreground">
                   Score, probabilidade, latência, tendência — em azul. A
                   distância entre as duas vozes é a informação que o produto
                   vende, e a interface inteira é desenhada para mostrá-la.
@@ -661,27 +695,40 @@ export default async function PaginaInicial() {
           <div
             className={`${COLUNA} grid items-center gap-14 lg:grid-cols-[0.95fr_1fr]`}
           >
+            {/* A EVIDÊNCIA MANDA — a prosa encolhe e as três falas à direita
+                sobem para escala maior que ela. Hoje a hierarquia estava
+                invertida: a prosa explicava o que a evidência já mostra, no
+                mesmo peso das seções vizinhas. Aqui quem carrega a tese são
+                as falas.
+
+                O TÍTULO CONTINUA NO SISTEMA: `.titulo-vitrine--sm` é um
+                degrau da própria escala compartilhada (ver globals.css),
+                não um `clamp()` inline solto — e continua levando
+                `display-aurora`, a mesma calibração de contraste no pior
+                ponto do gradiente que todo outro título de seção usa. Só o
+                TAMANHO é próprio desta seção; a cor e a família tipográfica
+                não saem do sistema medido. */}
             <Revelar>
               <p className="etiqueta-vitrine mb-5 text-primary">atribuição</p>
-              <h2 className="titulo-vitrine display-aurora">
+              <h2 className="titulo-vitrine--sm display-aurora">
                 O número aponta as falas que o puxaram
               </h2>
-              <p className="mt-6 leading-relaxed text-muted-foreground">
+              <p className="mt-5 max-w-lg text-sm leading-relaxed text-muted-foreground">
                 O sinal de texto pontua <em>por mensagem</em>: o Fraus mostra
                 quais falas derrubaram (ou salvaram) a nota de cada atendimento,
                 em vez de devolver um score opaco para a operação discutir às
-                cegas. É o que um número sozinho não conta — e o que um produto
-                vizinho não copia com honestidade.
+                cegas. É o que um número sozinho não conta — e o que um
+                produto vizinho não copia com honestidade.
               </p>
             </Revelar>
             <Revelar>
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-3">
                 {ATRIBUICOES.map(({ fala, peso }) => (
                   <li
                     key={fala}
-                    className="vidro-fino flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                    className="vidro-fino flex flex-col gap-2 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
                   >
-                    <span className="text-sm text-dito-texto sm:text-base">
+                    <span className="text-lg font-medium leading-snug text-dito-texto sm:text-xl">
                       {fala}
                     </span>
                     <span className="shrink-0 font-mono text-xs text-medido-texto">
@@ -702,12 +749,24 @@ export default async function PaginaInicial() {
           id="honestidade"
           className="scroll-mt-24 border-t border-border/50 py-28 lg:py-36"
         >
-          <Revelar className={`${COLUNA} max-w-2xl`}>
+          {/* MEDIDA LARGA — a intro solta o `max-w-2xl` que toda outra seção
+              usa e ocupa a coluna inteira (`COLUNA` já é `max-w-6xl`). É a
+              seção de leitura mais densa da página, e é honesta que ela
+              PAREÇA densa em vez de fingir a mesma respiração das seções de
+              espetáculo ao redor.
+
+              O TÍTULO usa `.titulo-vitrine--md` + `display-aurora` pelo
+              mesmo motivo do título da seção de atribuição logo acima: a
+              escala é própria da seção, mas a cor continua saindo da
+              calibração medida do sistema, não de um `clamp()` solto. */}
+          <Revelar className={COLUNA}>
             <p className="etiqueta-vitrine mb-5 text-primary">
               honestidade metodológica
             </p>
-            <h2 className="titulo-vitrine display-aurora">O que é medido, o que é estimado</h2>
-            <p className="mt-6 leading-relaxed text-muted-foreground">
+            <h2 className="titulo-vitrine--md display-aurora max-w-2xl">
+              O que é medido, o que é estimado
+            </h2>
+            <p className="mt-6 max-w-2xl leading-relaxed text-muted-foreground">
               A ferramenta leva o nome do daemon romano do engano por um motivo:
               o texto engana, e medir isso exige dizer com precisão o que é fato
               e o que é inferência.
@@ -718,17 +777,24 @@ export default async function PaginaInicial() {
               produto admite os próprios limites; embrulhar as três admissões em
               vidro as faria ler como três benefícios a mais. Numeral grande,
               régua, texto — tratamento editorial, que é como uma ressalva se
-              apresenta quando é levada a sério. */}
+              apresenta quando é levada a sério.
+
+              TIPO MENOR que nas outras seções (título de 1,125rem em vez de
+              1,25rem, corpo do mesmo `text-sm` de sempre mas sem o respiro
+              extra que as seções de espetáculo têm) — a densidade de leitura
+              é o próprio ponto desta seção, e três colunas lado a lado dentro
+              da coluna larga reforçam que aqui o texto compete por espaço com
+              texto, não com vazio. */}
           <div
-            className={`${COLUNA} mt-16 grid gap-x-10 gap-y-14 lg:grid-cols-3`}
+            className={`${COLUNA} mt-14 grid gap-x-10 gap-y-12 lg:grid-cols-3`}
           >
             {HONESTIDADES.map(({ n, titulo, texto }) => (
               <Revelar key={n}>
-                <span className="num block text-3xl font-medium text-primary">
+                <span className="num block text-2xl font-medium text-primary">
                   {n}
                 </span>
-                <div className="mt-5 h-px w-full bg-linha" />
-                <h3 className="mt-5 text-xl font-medium tracking-tight">
+                <div className="mt-4 h-px w-full bg-linha" />
+                <h3 className="mt-4 text-[1.125rem] font-medium tracking-tight">
                   {titulo}
                 </h3>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -747,7 +813,22 @@ export default async function PaginaInicial() {
             (por que o `GlassSurface` não substitui o `vidro` da casa, por que a
             cor do `WarpText` é um hex, e por que há um `<h2>` invisível). */}
         <Revelar>
-          <section className={`${COLUNA} pb-28 lg:pb-36`}>
+          <section className={`relative ${COLUNA} pb-28 lg:pb-36`}>
+            {/* A MARCA SANGRANDO — o cenário fecha onde abriu. É a mesma
+                `MarcaFraus` do header, só que enorme e cortada pela borda da
+                tela: o dourado do topo (`--marca-cor-topo`) é a mesma estrela
+                quente do ateliê, e aqui ela finalmente aparece em tamanho de
+                estrela. `pointer-events-none` porque o gesto secreto da marca
+                pertence ao header — aqui ela é cenário, não convite ao
+                clique — e a opacidade baixa mantém a régua do §6 do
+                DESIGN.md: nenhuma superfície nova, só a marca de sempre,
+                grande e ao fundo. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-24 -top-16 -z-10 opacity-[0.07] sm:-right-16 sm:opacity-[0.09]"
+            >
+              <MarcaFraus tamanho={420} />
+            </div>
             <FechoVitrine titulo="Pronto para ler o que o cliente não disse?">
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <BotaoEstelar href={acaoPrimaria.href}>

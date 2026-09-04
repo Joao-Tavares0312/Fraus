@@ -61,7 +61,10 @@ const ROTULO_CABECA: Record<string, string> = {
  * 10 falas sinceras de atendimento. Exibir "100%" sem a ressalva colada seria
  * a mentira mais eficaz desta tela inteira.
  */
-const LIMIAR_SUSPEITO = 0.999;
+// Exportado: o veredito no topo da tela (`EstadoDoModelo.tsx`) precisa do
+// mesmo corte para decidir se cola o rotulo "suspeito" no F1 da ironia --
+// duplicar o numero literal ali criaria dois limiares que podem divergir.
+export const LIMIAR_SUSPEITO = 0.999;
 
 function comoFracao(valor: unknown): number | null {
   if (typeof valor !== "number" || !Number.isFinite(valor)) return null;
@@ -123,14 +126,31 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
       )
     : [];
 
-  const ehSuspeita = (chave: string, valor: number) =>
-    chave !== "exemplos_treino" && valor >= LIMIAR_SUSPEITO;
-  const temSuspeita = numericas.some(({ chave, valor }) => ehSuspeita(chave, valor));
+  // Mesma normalizacao que `percentual` aplica para EXIBIR: o campo pode vir
+  // em fracao [0,1] ou ja em pontos percentuais, e comparar o valor cru
+  // contra LIMIAR_SUSPEITO (fracao) rotulava um resultado em pontos
+  // percentuais baixo (ex.: 5.0 = 5%) como "suspeito" -- o mesmo bug corrigido
+  // em EstadoDoModelo.tsx.
+  const ehSuspeita = (chave: string, valor: number) => {
+    if (chave === "exemplos_treino") return false;
+    const fracao = valor <= 1 ? valor : valor / 100;
+    return fracao >= LIMIAR_SUSPEITO;
+  };
 
   const porClasse =
     metricas && metricas.f1_por_classe && typeof metricas.f1_por_classe === "object"
       ? Object.entries(metricas.f1_por_classe as Record<string, number>)
       : [];
+
+  // Dispara para QUALQUER cabeca cuja metrica cruze LIMIAR_SUSPEITO -- nao so
+  // ironia. Ate 04/09/2026 esta explicacao so existia cravada no veredito do
+  // topo da tela (EstadoDoModelo.tsx), escrita em cima da ironia; se o
+  // retreino exportar, por exemplo, acuracia 1.0 para a cabeca de TEXTO, o
+  // rotulo "suspeito" aparece aqui sem nenhum lugar dizendo por que isso e
+  // ma noticia. Recolher e permitido, remover nao -- por isso o paragrafo
+  // volta a existir onde a suspeita de fato acontece: por metrica, por
+  // cabeca.
+  const temSuspeita = numericas.some(({ chave, valor }) => ehSuspeita(chave, valor));
 
   return (
     <section className="flex flex-col gap-3 border-t border-linha pt-4 first:border-t-0 first:pt-0">
@@ -192,15 +212,20 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
             })}
           </dl>
 
-          {/* O aviso vale para a CABECA, nao para cada cartao: repetido tres
-              vezes ele vira ruido e para de ser lido, que e o oposto do que
-              ele existe para fazer. */}
           {temSuspeita ? (
             <p className="text-xs leading-relaxed text-warning-rich-text">
               Métrica perfeita em tarefa de linguagem quase nunca significa
               modelo bom — significa que o conjunto de teste se parece demais
-              com o de treino. Leia a limitação abaixo antes de citar estes
-              números.
+              com o de treino.
+              {/* "Leia a limitacao abaixo" so aparece quando `limitacao` de
+                  fato vem em `metricas` -- ela nao e campo garantido pelo
+                  contrato da API, e sem ela o texto apontaria para um trecho
+                  que nao existe nesta tela. A frase de honestidade acima
+                  continua incondicional: e ela, nao a remissao, que carrega
+                  o alerta central. */}
+              {textuais.includes("limitacao")
+                ? " Leia a limitação abaixo antes de citar estes números."
+                : ""}
             </p>
           ) : null}
 

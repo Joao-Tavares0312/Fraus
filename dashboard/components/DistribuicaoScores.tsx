@@ -12,6 +12,7 @@ import {
 import type { BarraDistribuicao } from "@/lib/derivacoes";
 import { ROTULO_CATEGORIA } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
+import { CabecaVazada } from "./CabecaVazada";
 
 /**
  * Escala DIVERGENTE do NPS. Os tres tokens sao os do `DESIGN.md`; nenhum deles
@@ -144,7 +145,7 @@ export function DistribuicaoScores({
           <span className="num text-[1.75rem] leading-none font-semibold text-muted-foreground">
             {semSinal}
           </span>
-          <span className="text-sm text-muted-foreground">sem sinal</span>
+          <CabecaVazada />
         </p>
         <p className="text-xs leading-relaxed text-muted-foreground">
           Atendimentos sem fala do cliente. Não têm nota e não entram como zero:

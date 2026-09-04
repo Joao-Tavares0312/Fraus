@@ -1020,6 +1020,28 @@
     font-weight: 500;
     text-wrap: balance;
   }
+  /* DOIS DEGRAUS ABAIXO DE `.titulo-vitrine`, para seções que precisam de
+     âncora própria por ESCALA sem sair do sistema de tipo da vitrine (Task
+     10, fix round 1). Nasceram porque duas seções tinham título em
+     `clamp()` inline fora de `.titulo-vitrine`/`.display-aurora` — o que
+     junto a `display-aurora` reintroduzia texto com `background-clip: text`
+     e cor calibrada por fora do sistema medido. `--sm` e `--md` herdam
+     `line-height`/`letter-spacing`/`font-weight` de `.titulo-vitrine`
+     (mesma família tipográfica) e só encolhem o corpo. */
+  .titulo-vitrine--sm {
+    font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+    text-wrap: balance;
+  }
+  .titulo-vitrine--md {
+    font-size: clamp(1.85rem, 3.2vw, 2.75rem);
+    line-height: 1.06;
+    letter-spacing: -0.025em;
+    font-weight: 500;
+    text-wrap: balance;
+  }
   /* A ETIQUETA: mono, caixa alta, tracking aberto. E o contrapeso do display --
      e o par (enorme + minusculo) que produz a sensacao de escala. Sozinho, o
      display grande so parece grande. */

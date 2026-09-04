@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Aparato } from "./Aparato";
+import { RessalvaDaTela } from "./AparatoDaTela";
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
 import { pilha } from "@/lib/movimento";
 import {
@@ -15,7 +15,6 @@ import {
   formatarNumero,
   formatarSegundos,
 } from "@/lib/formato";
-import { useEspecular } from "@/hooks/useEspecular";
 
 /**
  * Os quatro indicadores do periodo.
@@ -104,16 +103,14 @@ export function FaixaIndicadores({
       ? `${indicadores.semSinal} de ${indicadores.total} sem fala do cliente — fora do cálculo, nunca como zero.`
       : undefined;
 
-  const refEspecular = useEspecular<HTMLElement>();
-
   return (
-    // A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
-    // se rele a cada compasso. Ela mora a ESQUERDA da linha do tempo, entao a
-    // pilha vertical e a forma certa em tela larga -- a fileira de quatro
-    // colunas era o template de metrica-heroi, e ele empurrava a tese da tela
-    // para baixo da dobra.
+    <>
+    {/* A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
+        se rele a cada compasso. Ela mora a ESQUERDA da linha do tempo, entao a
+        pilha vertical e a forma certa em tela larga -- a fileira de quatro
+        colunas era o template de metrica-heroi, e ele empurrava a tese da tela
+        para baixo da dobra. */}
     <motion.section
-      ref={refEspecular}
       aria-label={`Indicadores de ${rotuloDoPeriodo}`}
       // A ARMADURA e o container da pilha: ela escalona os quatro indicadores
       // em 40ms, e cada `CartaoIndicador` herda a variante daqui. Escalonar
@@ -123,7 +120,13 @@ export function FaixaIndicadores({
       initial="oculto"
       whileInView="presente"
       viewport={{ once: true, margin: "0px 0px -64px 0px" }}
-      className="vidro especular chanfro grid grid-cols-1 gap-3 rounded-lg p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-1"
+      // A §2.2 do DESIGN.md sempre disse que os indicadores sao "rotulo mais
+      // numero tabular, sem barra de progresso decorativa e sem cartao": a
+      // armadura NAO e um painel, entao perde vidro/chanfro/borda -- ela le
+      // como pilha compacta, separada por regua (`CartaoIndicador` usa
+      // `border-linha`, nao mais `border-compasso`, porque compasso e a linha
+      // fraca pensada para viver DENTRO de uma superficie de vidro).
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-5 xl:grid-cols-1"
     >
       <CartaoIndicador
         rotulo="NPS inferido"
@@ -189,42 +192,45 @@ export function FaixaIndicadores({
         trilho={trilhoDeLatencia(limiares)}
         explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
       />
-
-      {/*
-        O METODO dos quatro indicadores vira UM aparato so, no pe da armadura —
+    </motion.section>
+    {/* O METODO dos quatro indicadores vira UM aparato so, no pe da tela --
         antes cada cartao carregava o proprio paragrafo e a pilha inteira
         gastava mais tela em prosa fixa do que em numero (regra ja paga duas
-        vezes: ressalva repetida vira ruido e para de ser lida). O que continua
-        colado ao numero e DADO do recorte — a contagem de "com sinal" do NPS e
-        a legenda de cortes do trilho — porque muda com o filtro.
-      */}
-      <Aparato className="sm:col-span-2 xl:col-span-1">
-        <dl className="mt-2 flex max-w-[52ch] flex-col gap-1.5 text-[0.6875rem] leading-snug text-muted-foreground">
-          <div>
-            <dt className="inline font-medium">CSAT inferido:</dt>{" "}
-            <dd className="inline">
-              proporção de atendimentos com nota ≥ 7, a mesma regra do servidor.
-            </dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Taxa de contenção:</dt>{" "}
-            <dd className="inline">
-              atendimentos resolvidos sem passar para um humano. Não depende de
-              score.
-            </dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Latência mediana:</dt>{" "}
-            <dd className="inline">
-              mediana do intervalo entre a fala do cliente e a resposta
-              seguinte, derivada dos timestamps. Os cortes do trilho (
-              {limiares.pico} s, {limiares.saudavel} s e{" "}
-              {emMinutos(limiares.degradando)} min) são configuráveis em
-              Configurações.
-            </dd>
-          </div>
-        </dl>
-      </Aparato>
-    </motion.section>
+        vezes: ressalva repetida vira ruido e para de ser lida). O que
+        continua colado ao numero e DADO do recorte -- a contagem de "com
+        sinal" do NPS e a legenda de cortes do trilho -- porque muda com o
+        filtro. Por ser filho de verdade (RessalvaDaTela via portal, nao
+        estado copiado), este texto acompanha `limiares` e `indicadores`
+        sempre que a tela re-renderiza, em vez de congelar no valor do
+        primeiro registro. */}
+    <RessalvaDaTela titulo="Indicadores">
+      <dl className="flex max-w-[52ch] flex-col gap-1.5 text-[0.6875rem] leading-snug text-muted-foreground">
+        <div>
+          <dt className="inline font-medium">CSAT inferido:</dt>{" "}
+          <dd className="inline">
+            proporção de atendimentos com nota ≥ 7, a mesma regra do
+            servidor.
+          </dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Taxa de contenção:</dt>{" "}
+          <dd className="inline">
+            atendimentos resolvidos sem passar para um humano. Não depende de
+            score.
+          </dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Latência mediana:</dt>{" "}
+          <dd className="inline">
+            mediana do intervalo entre a fala do cliente e a resposta
+            seguinte, derivada dos timestamps. Os cortes do trilho (
+            {limiares.pico} s, {limiares.saudavel} s e{" "}
+            {emMinutos(limiares.degradando)} min) são configuráveis em
+            Configurações.
+          </dd>
+        </div>
+      </dl>
+    </RessalvaDaTela>
+    </>
   );
 }

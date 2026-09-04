@@ -51,7 +51,8 @@ export default async function PaginaIntegracoes() {
         subtitulo="De onde vêm os atendimentos: as fontes cadastradas, o estado de cada credencial no ambiente da API, e o histórico do que cada importação aceitou e rejeitou."
       />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx. */}
+      <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
         {/* AS FONTES vêm primeiro: é o mestre-detalhe da tela, e é aqui que a
             conversa passa a entrar pela rede. */}
         {/* A LEGENDA VOLTOU PARA O APARATO. Ela dizia a regra que esta tela
@@ -62,6 +63,7 @@ export default async function PaginaIntegracoes() {
             disfarçada de realocação. Recolher é permitido; remover não. */}
         <Painel
           titulo="Fontes"
+          nivel="dominante"
           legenda="Cada fonte registra por onde a conversa entra. O segredo não mora aqui: o que se guarda é o nome da variável de ambiente que a API lê na máquina onde ela roda."
         >
           {fontes.ok ? (
