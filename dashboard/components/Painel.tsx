@@ -139,8 +139,16 @@ export function Painel({
       {/* A ressalva sobe para o aparato da tela, identificada pelo titulo do
           painel -- ela e filho de verdade deste componente, entao re-renderiza
           quando `legenda`/`rodape` mudam, em vez de congelar num valor antigo
-          copiado para estado. Os rotulos curtos ficam onde estao. */}
-      <RessalvaDaTela titulo={titulo}>
+          copiado para estado. Os rotulos curtos ficam onde estao.
+
+          `estado` avisa o aparato que este sistema nao produziu dado desta
+          vez -- mesma precedencia do render acima (erro vence vazio), e
+          `undefined` no caso normal, para o aparato ficar identico a hoje
+          quando nenhum dos dois vier. */}
+      <RessalvaDaTela
+        titulo={titulo}
+        estado={erro ? "erro" : vazio ? "vazio" : undefined}
+      >
         {legenda}
         {rodape}
       </RessalvaDaTela>

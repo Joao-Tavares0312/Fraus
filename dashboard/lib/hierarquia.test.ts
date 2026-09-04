@@ -127,6 +127,28 @@ describe("estados do dominante", () => {
   });
 });
 
+describe("o aparato avisa quando o sistema nao produziu dado", () => {
+  it("o Painel repassa erro/vazio ao RessalvaDaTela como `estado`, erro vencendo vazio", () => {
+    // Casa a expressao inteira, nao so a palavra `estado`: garante que a
+    // precedencia (erro vence vazio) e a mesma do render acima, e que ela
+    // realmente chega ao RessalvaDaTela via a prop nova.
+    const fonte = readFileSync("components/Painel.tsx", "utf8");
+    expect(fonte).toMatch(
+      /estado=\{erro \? "erro" : vazio \? "vazio" : undefined\}/,
+    );
+  });
+
+  it("RessalvaDaTela declara `estado` como erro ou vazio, e nao so cor", () => {
+    const fonte = readFileSync("components/AparatoDaTela.tsx", "utf8");
+    expect(fonte).toMatch(/estado\?:\s*"erro"\s*\|\s*"vazio"/);
+    // O rotulo tem que ser texto de verdade, nao uma classe de cor sozinha
+    // representando o estado -- por isso o teste procura o dicionario de
+    // rotulos, nao uma className condicional.
+    expect(fonte).toContain("não carregou");
+    expect(fonte).toContain("sem dado");
+  });
+});
+
 describe("regua", () => {
   it("o Painel declara o parametro regua com os dois lados nomeados", () => {
     // `toContain("regua")` sozinho e vacuo: a palavra ja aparecia num

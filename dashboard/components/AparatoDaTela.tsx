@@ -105,11 +105,27 @@ export function ProvedorDeAparato({ children }: { children: ReactNode }) {
  * `children` vazio (`null`/`undefined`/`false`) nao se inscreve -- e o mesmo
  * caso de "sem legenda nem rodape" que o `Painel` ja tratava antes.
  */
+/** Rotulo curto ao lado do titulo, quando o sistema nao produziu dado. */
+const ROTULO_DO_ESTADO: Record<"erro" | "vazio", string> = {
+  erro: "não carregou",
+  vazio: "sem dado",
+};
+
 export function RessalvaDaTela({
   titulo,
+  /**
+   * O painel que produz esta ressalva esta em erro ou vazio -- a mesma
+   * precedencia do render do `Painel` (erro vence vazio). AUSENTE no caso
+   * normal, de proposito: sem isto o aparato descreveria metodo aplicado a
+   * um resultado que nao existe, e a nota metodologica continua verdadeira
+   * (o sistema so nao produziu dado desta vez), entao ela nao sai daqui --
+   * "recolher e permitido, remover nao". A marcacao e texto, nunca so cor.
+   */
+  estado,
   children,
 }: {
   titulo: string;
+  estado?: "erro" | "vazio";
   children?: ReactNode;
 }) {
   const no = useContext(NoContexto);
@@ -132,7 +148,14 @@ export function RessalvaDaTela({
 
   return createPortal(
     <section>
-      <h3 className="mb-1 font-semibold text-foreground">{titulo}</h3>
+      <h3 className="mb-1 flex items-baseline gap-2 font-semibold text-foreground">
+        {titulo}
+        {estado ? (
+          <span className="text-xs font-normal text-muted-foreground">
+            {ROTULO_DO_ESTADO[estado]}
+          </span>
+        ) : null}
+      </h3>
       {children}
     </section>,
     no,
