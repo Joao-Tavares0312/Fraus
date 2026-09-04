@@ -43,7 +43,7 @@ Valem para **todas** as tarefas abaixo, sem exceção:
 
 | Caminho | Responsabilidade | Tarefa |
 |---|---|---|
-| `dashboard/app/fontes/MonaSans[wght,wdth].woff2` | arquivo da fonte variável, versionado | 1 |
+| `dashboard/app/fontes/MonaSansVF[opsz,wght].woff2` | arquivo da fonte variável, versionado | 1 |
 | `dashboard/app/fontes/LICENSE.md` | licença da Mona Sans, ao lado do binário | 1 |
 | `dashboard/app/layout.tsx` | carregar a fonte e expor `--fonte-mona` no `<html>` | 1 |
 | `dashboard/app/globals.css` | ligar `--fonte-mona` às duas classes de display | 1 |
@@ -56,7 +56,7 @@ Valem para **todas** as tarefas abaixo, sem exceção:
 ## Tarefa 1: Mona Sans no display
 
 **Arquivos:**
-- Criar: `dashboard/app/fontes/MonaSans[wght,wdth].woff2`
+- Criar: `dashboard/app/fontes/MonaSansVF[opsz,wght].woff2`
 - Criar: `dashboard/app/fontes/LICENSE.md`
 - Criar: `dashboard/lib/tipografia.test.ts`
 - Modificar: `dashboard/app/layout.tsx` (bloco de fontes, linhas 1–24; `<html>`, ~linha 70)
@@ -70,22 +70,33 @@ Valem para **todas** as tarefas abaixo, sem exceção:
 
 - [ ] **Passo 1: baixar a fonte e a licença**
 
-O release oficial é `github/mona-sans`, v2.0.27, conferido em 04/09/2026.
+O release oficial é `github/mona-sans`, v2.0.27, conferido em 04/09/2026. O asset
+é o **`webfonts`** — os nomes exatos foram levantados em 04/09/2026, depois de a
+primeira tentativa deste passo bater em 404 num nome inventado.
 
 ```bash
 cd dashboard && mkdir -p app/fontes && cd app/fontes
-curl -sL -o mona-sans.zip https://github.com/github/mona-sans/releases/download/v2.0.27/Mona-Sans.zip
-unzip -o -j mona-sans.zip '*Mona-Sans[wght,wdth].woff2' -d .
+curl -sL -o mona-sans.zip https://github.com/github/mona-sans/releases/download/v2.0.27/Mona-Sans-Webfonts.zip
+unzip -l mona-sans.zip          # confira os nomes ANTES de extrair
+unzip -o -j mona-sans.zip '*MonaSansVF[opsz,wght].woff2' -d .
 unzip -o -j mona-sans.zip '*LICENSE*' -d .
 rm mona-sans.zip
-ls -la
 ```
 
-Esperado: um `.woff2` variável (algo entre 40 e 120 KB) e um arquivo de licença.
-Se o nome interno do zip divergir, liste o conteúdo com `unzip -l mona-sans.zip`
-e ajuste o padrão — **não** substitua por outra fonte, e **não** carregue por URL.
-Renomeie o `.woff2` para `MonaSans[wght,wdth].woff2` e a licença para `LICENSE.md`
-se vierem com outro nome.
+**O corte é o de dois eixos, `[opsz,wght]`, ~137 KB** — e não o
+`MonaSansVF[wdth,opsz,wght].woff2` de ~308 KB, que também existe no zip. O eixo
+`wdth` não é acionado por nenhuma regra que este plano cria: as duas classes de
+display só definem `font-family`, e `.display-vitrine` trava `font-weight: 500`.
+Pagar 2,2× o peso por um eixo que ninguém usa é peso morto. O `opsz` do corte
+menor, ao contrário, serve exatamente ao caso — é fonte de display em corpo
+grande, e o ajuste óptico vem de graça.
+
+**Não renomeie o arquivo.** Um nome que anuncia eixos que o binário não tem é uma
+mentira que a próxima pessoa paga. Se a licença vier com outro nome, essa sim
+renomeie para `LICENSE.md`.
+
+Se o `.woff2` variável não estiver no zip, **pare e escale** — não substitua por
+outra fonte, não improvise com pesos estáticos, e não carregue por URL.
 
 - [ ] **Passo 2: escrever o teste que falha**
 
@@ -177,7 +188,7 @@ Depois do bloco de `jetbrains`, acrescente:
  * deploy. Nenhuma chamada de rede, nem no build nem em runtime.
  */
 const mona = localFont({
-  src: "./fontes/MonaSans[wght,wdth].woff2",
+  src: "./fontes/MonaSansVF[opsz,wght].woff2",
   variable: "--fonte-mona",
   display: "swap",
   weight: "200 900",

@@ -24,11 +24,17 @@ em 04/09/2026 foi de escopo médio e não de reformulação completa:
 ## 1. Tipografia — Mona Sans, e só no display
 
 **Escolha.** Mona Sans v2.0.27, a mesma display da landonorris.com, que a nota
-elege como a referência mais instrutiva das seis. Grotesca variável com eixos de
-peso e largura, sem a memória de "aplicação moderna bem-feita" que a Inter
-carrega — que é exatamente o diagnóstico da §2.2.
+elege como a referência mais instrutiva das seis. Grotesca variável, sem a
+memória de "aplicação moderna bem-feita" que a Inter carrega — que é exatamente o
+diagnóstico da §2.2.
 
-**Como entra.** Os `.woff2` variáveis são versionados em `dashboard/app/fontes/`,
+**Qual corte.** O release traz dois cortes variáveis, e o escolhido é o de dois
+eixos — peso e tamanho óptico, ~137 KB. O corte que acrescenta o eixo de largura
+pesa ~308 KB, e nenhuma regra deste trabalho aciona largura: as duas classes de
+display só definem família, e a manchete trava o peso. O tamanho óptico, esse
+sim, serve ao caso — é fonte de display em corpo grande.
+
+**Como entra.** O `.woff2` variável é versionado em `dashboard/app/fontes/`,
 com o arquivo de licença da fonte ao lado, e carregados por `next/font/local`
 expondo `--fonte-mona`. Isso preserva a invariante 1 do `CLAUDE.md` do mesmo
 jeito que Inter e JetBrains já a preservam: o arquivo é servido do próprio
