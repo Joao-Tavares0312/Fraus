@@ -765,10 +765,20 @@ Acrescente a `dashboard/lib/hierarquia.test.ts`:
 
 ```ts
 describe("regua", () => {
-  it("o Painel sabe montar a regua com os dois lados", () => {
+  it("o Painel sabe montar a regua com os dois lados, na ordem certa", () => {
+    // CUIDADO: `toContain("regua")` sozinho NAO guarda nada -- a palavra ja
+    // aparecia em comentario e a classe `border-linha` ja existia no arquivo,
+    // entao a versao original deste teste passava ANTES da implementacao.
+    // O que precisa ser afirmado e a capacidade: o parametro com os dois
+    // lados, e a ORDEM entre eles -- dito acima, medido abaixo. Inverter a
+    // ordem nao gera erro nenhum, so faz a interface afirmar o contrario da
+    // tese da §1 do DESIGN.md.
     const fonte = readFileSync("components/Painel.tsx", "utf8");
-    expect(fonte).toContain("regua");
-    expect(fonte).toContain("border-linha");
+    expect(fonte).toMatch(/regua\?:\s*\{[^}]*dito[^}]*medido/s);
+    const posDito = fonte.indexOf("regua.dito");
+    const posMedido = fonte.indexOf("regua.medido");
+    expect(posDito).toBeGreaterThan(-1);
+    expect(posMedido).toBeGreaterThan(posDito);
   });
 
   it("o grafico de NPS x latencia NAO usa regua", () => {
@@ -949,6 +959,10 @@ describe("estados do dominante", () => {
     expect(fonte).toContain("vazio");
   });
 
+  // GUARDA DE REGRESSAO, nao teste de TDD: ela passa antes e depois da
+  // implementacao. Existe para impedir que alguem introduza o padrao depois,
+  // e nao para ficar vermelha agora. Quem implementar nao deve esperar ver
+  // esta falhar -- a que tem que falhar primeiro e a de cima.
   it("erro e vazio nao viram string vazia nem zero", () => {
     // Ausencia de dado nao e insatisfacao, e a invariante 2 do CLAUDE.md
     // manda procurar `?? 0` e `|| 0` antes de commitar.
