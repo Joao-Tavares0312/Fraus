@@ -400,8 +400,12 @@ analista lê em DPI consistente: fonte de display em rótulo e dado é proibida.
 > runtime, que é a regra da casa. A pilha de sistema fica atrás como fallback.
 > O que a regra original defendia sobrevive: continua sendo UMA família para
 > rótulo e dado, e fonte de display segue proibida — a exceção nomeada é a
-> **LP** (`app/page.tsx`), vitrine fora do modo Operate, onde o display usa a
-> própria Inter em corpo grande com tracking até −0.02em.
+> **LP** (`app/page.tsx`), vitrine fora do modo Operate, onde o display usa
+> **Mona Sans** variável em corpo grande com tracking até −0.02em. Ela entra
+> por `next/font/local` a partir de `app/fontes/`, versionada no repo, e
+> governa exatamente duas classes: `.display-vitrine` e `.titulo-vitrine`.
+> `lib/tipografia.test.ts` é o juiz desse escopo — nenhuma terceira regra pode
+> usá-la, porque rótulo e dado continuam sendo território da Inter.
 
 - **Escala fixa em rem**, razão apertada (1.125–1.2). Nada fluido.
 - **Numeral tabular e monoespaçado em todo número que se compara** (`.num`).
