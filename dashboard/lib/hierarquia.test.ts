@@ -81,6 +81,32 @@ describe("aparato", () => {
   });
 });
 
+describe("as telas declaram nivel", () => {
+  const TELAS = [
+    ["app/dashboard/page.tsx", "/dashboard"],
+    ["app/dashboard/atendimentos/page.tsx", "/dashboard/atendimentos"],
+    ["app/dashboard/integracoes/page.tsx", "/dashboard/integracoes"],
+    ["app/dashboard/configuracoes/page.tsx", "/dashboard/configuracoes"],
+  ] as const;
+
+  it("cada tela marca exatamente um painel como dominante", () => {
+    for (const [arquivo] of TELAS) {
+      const fonte = readFileSync(arquivo, "utf8");
+      const ocorrencias = fonte.match(/nivel="dominante"/g) ?? [];
+      expect(ocorrencias.length, arquivo).toBe(1);
+    }
+  });
+
+  it("toda tela que declara dominante esta no vocabulario", () => {
+    // NAO compare titulo: varios paineis montam o titulo em tempo de render
+    // (`Atendimentos de ${rotulo}`), e string estatica nunca casa com isso.
+    // O vocabulario guarda identificador; quem marca o dominante e a tela.
+    for (const [, rota] of TELAS) {
+      expect(DOMINANTE_POR_TELA, rota).toHaveProperty(rota);
+    }
+  });
+});
+
 describe("regua", () => {
   it("o Painel declara o parametro regua com os dois lados nomeados", () => {
     // `toContain("regua")` sozinho e vacuo: a palavra ja aparecia num

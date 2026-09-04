@@ -60,11 +60,17 @@ export default async function PaginaGrafo(props: PageProps<"/dashboard/grafo">) 
   return (
     <>
       <CabecalhoPagina titulo="Grafo da memória" periodo={periodo} />
-      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx. Os
+          dois ramos de vazio/erro acima continuam com flex-1 -- o EstadoVazio
+          depende dele para se centralizar na coluna. O canvas do grafo nao
+          depende de flex-1 para altura: ele tem `h-[70vh] min-h-[26rem]`
+          proprios (GrafoDaMemoria.tsx). */}
+      <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
         <Painel
           titulo={`${grafo.dado.nos.length} nós, ${grafo.dado.arestas.length} arestas`}
           legenda="Conversas, categorias, canais, desfechos, termos, emojis, features, fontes e importações. Âmbar é o que foi dito; azul é o que foi medido. O tamanho do ponto é o número de conexões — nunca a nota, porque então um atendimento sem sinal encolheria até sumir. Conversa sem sinal aparece vazada: o marcador existe, ocupa a posição, e é oco. A lista equivalente ao canvas fica a um Tab de distância, e seleciona os mesmos nós."
           semPadding
+          nivel="dominante"
           rodape={
             grafo.dado.meta.truncado
               ? `Mostrando ${grafo.dado.meta.termos_exibidos} de ${grafo.dado.meta.termos_totais} termos — o resto ficou de fora para o grafo continuar legível.`

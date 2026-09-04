@@ -124,7 +124,13 @@ export function FaixaIndicadores({
       initial="oculto"
       whileInView="presente"
       viewport={{ once: true, margin: "0px 0px -64px 0px" }}
-      className="vidro especular chanfro grid grid-cols-1 gap-3 rounded-lg p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-1"
+      // A §2.2 do DESIGN.md sempre disse que os indicadores sao "rotulo mais
+      // numero tabular, sem barra de progresso decorativa e sem cartao": a
+      // armadura NAO e um painel, entao perde vidro/chanfro/borda -- ela le
+      // como pilha compacta, separada por regua (`CartaoIndicador` usa
+      // `border-linha`, nao mais `border-compasso`, porque compasso e a linha
+      // fraca pensada para viver DENTRO de uma superficie de vidro).
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-5 xl:grid-cols-1"
     >
       <CartaoIndicador
         rotulo="NPS inferido"

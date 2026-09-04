@@ -98,7 +98,7 @@ export function CartaoIndicador({
     // por isso aqui nao ha `initial` nem `animate`: quem escalona e o pai.
     <motion.div
       variants={itemDaPilha}
-      className="quebra-evitar flex flex-col gap-1.5 border-b border-compasso pb-3 last:border-b-0 last:pb-0"
+      className="quebra-evitar flex flex-col gap-1.5 border-b border-linha pb-3 last:border-b-0 last:pb-0"
       data-slot="indicador"
     >
       <div className="flex items-baseline justify-between gap-2">
