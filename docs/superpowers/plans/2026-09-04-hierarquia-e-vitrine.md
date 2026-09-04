@@ -380,6 +380,16 @@ git commit -m "feat(dashboard): o painel passa a ter nivel"
 
 ### Task 3: Um aparato por tela
 
+> **Como isto ficou de fato (04/09/2026).** O codigo abaixo guarda a ressalva
+> em estado do provedor, e isso congela texto vivo: conteudo em JSX nao pode
+> entrar nas dependencias do efeito sem virar laco infinito, entao uma ressalva
+> cujo texto muda sem mudar de titulo fica com o valor velho. A implementacao
+> final usa **portal**: o provedor guarda um NO do DOM, o `AparatoDaTela`
+> fornece esse no, e cada painel monta `<RessalvaDaTela>` que faz `createPortal`
+> do conteudo para la. O conteudo volta a ser filho React de verdade, com ciclo
+> de vida proprio, e a classe inteira do defeito desaparece. Ver
+> `dashboard/components/AparatoDaTela.tsx`.
+
 **Files:**
 - Create: `dashboard/components/AparatoDaTela.tsx`
 - Modify: `dashboard/components/Painel.tsx`, `dashboard/components/FaixaIndicadores.tsx`
