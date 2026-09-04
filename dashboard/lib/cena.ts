@@ -65,6 +65,13 @@ function limitar(valor: number, minimo: number, maximo: number): number {
  * a pagina e curta demais para rolar (`rolavel = 0`) ou antes do layout
  * medir -- o extremo seguro para QUALQUER camada nesse caso e 0, cena
  * apagada, nunca clara demais.
+ *
+ * CORRECAO DE 04/09/2026: a primeira versao mandava planeta e estrelas
+ * nascerem em 0 (`sin(0)` e `teto * 0`), o que apagava o sol listrado e o
+ * campo de estrelas exatamente no heroi -- a unica tela que ja funcionava
+ * antes desta task existir, e onde o sol era a ancora visual. A regra
+ * agora e EM p=0 OS TRES FATORES VALEM 1: o heroi fica identico ao de hoje,
+ * pixel por pixel, e a coreografia acontece so DEPOIS dele.
  */
 export function intensidadeDaCamada(camada: Camada, progresso: number): number {
   if (Number.isNaN(progresso)) {
@@ -76,16 +83,31 @@ export function intensidadeDaCamada(camada: Camada, progresso: number): number {
 
   switch (camada) {
     // A grade e o piso do cenario: forte na entrada, cede conforme a leitura
-    // comeca, e nao volta.
+    // comeca, e nao volta. Curva intocada pela correcao de 04/09 -- ja
+    // nascia em 1, o defeito era so nas outras duas.
     case "grade":
       return teto * (1 - p);
-    // O planeta cruza: nasce fora, atinge o proprio teto no meio da travessia
-    // e sai. Meia onda de seno, que garante o teto exatamente uma vez.
+    // O planeta fecha onde abre: nasce no proprio teto (o sol do heroi,
+    // intacto), desce ate desaparecer exatamente no meio da rolagem -- onde
+    // a leitura pesa mais e o disco ja fez sua funcao de ancora -- e volta
+    // ao teto no fim, reencontrando a cena do heroi no fecho da pagina.
+    // Meia onda de cosseno completa (0 a 2*PI) garante os dois extremos
+    // EXATAMENTE no teto e o vale EXATAMENTE no meio.
     case "planeta":
-      return teto * Math.sin(Math.PI * p);
-    // O campo de estrelas e o oposto da grade: quase ausente no heroi, onde a
-    // manchete manda, e assume o fundo conforme a pagina desce.
+      return teto * (0.5 + 0.5 * Math.cos(2 * Math.PI * p));
+    // O campo de estrelas tambem nasce no teto -- o ceu do heroi ja tinha
+    // estrelas, a correcao nao inventou isso. A variacao e um arco RASO (o
+    // dobro de sombra do que o piso, nunca o fundo) que cede um pouco
+    // enquanto a leitura comeca (mesma janela em que o planeta se apaga) e
+    // volta ao teto no fecho, no mesmo instante que o planeta -- as duas
+    // camadas de fundo se recompoem juntas quando a pagina termina. Nao e
+    // constante: uma reta em 1 seria cena parada, nao cena que acompanha a
+    // rolagem, e o requisito pede as duas coisas ao mesmo tempo (nascer no
+    // teto E variar de verdade). A amplitude de 0.3 mantem o campo sempre
+    // visivel de longe -- ele nunca ficou perto de 0, diferente do planeta,
+    // porque nesta leitura o ceu de fundo nunca "sai de cena": ele so
+    // recua um pouco de brilho no trecho de maior leitura.
     case "estrelas":
-      return teto * p;
+      return teto * (1 - 0.3 * Math.sin(Math.PI * p));
   }
 }

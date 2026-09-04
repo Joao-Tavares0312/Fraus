@@ -57,6 +57,17 @@ describe("intensidadeDaCamada", () => {
     }
   });
 
+  it("todo fator vale 1 no progresso 0 -- o heroi fica identico ao de hoje", () => {
+    // Correcao de 04/09/2026: a primeira curva apagava planeta e estrelas no
+    // heroi (nasciam em 0), matando o sol listrado exatamente na unica tela
+    // que ja funcionava antes desta feature existir. Este teste e a trava
+    // contra reintroduzir isso -- p=0 tem que devolver o teto de CADA
+    // camada, sem excecao.
+    for (const camada of CAMADAS) {
+      expect(intensidadeDaCamada(camada, 0)).toBe(FATOR_MAXIMO_POR_CAMADA[camada]);
+    }
+  });
+
   it("cada camada atinge o proprio maximo em algum ponto", () => {
     // Maximo que nunca e alcancado e pessimismo gratuito: faria o vidro
     // engrossar sem motivo, e a §8.6 diz que a espessura cede so quando
