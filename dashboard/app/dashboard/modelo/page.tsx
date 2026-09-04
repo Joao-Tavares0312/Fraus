@@ -44,10 +44,12 @@ export default async function PaginaModelo() {
           titulo="Modelo"
           subtitulo="Pesos, métricas, lexicon e simulador — a ficha da IA que pontua os atendimentos."
         />
-        {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx --
-            o AparatoDaTela monta DEPOIS do children, entao um wrapper que
-            estica ate min-h-svh empurra o aparato para baixo de um vao. */}
-        <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
+        {/* COM flex-1: ver o comentario identico em app/dashboard/configuracoes/page.tsx
+            e app/dashboard/grafo/page.tsx -- o EstadoVazio depende do pai
+            esticado ate a altura da tela para se centralizar verticalmente
+            (empty.tsx usa flex-1 ... justify-center). O ramo de SUCESSO logo
+            abaixo e que fica sem flex-1. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
           <EstadoVazio
             titulo="A ficha do modelo não carregou"
             explicacao={`${resultado.erro}. Sem ela não há peso, métrica nem faixa a exibir — e preencher com valores plausíveis seria descrever um modelo que ninguém consultou.`}
@@ -68,7 +70,9 @@ export default async function PaginaModelo() {
         subtitulo="A ficha da IA que pontua os atendimentos: quanto cada sinal pesa, o que o treino mediu, que tabela de emoji está em uso e o que o classificador responde a uma frase nova."
       />
 
-      {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx. */}
+      {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx.
+          O ramo de erro/vazio logo acima continua com flex-1 -- o EstadoVazio
+          depende dele para se centralizar na coluna. */}
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
         <EstadoDoModelo modelo={modelo} />
 

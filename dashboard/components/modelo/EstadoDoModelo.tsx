@@ -58,7 +58,10 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
           o padrão que ela aprendeu a reconhecer como irônica em outro domínio.
           Ela continua carregada, obrigatória e lida por mensagem -- aparece em
           `mensagens[].prob_ironia` e no simulador abaixo -- só não pesa mais em
-          `contribuicoes` nem em `importancias`. O F1 de 100% mede acerto no
+          `contribuicoes` nem em `importancias`.{" "}
+          {f1Percentual !== null
+            ? `O F1 de ${f1Percentual}% mede acerto no`
+            : "O F1 mede acerto no"}{" "}
           MESMO corpus sintético que gerou o treino: métrica perfeita em tarefa
           de linguagem quase nunca significa modelo bom, significa que o teste
           se parece demais com o treino. O sinal de tempo tem a mesma limitação
@@ -72,7 +75,12 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
       <ul className="flex flex-col gap-4">
         <li className="flex flex-col gap-1">
           <span className="flex flex-wrap items-baseline gap-2">
-            <span className="rounded-full bg-warning-rich-text/10 px-2 py-0.5 text-xs font-medium text-warning-rich-text">
+            {/* Neutra sempre: "no vetor" e "fora do vetor" sao os dois estados
+                ESPERADOS e documentados desta cabeca, nenhum dos dois e um
+                alerta -- so warning quando o rotulo realmente avisa algo
+                (ver a etiqueta de F1 abaixo). Cor de alerta aqui contradiria
+                o texto sempre que a cabeca estivesse no estado normal. */}
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {ironia === null ? "fora do vetor" : ironia.pontua ? "no vetor" : "fora do vetor"}
             </span>
             <span className="text-sm font-medium text-foreground">
@@ -97,7 +105,18 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
 
         <li className="flex flex-col gap-1">
           <span className="flex flex-wrap items-baseline gap-2">
-            <span className="rounded-full bg-warning-rich-text/10 px-2 py-0.5 text-xs font-medium text-warning-rich-text">
+            {/* Cor acompanha o SENTIDO do rotulo: "suspeito" e o alerta de
+                verdade (metrica boa demais para acreditar), entao so ele leva
+                warning. "abaixo do limiar" e a noticia neutra/boa -- nao
+                cruzou o limiar de suspeita -- e usa a mesma etiqueta neutra
+                da cabeca de ironia acima. */}
+            <span
+              className={
+                f1Suspeito
+                  ? "rounded-full bg-warning-rich-text/10 px-2 py-0.5 text-xs font-medium text-warning-rich-text"
+                  : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+              }
+            >
               {f1Suspeito ? "suspeito" : "abaixo do limiar"}
             </span>
             <span className="text-sm font-medium text-foreground">
@@ -125,7 +144,9 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
 
         <li className="flex flex-col gap-1">
           <span className="flex flex-wrap items-baseline gap-2">
-            <span className="rounded-full bg-warning-rich-text/10 px-2 py-0.5 text-xs font-medium text-warning-rich-text">
+            {/* Neutra: limitacao declarada de arquitetura, nao um alerta que
+                pede acao -- mesma etiqueta neutra usada acima. */}
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               sintético
             </span>
             <span className="text-sm font-medium text-foreground">

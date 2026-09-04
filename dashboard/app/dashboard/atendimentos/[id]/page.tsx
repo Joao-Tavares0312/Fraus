@@ -54,9 +54,14 @@ export default async function PaginaDoAtendimento(
 
   if (!resultado.ok) {
     if (/404/.test(resultado.erro)) notFound();
-    // SEM flex-1: ver o comentario identico em app/dashboard/page.tsx.
+    // COM flex-1: mesmo padrao de app/dashboard/configuracoes/page.tsx e
+    // app/dashboard/grafo/page.tsx -- EstadoVazio so centraliza verticalmente
+    // se o pai estiver esticado. Aqui o sintoma era mais fraco (tem titulo e
+    // link ALEM do vazio, entao sem flex-1 ele so ficava desalinhado, nao
+    // colapsado), mas o defeito e o mesmo e o conserto e de graca: aplicado
+    // por consistencia com os outros dois ramos de erro da tela.
     return (
-      <div className="flex min-w-0 flex-col gap-4 px-4 py-10 sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-10 sm:px-6">
         <h1 className="text-lg font-semibold text-foreground">
           Não foi possível abrir o atendimento
         </h1>

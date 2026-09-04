@@ -216,8 +216,16 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
             <p className="text-xs leading-relaxed text-warning-rich-text">
               Métrica perfeita em tarefa de linguagem quase nunca significa
               modelo bom — significa que o conjunto de teste se parece demais
-              com o de treino. Leia a limitação abaixo antes de citar estes
-              números.
+              com o de treino.
+              {/* "Leia a limitacao abaixo" so aparece quando `limitacao` de
+                  fato vem em `metricas` -- ela nao e campo garantido pelo
+                  contrato da API, e sem ela o texto apontaria para um trecho
+                  que nao existe nesta tela. A frase de honestidade acima
+                  continua incondicional: e ela, nao a remissao, que carrega
+                  o alerta central. */}
+              {textuais.includes("limitacao")
+                ? " Leia a limitação abaixo antes de citar estes números."
+                : ""}
             </p>
           ) : null}
 
