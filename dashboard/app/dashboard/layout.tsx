@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { AparatoDaTela, ProvedorDeAparato } from "@/components/AparatoDaTela";
 import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
@@ -81,7 +82,13 @@ export default async function DashboardLayout({
               {/* Acima do conteudo, em TODA tela: sem a API todas quebram
                   igual, e a instrucao tem que estar onde o Joao ja esta. */}
               <AvisoApiFora />
-              {children}
+              {/* O provedor envolve conteudo E rodape juntos: e o unico jeito
+                  do aparato da tela enxergar as ressalvas que os paineis
+                  registram durante o render de `children`. */}
+              <ProvedorDeAparato>
+                {children}
+                <AparatoDaTela className="mt-8" />
+              </ProvedorDeAparato>
             </SidebarInset>
           </SidebarProvider>
         </ProvedorDaMentira>

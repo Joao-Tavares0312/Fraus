@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { entradaDeSistema } from "@/lib/movimento";
 import { useEspecular } from "@/hooks/useEspecular";
 import { classesDoNivel, type Nivel } from "@/lib/hierarquia";
-import { Aparato } from "./Aparato";
+import { useRegistrarRessalva } from "./AparatoDaTela";
 
 /**
  * O SISTEMA: a unidade de composicao da interface.
@@ -52,7 +52,17 @@ export function Painel({
   className?: string;
   children: ReactNode;
 }) {
-  const temAparato = Boolean(legenda || rodape);
+  // A ressalva sobe para o aparato da tela, identificada pelo titulo do
+  // painel. Os rotulos curtos ficam onde estao.
+  useRegistrarRessalva(
+    titulo,
+    legenda || rodape ? (
+      <>
+        {legenda}
+        {rodape}
+      </>
+    ) : null,
+  );
   const refEspecular = useEspecular<HTMLElement>();
 
   return (
@@ -98,15 +108,6 @@ export function Painel({
       >
         {children}
       </div>
-
-      {temAparato ? (
-        <Aparato className="mt-3 border-t border-compasso pt-2">
-          <div className="mt-2 flex max-w-[72ch] flex-col gap-2 text-xs leading-relaxed text-muted-foreground">
-            {legenda}
-            {rodape}
-          </div>
-        </Aparato>
-      ) : null}
     </motion.section>
   );
 }

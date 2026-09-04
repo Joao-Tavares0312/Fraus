@@ -61,3 +61,22 @@ describe("Painel", () => {
     expect(fonte).not.toMatch(/"[^"]*\bvidro(-fino)?\b[^"]*"/);
   });
 });
+
+describe("aparato", () => {
+  it("o Painel nao hospeda mais um Aparato proprio", () => {
+    // Seis aparatos identicos por tela viram ruido: a honestidade fica com
+    // forma de repeticao, e nao de rigor. A prosa se consolida num so, no pe
+    // da tela; os rotulos curtos continuam colados ao numero.
+    const fonte = readFileSync("components/Painel.tsx", "utf8");
+    expect(fonte).not.toContain("<Aparato");
+    expect(fonte).toContain("useRegistrarRessalva");
+  });
+
+  it("o layout monta o provedor e o aparato da tela para todas as paginas", () => {
+    // Quem monta o rodape e o layout, nao cada pagina: e o que garante que
+    // toda tela ganhe o aparato sem repetir a montagem.
+    const fonte = readFileSync("app/dashboard/layout.tsx", "utf8");
+    expect(fonte).toContain("AparatoDaTela");
+    expect(fonte).toContain("ProvedorDeAparato");
+  });
+});
