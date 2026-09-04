@@ -218,18 +218,27 @@ export function classesDoNivel(nivel: Nivel): string {
 }
 
 /**
- * O sistema que responde a pergunta que levou o analista aquela tela.
- * A chave e a rota; o valor e o titulo exato do painel dominante.
+ * QUAL sistema responde a pergunta que levou o analista a cada tela.
+ *
+ * O valor e um IDENTIFICADOR ESTAVEL, nao o titulo exibido. Guardar o titulo
+ * seria fragil por construcao: varios paineis montam o titulo em tempo de
+ * render porque ele carrega periodo ou contagem (`Atendimentos de ${rotulo}`,
+ * `${n} nos, ${m} arestas`), e nenhuma string estatica casa com isso -- um
+ * consumidor que comparasse titulo falharia em silencio em metade das telas.
+ *
+ * Quem MARCA o dominante e a propria tela, com `nivel="dominante"` no Painel.
+ * Esta tabela documenta a intencao e da a guarda de "um por tela" algo para
+ * conferir; ela nao e chave de busca.
  */
 export const DOMINANTE_POR_TELA: Record<string, string> = {
-  "/dashboard": "NPS inferido × latência mediana, por dia",
-  "/dashboard/atendimentos": "Atendimentos do período",
+  "/dashboard": "nps-x-latencia",
+  "/dashboard/atendimentos": "tabela-de-atendimentos",
   // A tela Modelo abria pelo simulador e enterrava no meio o que o avaliador
   // precisa ler primeiro. O veredito sobe para dominante -- ver Task 7.
-  "/dashboard/modelo": "Estado do modelo",
-  "/dashboard/grafo": "Grafo da memória",
-  "/dashboard/integracoes": "Fontes cadastradas",
-  "/dashboard/configuracoes": "Faixas de NPS",
+  "/dashboard/modelo": "veredito-do-modelo",
+  "/dashboard/grafo": "canvas-do-grafo",
+  "/dashboard/integracoes": "fontes",
+  "/dashboard/configuracoes": "faixas-de-nps",
 };
 
 export function dominanteDaTela(rota: string): string | null {
@@ -831,11 +840,12 @@ describe("as telas declaram nivel", () => {
     }
   });
 
-  it("o dominante declarado bate com o vocabulario", () => {
-    for (const [arquivo, rota] of TELAS) {
-      const fonte = readFileSync(arquivo, "utf8");
-      const esperado = DOMINANTE_POR_TELA[rota];
-      expect(fonte, arquivo).toContain(esperado);
+  it("toda tela que declara dominante esta no vocabulario", () => {
+    // NAO compare titulo: varios paineis montam o titulo em tempo de render
+    // (`Atendimentos de ${rotulo}`), e string estatica nunca casa com isso.
+    // O vocabulario guarda identificador; quem marca o dominante e a tela.
+    for (const [, rota] of TELAS) {
+      expect(DOMINANTE_POR_TELA, rota).toHaveProperty(rota);
     }
   });
 });
