@@ -82,10 +82,34 @@ describe("aparato", () => {
 });
 
 describe("regua", () => {
-  it("o Painel sabe montar a regua com os dois lados", () => {
+  it("o Painel declara o parametro regua com os dois lados nomeados", () => {
+    // `toContain("regua")` sozinho e vacuo: a palavra ja aparecia num
+    // comentario pre-existente. Casar `regua` com `dito` e `medido` juntos,
+    // na forma de declaracao de tipo, e o que distingue "tem a capacidade"
+    // de "menciona a palavra".
     const fonte = readFileSync("components/Painel.tsx", "utf8");
-    expect(fonte).toContain("regua");
-    expect(fonte).toContain("border-linha");
+    expect(fonte).toMatch(
+      /regua\?:\s*\{\s*dito:\s*ReactNode;\s*medido:\s*ReactNode/,
+    );
+  });
+
+  it("o corpo ramifica na presenca da regua, e o dito vem antes do medido", () => {
+    // A ordem e a tese inteira da §1 (dito ACIMA, medido ABAIXO). Inverter
+    // nao quebra nenhum tipo nem gera erro -- so faz a interface afirmar o
+    // contrario do que quer dizer. Por isso a ordem e o que este teste
+    // guarda, nao so a presenca dos dois lados.
+    const fonte = readFileSync("components/Painel.tsx", "utf8");
+    const inicioDoRamo = fonte.indexOf("regua ?");
+    expect(inicioDoRamo, "esperava um ramo condicional `regua ? ... : ...`").toBeGreaterThan(-1);
+
+    const corpoDoRamo = fonte.slice(inicioDoRamo);
+    const idxDito = corpoDoRamo.indexOf("regua.dito");
+    const idxLinha = corpoDoRamo.indexOf("border-linha");
+    const idxMedido = corpoDoRamo.indexOf("regua.medido");
+
+    expect(idxDito, "regua.dito nao aparece no ramo condicional").toBeGreaterThan(-1);
+    expect(idxLinha, "border-linha nao aparece depois do dito").toBeGreaterThan(idxDito);
+    expect(idxMedido, "regua.medido nao aparece depois da linha").toBeGreaterThan(idxLinha);
   });
 
   it("o grafico de NPS x latencia NAO usa regua", () => {
