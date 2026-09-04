@@ -175,8 +175,36 @@ def montar_features(
     }
 
 
+class FusorIncompativelError(RuntimeError):
+    """Artefato treinado (`.joblib`) nao bate com `NOMES_FEATURES` vigente.
+
+    Distinta de `ModeloAusenteError` (fraus/sinais/texto.py) de proposito: as
+    duas impedem servir predicao (invariante 7), mas o remedio e diferente. Um
+    modelo AUSENTE pede treinar do zero; um modelo INCOMPATIVEL ja existe e
+    foi treinado com um contrato antigo -- o remedio e RETREINAR com o
+    contrato atual, nao gerar um artefato novo do nada. Misturar as duas
+    mensagens levaria quem le o erro a rodar o notebook errado.
+    """
+
+
 def vetorizar(features: dict[str, float]) -> list[float]:
-    """Ordem canonica. Feature faltando e KeyError -- nunca zero silencioso."""
+    """Ordem canonica. Feature faltando e KeyError; feature sobrando e ValueError.
+
+    Nenhum dos dois casos pode virar zero silencioso (invariante 9): falta
+    ja estourava; sobra nao estourava -- um dict com as 38 chaves certas MAIS
+    uma extra passava batido, gerando um vetor do tamanho certo por acaso. E
+    justamente o cenario que aconteceria se uma familia de sinal saisse do
+    contrato (como `ironia_*` saiu em 04/09/2026) mas continuasse sendo
+    produzida por engano em algum chamador: o vetor ficaria certo e a
+    regressao passaria despercebida.
+    """
+    excedentes = set(features) - set(NOMES_FEATURES)
+    if excedentes:
+        raise ValueError(
+            f"Chave(s) fora do contrato de {len(NOMES_FEATURES)} features: "
+            f"{sorted(excedentes)}. Remova do dict antes de vetorizar, ou "
+            "adicione a NOMES_FEATURES se a intencao e que ela entre no vetor."
+        )
     return [float(features[nome]) for nome in NOMES_FEATURES]
 
 
@@ -286,6 +314,28 @@ class Fusor:
 
     @classmethod
     def carregar(cls, caminho: Path) -> "Fusor":
+        """Carrega o artefato e VALIDA a forma contra `NOMES_FEATURES` antes de devolver.
+
+        `joblib.load` puro (o comportamento anterior) nao checava nada: um
+        artefato de 40 features carregava sem erro contra um contrato de 38,
+        a API subia normalmente, `/modelo/simular` funcionava (nao passa pelo
+        fusor) e enganava quem testava a mao -- o `ValueError` do
+        `StandardScaler` so estourava como HTTP 500 na primeira pontuacao
+        real, em `/ingestao` ou `/conversas/importar`. Isso confundiu duas
+        vezes na mesma semana. A invariante 7 pede falha alta e EXPLICITA
+        para modelo incompativel, e "explicita" nao basta se so acontece na
+        primeira predicao -- precisa ser na CARGA, que e quando a API sobe.
+        """
         fusor = cls()
         fusor._pipeline = joblib.load(caminho)
+
+        esperado = len(NOMES_FEATURES)
+        recebido = fusor._pipeline.named_steps["escala"].n_features_in_
+        if recebido != esperado:
+            raise FusorIncompativelError(
+                f"Fusor em {caminho} foi treinado com {recebido} features, "
+                f"mas o contrato vigente (NOMES_FEATURES) tem {esperado}. "
+                "Retreine notebooks/02_treino_fusor.ipynb com o contrato "
+                "atual e substitua o artefato. Ver docs/treinamento.md."
+            )
         return fusor
