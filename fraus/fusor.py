@@ -1,4 +1,5 @@
-"""Fusor das oito familias de sinal.
+"""Fusor das sete familias de sinal que entram no vetor (de oito no sistema --
+a ironia continua existindo, so nao pontua mais; ver `NOMES_FEATURES`).
 
 LogisticRegression com padronizacao: interpretavel de proposito -- o trabalho
 precisa defender POR QUE um atendimento recebeu a nota, e coeficiente de
@@ -20,12 +21,11 @@ from fraus.sinais.emocao import features_emocao
 from fraus.sinais.emoji import features_emoji
 from fraus.sinais.estilo import features_estilo
 from fraus.sinais.incongruencia import features_incongruencia
-from fraus.sinais.ironia import features_ironia
 from fraus.sinais.lexico import features_lexico
 from fraus.sinais.tempo import features_tempo
 from fraus.sinais.texto import features_texto
 
-# Ordem canonica das 40 features, agrupadas por familia de sinal. A ordem
+# Ordem canonica das 38 features, agrupadas por familia de sinal. A ordem
 # importa: `vetorizar` produz o vetor nesta sequencia e o fusor treinado espera
 # exatamente ela. Reordenar sem retreinar troca os pesos de lugar em silencio.
 #
@@ -37,6 +37,30 @@ from fraus.sinais.texto import features_texto
 # complementar o classificador de ironia, cuja transferencia de dominio
 # (IDPT 2021, tweet e noticia) nunca foi verificada em atendimento. Ver a
 # spec de 03/09/2026 e a bibliografia dela.
+#
+# Caiu de 40 para 38 em 04/09/2026: `ironia_prob_media` e `ironia_prob_max`
+# SAIRAM do vetor. Medicao sobre o proprio corpus de treino (B2W-Reviews01,
+# 500 resenhas por rotulo, semente 20260904) mostrou que a cabeca de ironia --
+# treinada no IDPT 2021, tweet e noticia -- funciona em resenha de e-commerce
+# como um detector de sentimento POSITIVO, nao de ironia:
+#
+#   resenha negativa: media P(ironia) = 0,1012  frac(P>0,5) = 0,092
+#   resenha positiva: media P(ironia) = 0,7146  frac(P>0,5) = 0,740
+#
+# O fusor de 40 features aprendeu +0,77 de peso para `ironia_prob_media` no
+# eixo satisfeito-menos-insatisfeito (o de 35 ja tinha +0,48, entao nao e
+# regressao nova) -- mais ironia empurrando para SATISFEITO, o inverso do que
+# o nome da feature promete. Consequencia: a frase canonica de ironia do
+# proprio projeto, "que atendimento maravilhoso, so esperei 3 horas", pontuava
+# 99,98 (nota 10, promotor) nesse fusor, porque as duas features que deveriam
+# derruba-la empurravam para cima. A cabeca isolada acerta essa frase (0,998);
+# quem lia ao contrario era o fusor, e so por causa do corpus.
+#
+# A cabeca de ironia CONTINUA carregada e obrigatoria (invariante 7) e
+# CONTINUA aparecendo por mensagem na dashboard, onde e honesta -- so parou de
+# PONTUAR. Se voce esta se perguntando por que existe `fraus/sinais/ironia.py`
+# mas nenhuma `ironia_*` aqui: e por isto. Ver `docs/treinamento.md` para a
+# medicao completa antes de reconsiderar.
 NOMES_FEATURES = [
     # texto (4)
     "texto_prob_insatisfeito_media",
@@ -70,9 +94,6 @@ NOMES_FEATURES = [
     "lexico_polaridade_media",
     "lexico_cobertura",
     "lexico_frac_negados",
-    # ironia (2)
-    "ironia_prob_media",
-    "ironia_prob_max",
     # estilo (6)
     "estilo_frac_caixa_alta",
     "estilo_pontuacao_enfatica",
@@ -120,24 +141,28 @@ def montar_features(
     conversa: Conversa,
     classificador,
     classificador_emocao,
-    classificador_ironia,
     curadoria=None,
 ) -> dict[str, float]:
-    """Junta as oito familias de sinal numa linha unica de features.
+    """Junta as SETE familias de sinal do vetor numa linha unica de features.
 
-    Os tres classificadores sao OBRIGATORIOS desde que o contrato subiu para 35:
-    emocao e ironia deixaram de ser leitura decorativa e passaram a mover a
-    nota. Aceitar `None` aqui produziria vetor incompleto, e vetor incompleto
-    vira `KeyError` la em `vetorizar` -- com a diferenca de que o erro apontaria
-    para o lugar errado.
+    Sao sete familias NO VETOR -- oito sinais existem no sistema, porque a
+    ironia continua sendo lida por mensagem (ver `Motor._ironia_de`), so nao
+    entra aqui. Ver o comentario acima de `NOMES_FEATURES` para o porque.
+
+    Os dois classificadores (texto e emocao) sao OBRIGATORIOS desde que o
+    contrato subiu para 35: emocao deixou de ser leitura decorativa e passou a
+    mover a nota. Aceitar `None` aqui produziria vetor incompleto, e vetor
+    incompleto vira `KeyError` la em `vetorizar` -- com a diferenca de que o
+    erro apontaria para o lugar errado. Note que NAO ha `classificador_ironia`
+    aqui: a cabeca de ironia continua obrigatoria para o Motor (invariante 7),
+    mas este montador de vetor nao precisa mais dela.
 
     `curadoria` e opcional e chega POR PARAMETRO, nunca por estado global: e o
     que o analista ensinou ao lexico, lido a cada requisicao. Ela alcanca TRES
-    familias -- `lexico_*`, `emoji_*` e, desde a subida para 40 features,
-    `incongruencia_*`, que le os dois lexicos por dentro e portanto herda a
-    curadoria deles -- e MAIS NENHUMA: o contrato continua de 40 chaves
-    (invariante 9), e o que ela muda e o VALOR dessas familias, jamais o
-    conjunto de features.
+    familias -- `lexico_*`, `emoji_*` e `incongruencia_*`, que le os dois
+    lexicos por dentro e portanto herda a curadoria deles -- e MAIS NENHUMA: o
+    contrato continua de 38 chaves (invariante 9), e o que ela muda e o VALOR
+    dessas familias, jamais o conjunto de features.
     """
     return {
         **features_texto(conversa, classificador),
@@ -145,7 +170,6 @@ def montar_features(
         **features_tempo(conversa),
         **features_emocao(conversa, classificador_emocao),
         **features_lexico(conversa, curadoria),
-        **features_ironia(conversa, classificador_ironia),
         **features_estilo(conversa),
         **features_incongruencia(conversa, curadoria),
     }

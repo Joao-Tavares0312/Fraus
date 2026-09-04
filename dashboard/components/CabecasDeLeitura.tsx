@@ -13,12 +13,17 @@ import { formatarNumero } from "@/lib/formato";
  * que envelhece e sempre a que ninguem olha, ate alguem citar dela um numero
  * sem a ressalva que a outra tela ja tinha.
  *
- * Desde 21/08/2026 emocao e ironia TAMBEM pontuam: `emocao_*` e `ironia_*`
- * entraram nas 35 features do fusor (agregadas por conversa, nao por frase).
+ * Desde 21/08/2026 emocao TAMBEM pontua: `emocao_*` entrou nas features do
+ * fusor (agregada por conversa, nao por frase). A ironia chegou a pontuar do
+ * mesmo jeito, mas SAIU do vetor em 04/09/2026 -- medida no corpus de treino,
+ * a cabeca (treinada em tweet e noticia) vira detector de sentimento positivo
+ * em resenha de atendimento, nao detector de ironia. Ela continua carregada e
+ * exibida aqui, como leitura por frase, so que sem pesar na nota.
  * O numero exibido AQUI e a leitura desta frase, nao a media que alimenta o
  * modelo -- por isso a separacao visual continua existindo: encostar
  * "ironia 99%" na barra de satisfacao convidaria a ler uma frase como causa
- * direta da nota, quando quem pesa e a media da conversa inteira.
+ * direta da nota, quando quem pesa (so no caso da emocao) e a media da
+ * conversa inteira.
  */
 export function CabecasDeLeitura({
   emocao,
@@ -54,9 +59,10 @@ export function CabecasDeLeitura({
           <span className="uppercase tracking-wide opacity-70">
             leitura por frase
           </span>{" "}
-          — a média destes dois sinais por conversa entra nas 35 features do
-          fusor desde 21/08/2026, mas o número aqui é desta frase, não a média
-          que pesa na nota.
+          — a média da emoção por conversa entra nas features do fusor desde
+          21/08/2026, mas o número aqui é desta frase, não a média que pesa na
+          nota. A ironia é só leitura: desde 04/09/2026 ela não entra mais no
+          fusor.
         </p>
       ) : null}
 

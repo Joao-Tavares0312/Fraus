@@ -48,8 +48,11 @@ def modelo(ctx: Contexto = Depends(obter_contexto)) -> dict:
         "classes": ["insatisfeito", "neutro", "satisfeito"],
         # As tres cabecas, cada uma com a metrica que ela de fato mediu e a
         # limitacao que essa metrica esconde. `pontua` separa quem decide a
-        # nota de quem so descreve -- desde o contrato de 35 features
-        # (21/08/2026) as tres entram no fusor, entao as tres marcam True.
+        # nota de quem so descreve. Entre 21/08/2026 e 03/09/2026 as tres
+        # entravam no fusor e marcavam True. Em 04/09/2026 a ironia SAIU do
+        # vetor (ver `fraus/fusor.py`, comentario de `NOMES_FEATURES`): ela
+        # continua carregada e lida por mensagem, mas nao decide mais a nota --
+        # e exatamente o caso que este campo existe para distinguir.
         "cabecas": [
             {
                 "nome": "satisfacao",
@@ -67,7 +70,7 @@ def modelo(ctx: Contexto = Depends(obter_contexto)) -> dict:
                 "nome": "ironia",
                 "classes": ["nao-ironico", "ironico"],
                 "metricas": metricas_de(CAMINHO_METRICAS_IRONIA),
-                "pontua": True,
+                "pontua": False,
             },
         ],
         "faixas_nps": {

@@ -7,13 +7,22 @@ import { cn } from "@/lib/utils";
  *
  * A metafora do produto encaixa direto: o sinal de texto e de emoji sao o que
  * foi DITO (ambar, dois pesos da mesma familia), e o de tempo e o `--tempo`.
- * Emocao, lexico, ironia e estilo entraram no vetor em 21/08/2026 e ganharam
- * cor propria (nenhuma reciclada) para nao se misturarem visualmente com as
- * tres famílias antigas. "outros" e o balde explicito de prefixo
- * desconhecido -- nunca deve aparecer com fusor treinado sobre
- * `NOMES_FEATURES`, mas existe para nao herdar a cor de uma familia real se o
- * contrato do backend mudar de novo. Nenhum deles e lime -- a marca nao entra
- * em dado.
+ * Emocao, lexico e estilo entraram no vetor em 21/08/2026 e ganharam cor
+ * propria (nenhuma reciclada) para nao se misturarem visualmente com as tres
+ * famílias antigas. "outros" e o balde explicito de prefixo desconhecido --
+ * nunca deve aparecer com fusor treinado sobre `NOMES_FEATURES`, mas existe
+ * para nao herdar a cor de uma familia real se o contrato do backend mudar de
+ * novo. Nenhum deles e lime -- a marca nao entra em dado.
+ *
+ * A ironia SAIU do vetor em 04/09/2026 (medida no corpus de treino, a cabeca
+ * funciona como detector de sentimento positivo, nao de ironia -- ver
+ * docs/handoff.md). A entrada abaixo fica morta para dado real: nenhuma
+ * feature `ironia_*` sai mais de `NOMES_FEATURES`, entao `feature.sinal`
+ * nunca chega como "ironia" vindo do backend. Mantida porque `SinalDaFeature`,
+ * em `lib/derivacoes.ts`, ainda declara "ironia" como valor valido do tipo
+ * (o mapa de prefixo->familia e compartilhado com outras leituras que
+ * precisam da cabeca por mensagem) -- apagar so aqui trocaria um lookup
+ * tipado por um `undefined` silencioso se algum caller passar esse sinal.
  */
 const COR_DO_SINAL: Record<string, string> = {
   texto: "var(--dito)",
@@ -21,7 +30,7 @@ const COR_DO_SINAL: Record<string, string> = {
   tempo: "var(--tempo)",
   emocao: "var(--emocao)",
   lexico: "var(--lexico)",
-  ironia: "var(--ironia)",
+  ironia: "var(--ironia)", // morta para dado real -- ver nota acima
   estilo: "var(--estilo)",
   outros: "var(--outros-sinal)",
 };
@@ -32,7 +41,7 @@ const TEXTO_DO_SINAL: Record<string, string> = {
   tempo: "text-tempo-texto",
   emocao: "text-emocao-texto",
   lexico: "text-lexico-texto",
-  ironia: "text-ironia-texto",
+  ironia: "text-ironia-texto", // morta para dado real -- ver nota em COR_DO_SINAL
   estilo: "text-estilo-texto",
   outros: "text-outros-sinal-texto",
 };
@@ -42,8 +51,10 @@ const TEXTO_DO_SINAL: Record<string, string> = {
  * distincao que o produto nao pode errar:
  *
  *   `modo="global"`      -> `importancias`: peso do MODELO, sempre positivo,
- *                           colorido pela familia de sinal (as sete: texto,
- *                           emoji, tempo, emocao, lexico, ironia, estilo).
+ *                           colorido pela familia de sinal (as sete do vetor:
+ *                           texto, emoji, tempo, emocao, lexico, estilo,
+ *                           incongruencia -- a ironia NAO esta entre elas
+ *                           desde 04/09/2026, ver nota em COR_DO_SINAL).
  *   `modo="divergente"`  -> `contribuicoes`: o que pesou NAQUELE atendimento,
  *                           COM SINAL, saindo de um eixo central — positivo
  *                           para a direita (empurrou a nota para cima),

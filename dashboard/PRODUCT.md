@@ -29,12 +29,15 @@ precisão o que nele é medido e o que é estimado.
 
 ## Positioning
 
-Fusão de **40 features, oito famílias de sinal** — texto (BERTimbau
-fine-tunado), emoji (Emoji Sentiment Ranking, com a posição relativa na
-mensagem como feature), tempo (latência como feature aprendida, não
+Fusão de **38 features, sete famílias no vetor** (oito famílias de sinal no
+sistema — a ironia continua lida por mensagem, só não pontua mais) — texto
+(BERTimbau fine-tunado), emoji (Emoji Sentiment Ranking, com a posição relativa
+na mensagem como feature), tempo (latência como feature aprendida, não
 penalidade linear), emoção (sete classes + desprezo derivado), léxico
-(SentiLex-PT02, com negação), ironia (cabeça binária), estilo (caixa alta,
-pontuação, alongamento, palavrão e censura) e incongruência (polaridade
+(SentiLex-PT02, com negação), ironia (cabeça binária, exibida por mensagem mas
+fora do vetor desde 04/09/2026 — vazamento de corpus medido, ver o README),
+estilo (caixa alta, pontuação, alongamento, palavrão e censura) e incongruência
+(polaridade
 emoji×texto, marcador de contraste, hipérbole e aspas irônicas) — sem LLM
 em runtime.
 

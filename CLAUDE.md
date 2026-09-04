@@ -22,15 +22,21 @@ CSV / Discord / WhatsApp
  │texto    │emoji    │tempo    │emoção   │léxico   │ironia   │estilo   │incongru-│
  │BERTimbau│lexicon  │latência │7 clas-  │SentiLex │cabeça   │caixa    │ência    │
  │por      │+ posi-  │escala-  │ses +    │-PT02 +  │binária  │alta +   │emoji×   │
- │mensagem │ção      │ção      │desprezo │negação  │         │palavrão │texto    │
- └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴────┬────┘
-            ↓  40 features
-      Fusor (LogisticRegression + StandardScaler)
+ │mensagem │ção      │ção      │desprezo │negação  │(*)      │palavrão │texto    │
+ └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴─────────┴────┬────┴────┬────┘
+            ↓  38 features                                     (*) por mensagem,
+      Fusor (LogisticRegression + StandardScaler)                   direto p/ dashboard
             ↓  score 0–100
    nota 0–10 → categoria NPS → indicadores agregados
             ↓
       FastAPI  →  dashboard Next.js
 ```
+
+(*) A cabeça de ironia continua carregada, obrigatória e lida por mensagem,
+mas desde 04/09/2026 **não entra no vetor do Fusor** — medida no próprio
+corpus de treino, ela funciona como detector de sentimento positivo, não de
+ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
+`docs/treinamento.md`).
 
 ## Mapa de arquivos
 
@@ -97,11 +103,15 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
 8. **A ordem das classes é 0 insatisfeito, 1 neutro, 2 satisfeito** — no notebook,
    no sinal de texto, no fusor e nos indicadores. Inverter não gera erro: faz o
    sistema pontuar ao contrário em silêncio.
-9. **As 35 chaves de feature** produzidas pelos sete sinais batem exatamente com
-   `NOMES_FEATURES`. `vetorizar` levanta `KeyError` em falta — nunca zero
-   silencioso. Emoção, léxico, ironia e estilo entraram no vetor em 21/08/2026:
-   `montar_features` agora exige três classificadores, e a API não sobe sem os
-   três modelos treinados.
+9. **As 38 chaves de feature** produzidas pelas SETE famílias do vetor batem
+   exatamente com `NOMES_FEATURES`. `vetorizar` levanta `KeyError` em falta —
+   nunca zero silencioso. Emoção, léxico, ironia e estilo entraram no vetor em
+   21/08/2026; a família `incongruencia_*` entrou em 03/09/2026; a ironia SAIU
+   de novo em 04/09/2026 (`ironia_prob_media`/`ironia_prob_max` medem sentimento
+   positivo, não ironia, no corpus de treino — ver `docs/treinamento.md`).
+   `montar_features` exige DOIS classificadores (texto, emoção); o `Motor`
+   continua exigindo os TRÊS (a ironia entra na leitura por mensagem, não no
+   vetor), e a API não sobe sem os três modelos treinados.
 10. **Corpus de treino não pode entregar o rótulo.** Faixa de latência disjunta
     por classe fez o primeiro fusor marcar 99,3% lendo só o relógio, com o
     BERTimbau apagado. Distribuição por rótulo se sobrepõe; feature constante no

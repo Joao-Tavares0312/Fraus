@@ -269,14 +269,38 @@ Passos, no Colab:
    se as features que lideram forem as de conteudo (texto, emoji), o modelo
    aprendeu; se forem as circunstanciais, procure o vazamento.
 4. Conferir os coeficientes das cinco features novas em `Fusor.importancias()`
-   / `Fusor.eixo_global()`. Espere peso proximo de zero em
-   `incongruencia_marcador_contraste` e `incongruencia_aspas_ironicas`: o
-   simulador nao produz marcador de contraste entre polaridades opostas nem
-   aspas ironicas, entao as duas ficam constantes no corpus de treino e
-   feature constante nasce com peso zero — limitacao declarada, nao defeito.
-   Elas continuam sendo calculadas e valem em dado real; so nao tem o que
-   aprender no sintetico. `incongruencia_polaridade` tem sinal nos tres
-   rotulos e deve aparecer com peso real. `incongruencia_hiperbole` melhorou
+   / `Fusor.eixo_global()`.
+
+   **CORRECAO DE 04/09/2026, e a licao vale mais que o numero:** este passo
+   dizia para esperar peso proximo de zero em
+   `incongruencia_marcador_contraste` e `incongruencia_aspas_ironicas`,
+   porque as duas sao constantes em zero no corpus do SIMULADOR. A previsao
+   estava errada, e o erro foi confundir dois corpora diferentes. O simulador
+   fornece a ESTRUTURA temporal (latencia, turnos, escalacao) a partir de seis
+   frases por rotulo; o TEXTO do treino e o B2W-Reviews01, resenha real de
+   e-commerce, onde marcador de contraste e aspas ironicas ocorrem
+   normalmente. Medir uma feature de texto no gerador de estrutura e olhar
+   para o corpus errado.
+
+   Os pesos reais do primeiro retreino de 40 features, no eixo
+   satisfeito-menos-insatisfeito:
+
+   | feature | peso |
+   |---|---|
+   | `incongruencia_emoji_texto` | −0,95 |
+   | `incongruencia_hiperbole` | −0,65 |
+   | `incongruencia_marcador_contraste` | −0,38 |
+   | `incongruencia_polaridade` | −0,37 |
+   | `incongruencia_aspas_ironicas` | −0,15 |
+
+   As cinco sairam NEGATIVAS, que e a direcao que a literatura preve: mais
+   incongruencia empurra a nota para insatisfeito. A hiperbole em −0,65 e a
+   evidencia de que o cruzamento do corpus (secao acima) funcionou — sem ele
+   ela teria aprendido o sinal contrario.
+
+   O que continua valendo da versao anterior deste passo: as guardas de
+   vazamento medem o SIMULADOR e sao sobre a estrutura, nao sobre o texto do
+   B2W. `incongruencia_hiperbole` melhorou
    mas nao chegou aos tres: depois da correcao ela dispara em DOIS dos tres
    rotulos — `insatisfeito 34/60` e `satisfeito 39/60` (numeros medidos
    acima, na secao do retreino) —, e `neutro` continua em `0/60`. Isso e
@@ -293,16 +317,60 @@ Passos, no Colab:
 5. Copiar `fusor.joblib` e `importancias.json` para `modelos/` na raiz do
    repositorio local e rodar `uv run pytest -q` inteiro.
 
+### A ironia sai do vetor (04/09/2026)
+
+Medicao sobre o proprio corpus de treino do fusor (B2W-Reviews01, amostra
+equilibrada de 500 resenhas por rotulo, semente 20260904), rodando so a cabeca
+de ironia:
+
+```
+resenha NEGATIVA (nao): media P(ironia) = 0,1012  mediana 0,0013  frac(P>0,5) = 0,092
+resenha POSITIVA (sim): media P(ironia) = 0,7146  mediana 0,9687  frac(P>0,5) = 0,740
+                                                        diferenca (sim-nao) = +0,6134
+```
+
+A cabeca, treinada no IDPT 2021 (tweet e noticia), aplicada a resenha de
+e-commerce funciona na pratica como **detector de sentimento positivo**: marca
+74% das resenhas satisfeitas como ironicas contra 9% das insatisfeitas. O
+fusor de 40 features aprendeu **+0,77** de peso para `ironia_prob_media` no
+eixo satisfeito-menos-insatisfeito — mais ironia empurrando para SATISFEITO,
+o inverso do que o nome da feature promete. O fusor de 35 ja tinha o mesmo
+sinal (+0,48), entao nao e regressao desta rodada: e o mesmo vazamento medido
+de novo, agora com numero.
+
+Consequencia observavel: a frase canonica de ironia deste projeto — "que
+atendimento maravilhoso, so esperei 3 horas" — pontuava **99,98 / nota 10 /
+promotor** no fusor de 40, porque as duas features de ironia empurravam para
+cima em vez de para baixo. (A cabeca isolada acerta essa frase: 0,998 nela,
+0,002 num elogio sincero. Quem lia ao contrario era o fusor, e so por causa
+do corpus.)
+
+**Decisao: `ironia_prob_media` e `ironia_prob_max` saem de `NOMES_FEATURES`.**
+Feature que mede outra coisa que nao o nome dela e pior que feature ausente —
+ela nao adiciona sinal, duplica `texto_prob_satisfeito_*` com ruido, e inverte
+o caso que o projeto usa como exemplo de manual. A cabeca de ironia CONTINUA
+carregada e obrigatoria (invariante 7) e continua sendo lida por mensagem e
+exibida na dashboard, onde e honesta e ja vem com a ressalva de confiabilidade
+que a tela mostra — o que muda e que ela para de pontuar. O retreino do fusor
+com 38 features fica pendente (proximo passo, dono do projeto); ate la
+`modelos/fusor.joblib` continua sendo o artefato de 40, e a API volta a subir
+e falhar na primeira pontuacao (mesma situacao descrita na secao anterior,
+so que pelo motivo inverso — features A MAIS no artefato do que no contrato).
+
 ## Contrato de features
 
 `NOMES_FEATURES`, em `fraus/fusor.py`, e a lista canonica. `vetorizar` levanta `KeyError` se faltar chave — nunca zero silencioso (invariante 9).
 
-Hoje sao **40 features**, de oito familias. O contrato subiu de 16 para 35 em
-21/08/2026, quando os notebooks 03 e 04 passaram a existir e a condicao que
-justificava a espera acabou, e de 35 para 40 em 03/09/2026, quando a familia
-`incongruencia_*` entrou (ver [Retreino do fusor apos as features de
+Hoje sao **38 features**, de SETE familias no vetor (OITO sinais existem no
+sistema — a ironia continua existindo e sendo lida por mensagem, so nao entra
+mais aqui, ver a secao acima). O contrato subiu de 16 para 35 em 21/08/2026,
+quando os notebooks 03 e 04 passaram a existir e a condicao que justificava a
+espera acabou; de 35 para 40 em 03/09/2026, quando a familia `incongruencia_*`
+entrou (ver [Retreino do fusor apos as features de
 incongruencia](#retreino-do-fusor-apos-as-features-de-incongruencia-03092026)
-acima).
+acima); e caiu de 40 para 38 em 04/09/2026, quando `ironia_prob_media` e
+`ironia_prob_max` sairam (ver [A ironia sai do
+vetor](#a-ironia-sai-do-vetor-04092026) acima).
 
 | sinal | modulo | features | no vetor? |
 |---|---|---|---|
@@ -311,12 +379,14 @@ acima).
 | tempo | `fraus/sinais/tempo.py` | 7 | sim |
 | emocao | `fraus/sinais/emocao.py` | 8 | sim |
 | lexico | `fraus/sinais/lexico.py` | 3 | sim |
-| ironia | `fraus/sinais/ironia.py` | 2 | sim |
+| ironia | `fraus/sinais/ironia.py` | 2 | **nao** (lida por mensagem, nao pontua) |
 | estilo | `fraus/sinais/estilo.py` | 6 | sim |
 | incongruencia | `fraus/sinais/incongruencia.py` | 5 | sim |
 
-**Consequencia:** `montar_features` exige TRES classificadores, e a API nao sobe
-sem os tres artefatos em `modelos/`. E o comportamento correto da invariante 7.
+**Consequencia:** `montar_features` exige DOIS classificadores (texto e
+emocao); `Motor` continua exigindo os TRES (a ironia entra na atribuicao por
+mensagem, nao no vetor), e a API nao sobe sem os tres artefatos em `modelos/`.
+E o comportamento correto da invariante 7.
 
 ## Notebook 03 — classificador de emocao
 

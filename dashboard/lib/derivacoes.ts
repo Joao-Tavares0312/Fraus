@@ -622,6 +622,7 @@ export type SinalDaFeature =
   | "lexico"
   | "ironia"
   | "estilo"
+  | "incongruencia"
   | "outros";
 
 // Tempo NAO tem prefixo unico -- `latencia_`, `duracao_`, `qtd_`, `escalou` e
@@ -635,6 +636,7 @@ const SINAL_POR_PREFIXO: [string, SinalDaFeature][] = [
   ["lexico_", "lexico"],
   ["ironia_", "ironia"],
   ["estilo_", "estilo"],
+  ["incongruencia_", "incongruencia"],
   ["latencia_", "tempo"],
   ["duracao_", "tempo"],
   ["qtd_", "tempo"],
@@ -665,6 +667,7 @@ export const ROTULO_SINAL: Record<SinalDaFeature, string> = {
   lexico: "Léxico",
   ironia: "Ironia",
   estilo: "Estilo",
+  incongruencia: "Incongruência",
   outros: "Outros",
 };
 
@@ -677,6 +680,7 @@ export const ORDEM_SINAIS: SinalDaFeature[] = [
   "lexico",
   "ironia",
   "estilo",
+  "incongruencia",
   "outros",
 ];
 
@@ -869,6 +873,11 @@ export const ROTULO_FEATURE: Record<string, string> = {
   estilo_palavrao_intensidade: "Intensidade de palavrão",
   estilo_palavrao_dirigido: "Palavrão dirigido a pessoa",
   estilo_frac_censurado: "Fração censurada",
+  incongruencia_polaridade: "Incongruência de polaridade",
+  incongruencia_emoji_texto: "Incongruência emoji x texto",
+  incongruencia_marcador_contraste: "Marcador de contraste",
+  incongruencia_hiperbole: "Hipérbole",
+  incongruencia_aspas_ironicas: "Aspas irônicas",
 };
 
 export function rotuloDaFeature(nome: string): string {

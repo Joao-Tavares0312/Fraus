@@ -172,13 +172,17 @@ def criar_app_padrao() -> FastAPI:
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)  # propaga ModeloAusenteError
     fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
 
-    # Emocao e ironia entram no vetor desde a subida do contrato para 35
-    # features (21/08/2026): sao tao obrigatorias quanto o classificador de
-    # texto. Ausencia de qualquer uma delas propaga ModeloAusenteError, do
-    # mesmo jeito que ClassificadorTexto ja faz -- servir predicao com vetor
-    # incompleto e pior que estar fora do ar (invariante 7). O contrato subiu
-    # de novo, para 40, em 03/09/2026 com a familia `incongruencia_*` -- essa
-    # nao exige modelo, entao nao muda nada aqui.
+    # Emocao entra no vetor desde a subida do contrato para 35 features
+    # (21/08/2026), e e tao obrigatoria quanto o classificador de texto:
+    # ausencia propaga ModeloAusenteError, do mesmo jeito que ClassificadorTexto
+    # ja faz -- servir predicao com vetor incompleto e pior que estar fora do ar
+    # (invariante 7). O contrato subiu de novo, para 38, em 04/09/2026, quando a
+    # ironia SAIU do vetor (medida no corpus de treino, ela funciona como
+    # detector de sentimento positivo, nao de ironia -- ver docs/handoff.md).
+    # A cabeca de ironia continua obrigatoria mesmo assim: ela nao alimenta mais
+    # o fusor, mas alimenta a leitura por mensagem (`prob_ironia` na API), que a
+    # tela de atendimento e a de analise mostram. Faltar o modelo tira essa
+    # leitura do ar, e o mesmo motivo do invariante 7 vale para ela.
     emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO)
     ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA)
 

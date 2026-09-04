@@ -270,7 +270,8 @@ export default async function PaginaDoAtendimento(
               />
             ) : (
               <PainelContribuicoes
-                atribuicao={atribuicao}
+                contribuicoes={atribuicao.contribuicoes}
+                sinaisForaDoScore={atribuicao.sinais_fora_do_score}
                 totalDeFeatures={Object.keys(atribuicao.importancias).length}
               />
             )}

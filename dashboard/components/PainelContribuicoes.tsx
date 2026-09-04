@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import type { Atribuicao } from "@/lib/api";
 import { ordenarPorMagnitude } from "@/lib/derivacoes";
 import { formatarNumero } from "@/lib/formato";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,15 +20,24 @@ import { EstadoVazio } from "./EstadoVazio";
  *     importancia cresce da esquerda (e mora em outra TELA, a de Modelo);
  *   - na cor: aqui a escala e a divergente (promotor/detrator), la e a dos
  *     tres tipos de sinal.
+ *
+ * Recebe os tres campos soltos, nao o objeto inteiro de uma rota -- `Atribuicao`
+ * (tela de atendimento) e `ConversaAnalisada` (tela `/analisar`) tem formatos
+ * diferentes por fora, mas os tres campos que este painel usa sao identicos nos
+ * dois. Acoplar ao tipo de uma rota so far duplicaria o componente na outra tela,
+ * que e exatamente o erro que o `sinais_fora_do_score` de `/analisar` sofreu ate
+ * aqui (existe no tipo desde a mudanca de 04/09/2026, nunca foi renderizado).
  */
 export function PainelContribuicoes({
-  atribuicao,
+  contribuicoes,
+  sinaisForaDoScore,
   totalDeFeatures,
 }: {
-  atribuicao: Atribuicao;
+  contribuicoes: Record<string, number> | null;
+  sinaisForaDoScore: string[];
   totalDeFeatures: number;
 }) {
-  if (atribuicao.contribuicoes === null) {
+  if (contribuicoes === null) {
     return (
       <EstadoVazio
         className="m-5"
@@ -39,9 +47,10 @@ export function PainelContribuicoes({
     );
   }
 
-  const features = ordenarPorMagnitude(atribuicao.contribuicoes);
+  const features = ordenarPorMagnitude(contribuicoes);
   const paraCima = features.filter((f) => f.valor > 0).length;
   const paraBaixo = features.filter((f) => f.valor < 0).length;
+  const foraDoScore = sinaisForaDoScore;
 
   return (
     <div className="flex flex-col gap-4 px-5 py-4">
@@ -67,6 +76,23 @@ export function PainelContribuicoes({
           .
         </AlertDescription>
       </Alert>
+
+      {foraDoScore.length > 0 && (
+        <Alert className="rounded-md">
+          <AlertTitle className="text-xs">
+            {foraDoScore.length === 1
+              ? "Um sinal foi lido, mas não pontua."
+              : `${foraDoScore.length} sinais foram lidos, mas não pontuam.`}
+          </AlertTitle>
+          <AlertDescription className="text-xs leading-relaxed">
+            <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">
+              {foraDoScore.join(", ")}
+            </code>{" "}
+            aparece por mensagem nesta tela, mas não entra na lista de
+            contribuições abaixo nem move a nota. É leitura, não decisão.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <p className="text-xs text-muted-foreground">
         <span className="num text-promotor-texto">{paraCima}</span> feature(s)
