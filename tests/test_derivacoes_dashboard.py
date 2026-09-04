@@ -110,3 +110,30 @@ def test_a_vitrine_anuncia_o_numero_real_de_features():
         f"{len(NOMES_FEATURES)}. Atualize dashboard/app/page.tsx -- e as outras "
         "mencoes do numero em lp/Contador.tsx e lp/Constelacao.tsx junto."
     )
+
+
+def test_sem_sinal_e_notacao_e_nao_so_texto():
+    """A §1.1 do DESIGN.md promete cabeca vazada para o sem sinal.
+
+    Guarda que atravessa a fronteira de linguagem, no mesmo molde de
+    `test_a_vitrine_anuncia_o_numero_real_de_features`: o pytest le o TSX
+    como texto. O que ela impede e a regressao silenciosa de alguem trocar a
+    notacao de volta por uma string, que nenhum gate de front pegaria.
+    """
+    componentes = RAIZ / "dashboard" / "components"
+    assert (componentes / "CabecaVazada.tsx").is_file()
+
+    for arquivo in ("TabelaConversas.tsx", "DistribuicaoScores.tsx"):
+        fonte = (componentes / arquivo).read_text(encoding="utf-8")
+        assert "CabecaVazada" in fonte, f"{arquivo} ainda imprime sem sinal cru"
+
+
+def test_a_cabeca_vazada_carrega_rotulo_textual():
+    """Categoria nunca e comunicada so por cor -- nem so por forma.
+
+    Um anel oco sem rotulo obrigaria o leitor a saber a convencao, e o
+    PRODUCT.md exige o rotulo textual junto.
+    """
+    caminho = RAIZ / "dashboard" / "components" / "CabecaVazada.tsx"
+    fonte = caminho.read_text(encoding="utf-8")
+    assert "sem sinal" in fonte

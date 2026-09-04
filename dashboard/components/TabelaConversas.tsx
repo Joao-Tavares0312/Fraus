@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
 import { EstadoVazio } from "./EstadoVazio";
+import { CabecaVazada } from "./CabecaVazada";
 import { ausenciaNoFim } from "@/lib/ordenacao";
 
 export type LinhaConversa = {
@@ -261,7 +262,7 @@ export function TabelaConversas({
             const nota = contexto.getValue();
             const linha = contexto.row.original;
             return nota === null ? (
-              <span className="text-muted-foreground">{ROTULO_SEM_SINAL}</span>
+              <CabecaVazada rotulo={ROTULO_SEM_SINAL} />
             ) : (
               <div className="flex min-w-0 flex-col items-start gap-1">
                 <span className="num estimado text-foreground">{nota}</span>
