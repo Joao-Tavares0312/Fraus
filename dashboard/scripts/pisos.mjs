@@ -95,6 +95,40 @@ function claridadeParaLuminancia(alvo, C, H) {
 
 const css = readFileSync(join(RAIZ, "app", "globals.css"), "utf8");
 
+/**
+ * O PIOR CASO DA CENA DA VITRINE VIROU TRAJETORIA, NAO PONTO (04/09/2026).
+ *
+ * A cena (grade, planeta, estrelas) passou a acompanhar a rolagem em
+ * `lib/cena.ts`: cada camada varia entre 0 e um FATOR MAXIMO ao longo do
+ * scroll, em vez de ficar fixa na opacidade do tema. O piso deste script
+ * precisa medir o estado MAIS CLARO que a cena atinge em QUALQUER ponto da
+ * rolagem -- que e `fator maximo x token do tema`, por tema (o fator nao sabe
+ * de tema, o token e quem carrega a intensidade, inclusive o zero deliberado
+ * de `--estrelas-op` na chuva).
+ *
+ * ESTE ARQUIVO E `lib/cena.ts` NAO SAO ARQUIVOS TYPESCRIPT ES MODULES QUE UM
+ * SCRIPT `.mjs` POSSA IMPORTAR SEM UM PASSO DE TRANSPILACAO -- e este projeto
+ * nao tem dependencia nova para isso. A saida e a mesma do resto do arquivo
+ * (ver `lerCores`/`lerNumeros` acima): ler o texto do `.ts` e extrair por
+ * expressao regular. Ler so o fator, ou so o token, mede uma superficie que
+ * nao existe -- o modo de falha que a §8.6 do DESIGN.md registra ter
+ * acontecido duas vezes; por isso o fator vem DAQUI, do arquivo fonte, e
+ * nunca de um numero copiado a mao.
+ */
+const cenaTs = readFileSync(join(RAIZ, "lib", "cena.ts"), "utf8");
+
+function lerFatorMaximo(camada) {
+  const re = new RegExp(`${camada}:\\s*([\\d.]+)`, "i");
+  const bloco = recortarBloco(cenaTs, "FATOR_MAXIMO_POR_CAMADA") ?? "";
+  const m = bloco.match(re);
+  if (!m) throw new Error(`fator maximo de "${camada}" nao encontrado em lib/cena.ts`);
+  return Number(m[1]);
+}
+
+const FATOR_GRADE = lerFatorMaximo("grade");
+const FATOR_PLANETA = lerFatorMaximo("planeta");
+const FATOR_ESTRELAS = lerFatorMaximo("estrelas");
+
 /** Recorta o corpo de um bloco contando chaves (ha `@supports` aninhado). */
 function recortarBloco(fonte, seletor) {
   const achado = seletor instanceof RegExp ? fonte.match(seletor) : null;
@@ -288,16 +322,20 @@ for (const tema of temas) {
       // mascara dela cobre a tela toda menos o rodape -- ela se sobrepoe a
       // qualquer uma das duas alternativas abaixo. Somar sempre e a leitura
       // pessimista, e com uma contribuicao desta ordem ela nao custa nada.
-      ["estrelas", COR_ESTRELAS, op("--estrelas-op") * COBERTURA_ESTRELAS],
+      [
+        "estrelas",
+        COR_ESTRELAS,
+        op("--estrelas-op") * FATOR_ESTRELAS * COBERTURA_ESTRELAS,
+      ],
       ["mancha da marca", cor("--atelie-marca"), op("--atelie-op-marca")],
       ["mancha fria", cor("--atelie-fria"), op("--atelie-op-fria")],
       // O sol listrado herdou o posto da mancha quente (ver Atelier.tsx). A
       // cor medida e a ALTA do gradiente: e a mais clara das duas, e piso
       // otimista e pior que piso nenhum.
-      ["sol listrado", cor("--sol-cor-alta"), op("--sol-op")],
+      ["sol listrado", cor("--sol-cor-alta"), op("--sol-op") * FATOR_PLANETA],
       ["marca impressa", cor("--marca-cor"), op("--marca-op")],
       ["reflexo no asfalto", cor("--atelie-fria"), op("--atelie-asfalto")],
-      ["grade a laser", cor("--grade-cor"), op("--grade-op")],
+      ["grade a laser", cor("--grade-cor"), op("--grade-op") * FATOR_GRADE],
       ["chuva", COR_CHUVA, op("--atelie-chuva")],
     ];
     const opcionais = new Set(["papel pautado", "marca impressa", "grade a laser"]);
