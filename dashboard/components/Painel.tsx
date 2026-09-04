@@ -50,6 +50,19 @@ export function Painel({
    * regua nao entra: seria notacao decorativa, e a §1.1 proibe.
    */
   regua,
+  /**
+   * Falha isolada (DESIGN.md §5): o sistema que nao carrega mostra o proprio
+   * erro NO LUGAR DELE, com o peso dele, e os vizinhos continuam de pe. Num
+   * dominante isso importa mais: um aviso pequeno numa caixa grande le como
+   * se nada tivesse acontecido.
+   */
+  erro,
+  /**
+   * Estado vazio nomeia O QUE FALTA e qual etapa ou endpoint resolveria.
+   * Nunca preencher com numero simulado -- numa ferramenta batizada com o nome
+   * do daemon do engano, dado plausivel inventado seria a pior falha possivel.
+   */
+  vazio,
 }: {
   titulo: string;
   /** Metodo e ressalvas. Vai para o aparato, nunca acima do dado. */
@@ -63,6 +76,10 @@ export function Painel({
   children: ReactNode;
   /** Metade dito, metade medido. So quando o dado de fato se divide assim. */
   regua?: { dito: ReactNode; medido: ReactNode };
+  /** Substitui regua/children pelo proprio erro, no lugar do conteudo. */
+  erro?: ReactNode;
+  /** Substitui regua/children pelo estado vazio, no lugar do conteudo. */
+  vazio?: ReactNode;
 }) {
   const refEspecular = useEspecular<HTMLElement>();
 
@@ -108,7 +125,7 @@ export function Painel({
             semPadding ? "-mx-4 pt-3 sm:-mx-5" : "pt-4",
           )}
         >
-          {regua ? (
+          {erro ?? vazio ?? (regua ? (
             <div className="flex flex-col">
               <div className="pb-3">{regua.dito}</div>
               <div className="border-t border-linha" />
@@ -116,7 +133,7 @@ export function Painel({
             </div>
           ) : (
             children
-          )}
+          ))}
         </div>
       </motion.section>
       {/* A ressalva sobe para o aparato da tela, identificada pelo titulo do

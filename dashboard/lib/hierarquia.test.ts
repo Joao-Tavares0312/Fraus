@@ -107,6 +107,26 @@ describe("as telas declaram nivel", () => {
   });
 });
 
+describe("estados do dominante", () => {
+  it("o Painel sabe render erro e vazio no lugar do conteudo", () => {
+    const fonte = readFileSync("components/Painel.tsx", "utf8");
+    expect(fonte).toContain("erro");
+    expect(fonte).toContain("vazio");
+  });
+
+  // GUARDA DE REGRESSAO, nao teste de TDD: ela passa antes e depois da
+  // implementacao. Existe para impedir que alguem introduza o padrao depois,
+  // e nao para ficar vermelha agora. Quem implementar nao deve esperar ver
+  // esta falhar -- a que tem que falhar primeiro e a de cima.
+  it("erro e vazio nao viram string vazia nem zero", () => {
+    // Ausencia de dado nao e insatisfacao, e a invariante 2 do CLAUDE.md
+    // manda procurar `?? 0` e `|| 0` antes de commitar.
+    const fonte = readFileSync("components/Painel.tsx", "utf8");
+    expect(fonte).not.toMatch(/\?\?\s*0\b/);
+    expect(fonte).not.toMatch(/\|\|\s*0\b/);
+  });
+});
+
 describe("regua", () => {
   it("o Painel declara o parametro regua com os dois lados nomeados", () => {
     // `toContain("regua")` sozinho e vacuo: a palavra ja aparecia num
