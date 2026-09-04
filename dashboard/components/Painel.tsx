@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { entradaDeSistema } from "@/lib/movimento";
 import { useEspecular } from "@/hooks/useEspecular";
+import { classesDoNivel, type Nivel } from "@/lib/hierarquia";
 import { Aparato } from "./Aparato";
 
 /**
@@ -31,6 +32,12 @@ export function Painel({
   acessorio,
   rodape,
   semPadding,
+  /**
+   * Peso do sistema na tela. O padrao e `apoio` de proposito: painel que nao
+   * declara nivel nao pode virar dominante por omissao, senao a tela passa a
+   * ter dois -- e duas respostas principais e nenhuma.
+   */
+  nivel = "apoio",
   className,
   children,
 }: {
@@ -41,6 +48,7 @@ export function Painel({
   rodape?: ReactNode;
   /** Para tabela e grafico, que gerenciam o proprio respiro. */
   semPadding?: boolean;
+  nivel?: Nivel;
   className?: string;
   children: ReactNode;
 }) {
@@ -64,13 +72,19 @@ export function Painel({
       whileInView="presente"
       viewport={{ once: true, margin: "0px 0px -64px 0px" }}
       className={cn(
-        "vidro especular chanfro quebra-evitar min-w-0 overflow-hidden rounded-lg p-4 sm:p-5",
+        "especular chanfro quebra-evitar min-w-0 overflow-hidden rounded-lg",
+        classesDoNivel(nivel),
         className,
       )}
     >
       {/* A regua do sistema. Mais espaco acima do titulo do que abaixo. */}
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-linha pb-2">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">
+        <h2
+          className={cn(
+            "font-semibold tracking-tight text-foreground",
+            nivel === "dominante" ? "text-base" : "text-sm",
+          )}
+        >
           {titulo}
         </h2>
         {acessorio ? <div className="shrink-0">{acessorio}</div> : null}

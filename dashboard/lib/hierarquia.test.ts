@@ -1,4 +1,5 @@
 // dashboard/lib/hierarquia.test.ts
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   DOMINANTE_POR_TELA,
@@ -46,5 +47,17 @@ describe("dominanteDaTela", () => {
 
   it("devolve null para rota que nao e tela da ferramenta", () => {
     expect(dominanteDaTela("/")).toBeNull();
+  });
+});
+
+describe("Painel", () => {
+  it("consome o vocabulario em vez de digitar a superficie de novo", () => {
+    // Guarda de duplicacao: se alguem cravar `vidro-fino` no Painel, a regra
+    // passa a existir em dois lugares e diverge no dia em que um dos dois for
+    // corrigido -- que e exatamente como o Aparato nasceu (ver o cabecalho
+    // dele).
+    const fonte = readFileSync("components/Painel.tsx", "utf8");
+    expect(fonte).toContain("classesDoNivel");
+    expect(fonte).not.toMatch(/"[^"]*\bvidro(-fino)?\b[^"]*"/);
   });
 });
