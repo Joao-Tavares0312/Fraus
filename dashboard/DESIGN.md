@@ -48,6 +48,22 @@ A cabeça vazada é a peça mais importante desta lista. O princípio de produto
 Se em algum momento ler esta interface exigir saber solfejo, a regra foi
 aplicada errado. O modo é **Operate**: expressão nunca obscurece a tarefa.
 
+> **Emenda de 04/09/2026 — a cabeça vazada saiu do papel.** Esta seção prometia
+> a peça desde 13/08/2026 e a chamava de a mais importante da lista; ela levou
+> até 04/09/2026 para existir de fato, em `components/CabecaVazada.tsx`: um
+> anel oco (`rounded-full border border-muted-foreground bg-transparent`), sem
+> preenchimento, com rótulo textual obrigatório ao lado (`comRotulo`, padrão
+> `true` — a exceção documentada é quando quem chama já escreve um rótulo
+> equivalente perto, para não duplicar leitura de tela).
+>
+> O caso mais visível do vácuo era `EtiquetaCategoria`: `categoria: null`
+> desenhava um ponto **cheio cinza** no mesmo slot dos três pontos cheios
+> coloridos da escala (detrator/neutro/promotor) — exatamente "cinza dentro da
+> escala", que a §5 proíbe por nome. Corrigido: `categoria: null` agora
+> renderiza `<CabecaVazada comRotulo={false} />` (o rótulo por extenso já é
+> escrito por `EtiquetaCategoria` logo depois do anel), então o ausente deixou
+> de competir por posição com os três valores reais.
+
 ---
 
 ## 2. Composição
@@ -80,7 +96,28 @@ clave, que se lê de uma vez e não se relê a cada compasso. Eles são **rótul
 mais número tabular**, sem barra de progresso decorativa e sem cartão.
 
 **Ritmo vertical.** Densidade varia entre sistemas: um sistema denso ganha o
-direito de um respiro depois. Mais espaço acima de um título do que abaixo.
+direito de um respiro depois.
+
+> **Emenda de 04/09/2026 — a armadura deixou de ser painel, e ganhou nível.**
+> Esta seção já pedia isso ("sem cartão", "rótulo mais número tabular"), e até
+> aqui a implementação não cumpria. `Painel` ganhou a prop `nivel`
+> (`"dominante" | "apoio"`, padrão `apoio` — um painel que não declara nível
+> não pode virar dominante por omissão, senão a tela passa a ter dois
+> dominantes e nenhuma resposta principal), e o vocabulário — as duas classes
+> de espessura de vidro que cada nível usa — mora em `lib/hierarquia.ts`, pelo
+> mesmo motivo que cor mora em token: regra digitada de novo em outro lugar
+> diverge.
+>
+> O mesmo arquivo expõe `DOMINANTE_POR_TELA`, um mapa de rota para o
+> **identificador estável** do sistema que responde à pergunta que levou o
+> analista àquela tela — não o título de exibição. A distinção importa: vários
+> painéis montam o título em tempo de render, porque ele carrega período ou
+> contagem (`Atendimentos de ${rotulo}`, `${n} nós, ${m} arestas`), e nenhuma
+> string estática casaria com isso. Quem marca o dominante de fato é a própria
+> tela, com `nivel="dominante"` no `Painel`; o mapa é documentação da
+> intenção e uma referência para conferir "um por tela", não chave de busca.
+
+ Mais espaço acima de um título do que abaixo.
 
 ---
 
@@ -376,6 +413,32 @@ Regra: o dado aparece primeiro, a explicação fica a um gesto de distância e
 Os rótulos curtos — `estimativa`, `observado`, `sem sinal` — não são aparato:
 ficam colados ao número, sempre visíveis.
 
+> **Emenda de 04/09/2026 — um aparato por tela, não um por painel.** Com seis
+> painéis numa tela, "Método e ressalvas" passou a se repetir seis vezes,
+> idêntico, e repetição lê como ruído em vez de rigor. `AparatoDaTela.tsx`
+> concentra as ressalvas de todos os painéis da página num único rodapé; cada
+> painel continua produzindo a própria ressalva via `RessalvaDaTela`, só o
+> **container visual** virou um. O que a regra original defendia continua de
+> pé: **os rótulos curtos continuam fora do aparato**, colados ao número,
+> sempre visíveis — só a prosa metodológica migrou para o container único.
+>
+> **A implementação usa portal, não estado copiado.** A primeira versão deste
+> arquivo guardava o JSX da ressalva em `useState` no momento do registro —
+> e isso congelava a ressalva: um `FaixaIndicadores` que interpola
+> `indicadores.comSinal` no rodapé ficava preso ao primeiro valor lido, mesmo
+> com o número mudando na tela ao lado, o que é pior que a repetição que a
+> mudança veio eliminar. `createPortal` resolve isso na raiz: o conteúdo nunca
+> sai da árvore React do painel que o produz, só o destino no DOM é
+> emprestado — ele volta a ser filho de verdade, e re-renderiza quando o
+> painel de origem re-renderiza.
+>
+> **O aparato marca quando o sistema está em erro ou vazio.** `RessalvaDaTela`
+> aceita `estado?: "erro" | "vazio"` e imprime um rótulo curto (`não
+> carregou` / `sem dado`) ao lado do título da ressalva no rodapé. Sem essa
+> marcação, a nota metodológica leria como se tivesse se aplicado a um
+> resultado que não existe — o texto continua verdadeiro (o sistema só não
+> produziu dado desta vez), mas precisa dizer isso.
+
 ---
 
 ## 5. Estados
@@ -433,6 +496,31 @@ só, pelo mesmo motivo que a cor mora em token. `prefers-reduced-motion` é
 respeitado em duas frentes, porque uma não alcança a outra: o bloco no fim do
 `globals.css` zera transição de CSS, e o `<Movimento>` no layout raiz passa
 `reducedMotion="user"` ao Motion, que anima em JS e não obedeceria ao CSS.
+
+> **Emenda de 04/09/2026 — a coreografia de rolagem da vitrine, e por que ela
+> não é o terceiro momento.** A LP (`app/page.tsx`) ganhou uma cena que
+> responde à posição de rolagem: `lib/cena.ts` devolve, por camada do ateliê
+> (grade, planeta, campo de estrelas), um **fator** de 0 a 1 em função do
+> progresso da rolagem, e `hooks/useProgressoDaCena.ts` escreve esse fator
+> direto no nó raiz a cada quadro (sem `useState`, para não re-renderizar a
+> árvore atrás de tabela e gráfico).
+>
+> **O argumento, e é decisão do dono do projeto:** esta seção governa o modo
+> **Operate** — a ferramenta que o analista lê por horas. A LP é vitrine
+> declarada, visitada por segundos, com a atenção inteira na tela. O
+> precedente já existe nesta própria seção, na nota de 25/08/2026 sobre a
+> marca respondendo a gesto, e mais explicitamente na §8.7, que abriu a mesma
+> exceção para o campo de partículas em WebGL: "a ferramenta é lida por horas
+> e não pode ter GPU girando atrás do dado; a vitrine é visita de 40 segundos".
+> A coreografia de rolagem é a mesma exceção aplicada a uma segunda peça da
+> mesma vitrine — **a conta continua em dois na ferramenta**: o cursor de
+> leitura e a entrada dos sistemas.
+>
+> **`prefers-reduced-motion` congela, não desacelera.** Pela mesma decisão da
+> §8.7, quem pede menos movimento não recebe uma versão lenta da cena — recebe
+> a cena **parada no estado inicial** (`useProgressoDaCena` aplica o fator do
+> topo da rolagem e não escuta o evento de scroll). Cena de rolagem devagar
+> continua sendo cena de rolagem.
 
 ---
 
@@ -614,6 +702,14 @@ custaria mais do que dois tokens.
 
 ### 8.6 O preço: o vidro da chuva é mais grosso
 
+> **Nota de 04/09/2026 — os pisos "no grafite" citados nesta seção são
+> históricos.** O grafite é o tema descartado pela §8 em 01/09/2026; nenhum
+> valor de piso, espessura de vidro ou contraste medido "no grafite" existe em
+> produção. Ficam registrados pelo método que documentam — a conta que a
+> §7 exige refazer sempre que o ateliê ganha luz nova —, não como referência
+> de um tema vigente. Os pisos vigentes são os do **espaço profundo** (§8.7) e
+> da **chuva de neon**, remedidos na emenda de 04/09/2026 ao fim desta seção.
+
 Acender o ateliê levantou o piso das superfícies translúcidas, e o portão
 reprovou três pares — `--destructive` sobre vidro fino caiu para **3,53:1**.
 
@@ -756,6 +852,37 @@ uma superfície que não existe.
 > NPS —, não cromo. Afinar mais exigiria mexer na camada de dado, e isso é
 > decisão de outra ordem: fica registrado aqui como a fronteira, não como
 > pendência.
+
+> **Emenda de 04/09/2026 — o pior caso virou trajetória, e nenhum piso mudou.**
+> Até aqui esta seção media o ateliê num único ponto (pior caso geométrico
+> fixo). A §6 desta sessão deu à LP uma cena que responde à rolagem
+> (`lib/cena.ts`), e isso trocou o pior caso de um ponto por uma **trajetória**:
+> a claridade do ateliê varia ao longo da rolagem, e o piso de vidro precisa
+> valer para o ponto mais claro dessa trajetória inteira, não só do herói.
+>
+> `scripts/pisos.mjs` passou a importar `FATOR_MAXIMO_POR_CAMADA` de
+> `lib/cena.ts` e multiplicar cada fator pelo token de opacidade do tema
+> vigente (`--grade-op`, `--sol-op`, `--estrelas-op`), em vez de ler só a
+> opacidade estática do CSS — o mesmo motivo que fez `intensidadeDaCamada`
+> nascer função pura em `lib/cena.ts`: fator escondido em JSX é fator que o
+> script não lê, e o portão volta a medir uma superfície que não existe, como
+> já aconteceu duas vezes nesta mesma seção.
+>
+> **E nenhum piso mudou.** O motivo está na própria função: `cena.ts` devolve
+> **fator** (0 a 1), não opacidade, e os três fatores valem exatamente 1 no
+> topo da página (`progresso = 0`) — decisão registrada no código como
+> correção de 04/09/2026, para o herói ficar idêntico ao de hoje pixel por
+> pixel. Como o herói já era o ponto usado para medir o pior caso, e nenhum
+> fator ultrapassa 1 em ponto nenhum da rolagem, a cena **nunca fica mais
+> clara que o herói de hoje** — a trajetória inteira está contida no ponto que
+> já era medido. O risco que a Task 12 antecipava — `--detrator-texto` × vidro
+> fino em 4,54 na chuva, o par mais apertado da interface, cedendo com a nova
+> fonte de luz — não se materializou.
+>
+> `npm run contraste`: **348 PASS / 0 FAIL** nos dois temas vigentes (espaço
+> profundo e chuva de neon). O par mais apertado continua sendo
+> `--detrator-texto` × `--vidro-fino-piso` / `--vidro-piso`, em **4,54** na
+> chuva — o mesmo valor, sem folga nova nem perdida.
 
 ### 8.7 O padrão de fábrica: espaço profundo (01/09/2026)
 
