@@ -159,5 +159,12 @@ def test_a_tela_modelo_abre_pelo_veredito():
         encoding="utf-8"
     )
     assert "EstadoDoModelo" in pagina
-    # O veredito vem ANTES do simulador na ordem do arquivo.
-    assert pagina.index("EstadoDoModelo") < pagina.index("Simulador")
+
+    # A comparacao tem que ser sobre o USO em JSX (`<EstadoDoModelo`,
+    # `<Simulador`), nao sobre a primeira ocorrencia do nome no arquivo --
+    # senao o teste passa so pela ordem alfabetica do bloco de import
+    # (`EstadoDoModelo` importado antes de `Simulador`), que nao garante nada
+    # sobre a ordem de renderizacao no corpo da pagina. `<Simulador` so
+    # aparece uma vez no arquivo, como elemento; o titulo em prosa do Painel
+    # ("Simulador ao vivo") nao bate no prefixo `<Simulador`.
+    assert pagina.index("<EstadoDoModelo") < pagina.index("<Simulador")
