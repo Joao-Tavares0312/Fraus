@@ -1134,6 +1134,23 @@ git commit -m "feat(dashboard): a tela modelo abre pelo veredito, nao pelo simul
 
 ### Task 8: A curva da cena
 
+> **Correcao de 04/09/2026, feita durante a execucao.** O codigo abaixo trata o
+> teto como OPACIDADE ABSOLUTA, e isso esta errado. As camadas reais sao tokens
+> POR TEMA no `globals.css`: `--grade-op` (0,13 espacial / 0,2 chuva),
+> `--sol-op` (0,07 / 0,3) e `--estrelas-op` (0,55 / **0**). O zero da chuva e
+> deliberado e comentado no proprio CSS -- nao ha estrela visivel sob chuva e
+> poluicao luminosa. Teto absoluto acenderia estrelas num tema que decidiu nao
+> ter nenhuma, e dobraria o sol no espacial, acendendo o atelie contra a §8.6.
+>
+> A funcao passa a devolver um **FATOR de 0 a 1**; a opacidade real e
+> `fator x token do tema`. Cada tema mantem a propria decisao, o zero sobrevive
+> por construcao, e o pior caso que o `pisos.mjs` mede vira
+> `fator maximo x token do tema`, por tema.
+>
+> `intensidadeDaCamada` tambem precisa grampear `NaN` -- `Math.min`/`Math.max`
+> o propagam, e `NaN` e exatamente o que `scrollY / rolavel` produz quando a
+> pagina nao rola.
+
 **Files:**
 - Create: `dashboard/lib/cena.ts`
 - Test: `dashboard/lib/cena.test.ts`
@@ -1363,6 +1380,14 @@ export function useProgressoDaCena(): void {
 
 - [ ] **Step 2: Ligar no `Atelier`**
 
+> **Correcao de 04/09/2026.** A cena devolve FATOR, nao opacidade. As camadas
+> reais sao `--grade-op`, `--sol-op` (o planeta e o sol listrado) e
+> `--estrelas-op`, e cada tema declara o proprio valor. O consumo correto e
+> multiplicar: `calc(var(--grade-op) * var(--cena-grade, 1))`. O fallback e
+> **1**, nao o valor de hoje -- assim a primeira pintura, antes do JavaScript,
+> mostra a cena exatamente como ela e hoje.
+
+
 Em `Atelier.tsx`, chame `useProgressoDaCena()` e troque a opacidade fixa das três
 camadas por `var(--cena-grade)`, `var(--cena-planeta)` e `var(--cena-estrelas)`,
 **com fallback para o valor de hoje** — `var(--cena-grade, 0.1)` — para que a
@@ -1476,7 +1501,13 @@ equivalente no **espaço profundo** — padrão de fábrica de hoje, vidro mais 
 dos três, a 56% — nunca foi registrado. Remeça antes de confiar em qualquer
 número herdado.
 
-- [ ] **Step 1: Ensinar o script a ler o teto**
+- [ ] **Step 1: Ensinar o script a ler o fator maximo**
+
+> **Correcao de 04/09/2026.** O pior caso de cada camada passa a ser
+> `fator maximo (de lib/cena.ts) x token do tema (do globals.css)`, calculado
+> POR TEMA. Ler so o fator, ou so o token, mede uma superficie que nao existe --
+> o modo de falha que a §8.6 registra ter acontecido duas vezes.
+
 
 Em `pisos.mjs`, troque a opacidade fixa das três camadas da cena pelo teto
 declarado em `lib/cena.ts`. Leia do arquivo, não copie o número: teto duplicado
