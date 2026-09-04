@@ -695,22 +695,30 @@ export default async function PaginaInicial() {
           <div
             className={`${COLUNA} grid items-center gap-14 lg:grid-cols-[0.95fr_1fr]`}
           >
-            {/* A EVIDÊNCIA MANDA — a prosa encolhe (título sai da escala
-                `titulo-vitrine`/`display-aurora` das outras seções para um
-                tamanho de subtítulo) e as três falas à direita sobem para
-                escala maior que ela. Hoje a hierarquia estava invertida: a
-                prosa explicava o que a evidência já mostra, no mesmo peso das
-                seções vizinhas. Aqui quem carrega a tese são as falas. */}
+            {/* A EVIDÊNCIA MANDA — a prosa encolhe e as três falas à direita
+                sobem para escala maior que ela. Hoje a hierarquia estava
+                invertida: a prosa explicava o que a evidência já mostra, no
+                mesmo peso das seções vizinhas. Aqui quem carrega a tese são
+                as falas.
+
+                O TÍTULO CONTINUA NO SISTEMA: `.titulo-vitrine--sm` é um
+                degrau da própria escala compartilhada (ver globals.css),
+                não um `clamp()` inline solto — e continua levando
+                `display-aurora`, a mesma calibração de contraste no pior
+                ponto do gradiente que todo outro título de seção usa. Só o
+                TAMANHO é próprio desta seção; a cor e a família tipográfica
+                não saem do sistema medido. */}
             <Revelar>
               <p className="etiqueta-vitrine mb-5 text-primary">atribuição</p>
-              <h2 className="text-[clamp(1.5rem,2.4vw,2rem)] font-medium leading-[1.15] tracking-[-0.02em]">
+              <h2 className="titulo-vitrine--sm display-aurora">
                 O número aponta as falas que o puxaram
               </h2>
-              <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-5 max-w-lg text-sm leading-relaxed text-muted-foreground">
                 O sinal de texto pontua <em>por mensagem</em>: o Fraus mostra
                 quais falas derrubaram (ou salvaram) a nota de cada atendimento,
                 em vez de devolver um score opaco para a operação discutir às
-                cegas. É o que um número sozinho não conta.
+                cegas. É o que um número sozinho não conta — e o que um
+                produto vizinho não copia com honestidade.
               </p>
             </Revelar>
             <Revelar>
@@ -745,12 +753,17 @@ export default async function PaginaInicial() {
               usa e ocupa a coluna inteira (`COLUNA` já é `max-w-6xl`). É a
               seção de leitura mais densa da página, e é honesta que ela
               PAREÇA densa em vez de fingir a mesma respiração das seções de
-              espetáculo ao redor. */}
+              espetáculo ao redor.
+
+              O TÍTULO usa `.titulo-vitrine--md` + `display-aurora` pelo
+              mesmo motivo do título da seção de atribuição logo acima: a
+              escala é própria da seção, mas a cor continua saindo da
+              calibração medida do sistema, não de um `clamp()` solto. */}
           <Revelar className={COLUNA}>
             <p className="etiqueta-vitrine mb-5 text-primary">
               honestidade metodológica
             </p>
-            <h2 className="max-w-2xl text-[clamp(1.9rem,3.4vw,2.75rem)] font-medium leading-[1.08] tracking-[-0.025em]">
+            <h2 className="titulo-vitrine--md display-aurora max-w-2xl">
               O que é medido, o que é estimado
             </h2>
             <p className="mt-6 max-w-2xl leading-relaxed text-muted-foreground">
