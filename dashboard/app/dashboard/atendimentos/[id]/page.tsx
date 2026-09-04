@@ -54,8 +54,9 @@ export default async function PaginaDoAtendimento(
 
   if (!resultado.ok) {
     if (/404/.test(resultado.erro)) notFound();
+    // SEM flex-1: ver o comentario identico em app/dashboard/page.tsx.
     return (
-      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-10 sm:px-6">
+      <div className="flex min-w-0 flex-col gap-4 px-4 py-10 sm:px-6">
         <h1 className="text-lg font-semibold text-foreground">
           Não foi possível abrir o atendimento
         </h1>
@@ -106,7 +107,8 @@ export default async function PaginaDoAtendimento(
         }
       />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
+      {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx. */}
+      <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
         <section
           aria-label="Resumo do atendimento"
           className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"

@@ -122,7 +122,15 @@ export function Painel({
         <div
           className={cn(
             "min-w-0",
-            semPadding ? "-mx-4 pt-3 sm:-mx-5" : "pt-4",
+            // O cancelamento acompanha o padding DO NIVEL: dominante usa
+            // p-4 sm:p-6, apoio usa p-4 sm:p-5 (ver classesDoNivel). Um valor
+            // fixo aqui so acerta um dos dois -- ja aconteceu com o dominante
+            // ficando 4px para dentro da regua do cabecalho em >=640px.
+            semPadding
+              ? nivel === "dominante"
+                ? "-mx-4 pt-3 sm:-mx-6"
+                : "-mx-4 pt-3 sm:-mx-5"
+              : "pt-4",
           )}
         >
           {erro ?? vazio ?? (regua ? (

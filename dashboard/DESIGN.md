@@ -27,6 +27,17 @@ A metáfora de cor (âmbar/azul) permanece e passa a ter uma casa: âmbar mora
 acima, azul mora abaixo. Quando alguém precisa quebrar a regra de posição, a cor
 ainda desambigua — mas quebrar a posição é a exceção que se justifica no código.
 
+> **Emenda de 04/09/2026 — `--linha` ganhou um segundo papel.** Até aqui o
+> token só fazia a régua do sistema, a linha que **afirma** dito/medido. Com a
+> Task 6 (hierarquia), `CartaoIndicador` trocou `border-compasso` por
+> `border-linha` como separador interno da armadura: `--compasso` foi
+> desenhado mais fraco de propósito, para viver DENTRO de uma superfície de
+> vidro, e a armadura deixou de ser painel — ela não tem vidro, chanfro nem
+> borda —, então o filete que a separa por dentro precisa do peso de `--linha`
+> para continuar visível sobre o papel nu. O token agora serve dois papéis —
+> régua que afirma, e separador interno da armadura — porque o candidato mais
+> fraco parou de bater no contexto novo; não é acúmulo por descuido.
+
 ### 1.1 O que é notação e o que é decoração
 
 **Nenhum glifo musical é desenhado.** Sem clave, sem semínima, sem pentagrama de
@@ -96,7 +107,7 @@ clave, que se lê de uma vez e não se relê a cada compasso. Eles são **rótul
 mais número tabular**, sem barra de progresso decorativa e sem cartão.
 
 **Ritmo vertical.** Densidade varia entre sistemas: um sistema denso ganha o
-direito de um respiro depois.
+direito de um respiro depois. Mais espaço acima de um título do que abaixo.
 
 > **Emenda de 04/09/2026 — a armadura deixou de ser painel, e ganhou nível.**
 > Esta seção já pedia isso ("sem cartão", "rótulo mais número tabular"), e até
@@ -116,8 +127,6 @@ direito de um respiro depois.
 > string estática casaria com isso. Quem marca o dominante de fato é a própria
 > tela, com `nivel="dominante"` no `Painel`; o mapa é documentação da
 > intenção e uma referência para conferir "um por tela", não chave de busca.
-
- Mais espaço acima de um título do que abaixo.
 
 ---
 
@@ -884,8 +893,11 @@ uma superfície que não existe.
 > a claridade do ateliê varia ao longo da rolagem, e o piso de vidro precisa
 > valer para o ponto mais claro dessa trajetória inteira, não só do herói.
 >
-> `scripts/pisos.mjs` passou a importar `FATOR_MAXIMO_POR_CAMADA` de
-> `lib/cena.ts` e multiplicar cada fator pelo token de opacidade do tema
+> `scripts/pisos.mjs` passou a **ler** `FATOR_MAXIMO_POR_CAMADA` de
+> `lib/cena.ts` (por expressão regular — o próprio script documenta em
+> maiúsculas que importar de verdade exigiria transpilar, e é justamente por
+> isso que o script recorta o bloco do arquivo-fonte em vez de fazer `import`)
+> e multiplicar cada fator pelo token de opacidade do tema
 > vigente (`--grade-op`, `--sol-op`, `--estrelas-op`), em vez de ler só a
 > opacidade estática do CSS — o mesmo motivo que fez `intensidadeDaCamada`
 > nascer função pura em `lib/cena.ts`: fator escondido em JSX é fator que o

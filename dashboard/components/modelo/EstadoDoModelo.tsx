@@ -18,6 +18,15 @@ import { LIMIAR_SUSPEITO } from "./MetricasTreino";
  * limitacao declarada de arquitetura (nao ha cabeca de tempo a treinar; o
  * sinal vem de `fraus/sinais/tempo.py` sobre timestamps, nunca de fine-tuning),
  * por isso nao depende de nenhum campo numerico da API.
+ *
+ * MANCHETE E ETIQUETA SEGUEM A API, NUNCA UM TEXTO CRAVADO: ate 04/09/2026 a
+ * etiqueta "fora do vetor" e a manchete "A ironia nao pontua" eram
+ * incondicionais, e so o paragrafo pequeno abaixo ramificava em
+ * `ironia.pontua` -- se o retreino entrar e a API passar a reportar
+ * `pontua === true`, o painel dominante da tela que a banca le primeiro
+ * afirmaria uma falsidade no maior tipo da pagina, com a ressalva certa em
+ * letra miuda ao lado. Por isso os dois -- etiqueta E manchete -- ramificam
+ * no MESMO dado que o paragrafo le.
  */
 export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
   const ironia = modelo.cabecas.find((cabeca) => cabeca.nome === "ironia") ?? null;
@@ -27,11 +36,13 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
     metricasIronia && typeof metricasIronia.f1_ironico === "number"
       ? metricasIronia.f1_ironico
       : null;
-  const f1Percentual =
-    f1Bruto !== null
-      ? formatarNumero(f1Bruto <= 1 ? f1Bruto * 100 : f1Bruto)
-      : null;
-  const f1Suspeito = f1Bruto !== null && f1Bruto >= LIMIAR_SUSPEITO;
+  // Normaliza ANTES de comparar com LIMIAR_SUSPEITO: o campo pode vir em
+  // fracao [0,1] ou ja em pontos percentuais. Comparar o valor cru contra um
+  // limiar em fracao (0.999) rotulava 5.0 (5%, resultado pessimo) como
+  // "suspeito" -- suspeito de bom demais, quando o numero e ruim demais.
+  const f1Fracao = f1Bruto !== null ? (f1Bruto <= 1 ? f1Bruto : f1Bruto / 100) : null;
+  const f1Percentual = f1Fracao !== null ? formatarNumero(f1Fracao * 100) : null;
+  const f1Suspeito = f1Fracao !== null && f1Fracao >= LIMIAR_SUSPEITO;
 
   return (
     <Painel
@@ -39,21 +50,21 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
       nivel="dominante"
       legenda={
         <>
-          A ironia foi a primeira familia a entrar no vetor do fusor, em
-          21/08/2026, e a primeira a sair dele, em 04/09/2026 -- a cabeca (IDPT
-          2021, treinada em tweet e noticia) mede sentimento positivo no corpus
-          de treino deste projeto, nao ironia, porque frase educada com queixa
-          real (&ldquo;que atendimento maravilhoso, so esperei 3 horas&rdquo;) e exatamente
-          o padrao que ela aprendeu a reconhecer como ironica em outro dominio.
-          Ela continua carregada, obrigatoria e lida por mensagem -- aparece em
-          `mensagens[].prob_ironia` e no simulador abaixo -- so nao pesa mais em
+          A ironia foi a primeira família a entrar no vetor do fusor, em
+          21/08/2026, e a primeira a sair dele, em 04/09/2026 -- a cabeça (IDPT
+          2021, treinada em tweet e notícia) mede sentimento positivo no corpus
+          de treino deste projeto, não ironia, porque frase educada com queixa
+          real (&ldquo;que atendimento maravilhoso, só esperei 3 horas&rdquo;) é exatamente
+          o padrão que ela aprendeu a reconhecer como irônica em outro domínio.
+          Ela continua carregada, obrigatória e lida por mensagem -- aparece em
+          `mensagens[].prob_ironia` e no simulador abaixo -- só não pesa mais em
           `contribuicoes` nem em `importancias`. O F1 de 100% mede acerto no
-          MESMO corpus sintetico que gerou o treino: metrica perfeita em tarefa
+          MESMO corpus sintético que gerou o treino: métrica perfeita em tarefa
           de linguagem quase nunca significa modelo bom, significa que o teste
-          se parece demais com o treino. O sinal de tempo tem a mesma limitacao
-          por um motivo diferente: nenhum corpus publico de review em
-          portugues tem timestamps de dialogo, entao ele e treinado em
-          conversas sinteticas calibradas por literatura de live chat, nao em
+          se parece demais com o treino. O sinal de tempo tem a mesma limitação
+          por um motivo diferente: nenhum corpus público de review em
+          português tem timestamps de diálogo, então ele é treinado em
+          conversas sintéticas calibradas por literatura de live chat, não em
           atendimento real.
         </>
       }
@@ -62,16 +73,16 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
         <li className="flex flex-col gap-1">
           <span className="flex flex-wrap items-baseline gap-2">
             <span className="rounded-full bg-warning-rich-text/10 px-2 py-0.5 text-xs font-medium text-warning-rich-text">
-              fora do vetor
+              {ironia === null ? "fora do vetor" : ironia.pontua ? "no vetor" : "fora do vetor"}
             </span>
             <span className="text-sm font-medium text-foreground">
-              A ironia não pontua
+              {ironia?.pontua ? "A ironia pontua" : "A ironia não pontua"}
             </span>
           </span>
           {ironia ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
               {ironia.pontua
-                ? "A API ainda reporta esta cabeca como parte do fusor -- verifique se este texto ficou desatualizado."
+                ? "A API reporta esta cabeça como parte do fusor agora — o texto acima já reflete isso, mas as demais ressalvas desta tela sobre a ironia (métrica medida em corpus sintético) continuam valendo."
                 : "Carregada, obrigatória e lida por mensagem, mas fora de `importancias` e `contribuicoes` desde 04/09/2026: medida no corpus de treino, ela funciona como detector de sentimento positivo, não de ironia."}
             </p>
           ) : (
@@ -87,10 +98,10 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
         <li className="flex flex-col gap-1">
           <span className="flex flex-wrap items-baseline gap-2">
             <span className="rounded-full bg-warning-rich-text/10 px-2 py-0.5 text-xs font-medium text-warning-rich-text">
-              suspeito
+              {f1Suspeito ? "suspeito" : "abaixo do limiar"}
             </span>
             <span className="text-sm font-medium text-foreground">
-              O F1 da ironia é medida em corpus sintético
+              O F1 da ironia é medido em corpus sintético
             </span>
           </span>
           {f1Percentual !== null ? (
@@ -99,7 +110,7 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
               F1 na classe irônica, {f1Suspeito ? "acima" : "abaixo"} do limiar
               que este projeto trata como suspeito.{" "}
               {f1Suspeito
-                ? "Metrica perfeita em tarefa de linguagem quase nunca significa modelo bom."
+                ? "Métrica perfeita em tarefa de linguagem quase nunca significa modelo bom."
                 : ""}
             </p>
           ) : (

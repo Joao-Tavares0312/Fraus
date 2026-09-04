@@ -82,11 +82,24 @@ describe("aparato", () => {
 });
 
 describe("as telas declaram nivel", () => {
+  // A checagem segue O COMPONENTE que de fato marca `nivel="dominante"`, nao
+  // sempre `page.tsx`: em Modelo o dominante mora dentro de
+  // `EstadoDoModelo.tsx`, e olhar so a pagina deixaria essa tela sem guarda --
+  // alguem poderia marcar um segundo painel como dominante no Simulador (que
+  // vive em page.tsx) sem a suite acusar dois dominantes na mesma tela.
   const TELAS = [
     ["app/dashboard/page.tsx", "/dashboard"],
     ["app/dashboard/atendimentos/page.tsx", "/dashboard/atendimentos"],
     ["app/dashboard/integracoes/page.tsx", "/dashboard/integracoes"],
     ["app/dashboard/configuracoes/page.tsx", "/dashboard/configuracoes"],
+    ["app/dashboard/grafo/page.tsx", "/dashboard/grafo"],
+  ] as const;
+
+  // Modelo: o dominante mora em EstadoDoModelo.tsx, nao em page.tsx --
+  // conferimos os dois arquivos juntos para essa tela.
+  const ARQUIVOS_MODELO = [
+    "app/dashboard/modelo/page.tsx",
+    "components/modelo/EstadoDoModelo.tsx",
   ] as const;
 
   it("cada tela marca exatamente um painel como dominante", () => {
@@ -104,6 +117,15 @@ describe("as telas declaram nivel", () => {
     for (const [, rota] of TELAS) {
       expect(DOMINANTE_POR_TELA, rota).toHaveProperty(rota);
     }
+    expect(DOMINANTE_POR_TELA).toHaveProperty("/dashboard/modelo");
+  });
+
+  it("Modelo marca exatamente um dominante somado entre page.tsx e EstadoDoModelo.tsx", () => {
+    const ocorrencias = ARQUIVOS_MODELO.reduce((total, arquivo) => {
+      const fonte = readFileSync(arquivo, "utf8");
+      return total + (fonte.match(/nivel="dominante"/g) ?? []).length;
+    }, 0);
+    expect(ocorrencias).toBe(1);
   });
 });
 

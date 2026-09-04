@@ -26,6 +26,16 @@ export type Nivel = "dominante" | "apoio";
  * existe para o conteudo atras SUMIR num menu suspenso, e usar isso como
  * hierarquia de pagina gastaria a espessura mais cara de CSS em decoracao.
  */
+/**
+ * REGISTRO HONESTO: hoje a diferenca de SUPERFICIE entre os dois niveis e so
+ * o raio do blur (`--vidro-blur` vs `--vidro-blur-fino`, em globals.css).
+ * `--vidro-fino-fundo` e `--vidro-fundo` valem o MESMO color-mix nos dois
+ * temas, e os pisos calculados por `scripts/pisos.mjs` sao iguais para as
+ * duas classes. Na pratica a hierarquia inteira se reduz ao padding
+ * (`p-5 -> p-6`) e ao tipo (`text-sm -> text-base`) abaixo. Isto NAO e bug --
+ * o design nao muda -- mas quem le "vidro" e "vidro-fino" como vocabulario
+ * de opacidade diferente estaria acreditando em algo que o CSS nao entrega.
+ */
 const CLASSES: Record<Nivel, string> = {
   dominante: "vidro p-4 sm:p-6",
   apoio: "vidro-fino p-4 sm:p-5",

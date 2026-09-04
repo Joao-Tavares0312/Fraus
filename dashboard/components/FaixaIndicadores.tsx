@@ -15,7 +15,6 @@ import {
   formatarNumero,
   formatarSegundos,
 } from "@/lib/formato";
-import { useEspecular } from "@/hooks/useEspecular";
 
 /**
  * Os quatro indicadores do periodo.
@@ -104,8 +103,6 @@ export function FaixaIndicadores({
       ? `${indicadores.semSinal} de ${indicadores.total} sem fala do cliente — fora do cálculo, nunca como zero.`
       : undefined;
 
-  const refEspecular = useEspecular<HTMLElement>();
-
   return (
     <>
     {/* A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
@@ -114,7 +111,6 @@ export function FaixaIndicadores({
         colunas era o template de metrica-heroi, e ele empurrava a tese da tela
         para baixo da dobra. */}
     <motion.section
-      ref={refEspecular}
       aria-label={`Indicadores de ${rotuloDoPeriodo}`}
       // A ARMADURA e o container da pilha: ela escalona os quatro indicadores
       // em 40ms, e cada `CartaoIndicador` herda a variante daqui. Escalonar
