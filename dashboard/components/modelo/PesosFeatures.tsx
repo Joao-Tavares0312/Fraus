@@ -26,7 +26,7 @@ const EXPLICACAO_DO_SINAL: Record<string, string> = {
 };
 
 /**
- * As 38 features do fusor com o peso GLOBAL de cada uma, agrupadas pelas sete
+ * As 39 features do fusor com o peso GLOBAL de cada uma, agrupadas pelas sete
  * famílias do trabalho.
  *
  * Este e o peso do MODELO: ele vale para todos os atendimentos e nao explica
@@ -51,7 +51,7 @@ export function PesosFeatures({
       <EstadoVazio
         className="m-5"
         titulo="O modelo não devolveu pesos"
-        explicacao="GET /modelo respondeu com o mapa de importâncias vazio. Sem fusor treinado não há coeficiente a exibir, e desenhar 38 barras iguais seria inventar um modelo."
+        explicacao="GET /modelo respondeu com o mapa de importâncias vazio. Sem fusor treinado não há coeficiente a exibir, e desenhar 39 barras iguais seria inventar um modelo."
         etapa="notebook 02 (treino do fusor)"
       />
     );

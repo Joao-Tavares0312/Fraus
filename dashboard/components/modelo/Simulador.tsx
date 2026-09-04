@@ -251,7 +251,7 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
  * copias faria uma delas envelhecer sem a ressalva que a outra ja tem.
  *
  * Elas entram DEPOIS de uma linha e nunca dentro da barra de classes. Para a
- * emocao, a media por conversa e que entra nas 38 features do fusor (desde
+ * emocao, a media por conversa e que entra nas 39 features do fusor (desde
  * 21/08/2026), nao o numero desta frase isolada. Para a IRONIA a separacao e
  * ainda mais literal: desde 04/09/2026 ela nao entra no vetor de jeito nenhum
  * -- e leitura, nao nota. Encostar "ironia 99%" na barra de satisfacao

@@ -25,7 +25,7 @@ from fraus.sinais.lexico import features_lexico
 from fraus.sinais.tempo import features_tempo
 from fraus.sinais.texto import features_texto
 
-# Ordem canonica das 38 features, agrupadas por familia de sinal. A ordem
+# Ordem canonica das 39 features, agrupadas por familia de sinal. A ordem
 # importa: `vetorizar` produz o vetor nesta sequencia e o fusor treinado espera
 # exatamente ela. Reordenar sem retreinar troca os pesos de lugar em silencio.
 #
@@ -107,6 +107,7 @@ NOMES_FEATURES = [
     "incongruencia_marcador_contraste",
     "incongruencia_hiperbole",
     "incongruencia_aspas_ironicas",
+    "incongruencia_situacao_negativa",
 ]
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
@@ -161,7 +162,7 @@ def montar_features(
     que o analista ensinou ao lexico, lido a cada requisicao. Ela alcanca TRES
     familias -- `lexico_*`, `emoji_*` e `incongruencia_*`, que le os dois
     lexicos por dentro e portanto herda a curadoria deles -- e MAIS NENHUMA: o
-    contrato continua de 38 chaves (invariante 9), e o que ela muda e o VALOR
+    contrato continua de 39 chaves (invariante 9), e o que ela muda e o VALOR
     dessas familias, jamais o conjunto de features.
     """
     return {
@@ -191,7 +192,7 @@ def vetorizar(features: dict[str, float]) -> list[float]:
     """Ordem canonica. Feature faltando e KeyError; feature sobrando e ValueError.
 
     Nenhum dos dois casos pode virar zero silencioso (invariante 9): falta
-    ja estourava; sobra nao estourava -- um dict com as 38 chaves certas MAIS
+    ja estourava; sobra nao estourava -- um dict com as 39 chaves certas MAIS
     uma extra passava batido, gerando um vetor do tamanho certo por acaso. E
     justamente o cenario que aconteceria se uma familia de sinal saisse do
     contrato (como `ironia_*` saiu em 04/09/2026) mas continuasse sendo

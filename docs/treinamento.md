@@ -80,7 +80,7 @@ Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 2. clona este repositorio e instala o pacote `fraus` — a extracao de features usa o MESMO codigo da API (`fraus.fusor.montar_features`), nunca uma reimplementacao;
 3. carrega o B2W-Reviews01 e rotula por `recommend_to_a_friend` (ver abaixo);
 4. costura as frases em conversas sinteticas com `fraus.ingest.simulador.gerar_lote`, deterministico por semente, com latencia log-normal e emoji calibrados por rotulo;
-5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **35** (ver [Contrato de features](#contrato-de-features));
+5. extrai as features de cada conversa com o BERTimbau do notebook 01 carregado — hoje sao **39** (ver [Contrato de features](#contrato-de-features));
 6. treina o `Fusor` (`treinar(exemplos, rotulos)`);
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).
@@ -430,6 +430,40 @@ aconteceu — o `texto_prob_satisfeito_media` da propria cabeca de texto e 0,858
 nela, e domina o eixo sozinho. A remocao consertou o vetor; nao tocou nesta
 frase.
 
+### O contrato sobe para 39: incongruencia implicita (04/09/2026)
+
+`incongruencia_situacao_negativa` entrou em `NOMES_FEATURES` -- elogio
+convivendo com situacao negativa de atendimento na mesma fala. E a unica das
+seis que alcanca a frase canonica do projeto, porque nao depende de um segundo
+termo polar no lexicon.
+
+**O retreino do notebook 02 e OBRIGATORIO antes de a API voltar a subir.** O
+artefato de 38 nao carrega mais: `Fusor.carregar` valida a dimensao e levanta
+`FusorIncompativelError`. Isso e o comportamento desejado, nao um bug.
+
+Medido ANTES de aceitar, no B2W-Reviews01 (2000 resenhas por rotulo, semente
+20260904) -- que e o corpus que da o TEXTO do treino:
+
+```
+insatisfeito  82/2000 = 4,10%
+neutro        53/2000 = 2,65%
+satisfeito    35/2000 = 1,75%
+```
+
+Dispara nos tres rotulos, gradiente suave, razao 2,3:1 entre os extremos.
+Compare com a cabeca de ironia que saiu do vetor no mesmo dia (74% contra 9%,
+razao 8:1): aquilo era disjuncao pratica, isto e sinal.
+
+**Uma armadilha de metodo que quase repeti.** Medir esta feature no corpus do
+SIMULADOR dava zero nos tres rotulos, e eu quase concluí que ela nasceria com
+peso zero. Errado, e pelo mesmo motivo registrado na correcao de 04/09 mais
+acima: `FRASES_POR_ROTULO` **nao treina o fusor**. O notebook 02 usa 400 frases
+do B2W por classe e pega do simulador so a ESTRUTURA da conversa. O simulador
+importa para a guarda `test_nenhuma_feature_e_previsor_unilateral`, nao para o
+peso aprendido. As frases dos tres rotulos foram cruzadas mesmo assim -- sem
+isso a feature ficava constante em zero la e a guarda passaria por vacuidade,
+que e o modo de falha silencioso dela.
+
 ### Conferencia do artefato
 
 ```bash
@@ -454,7 +488,7 @@ explicito acima de 0,97.
 
 `NOMES_FEATURES`, em `fraus/fusor.py`, e a lista canonica. `vetorizar` levanta `KeyError` se faltar chave — nunca zero silencioso (invariante 9).
 
-Hoje sao **38 features**, de SETE familias no vetor (OITO sinais existem no
+Hoje sao **39 features**, de SETE familias no vetor (OITO sinais existem no
 sistema — a ironia continua existindo e sendo lida por mensagem, so nao entra
 mais aqui, ver a secao acima). O contrato subiu de 16 para 35 em 21/08/2026,
 quando os notebooks 03 e 04 passaram a existir e a condicao que justificava a

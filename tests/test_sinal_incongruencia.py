@@ -1,15 +1,16 @@
 from datetime import datetime, timezone
 
 from fraus.modelos import Conversa, Mensagem
+from fraus.sinais.incongruencia import CHAVES as CHAVES_DECLARADAS
 from fraus.sinais.incongruencia import features_incongruencia
 
-CHAVES = {
-    "incongruencia_polaridade",
-    "incongruencia_emoji_texto",
-    "incongruencia_marcador_contraste",
-    "incongruencia_hiperbole",
-    "incongruencia_aspas_ironicas",
-}
+# Importada do modulo em vez de redigitada aqui: a copia literal ficou para
+# tras quando F6 (`incongruencia_situacao_negativa`) nasceu, e o teste falhou
+# por estar desatualizado, nao por ter achado defeito. O que ele precisa
+# garantir e "a funcao devolve exatamente as chaves que o modulo DECLARA" --
+# que as chaves declaradas batem com `NOMES_FEATURES` e trabalho de
+# `tests/test_fusor.py`, e la a lista do fusor e a fonte independente.
+CHAVES = set(CHAVES_DECLARADAS)
 
 
 def _conversa(textos: list[str], autor: str = "cliente") -> Conversa:
@@ -24,7 +25,7 @@ def _conversa(textos: list[str], autor: str = "cliente") -> Conversa:
     )
 
 
-def test_devolve_exatamente_as_cinco_chaves():
+def test_devolve_exatamente_as_chaves_declaradas():
     assert set(features_incongruencia(_conversa(["oi"]))) == CHAVES
 
 

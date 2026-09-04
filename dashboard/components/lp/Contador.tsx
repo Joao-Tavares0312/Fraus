@@ -15,7 +15,7 @@ import { animate, useInView, useReducedMotion } from "motion/react";
  * `SeletorTema` usa `useSyncExternalStore` em vez de efeito com setState.
  *
  * O QUE ELE CONTA, E O QUE ISSO CUSTA EM HONESTIDADE: os quatro números da
- * faixa são FATOS DO CÓDIGO (38 features, 7 famílias, 3 BERTimbau, 0 LLMs em
+ * faixa são FATOS DO CÓDIGO (39 features, 7 famílias, 3 BERTimbau, 0 LLMs em
  * runtime), e a animação não pode sugerir que são medições ao vivo — por isso a
  * etiqueta "fatos do código · fraus.fusor.NOMES_FEATURES" fica logo abaixo,
  * como já ficava. O movimento aqui chama atenção para um número estático; ele

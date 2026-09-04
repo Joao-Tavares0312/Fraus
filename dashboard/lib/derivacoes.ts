@@ -878,6 +878,7 @@ export const ROTULO_FEATURE: Record<string, string> = {
   incongruencia_marcador_contraste: "Marcador de contraste",
   incongruencia_hiperbole: "Hipérbole",
   incongruencia_aspas_ironicas: "Aspas irônicas",
+  incongruencia_situacao_negativa: "Elogio com situação negativa",
 };
 
 export function rotuloDaFeature(nome: string): string {

@@ -48,11 +48,11 @@ a API na internet precisa saber que ela existe. Ver `README.md` e
 
 **A raiz virou vitrine.** `/` descreve o produto (tese, sete sinais,
 honestidade metodológica) e as telas moram em `/dashboard/*`, com redirect das
-rotas antigas. Nenhum número da LP é inventado — 38 features e sete sinais são
+rotas antigas. Nenhum número da LP é inventado — 39 features e sete sinais são
 fatos do código, e não há acurácia fabricada nem depoimento. **Isso impõe uma
 obrigação:** quando `NOMES_FEATURES` mudar, os números da LP mudam junto
 (`dashboard/app/page.tsx`, `lp/Contador.tsx`, `lp/Constelacao.tsx`). Em
-04/09/2026 o contrato foi a 38 e a LP ficou anunciando 35 — número falso numa
+04/09/2026 o contrato foi a 38 (e no mesmo dia a 39) e a LP ficou anunciando 35 — número falso numa
 tela pública, exatamente o que esta seção promete que não acontece. Agora há
 guarda: `tests/test_derivacoes_dashboard.py::test_a_vitrine_anuncia_o_numero_real_de_features`
 lê o `page.tsx` como texto e compara com `NOMES_FEATURES`. Ela cobre só o
@@ -122,7 +122,7 @@ sentidos** (`TabelaConversas.ausenciaPorUltimo`).
 
 ### 3.2 Sem horário, sem nota
 
-Latência é uma das 38 features do fusor, com peso aprendido. Uma transcrição de
+Latência é uma das 39 features do fusor, com peso aprendido. Uma transcrição de
 `.docx`/`.pdf` sem relógio não recebe nota, e a tela diz por quê.
 
 Zerar os campos de tempo seria o caminho fácil e **zero não é neutro**: o modelo
@@ -143,7 +143,7 @@ e fazia a tabela mostrar nota 7 ao lado de "Detrator".
 
 ### 3.4 Emoção pontua; ironia NÃO pontua mais, desde 04/09/2026
 
-O fusor tem **38 features** (confira `fraus.fusor.NOMES_FEATURES`), de SETE
+O fusor tem **39 features** (confira `fraus.fusor.NOMES_FEATURES`), de SETE
 famílias. Emoção entrou no vetor em 21/08/2026 e continua lá. A **ironia
 entrou junto e saiu em 04/09/2026**: medida no próprio corpus de treino
 (B2W-Reviews01), a cabeça marca 74% das resenhas satisfeitas como irônicas
@@ -297,30 +297,44 @@ precisam ser reescritos, não mantidos por inércia.
 
 ### P0 — A ironia continua escapando do score
 
-O fusor está em dia: contrato e artefato batem em **38 features** desde
-04/09/2026, acurácia 0,943. Confira a qualquer momento com
-`uv run python scripts/conferir_fusor.py`.
+**O contrato está em 39 features e o artefato em `modelos/` é o de 38 — a API
+não sobe até o notebook 02 rodar de novo.** Isso é o comportamento correto da
+invariante 7, não um bug: `Fusor.carregar` valida a dimensão. O fusor de 38
+(acurácia 0,943) está descrito em `docs/treinamento.md`. Confira qualquer
+artefato com `uv run python scripts/conferir_fusor.py`.
 
-O que continua aberto é o caso que deu origem a tudo isto. A frase canônica do
-projeto pontua **99,95 / nota 10 / promotor**:
+A feature que ataca o caso foi IMPLEMENTADA em 04/09/2026 e e a razao de o
+contrato ter subido para 39: `incongruencia_situacao_negativa` marca elogio
+convivendo com situacao negativa de atendimento na mesma fala. E a unica das
+seis que alcanca a frase canonica, porque nao precisa de um segundo termo
+polar no lexicon:
 
 ```
-"que atendimento maravilhoso, so esperei 3 horas"
+"que atendimento maravilhoso, so esperei 3 horas"            -> dispara
+"Nossa, eu realmente gostei de ficar 5h esperando"           -> dispara
+"esperei 3 horas e ninguem resolveu"        (reclamacao)     -> nao dispara
+"nao gostei de ficar esperando"             (negado)         -> nao dispara
 ```
 
-As cinco features de `incongruencia_*` dão **0,0** nela e disparam numa frase
-de satisfação genuína — hoje elas pegam entusiasmo, não ironia. A causa é
-estrutural, não bug: todas são função de `anotar_texto`/emoji, e "só esperei 3
-horas" não tem palavra polar no SentiLex; é negativo por **pragmática**. E a
-cabeça de texto classifica a frase como satisfeito com 0,858, dominando o eixo.
+**O que ainda NAO se sabe:** qual peso o fusor vai aprender para ela. Ate o
+notebook 02 rodar, a feature existe e e calculada, mas nao move nota nenhuma.
+Ao conferir o artefato novo, o peso dela precisa sair NEGATIVO no eixo
+satisfeito-menos-insatisfeito, como as outras cinco de incongruencia. Peso
+positivo significaria que ela virou detector de satisfacao -- o mesmo modo de
+falha que tirou a ironia do vetor -- e ai ela sai tambem.
 
-Rota proposta, já pesquisada e desenhada:
-`docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md` —
-`incongruencia_situacao_negativa`, lista curada de padrões de queixa de
-atendimento (espera, transferência, cobrança) que só dispara quando há elogio
-léxico na mesma fala. Custo: vetor vai a 39 features, **exige rodar o notebook
-02 de novo**, e exige frases novas no simulador nos três rótulos para não
-repetir o vazamento unilateral que já pegou `incongruencia_hiperbole`.
+Medicao feita ANTES de aceitar (invariante 10), no B2W, que e o corpus que da o
+TEXTO do treino: dispara em 4,10% / 2,65% / 1,75% dos rotulos insatisfeito,
+neutro e satisfeito. Tres rotulos, gradiente suave, razao 2,3:1 -- sinal, nao
+previsor unilateral.
+
+**Armadilha que quase me pegou aqui, e que vale para qualquer feature nova:**
+medir no corpus do SIMULADOR dava zero nos tres rotulos, o que sugeriria peso
+zero. Errado -- `FRASES_POR_ROTULO` NAO treina o fusor. O notebook 02 usa 400
+frases do B2W por classe e pega do simulador so a ESTRUTURA da conversa. O
+simulador importa para a guarda de previsor unilateral, nao para o peso. As
+frases foram cruzadas nos tres rotulos mesmo assim, senao a guarda passaria por
+vacuidade sobre a feature nova.
 
 **A regra que vale sempre que o contrato mudar:** `Fusor.carregar` valida
 `n_features_in_` contra `len(NOMES_FEATURES)` e levanta `FusorIncompativelError`

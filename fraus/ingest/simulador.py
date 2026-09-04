@@ -159,6 +159,12 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "nao foi isso que eu perguntei, voce esta lendo o que eu escrevo?",
         "atendimento muito ruim, demorou demais e nao resolveu nada",
         "extremamente decepcionado, isso foi pessimo demais",
+        # F6 (`incongruencia_situacao_negativa`) precisa existir nos TRES
+        # rotulos deste corpus, senao a guarda de previsor unilateral fica
+        # vazia sobre ela -- feature constante em zero passa a guarda sem a
+        # guarda ter medido nada. Esta e a forma IRONICA (elogio + situacao
+        # negativa) numa fala insatisfeita, que e o caso de uso da feature.
+        "otimo, esperei duas horas para ouvir que nao podem fazer nada",
     ],
     1: [
         "ok, obrigado 🙂",
@@ -170,6 +176,10 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "demorou um pouco demais, mas tudo bem",
         "nao era bem isso mas ja ajuda",
         "sem problema, entendi",
+        # F6 na forma MORNA: elogio contido convivendo com espera real. Nao e
+        # ironia nem elogio pleno -- e o meio-termo que impede a feature de
+        # virar previsor de uma ponta so.
+        "gostei do atendimento, so demorou um pouco para responder",
     ],
     2: [
         "perfeito, resolveu na hora, muito obrigado! 😄",
@@ -181,6 +191,13 @@ FRASES_POR_ROTULO: dict[int, list[str]] = {
         "nao tive problema nenhum, obrigado",
         "nem precisei esperar, resolveu rapido",
         "nao demorou nada, valeu",
+        # F6 na forma de SATISFACAO GENUINA depois de problema real -- o falso
+        # positivo que a feature assume por desenho (ver `_situacao_negativa`).
+        # Ele precisa estar AQUI, no rotulo satisfeito: sem isto a feature
+        # dispararia so nas duas pontas de baixo e viraria, na pratica, mais um
+        # detector de insatisfacao com nome de detector de ironia -- o defeito
+        # exato que tirou `ironia_prob_*` do vetor em 04/09/2026.
+        "adorei o suporte, mesmo tendo esperado um pouco valeu a pena",
     ],
 }
 

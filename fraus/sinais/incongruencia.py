@@ -29,7 +29,7 @@ import re
 from fraus.modelos import Conversa
 from fraus.sinais.curadoria import CURADORIA_VAZIA, Curadoria
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji
-from fraus.sinais.lexico import anotar_texto
+from fraus.sinais.lexico import ALCANCE_NEGACAO, NEGACOES, anotar_texto
 
 CHAVES = (
     "incongruencia_polaridade",
@@ -37,6 +37,75 @@ CHAVES = (
     "incongruencia_marcador_contraste",
     "incongruencia_hiperbole",
     "incongruencia_aspas_ironicas",
+    "incongruencia_situacao_negativa",
+)
+
+# ---------------------------------------------------------------------------
+# F6 -- incongruencia IMPLICITA (Riloff 2013; Joshi 2015)
+#
+# As cinco features acima cobrem incongruencia EXPLICITA: as duas pontas do
+# contraste estao no lexicon. A ironia de atendimento tipica nao e assim --
+# tem so UM lado lexical (o elogio), e o outro lado e negativo por
+# conhecimento de mundo:
+#
+#     "que atendimento maravilhoso, so esperei 3 horas"
+#
+# "esperei 3 horas" nao tem nenhuma palavra polar em lexicon nenhum. Medido:
+# as cinco features dao 0,0 nessa frase, e ela pontuava 99,95 / nota 10.
+#
+# POR QUE LISTA CURADA e nao o bootstrapping do Riloff 2013: o algoritmo dele
+# aprende frases de situacao negativa de um corpus grande marcado como
+# sarcastico -- que nao existe para atendimento em portugues. Rodar sobre o
+# B2W-Reviews01 usaria o MESMO corpus que da o rotulo do fusor, e a feature
+# resultante seria um detector de sentimento negativo requentado: exatamente o
+# modo de falha que tirou `ironia_prob_*` do vetor em 04/09/2026. Lista curada
+# e pequena, auditavel item a item, e a procedencia e honesta -- mesma
+# natureza declarada de `palavroes_ptbr.csv` e de `MARCADORES_CONTRASTE`.
+# Desenho completo em docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md.
+# ---------------------------------------------------------------------------
+
+# O catalogo de queixa de atendimento, por tema. Nao e lista arbitraria: ao
+# contrario de sarcasmo em rede social (dominio aberto, qualquer assunto),
+# atendimento tem um numero finito de reclamacoes-tipo, e sao sempre as
+# mesmas. Cada item e casado como N-GRAMA DE TOKEN, nao como substring: "fila"
+# como substring casaria dentro de "perfilado".
+SITUACOES_NEGATIVAS = (
+    # espera e demora
+    "esperar", "esperei", "esperando", "esperamos", "esperado", "esperou",
+    "aguardar", "aguardei", "aguardando", "aguardado",
+    "demorou", "demora", "demorando", "fila",
+    # repeticao e transferencia -- o cliente refazendo trabalho do atendimento
+    "repetir", "repeti", "repetindo", "explicar tudo de novo",
+    "explico a mesma coisa", "explicar de novo",
+    "transferiram", "transferido", "transferida", "me passaram",
+    "de novo", "outra vez", "mais uma vez", "terceira vez", "quarta vez",
+    # entrega e promessa nao cumprida
+    "nao chegou", "não chegou", "nunca chegou", "cancelaram",
+    "nao resolveu", "não resolveu", "nao resolveram", "não resolveram",
+    "sem resposta", "sem solucao", "sem solução", "ate agora nada",
+    "até agora nada", "perdi o prazo",
+    # cobranca
+    "cobraram errado", "cobranca indevida", "cobrança indevida",
+    "descontaram", "cobrado duas vezes", "cobraram duas vezes",
+)
+
+# O lado POSITIVO do contraste quando o SentiLex nao ajuda.
+#
+# ESTA LISTA E O CONSERTO DE UM FURO REAL DO DESENHO. A proposta original
+# exigia um termo positivo de `anotar_texto` como lado do elogio. Medido na
+# primeira frase que um usuario digitou no simulador:
+#
+#     anotar_texto("Nossa, eu realmente gostei de ficar 5h esperando")
+#         -> [('gostei', 0, False)]        <- polaridade ZERO
+#
+# O SentiLex-PT02 e lexico de JULGAMENTO SOCIAL e e neutro em verbo de afeto
+# do proprio falante -- limitacao que `lexico.py` ja declara no topo. Ele sabe
+# que "maravilhoso" e positivo e nao sabe que "gostei" e. Sem esta lista, F6
+# acertaria a frase de manual do projeto e erraria a frase real. Os verbos
+# aqui sao os que o SentiLex deixa em zero, nao uma copia dele.
+VERBOS_AFETO_FALANTE = (
+    "gostei", "gosto", "gostamos", "adorei", "adoro", "adoramos",
+    "amei", "amo", "curti", "curto", "aprovei",
 )
 
 # Conectivos de contraste do portugues. Lista curta de proposito, pelo mesmo
@@ -82,6 +151,11 @@ _TOKEN = re.compile(r"[0-9a-zà-ÿA-ZÀ-Ý\-]+")
 # Aspas retas e curvas: o cliente digita as duas, e o teclado do celular
 # troca uma pela outra sem avisar.
 _ENTRE_ASPAS = re.compile(r'["“”\']([^"“”\']{1,40})["“”\']')
+# Pontuacao forte encerra o escopo da negacao em F6 -- mesmo criterio de
+# `_FRONTEIRA` em `lexico.py`. Nao e importada de la porque la ela e usada
+# para PARTIR o texto em segmentos com `finditer`, e aqui com `split`; o
+# criterio e o mesmo e a duplicacao esta declarada aqui de proposito.
+_FRONTEIRA_FRASE = re.compile(r"[.!?;]")
 
 
 def _polaridades(texto: str, curadoria: Curadoria) -> list[int]:
@@ -272,6 +346,109 @@ def _aspas_ironicas(texto: str, curadoria: Curadoria) -> bool:
     return False
 
 
+def _tokens_e_negadas(texto: str) -> tuple[list[str], set[int]]:
+    """Tokens do texto inteiro e os indices sob escopo de negacao.
+
+    `anotar_texto` ja resolve negacao, mas devolve termos SEM posicao -- e F6
+    casa n-gramas proprios (`SITUACOES_NEGATIVAS`, `VERBOS_AFETO_FALANTE`) que
+    nao estao no lexicon, entao nao ha achado dela para reaproveitar. As duas
+    CONSTANTES (`NEGACOES`, `ALCANCE_NEGACAO`) sao importadas de `lexico.py`,
+    nao redigitadas: se a lista de negacoes mudar la, muda aqui junto. O que e
+    local e so a varredura por posicao.
+
+    Sem isto, "nao gostei de ficar esperando" -- a fala mais inequivocamente
+    insatisfeita que existe -- casaria "gostei" + "esperando" e sairia como a
+    mais ironica da conversa.
+
+    Devolve tokens e negadas JUNTOS porque o escopo se calcula por SEGMENTO (a
+    pontuacao forte encerra a negacao, como em `lexico.py`: "nao chegou.
+    adorei esperar" tem duas oracoes, e a negacao da primeira nao alcanca a
+    segunda) enquanto o casamento de n-grama corre sobre a lista inteira.
+    Separar em duas funcoes obrigaria a tokenizar duas vezes e a recalcular os
+    offsets de segmento para traduzir indice local em indice global.
+
+    A pontuacao NAO sobrevive a `_TOKEN` (ela so aceita letra, digito e
+    hifen), entao a fronteira precisa ser aplicada ao TEXTO, antes de
+    tokenizar -- procurar `.!?;` na lista de tokens nunca acharia nada.
+    """
+    tokens: list[str] = []
+    negadas: set[int] = set()
+    for segmento in _FRONTEIRA_FRASE.split(texto.lower()):
+        base = len(tokens)
+        do_segmento = _TOKEN.findall(segmento)
+        tokens.extend(do_segmento)
+        negacao_ate = -1
+        for local, token in enumerate(do_segmento):
+            if token in NEGACOES:
+                negacao_ate = local + ALCANCE_NEGACAO
+                continue
+            if local <= negacao_ate:
+                negadas.add(base + local)
+    return tokens, negadas
+
+
+def _casa_ngrama(
+    tokens: list[str], negadas: set[int], candidatos: tuple[str, ...]
+) -> bool:
+    """Algum candidato aparece como n-grama de token e NAO esta negado.
+
+    N-grama de token, nao substring: "fila" como substring casaria dentro de
+    "perfilado", e "de novo" precisa das duas palavras adjacentes.
+
+    Um n-grama conta como negado se QUALQUER token dele estiver sob escopo --
+    a negacao alcanca o comeco da expressao, e "nao explico a mesma coisa"
+    deve morrer inteiro, nao so no primeiro token.
+    """
+    for candidato in candidatos:
+        partes = candidato.split(" ")
+        tamanho = len(partes)
+        for inicio in range(len(tokens) - tamanho + 1):
+            if tokens[inicio:inicio + tamanho] != partes:
+                continue
+            if any(i in negadas for i in range(inicio, inicio + tamanho)):
+                continue
+            return True
+    return False
+
+
+def _situacao_negativa(texto: str, achados: list[tuple[str, int, bool]]) -> float:
+    """F6 -- elogio convivendo com situacao negativa de atendimento.
+
+    Exige os DOIS lados na mesma fala. So a situacao negativa e reclamacao
+    direta, que e a fala mais comum de um cliente insatisfeito: se disparasse
+    ali, a feature seria um detector de insatisfacao com nome de detector de
+    ironia -- o mesmo defeito que tirou `ironia_prob_*` do vetor. So o elogio
+    e satisfacao genuina.
+
+    O lado positivo tem DUAS fontes, e a segunda nao e redundante: termo
+    positivo nao negado do SentiLex ("maravilhoso"), OU verbo de afeto do
+    falante ("gostei"), que o SentiLex deixa em polaridade zero por ser lexico
+    de julgamento social. Ver o comentario de `VERBOS_AFETO_FALANTE`.
+
+    Binaria de proposito (0,0 ou 1,0). O grau de ironia nao esta na CONTAGEM de
+    situacoes negativas -- "esperei e esperei" nao e mais ironico que
+    "esperei"; o que grada e a media por conversa, feita por
+    `features_incongruencia`.
+
+    LIMITACAO ACEITA: elogio genuino sobre a RESOLUCAO de um problema real
+    ("adorei, resolveram rapido mesmo eu tendo esperado antes") dispara igual.
+    Nao ha regra que separe isso de ironia sem conhecimento de mundo. Por isso
+    F6 e feature com peso APRENDIDO pelo fusor, ponderada contra as outras 38,
+    e nao regra de decisao -- mesma postura que `_hiperbole` ja assume.
+    """
+    tokens, negadas = _tokens_e_negadas(texto)
+    if not tokens:
+        return 0.0
+
+    if not _casa_ngrama(tokens, negadas, SITUACOES_NEGATIVAS):
+        return 0.0
+
+    tem_elogio = any(
+        polaridade > 0 and not negado for _, polaridade, negado in achados
+    ) or _casa_ngrama(tokens, negadas, VERBOS_AFETO_FALANTE)
+    return 1.0 if tem_elogio else 0.0
+
+
 def features_incongruencia(
     conversa: Conversa, curadoria: Curadoria | None = None
 ) -> dict[str, float]:
@@ -310,4 +487,5 @@ def features_incongruencia(
         somas["incongruencia_aspas_ironicas"] += (
             1.0 if _aspas_ironicas(texto, curadoria) else 0.0
         )
+        somas["incongruencia_situacao_negativa"] += _situacao_negativa(texto, achados)
     return {chave: valor / total for chave, valor in somas.items()}

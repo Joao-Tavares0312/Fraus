@@ -75,7 +75,7 @@ def test_carregar_recusa_artefato_incompativel(tmp_path):
     fusor) duas vezes na mesma semana. A validacao precisa acontecer na
     CARGA, nao na primeira predicao (invariante 7).
     """
-    nomes_diferentes = NOMES_FEATURES[:-2]  # 36 em vez de 38
+    nomes_diferentes = NOMES_FEATURES[:-2]  # dois a menos que o contrato
     exemplos = [{nome: 0.0 for nome in nomes_diferentes} for _ in range(4)]
     rotulos = [0, 1, 2, 1]
     fusor_velho = Fusor()
@@ -87,7 +87,9 @@ def test_carregar_recusa_artefato_incompativel(tmp_path):
     import joblib
     joblib.dump(fusor_velho._pipeline, caminho)
 
-    with pytest.raises(FusorIncompativelError, match=r"36.*38|38.*36"):
+    faltando = len(NOMES_FEATURES) - 2
+    esperado = rf"{faltando}.*{len(NOMES_FEATURES)}|{len(NOMES_FEATURES)}.*{faltando}"
+    with pytest.raises(FusorIncompativelError, match=esperado):
         Fusor.carregar(caminho)
 
 
@@ -175,11 +177,11 @@ def test_prever_devolve_uma_das_tres_classes():
     assert fusor.prever(_features(texto_prob_satisfeito_media=0.9)) in (0, 1, 2)
 
 
-def test_contrato_tem_trinta_e_oito_features_com_incongruencia():
+def test_contrato_tem_trinta_e_nove_features_com_incongruencia():
     from fraus.sinais.incongruencia import CHAVES
 
-    assert len(NOMES_FEATURES) == 38
-    assert len(set(NOMES_FEATURES)) == 38, "nome de feature duplicado"
+    assert len(NOMES_FEATURES) == 39
+    assert len(set(NOMES_FEATURES)) == 39, "nome de feature duplicado"
     for chave in CHAVES:
         assert chave in NOMES_FEATURES
 
@@ -304,7 +306,7 @@ def _conversa_com(texto: str) -> Conversa:
 def test_curadoria_atravessa_montar_features():
     """O elo que faltava: sem passar aqui, curar palavra nao moveria o score.
 
-    As 38 chaves continuam as mesmas (invariante 9) -- o que muda e o VALOR de
+    As 39 chaves continuam as mesmas (invariante 9) -- o que muda e o VALOR de
     `lexico_polaridade_media`, nunca o conjunto de features.
     """
     conversa = _conversa_com("o app ta lentissimo")
