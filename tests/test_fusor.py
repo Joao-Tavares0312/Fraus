@@ -1,6 +1,6 @@
 import pytest
 
-from fraus.fusor import NOMES_FEATURES, Fusor, vetorizar
+from fraus.fusor import NOMES_FEATURES, Fusor, FusorIncompativelError, vetorizar
 
 
 def _features(**sobrescritas) -> dict[str, float]:
@@ -43,6 +43,52 @@ def test_feature_faltando_e_erro_e_nao_zero_silencioso():
     del incompleto["emoji_contagem"]
     with pytest.raises(KeyError):
         vetorizar(incompleto)
+
+
+def test_vetorizar_recusa_chave_extra():
+    """Espelha o lado 'faltando' (invariante 9): sobrando tambem e erro.
+
+    Uma feature que saiu do contrato mas continua sendo produzida por engano
+    (caso real: `ironia_prob_media`/`ironia_prob_max` em 04/09/2026) precisa
+    aparecer na hora, nao passar batido dentro de um vetor do tamanho certo.
+    """
+    excedente = _features()
+    excedente["ironia_prob_media"] = 0.5
+    with pytest.raises(ValueError, match="ironia_prob_media"):
+        vetorizar(excedente)
+
+
+def test_carregar_aceita_artefato_compativel(tmp_path):
+    fusor = _fusor_treinado()
+    caminho = tmp_path / "fusor.joblib"
+    fusor.salvar(caminho)
+    assert Fusor.carregar(caminho) is not None
+
+
+def test_carregar_recusa_artefato_incompativel(tmp_path):
+    """Reproduz o incidente real: artefato de 40, contrato de 38.
+
+    `Fusor.carregar` fazia `joblib.load` puro e a API subia normalmente com
+    um `StandardScaler` de dimensao errada -- so estourava na primeira
+    pontuacao real (`/ingestao`, `/conversas/importar`), como HTTP 500. Isso
+    enganou quem testava a mao via `/modelo/simular` (que nao passa pelo
+    fusor) duas vezes na mesma semana. A validacao precisa acontecer na
+    CARGA, nao na primeira predicao (invariante 7).
+    """
+    nomes_diferentes = NOMES_FEATURES[:-2]  # 36 em vez de 38
+    exemplos = [{nome: 0.0 for nome in nomes_diferentes} for _ in range(4)]
+    rotulos = [0, 1, 2, 1]
+    fusor_velho = Fusor()
+    fusor_velho._pipeline.fit(
+        [[float(f[nome]) for nome in nomes_diferentes] for f in exemplos], rotulos
+    )
+
+    caminho = tmp_path / "fusor_velho.joblib"
+    import joblib
+    joblib.dump(fusor_velho._pipeline, caminho)
+
+    with pytest.raises(FusorIncompativelError, match=r"36.*38|38.*36"):
+        Fusor.carregar(caminho)
 
 
 def test_conversa_positiva_pontua_alto():
