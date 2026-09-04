@@ -42,11 +42,17 @@ export function useProgressoDaCena(): void {
       return;
     }
 
+    // `agendado` guarda o id do rAF pendente, no mesmo desenho do
+    // `useEspecular`: sem isto o cleanup so removeria o listener de scroll,
+    // e um frame ja enfileirado ainda rodaria depois da desmontagem,
+    // escrevendo na raiz por um componente que nao existe mais.
+    let agendado = 0;
     let pendente = false;
     function aoRolar() {
       if (pendente) return;
       pendente = true;
-      requestAnimationFrame(() => {
+      agendado = requestAnimationFrame(() => {
+        agendado = 0;
         pendente = false;
         const rolavel = document.body.scrollHeight - window.innerHeight;
         aplicar(rolavel > 0 ? window.scrollY / rolavel : 0);
@@ -55,6 +61,10 @@ export function useProgressoDaCena(): void {
 
     aoRolar();
     window.addEventListener("scroll", aoRolar, { passive: true });
-    return () => window.removeEventListener("scroll", aoRolar);
+    return () => {
+      if (agendado) cancelAnimationFrame(agendado);
+      agendado = 0;
+      window.removeEventListener("scroll", aoRolar);
+    };
   }, []);
 }
