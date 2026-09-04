@@ -41,14 +41,13 @@ if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
 from fraus.api.main import (CAMINHO_FUSOR, CAMINHO_MODELO_EMOCAO,  # noqa: E402
-                            CAMINHO_MODELO_IRONIA, CAMINHO_MODELO_TEXTO)
+                            CAMINHO_MODELO_TEXTO)
 from fraus.fusor import (NEUTRO, PESO_NEUTRO_NO_SCORE, SATISFEITO,  # noqa: E402
                          Fusor, montar_features, vetorizar)
 from fraus.indicadores import (calcular_nps, categoria_nps,  # noqa: E402
                                nota_0_10)
 from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_lote  # noqa: E402
 from fraus.sinais.emocao import ClassificadorEmocao  # noqa: E402
-from fraus.sinais.ironia import ClassificadorIronia  # noqa: E402
 from fraus.sinais.texto import ClassificadorTexto  # noqa: E402
 
 # 30 por classe, como a medicao original que este script substitui. O tamanho
@@ -83,12 +82,14 @@ def pontuar_com_peso(fusor: Fusor, features: dict[str, float], peso_neutro: floa
 
 
 def medir(peso_neutro: float) -> dict:
-    # Os tres classificadores sao obrigatorios desde o contrato de 35 features:
-    # cada um propaga ModeloAusenteError, com mensagem propria, se faltar --
-    # nunca pontuamos aqui com vetor incompleto (invariante 7).
+    # Texto e emocao sao obrigatorios para o vetor de 38 features que este
+    # script pontua; cada um propaga ModeloAusenteError, com mensagem propria,
+    # se faltar -- nunca pontuamos aqui com vetor incompleto (invariante 7).
+    # A ironia NAO entra em `montar_features` desde 04/09/2026 (ver
+    # `fraus/fusor.py`), entao este script -- que so mede a regua score/NPS --
+    # nao tem motivo para carrega-la; o Motor da API continua exigindo-a.
     classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)
     emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO)
-    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA)
     fusor = Fusor.carregar(CAMINHO_FUSOR)
 
     lote = gerar_lote(
@@ -105,7 +106,7 @@ def medir(peso_neutro: float) -> dict:
 
     for conversa, rotulo in lote:
         score = pontuar_com_peso(
-            fusor, montar_features(conversa, classificador, emocao, ironia), peso_neutro
+            fusor, montar_features(conversa, classificador, emocao), peso_neutro
         )
         scores.append(score)
         scores_por_rotulo[rotulo].append(score)

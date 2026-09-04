@@ -129,11 +129,11 @@ def test_prever_devolve_uma_das_tres_classes():
     assert fusor.prever(_features(texto_prob_satisfeito_media=0.9)) in (0, 1, 2)
 
 
-def test_contrato_tem_quarenta_features_com_incongruencia():
+def test_contrato_tem_trinta_e_oito_features_com_incongruencia():
     from fraus.sinais.incongruencia import CHAVES
 
-    assert len(NOMES_FEATURES) == 40
-    assert len(set(NOMES_FEATURES)) == 40, "nome de feature duplicado"
+    assert len(NOMES_FEATURES) == 38
+    assert len(set(NOMES_FEATURES)) == 38, "nome de feature duplicado"
     for chave in CHAVES:
         assert chave in NOMES_FEATURES
 
@@ -142,12 +142,35 @@ def test_contrato_nao_tem_duplicata():
     assert len(set(NOMES_FEATURES)) == len(NOMES_FEATURES)
 
 
+def test_contrato_nao_leva_mais_ironia_no_vetor():
+    """Trava a decisao de 04/09/2026 -- nao reverter sem reler a medicao.
+
+    Medido sobre o proprio corpus de treino (B2W-Reviews01, 500 resenhas por
+    rotulo, semente 20260904): resenha negativa tem media P(ironia) = 0,1012
+    (frac(P>0,5) = 0,092); resenha positiva tem media P(ironia) = 0,7146
+    (frac(P>0,5) = 0,740). A cabeca de ironia (IDPT 2021, tweet e noticia)
+    funciona nesse corpus como detector de sentimento POSITIVO, nao de
+    ironia -- o fusor de 40 features aprendeu +0,77 de peso para
+    `ironia_prob_media` no eixo satisfeito-menos-insatisfeito (mais ironia
+    empurrando para SATISFEITO). Se esta assercao falhar porque alguem
+    recolocou `ironia_prob_media`/`ironia_prob_max` em `NOMES_FEATURES`, reveja
+    a medicao (`docs/treinamento.md`) antes de ajustar o teste.
+    """
+    assert "ironia_prob_media" not in NOMES_FEATURES
+    assert "ironia_prob_max" not in NOMES_FEATURES
+
+
 def test_contrato_cobre_todos_os_prefixos_esperados():
-    """Doze prefixos, oito familias: tempo sozinho usa cinco deles."""
+    """Onze prefixos, sete familias no vetor: tempo sozinho usa cinco deles.
+
+    A ironia nao aparece aqui -- ela saiu do vetor em 04/09/2026 (ver o
+    comentario de `NOMES_FEATURES` em `fraus/fusor.py`), mas continua existindo
+    como oitavo sinal do sistema, so que fora do vetor.
+    """
     prefixos = {nome.split("_")[0] for nome in NOMES_FEATURES}
     assert prefixos == {
         "texto", "emoji", "latencia", "duracao", "qtd", "escalou",
-        "abandonou", "emocao", "lexico", "ironia", "estilo", "incongruencia",
+        "abandonou", "emocao", "lexico", "estilo", "incongruencia",
     }
 
 
@@ -222,11 +245,6 @@ class _EmocaoDuble:
         return [[uniforme] * len(NOMES_EMOCOES) for _ in textos]
 
 
-class _IroniaDuble:
-    def prever_mensagens(self, textos):
-        return [[0.9, 0.1] for _ in textos]
-
-
 def _conversa_com(texto: str) -> Conversa:
     base = datetime(2026, 8, 25, 10, 0, 0, tzinfo=timezone.utc)
     return Conversa(
@@ -240,16 +258,14 @@ def _conversa_com(texto: str) -> Conversa:
 def test_curadoria_atravessa_montar_features():
     """O elo que faltava: sem passar aqui, curar palavra nao moveria o score.
 
-    As 40 chaves continuam as mesmas (invariante 9) -- o que muda e o VALOR de
+    As 38 chaves continuam as mesmas (invariante 9) -- o que muda e o VALOR de
     `lexico_polaridade_media`, nunca o conjunto de features.
     """
     conversa = _conversa_com("o app ta lentissimo")
     curadoria = Curadoria(palavras={"lentissimo": -1})
 
-    sem = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble())
-    com = montar_features(
-        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble(), curadoria
-    )
+    sem = montar_features(conversa, _TextoDuble(), _EmocaoDuble())
+    com = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), curadoria)
 
     assert set(sem) == set(com) == set(NOMES_FEATURES)
     assert sem["lexico_polaridade_media"] == 0.0
@@ -261,10 +277,8 @@ def test_curadoria_de_emoji_atravessa_montar_features():
     conversa = _conversa_com("acabou assim \N{MELTING FACE}")
     curadoria = Curadoria(emojis={"\N{MELTING FACE}": -0.8})
 
-    sem = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble())
-    com = montar_features(
-        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble(), curadoria
-    )
+    sem = montar_features(conversa, _TextoDuble(), _EmocaoDuble())
+    com = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), curadoria)
 
     assert sem["emoji_score_medio"] == 0.0
     assert com["emoji_score_medio"] == -0.8
@@ -272,14 +286,12 @@ def test_curadoria_de_emoji_atravessa_montar_features():
 
 def test_montar_features_entrega_o_contrato_completo():
     conversa = _conversa_com("o atendimento foi otimo")
-    features = montar_features(conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble())
+    features = montar_features(conversa, _TextoDuble(), _EmocaoDuble())
     assert set(features) == set(NOMES_FEATURES)
 
 
 def test_sem_curadoria_o_vetor_e_o_de_antes():
     conversa = _conversa_com("o atendimento foi otimo")
     assert montar_features(
-        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble()
-    ) == montar_features(
-        conversa, _TextoDuble(), _EmocaoDuble(), _IroniaDuble(), None
-    )
+        conversa, _TextoDuble(), _EmocaoDuble()
+    ) == montar_features(conversa, _TextoDuble(), _EmocaoDuble(), None)

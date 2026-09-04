@@ -7,7 +7,7 @@ Aplicativo de três seções sobre um app shell com sidebar:
   atendimentos e o vocabulário característico de cada categoria.
 - **Atendimentos** — tabela filtrável, exportável, e o detalhe de cada
   transcrição com latência anotada e as contribuições daquele atendimento.
-- **Modelo** — peso global das 40 features, métricas do treino, lexicon de
+- **Modelo** — peso global das 38 features do vetor, métricas do treino, lexicon de
   emoji navegável e o **simulador ao vivo** de `POST /modelo/simular`.
 
 Um **filtro de período global** (`?de=&ate=` na URL) recorta indicadores, série,

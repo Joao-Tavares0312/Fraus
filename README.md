@@ -36,16 +36,20 @@ por um classificador leve:
 | **Tempo** | latência, escalação, abandono | o efeito é não-linear — o peso é aprendido, não arbitrado |
 | **Emoção** | as 7 emoções humanas, por mensagem | requisito de banca; a nota diz *quanto*, a emoção diz *o quê* |
 | **Léxico** | SentiLex-PT02 com escopo de **negação**, mais o [léxico curado](#léxico-curado) | polaridade de procedência independente do BERTimbau |
-| **Ironia** ⚠️ | cabeça binária sobre o IDPT 2021 | texto positivo com sentido negativo derruba a leitura dos outros sinais |
+| **Ironia** ⚠️ | cabeça binária sobre o IDPT 2021, lida por mensagem | texto positivo com sentido negativo — mas **não entra no score**, ver abaixo |
 | **Estilo** | caixa alta, pontuação, alongamento, palavrão, censura | a forma de escrever carrega afeto que a palavra sozinha não carrega |
 | **Incongruência** | polaridade emoji×texto, marcador de contraste, hipérbole, aspas irônicas | texto e emoji discordando é o formato clássico da ironia |
 
-As oito famílias somam **40 features** (as cinco de `incongruencia_*` entraram
-em 03/09/2026) e todas entram no vetor desde 21/08/2026 — ver [contrato de
-features](docs/treinamento.md#contrato-de-features).
+Sete das oito famílias — todas menos ironia — somam **38 features** no vetor
+do fusor (as cinco de `incongruencia_*` entraram em 03/09/2026) — ver [contrato
+de features](docs/treinamento.md#contrato-de-features).
 
-⚠️ *a cabeça de ironia tem vazamento de corpus medido e pontua assim mesmo — é
-dívida assumida, não pendência de integração; ver [pendência 1](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida).*
+⚠️ *a cabeça de ironia continua treinada, obrigatória e exibida por mensagem
+na dashboard, mas **saiu do vetor do fusor em 04/09/2026**: medida no próprio
+corpus de treino, ela funciona como detector de sentimento positivo, não de
+ironia (74% das resenhas satisfeitas marcadas como irônicas, contra 9% das
+insatisfeitas) — ver [pendência 1](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida)
+e [a decisão em docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026).*
 
 O resultado é um score de 0 a 100 por atendimento, que vira nota 0–10 e categoria
 de NPS (**0–6 detrator · 7–8 neutro · 9–10 promotor**), agregado numa dashboard.
@@ -139,8 +143,8 @@ léxico anterior") em vez de esconder, e a contagem ignora o filtro de período 
 propósito: a régua misturada é propriedade do banco, não da semana que se olha.
 
 `POST /conversas/repontuar` zera a divergência. **Limitação declarada:** ele roda
-os três BERTimbau de novo por conversa — o vetor é de 40 features e o fusor exige
-as 40, então não existe recalcular só as três léxicas e as cinco de emoji. Em
+os três BERTimbau de novo por conversa — o vetor é de 38 features e o fusor exige
+as 38, então não existe recalcular só as três léxicas e as cinco de emoji. Em
 dezenas de atendimentos são segundos; em milhares vira trabalho de fila, e a fila
 não existe. A rota é **síncrona de propósito**: uma fila que ninguém observa
 seria pior que uma espera que se vê.
@@ -720,8 +724,8 @@ ordem lá é a ordem de importância.
 | Frente | Estado | O que existe |
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
-| **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável** — ver pendência 1 |
-| **Fusor** | ✅ | contrato e artefato batem desde 04/09/2026: `NOMES_FEATURES` tem 40 nomes (família `incongruencia_*` entrou em 03/09/2026) e `modelos/fusor.joblib` foi retreinado com `n_features_in_ = 40`, **acurácia 0,947 / F1-macro 0,947** contra 0,93 do fusor de 35. As cinco features novas aprenderam peso NEGATIVO no eixo satisfeito−insatisfeito (mais incongruência empurra para insatisfeito), que é a direção que a literatura prevê. **Dívida remanescente, independente deste artefato:** `Fusor.carregar` é `joblib.load` puro, sem validação de forma — na próxima vez que o contrato mudar, a API sobe com artefato incompatível e só falha na primeira pontuação real. Ver invariante 7 e [docs/treinamento.md](docs/treinamento.md#retreino-do-fusor-apos-as-features-de-incongruencia-03092026) |
+| **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável e, desde 04/09/2026, não pontua mais** — ver pendência 1 |
+| **Fusor** | ⚠️ | **contrato e artefato voltaram a divergir em 04/09/2026.** `NOMES_FEATURES` caiu de 40 para 38 (as duas `ironia_*` saíram — ver [docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026)), mas `modelos/fusor.joblib` continua sendo o artefato de 40 features, treinado em 04/09/2026 antes desta decisão. A API sobe normalmente e **falha na primeira pontuação real** (`StandardScaler` esperando 40, recebendo 38) — o mesmo padrão de risco já descrito abaixo, agora pela razão oposta (features A MAIS no artefato). Retreinar com `notebooks/02_treino_fusor.ipynb` é o próximo passo, ainda não feito. **Dívida remanescente, independente deste artefato:** `Fusor.carregar` é `joblib.load` puro, sem validação de forma — é por isso que a divergência só aparece na pontuação, não no boot. Ver invariante 7 e [docs/treinamento.md](docs/treinamento.md#contrato-de-features) |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -740,14 +744,22 @@ ordem lá é a ordem de importância.
 
 Em ordem, com o detalhe em [Pendências](#pendências):
 
-1. **Retreinar a cabeça de ironia — dívida assumida, não mais bloqueio.** O
-   vazamento está medido em `tests/test_ironia_dominio.py` (6 em 10 falas
-   sinceras marcadas como irônicas) e o gerador já foi corrigido; falta rodar
-   `notebooks/04_treino_ironia.ipynb` de novo. **A ironia já entra no score**
-   desde o item 2 — o aviso antigo ("não treinar o fusor sobre uma cabeça que
-   erra 6 em 10") deixou de valer como trava e passou a descrever o que
-   acontece hoje: o score carrega esse vazamento até este notebook rodar de
-   novo.
+0. **Retreinar o fusor no contrato de 38 — bloqueio de subida.** A ironia saiu
+   de `NOMES_FEATURES` em 04/09/2026 (ver a linha do Fusor na tabela acima e
+   [docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026)),
+   mas `modelos/fusor.joblib` ainda é o artefato de 40 features. A API sobe e
+   falha na primeira pontuação real. Rodar `notebooks/02_treino_fusor.ipynb`
+   de novo (a chamada de `montar_features` já não passa mais o classificador
+   de ironia) e copiar o artefato novo para `modelos/`.
+1. **Retreinar a cabeça de ironia — dívida assumida, não mais bloqueio de
+   confiabilidade, mas continua obrigatória para a API subir.** O vazamento
+   está medido em `tests/test_ironia_dominio.py` (6 em 10 falas sinceras
+   marcadas como irônicas) e o gerador já foi corrigido; falta rodar
+   `notebooks/04_treino_ironia.ipynb` de novo. **A ironia NÃO entra mais no
+   score desde 04/09/2026** (item 0 acima) — o vazamento não se propaga mais
+   para a nota, mas a cabeça continua sendo lida por mensagem e exibida na
+   dashboard, então retreiná-la continua valendo a pena para essa leitura ser
+   confiável.
 2. ~~**Retreinar o fusor no contrato de 35.**~~ **RESOLVIDO em 24/08/2026.** O
    contrato subiu para 35 em 21/08 e o artefato ficou para trás por três dias;
    `modelos/fusor.joblib` era de 16 features e a API real não subia. O
@@ -914,17 +926,22 @@ gargalo dos emojis e da caixa) e ganhou o teste que faltava. Falta rodar
 `modelos/bertimbau-ironia/`. Até lá a probabilidade de ironia é exibida como
 **indício com a ressalva colada**, nunca como veredito.
 
-**Isto passou de pré-requisito a dívida assumida em 21/08/2026.** Antes do
-contrato de 35 features, o aviso deste item era uma trava: "não treinar o
-fusor sobre uma cabeça de ironia que erra 6 em 10 injetaria o vazamento dela
-no score" — e por isso o item 2 ficava bloqueado por este aqui. O contrato
-subiu mesmo assim, `ironia_*` entrou no vetor, e a trava não foi respeitada:
-**a ironia pontua hoje com a cabeça que erra 6 em 10**, então o score de todo
-atendimento carrega esse vazamento até este notebook rodar de novo. Não é um
-risco resolvido nem neutro — é um risco que já está dentro do número que a
-tela mostra.
+**Isto passou de pré-requisito a dívida assumida em 21/08/2026, e mudou de
+natureza de novo em 04/09/2026.** Entre 21/08 e 03/09, o aviso deste item era
+uma trava: "não treinar o fusor sobre uma cabeça de ironia que erra 6 em 10
+injetaria o vazamento dela no score" — e por isso o item 2 ficava bloqueado
+por este aqui. O contrato subiu mesmo assim, `ironia_*` entrou no vetor, e a
+trava não foi respeitada: a ironia pontuou entre 21/08 e 03/09 com a cabeça que
+erra 6 em 10. Em 04/09/2026, uma medição separada (ver
+[docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026))
+mostrou que o problema da cabeça era ainda mais profundo do que o vazamento de
+registro conversacional: no corpus de treino do fusor ela funciona como
+detector de sentimento POSITIVO. **`ironia_prob_media` e `ironia_prob_max`
+saíram do vetor por causa disso — a ironia não pontua mais**, e este item
+passa a ser sobre a QUALIDADE da leitura por mensagem que a dashboard exibe,
+não sobre o score.
 
-### 2. Retreinar o fusor no contrato vigente (agora 40, era 35)
+### 2. Retreinar o fusor no contrato vigente (agora 38, era 40)
 
 São duas coisas distintas, e só uma está feita.
 
@@ -978,6 +995,17 @@ estoura como HTTP 500 na primeira pontuação real, em `/ingestao` ou
 incompatível; o comportamento atual cumpre a metade "explícita" (o 500 é
 claro) mas não a metade "na carga". Validar a dimensão em `Fusor.carregar` é
 o conserto, e continua pendente.
+
+**A dívida voltou de novo em 04/09/2026, pelo motivo oposto.** O contrato
+CAIU de 40 para 38 features: `ironia_prob_media` e `ironia_prob_max` saíram de
+`NOMES_FEATURES` (ver o item 1 acima e
+[docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026)),
+mas `modelos/fusor.joblib` continua sendo o artefato de 40 features treinado
+mais cedo no mesmo dia. A falta de validação de forma em `Fusor.carregar`
+significa exatamente o mesmo sintoma descrito acima: a API sobe normalmente e
+só falha na primeira pontuação real, agora com `StandardScaler` esperando 40 e
+recebendo 38. **Retreinar `notebooks/02_treino_fusor.ipynb` com o contrato de
+38 é o próximo passo, ainda não feito** — ver o item 0 da seção "Falta" acima.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),

@@ -19,13 +19,19 @@ from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
 class Motor:
     """Amarra os tres classificadores e o fusor num unico ponto de pontuacao.
 
-    Emocao e ironia ENTRAM no score desde que o contrato subiu para 35 features
-    (21/08/2026). Antes disso elas eram leitura decorativa e esta docstring
-    dizia, corretamente, que nao moviam a nota -- nao dizem mais.
+    Emocao ENTRA no score desde que o contrato subiu para 35 features
+    (21/08/2026); antes disso era leitura decorativa. A ironia entrou junto em
+    21/08/2026 mas SAIU de novo em 04/09/2026: o corpus de treino faz a cabeca
+    funcionar como detector de sentimento positivo, nao de ironia (ver
+    `fraus/fusor.py`, comentario de `NOMES_FEATURES`) -- ela volta a ser
+    leitura decorativa, so que agora POR DECISAO, nao por falta de features.
 
-    A consequencia pratica: os tres modelos sao obrigatorios. Sem qualquer um
-    deles a API nao sobe, e esse e o comportamento correto (invariante 7) --
-    servir predicao com vetor incompleto e pior do que estar fora do ar.
+    A consequencia pratica: os tres modelos continuam obrigatorios mesmo a
+    ironia nao pontuando mais -- ela ainda e lida por mensagem e devolvida na
+    atribuicao. Sem qualquer um dos tres a API nao sobe, e esse e o
+    comportamento correto (invariante 7) -- servir predicao com vetor
+    incompleto, ou omitir um sinal que a tela promete mostrar, e pior do que
+    estar fora do ar.
     """
 
     def __init__(
@@ -85,9 +91,7 @@ class Motor:
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
         return self._fusor.pontuar(
-            montar_features(
-                conversa, self._classificador, self._emocao, self._ironia, curadoria
-            )
+            montar_features(conversa, self._classificador, self._emocao, curadoria)
         )
 
     def atribuir_conversa(self, conversa, curadoria=None) -> dict:
@@ -160,7 +164,7 @@ class Motor:
             # que o score, a tela explicaria a nota com evidencia que nao a
             # produziu -- pior que nao explicar.
             features = montar_features(
-                conversa, self._classificador, self._emocao, self._ironia, curadoria
+                conversa, self._classificador, self._emocao, curadoria
             )
             contribuicoes = self._fusor.contribuicoes(features)
 
@@ -170,13 +174,18 @@ class Motor:
             "contribuicoes": contribuicoes,
             # Ate 20/08/2026 esta lista trazia ["emocao", "prob_ironia"]: os dois
             # vinham na resposta mas nao entravam no score. Desde o contrato de
-            # 35 features (21/08/2026) as duas cabecas ENTRAM em `contribuicoes`
-            # e no score, entao a lista esvaziou. O campo continua existindo --
-            # "sinais que vieram mas nao entram no score" e uma pergunta valida
-            # mesmo com o conjunto vazio hoje, e a interface ja consome o
-            # contrato de tipo (`dashboard/lib/api.ts`); sumir com o campo
-            # trocaria "nao ha nenhum" por "campo ausente", que e outra coisa.
-            "sinais_fora_do_score": [],
+            # 35 features (21/08/2026) ate 03/09/2026 as duas cabecas ENTRAVAM
+            # em `contribuicoes` e no score, entao a lista esvaziou. Em
+            # 04/09/2026 a ironia SAIU do vetor de novo -- o corpus de treino
+            # fez a cabeca funcionar como detector de sentimento positivo, nao
+            # de ironia (ver o comentario de `NOMES_FEATURES` em `fusor.py`) --
+            # entao a lista volta a ter conteudo. O campo continua existindo
+            # mesmo quando vazio: "sinais que vieram mas nao entram no score" e
+            # uma pergunta valida independente da resposta do momento, e a
+            # interface ja consome o contrato de tipo (`dashboard/lib/api.ts`);
+            # sumir com o campo trocaria "nao ha nenhum" por "campo ausente",
+            # que e outra coisa.
+            "sinais_fora_do_score": ["prob_ironia"],
         }
 
     def importancias(self) -> dict:
@@ -220,8 +229,8 @@ class Motor:
 
         Usado por `/modelo/simular` para deixar o operador testar frases sem
         importar CSV. So mexe no classificador de texto (nao ha conversa, entao
-        nao ha as outras 31 features -- tempo, emoji, emocao, lexico, ironia e
-        estilo -- que so existem agregadas na conversa) -- o classificador
+        nao ha as outras 34 features do vetor -- tempo, emoji, emocao, lexico
+        e estilo -- que so existem agregadas na conversa) -- o classificador
         e o fusor continuam sem vazar para a rota.
         """
         probabilidades = self._classificador.prever_mensagens([texto])[0]

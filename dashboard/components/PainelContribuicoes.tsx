@@ -42,6 +42,7 @@ export function PainelContribuicoes({
   const features = ordenarPorMagnitude(atribuicao.contribuicoes);
   const paraCima = features.filter((f) => f.valor > 0).length;
   const paraBaixo = features.filter((f) => f.valor < 0).length;
+  const foraDoScore = atribuicao.sinais_fora_do_score;
 
   return (
     <div className="flex flex-col gap-4 px-5 py-4">
@@ -67,6 +68,23 @@ export function PainelContribuicoes({
           .
         </AlertDescription>
       </Alert>
+
+      {foraDoScore.length > 0 && (
+        <Alert className="rounded-md">
+          <AlertTitle className="text-xs">
+            {foraDoScore.length === 1
+              ? "Um sinal foi lido, mas não pontua."
+              : `${foraDoScore.length} sinais foram lidos, mas não pontuam.`}
+          </AlertTitle>
+          <AlertDescription className="text-xs leading-relaxed">
+            <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">
+              {foraDoScore.join(", ")}
+            </code>{" "}
+            aparece por mensagem nesta tela, mas não entra na lista de
+            contribuições abaixo nem move a nota. É leitura, não decisão.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <p className="text-xs text-muted-foreground">
         <span className="num text-promotor-texto">{paraCima}</span> feature(s)

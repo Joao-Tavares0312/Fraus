@@ -192,12 +192,16 @@ export type MensagemAtribuida = {
   prob_satisfeito: number | null;
 
   /**
-   * As duas cabecas de LEITURA POR FRASE. A media delas por conversa entra
-   * nas 35 features do fusor desde 21/08/2026 (`emocao_*`, `ironia_*`) -- o
-   * numero aqui e desta frase, nao a media que pesa na nota. `sinais_fora_do_score`
-   * continua existindo na resposta mas vem vazio, e a interface ainda mantem
-   * os dois numeros visualmente separados da nota -- "ironia 0,99" encostado
-   * num score baixo convida a conclusao de que esta frase causou a nota.
+   * As duas cabecas de LEITURA POR FRASE. A media de `emocao` por conversa
+   * entra no vetor do fusor desde 21/08/2026 (`emocao_*`) -- o numero aqui e
+   * desta frase, nao a media que pesa na nota. `prob_ironia` NAO entra mais no
+   * vetor desde 04/09/2026 (`ironia_prob_media`/`ironia_prob_max` saíram de
+   * `NOMES_FEATURES` -- medida no corpus de treino, a cabeca funciona como
+   * detector de sentimento positivo, nao de ironia): `sinais_fora_do_score`
+   * volta a trazer `["prob_ironia"]`. A interface mantem os numeros
+   * visualmente separados da nota -- "ironia 0,99" encostado num score baixo
+   * convida a conclusao de que esta frase causou a nota, e isso deixou de ser
+   * verdade para a ironia especificamente.
    *
    * `null` quando o servidor subiu sem a cabeca correspondente.
    *
@@ -237,13 +241,22 @@ export type Atribuicao = {
   nota: number | null;
   categoria: Categoria | null;
   mensagens: MensagemAtribuida[];
-  /** Peso absoluto GLOBAL de cada uma das 35 features do fusor -- aprendido
-   * no treino, nao especifico desta conversa. */
+  /** Peso absoluto GLOBAL de cada uma das 38 features do vetor do fusor --
+   * aprendido no treino, nao especifico desta conversa. */
   importancias: Record<string, number>;
   /** Quanto cada feature pesou NESTA conversa: positivo empurrou para
    * satisfeito, negativo para insatisfeito. `null` quando nao ha fala do
    * cliente -- sem score, sem contribuicao. */
   contribuicoes: Record<string, number> | null;
+  /**
+   * Sinais que o servidor mediu mas que NAO entram no score -- hoje
+   * `["prob_ironia"]`. A cabeca de ironia continua carregada e aparece por
+   * mensagem em `mensagens[].prob_ironia`, mas desde 04/09/2026 nao pesa mais
+   * em `contribuicoes` nem em `importancias` (medida no corpus de treino, ela
+   * funciona como detector de sentimento positivo, nao de ironia). Lista
+   * vazia entre 21/08/2026 e 03/09/2026, quando a ironia pontuava.
+   */
+  sinais_fora_do_score: string[];
 };
 
 /** Metricas do treino, exportadas pelo notebook 01. `null` ate o treino rodar. */

@@ -312,9 +312,12 @@ def montar_motor():
         print("[api_demo] FRAUS_DEMO_DUBLE=1 -- dublê forcado, numeros SINTETICOS.")
         return MotorDuble()
 
-    # Os tres modelos sao obrigatorios para o Motor real desde o contrato de 35
-    # features -- sem qualquer um deles montar_features nao fecha o vetor. Falta
-    # de UM dos tres cai no dublê inteiro, nunca num Motor real com cabeca None.
+    # Os tres modelos sao obrigatorios para o Motor real (invariante 7). Texto e
+    # emocao porque sem eles `montar_features` nao fecha o vetor de 38; ironia
+    # porque, mesmo tendo saido do vetor em 04/09/2026, ela continua sendo lida
+    # por mensagem e exibida na dashboard -- servir isso com cabeca ausente
+    # seria o mesmo erro silencioso. Falta de UM dos tres cai no dublê inteiro,
+    # nunca num Motor real com cabeca None.
     if (
         not CAMINHO_MODELO_TEXTO.is_dir()
         or not CAMINHO_FUSOR.is_file()
