@@ -348,29 +348,43 @@ export default async function PaginaInicial() {
           </div>
 
           {/* QUINA SUPERIOR DIREITA. O ponto NAO pisca: indicador pulsante sem
-              mudanca de estado por tras e ruido com cara de alerta -- §6. */}
-          <div className={`${COLUNA} flex justify-end pt-8 lg:pt-12`}>
-            <p className="etiqueta-vitrine inline-flex items-center gap-2.5 text-right text-muted-foreground">
-              <span aria-hidden className="size-1.5 rounded-full bg-primary" />
-              satisfação inferida · sem pesquisa
+              mudanca de estado por tras e ruido com cara de alerta -- §6.
+
+              CONSERTO (ronda 1): em 390px de largura o rotulo, em caixa alta
+              com `letter-spacing: 0.18em`, nao cabia numa linha so e estourava
+              a borda direita da viewport. `max-w-40` forca a quebra em duas
+              linhas ate `md`; o corpo continua o mesmo definido por
+              `.etiqueta-vitrine` -- ele e o piso de legibilidade, nao mexe. */}
+          <Revelar className={`${COLUNA} flex justify-end pt-8 lg:pt-12`}>
+            <p className="etiqueta-vitrine flex max-w-40 items-center gap-2.5 text-right text-muted-foreground md:max-w-none">
+              <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
+              <span className="min-w-0">satisfação inferida · sem pesquisa</span>
             </p>
-          </div>
+          </Revelar>
 
           {/* A BASE. Em telas estreitas as quinas se desfazem numa pilha:
               quina em 390px de largura e um empilhamento com nome pomposo, e o
-              espaco negativo que da o efeito nao existe ali para ser gasto. */}
+              espaco negativo que da o efeito nao existe ali para ser gasto.
+
+              CONSERTO (ronda 1): o ponto de virada estava em `sm` (640px), e
+              exatamente ali a manchete quebrava em quatro linhas amassadas
+              disputando espaco com o botao ao lado -- 640 e largo demais para
+              o texto lado a lado e estreito demais para a pilha ter sumido.
+              Subiu para `md` (768px), onde a pilha ja tem fôlego para virar
+              linha sem espremer nada. */}
           <div className={`${COLUNA} pb-14 lg:pb-20`}>
-            <Revelar className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between sm:gap-12">
+            <Revelar className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between md:gap-12">
               {/* O GLITCH, e so nesta frase. `enableOnHover` porque glitch
                   perpetuo atras de um <h1> e a decoracao-pela-decoracao que o
                   DESIGN.md §6 proibe -- e porque no repouso a frase precisa ser
                   lida sem esforco, ja que ela E a manchete. E <span> dentro do
                   <h1> com texto real, entao busca e leitor de tela recebem a
-                  manchete inteira.
+                  manchete inteira -- nao ha canvas nem imagem ali.
                   SEM `.display-aurora` AQUI: background-clip: text recorta TODO
                   o conteudo do elemento, inclusive os filhos -- transformava o
                   🙂 numa bolha branca e apagava o ambar do text-dito-texto, que
-                  e o encoding do PRODUCT.md e nao decoracao. */}
+                  e o encoding do PRODUCT.md e nao decoracao. A aurora vive nos
+                  `.titulo-vitrine`, que sao texto puro. */}
               <h1 className="display-vitrine max-w-3xl">
                 O cliente escreve{" "}
                 <GlitchText
@@ -385,7 +399,7 @@ export default async function PaginaInicial() {
                 e sai insatisfeito.
               </h1>
 
-              <div className="flex shrink-0 flex-wrap items-center gap-3 sm:pb-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-3 md:pb-2">
                 <BotaoEstelar href={acaoPrimaria.href}>
                   {acaoPrimaria.rotulo}
                 </BotaoEstelar>
