@@ -42,6 +42,14 @@ export function Painel({
   nivel = "apoio",
   className,
   children,
+  /**
+   * A regua do sistema: dito ACIMA, medido ABAIXO (DESIGN.md §1).
+   *
+   * So passe isto quando o dado REALMENTE se divide nos dois lados. Onde as
+   * duas series sao medidas -- o grafico de NPS x latencia e o caso -- a
+   * regua nao entra: seria notacao decorativa, e a §1.1 proibe.
+   */
+  regua,
 }: {
   titulo: string;
   /** Metodo e ressalvas. Vai para o aparato, nunca acima do dado. */
@@ -53,6 +61,8 @@ export function Painel({
   nivel?: Nivel;
   className?: string;
   children: ReactNode;
+  /** Metade dito, metade medido. So quando o dado de fato se divide assim. */
+  regua?: { dito: ReactNode; medido: ReactNode };
 }) {
   const refEspecular = useEspecular<HTMLElement>();
 
@@ -98,7 +108,15 @@ export function Painel({
             semPadding ? "-mx-4 pt-3 sm:-mx-5" : "pt-4",
           )}
         >
-          {children}
+          {regua ? (
+            <div className="flex flex-col">
+              <div className="pb-3">{regua.dito}</div>
+              <div className="border-t border-linha" />
+              <div className="pt-3">{regua.medido}</div>
+            </div>
+          ) : (
+            children
+          )}
         </div>
       </motion.section>
       {/* A ressalva sobe para o aparato da tela, identificada pelo titulo do

@@ -80,3 +80,17 @@ describe("aparato", () => {
     expect(fonte).toContain("ProvedorDeAparato");
   });
 });
+
+describe("regua", () => {
+  it("o Painel sabe montar a regua com os dois lados", () => {
+    const fonte = readFileSync("components/Painel.tsx", "utf8");
+    expect(fonte).toContain("regua");
+    expect(fonte).toContain("border-linha");
+  });
+
+  it("o grafico de NPS x latencia NAO usa regua", () => {
+    // As duas series sao MEDIDAS. Regua ali seria notacao decorativa.
+    const fonte = readFileSync("components/GraficoNpsLatencia.tsx", "utf8");
+    expect(fonte).not.toContain("regua=");
+  });
+});
