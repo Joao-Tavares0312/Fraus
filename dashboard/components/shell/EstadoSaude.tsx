@@ -19,7 +19,17 @@ const APARENCIA: Record<
   "no-ar": {
     rotulo: "API no ar",
     cor: "bg-success",
-    detalhe: "GET /saude respondeu ok",
+    detalhe: "GET /saude respondeu ok, com o motor real",
+  },
+  // A API respondeu, mas quem pontua é o dublê: TODO número da tela é
+  // sintético, inclusive os pesos por feature. Cor de aviso e não de sucesso,
+  // porque isto não é um estado saudável — é uma tela que não pode ser lida
+  // como medição, e muito menos apresentada como tal.
+  duble: {
+    rotulo: "motor dublê — números sintéticos",
+    cor: "bg-warning",
+    detalhe:
+      "GET /saude respondeu com motor=duble: a API está de pé, mas não está medindo",
   },
   "fora-do-ar": {
     rotulo: "API fora do ar",
@@ -50,13 +60,17 @@ export function EstadoSaude() {
   const [desligando, setDesligando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  // Só pergunta com a API NO AR: é o único estado em que desligar faz sentido,
-  // e perguntar com ela fora seria uma chamada por poll sem resposta útil.
+  // Só pergunta com a API RESPONDENDO -- no ar ou em dublê. São os dois
+  // estados em que desligar faz sentido, e o dublê é justamente o que alguém
+  // mais vai querer derrubar para subir a API real no lugar. Com ela fora, a
+  // pergunta seria uma chamada por poll sem resposta útil.
+  const respondendo = estado === "no-ar" || estado === "duble";
+
   useEffect(() => {
     // Sem `setNossa(false)` neste ramo: apagar o estado aqui seria escrever
-    // durante o efeito, e o próprio render já não mostra o botão fora do
-    // "no-ar" (ver a condição abaixo). Um estado a menos para sincronizar.
-    if (estado !== "no-ar") return;
+    // durante o efeito, e o próprio render já não mostra o botão quando a API
+    // não responde (ver a condição abaixo). Um estado a menos para sincronizar.
+    if (!respondendo) return;
     let vivo = true;
     fetch("/api/fraus/iniciar", { cache: "no-store" })
       .then((resposta) => resposta.json())
@@ -69,7 +83,7 @@ export function EstadoSaude() {
     return () => {
       vivo = false;
     };
-  }, [estado]);
+  }, [respondendo]);
 
   async function desligar() {
     setErro(null);
@@ -116,7 +130,7 @@ export function EstadoSaude() {
         {/* Só aparece para a API que ESTA dashboard subiu. Para um uvicorn de
             terminal o botão não existe -- oferecer uma ação que levaria 409
             seria prometer um poder que a tela não tem. */}
-        {estado === "no-ar" && nossa ? (
+        {respondendo && nossa ? (
           <Button
             type="button"
             size="sm"

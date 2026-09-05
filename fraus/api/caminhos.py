@@ -11,10 +11,38 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-CAMINHO_MODELO_TEXTO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao"))
-CAMINHO_MODELO_EMOCAO = Path(os.environ.get("FRAUS_CAMINHO_MODELO_EMOCAO", "modelos/bertimbau-emocao"))
-CAMINHO_MODELO_IRONIA = Path(os.environ.get("FRAUS_CAMINHO_MODELO_IRONIA", "modelos/bertimbau-ironia"))
-CAMINHO_FUSOR = Path(os.environ.get("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib"))
+# A raiz do projeto, deduzida do proprio arquivo: fraus/api/caminhos.py -> ../..
+RAIZ_PROJETO = Path(__file__).resolve().parent.parent.parent
+
+
+def artefato(variavel: str, padrao: str) -> Path:
+    """Caminho de um artefato de treino, ancorado no PROJETO e nao no cwd.
+
+    O DEFEITO QUE ISTO TRANCA, pago em 04/09/2026: estes caminhos eram
+    relativos puros, logo resolvidos contra o diretorio de trabalho de quem
+    lancou o processo. Um uvicorn iniciado de fora da raiz nao achava nenhum
+    dos quatro artefatos, e o `scripts/api_demo.py` -- que escolhe o motor pela
+    PRESENCA dos arquivos -- caia para o dublê sem que nada quebrasse. A tela
+    seguiu mostrando numero sintetico com cara de predicao. O lugar de onde se
+    digita o comando nao pode decidir se voce recebe medicao ou invencao.
+
+    A variavel de ambiente continua VENCENDO e nao e reancorada: quem a exporta
+    esta declarando onde o arquivo esta, e mover isso para dentro do projeto
+    seria desobedecer configuracao explicita. O conserto vale para o PADRAO.
+    """
+    declarado = os.environ.get(variavel)
+    if declarado:
+        return Path(declarado)
+    return RAIZ_PROJETO / padrao
+
+
+CAMINHO_MODELO_TEXTO = artefato("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau-satisfacao")
+CAMINHO_MODELO_EMOCAO = artefato("FRAUS_CAMINHO_MODELO_EMOCAO", "modelos/bertimbau-emocao")
+CAMINHO_MODELO_IRONIA = artefato("FRAUS_CAMINHO_MODELO_IRONIA", "modelos/bertimbau-ironia")
+CAMINHO_FUSOR = artefato("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib")
+# O BANCO nao entra na regra acima: ele nao e artefato de treino, e sim estado
+# de quem opera. `fraus.db` relativo ao cwd continua sendo o comportamento de
+# sempre, e `FRAUS_DATABASE_URL` e o caminho de deploy de verdade.
 CAMINHO_BANCO = Path(os.environ.get("FRAUS_CAMINHO_BANCO", "fraus.db"))
 
 # ONDE o banco mora. `FRAUS_DATABASE_URL` (Postgres/Supabase) VENCE o caminho de
@@ -38,14 +66,17 @@ CAMINHO_CHAVES = Path(os.environ.get("FRAUS_CAMINHO_CHAVES", ".fraus-chaves.txt"
 # esperado antes do treino: `/modelo` devolve `metricas: null`, nunca inventa.
 # O padrao aponta para dentro da pasta do modelo porque e onde o notebook 01
 # de fato grava -- metrica ao lado do peso que ela mediu, nao solta na raiz.
-CAMINHO_METRICAS = Path(
-    os.environ.get("FRAUS_CAMINHO_METRICAS", "modelos/bertimbau-satisfacao/metricas.json")
+# Ancoradas no projeto pelo mesmo motivo dos pesos: metrica que some por causa
+# do cwd faz `/modelo` devolver `metricas: null`, e a tela passa a dizer "nao
+# medimos" sobre um treino que MEDIU. E mentira por acidente de lancamento.
+CAMINHO_METRICAS = artefato(
+    "FRAUS_CAMINHO_METRICAS", "modelos/bertimbau-satisfacao/metricas.json"
 )
-CAMINHO_METRICAS_EMOCAO = Path(
-    os.environ.get("FRAUS_CAMINHO_METRICAS_EMOCAO", "modelos/metricas_emocao.json")
+CAMINHO_METRICAS_EMOCAO = artefato(
+    "FRAUS_CAMINHO_METRICAS_EMOCAO", "modelos/metricas_emocao.json"
 )
-CAMINHO_METRICAS_IRONIA = Path(
-    os.environ.get("FRAUS_CAMINHO_METRICAS_IRONIA", "modelos/metricas_ironia.json")
+CAMINHO_METRICAS_IRONIA = artefato(
+    "FRAUS_CAMINHO_METRICAS_IRONIA", "modelos/metricas_ironia.json"
 )
 
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao

@@ -9,7 +9,14 @@ import {
 } from "react";
 import { obterSaude } from "@/lib/api";
 
-export type EstadoDeSaude = "verificando" | "no-ar" | "fora-do-ar";
+/**
+ * `duble` é um estado à parte, e não um "no-ar" com etiqueta: a API respondeu,
+ * mas o que ela serve é sintético. Juntar os dois num só obrigaria cada
+ * consumidor a lembrar de checar o motor, e a lição de 04/09/2026 é que esse
+ * tipo de lembrete não sobrevive — foi assim que a tela anunciou "API no ar"
+ * por um dia inteiro sobre números inventados.
+ */
+export type EstadoDeSaude = "verificando" | "no-ar" | "duble" | "fora-do-ar";
 
 const INTERVALO_MS = 20_000;
 
@@ -35,9 +42,18 @@ const SaudeContexto = createContext<Contexto | null>(null);
 export function SaudeProvider({ children }: { children: React.ReactNode }) {
   const [estado, setEstado] = useState<EstadoDeSaude>("verificando");
 
+  // `no-ar` exige o motor DECLARADO como real. Campo ausente (API antiga) ou
+  // qualquer outro valor cai em `duble`: errar para este lado custa uma
+  // etiqueta a mais na tela, errar para o outro apresenta invenção como
+  // medição. É a mesma precedência que a rota `/saude` aplica no servidor.
+  const classificar = (resultado: Awaited<ReturnType<typeof obterSaude>>) => {
+    if (!resultado.ok) return "fora-do-ar" as const;
+    return resultado.dado?.motor === "real" ? ("no-ar" as const) : ("duble" as const);
+  };
+
   const reconsultar = useCallback(async () => {
     const resultado = await obterSaude();
-    setEstado(resultado.ok ? "no-ar" : "fora-do-ar");
+    setEstado(classificar(resultado));
     return resultado.ok;
   }, []);
 
@@ -47,7 +63,7 @@ export function SaudeProvider({ children }: { children: React.ReactNode }) {
     const verificar = async () => {
       const resultado = await obterSaude();
       if (!vivo) return;
-      setEstado(resultado.ok ? "no-ar" : "fora-do-ar");
+      setEstado(classificar(resultado));
     };
 
     verificar();

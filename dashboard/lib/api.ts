@@ -1063,8 +1063,18 @@ export const obterSerieTemporal = (de?: string | null, ate?: string | null) => {
 };
 
 /** Estado de saude da API -- alimenta o indicador do app shell. */
+/**
+ * `motor` diz QUAL motor respondeu, e o campo existe por um defeito real de
+ * 04/09/2026: com o `scripts/api_demo.py` no dublê, esta tela escreveu "API no
+ * ar" durante um dia inteiro enquanto todo número exibido era sintético.
+ * "Respondeu" e "está medindo" são afirmações diferentes.
+ *
+ * Opcional no tipo de propósito: uma API mais antiga não manda o campo, e
+ * `undefined` ali significa "não deu para saber" — que o servidor da interface
+ * trata como possivelmente dublê, nunca como real confirmado.
+ */
 export const obterSaude = () =>
-  proteger(buscar<{ status: string }>("/saude"));
+  proteger(buscar<{ status: string; motor?: "real" | "duble" }>("/saude"));
 
 const LOTE_DETALHES = 8;
 
