@@ -29,7 +29,7 @@ function regras(): Array<{ seletor: string; corpo: string }> {
 }
 
 describe("a familia de display", () => {
-  it("define --fonte-mona uma vez", () => {
+  it("define --fonte-mona", () => {
     expect(CSS).toContain("--fonte-mona");
   });
 
@@ -42,8 +42,16 @@ describe("a familia de display", () => {
   });
 
   it("nao vaza para nenhuma outra regra", () => {
+    // `:root` fica de fora do alvo: e la que `--fonte-display` e DEFINIDA em
+    // termos de `--fonte-mona` (linha 243 do globals.css), e isso e a
+    // declaracao do token, nao um vazamento para uma regra de estilo.
     const vazamentos = regras()
-      .filter((r) => r.corpo.includes("var(--fonte-display)"))
+      .filter((r) => !r.seletor.includes(":root"))
+      .filter(
+        (r) =>
+          r.corpo.includes("var(--fonte-display)") ||
+          r.corpo.includes("var(--fonte-mona)"),
+      )
       .map((r) => r.seletor)
       .filter((s) => s !== ".display-vitrine" && s !== ".titulo-vitrine");
     expect(vazamentos).toEqual([]);

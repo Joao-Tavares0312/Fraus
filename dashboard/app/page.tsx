@@ -320,9 +320,10 @@ export default async function PaginaInicial() {
             página, porque é o único lugar em que o produto aparece — chegava
             espremido. Separados, os dois crescem. */}
         {/* `min-h` e nao `h`: a secao CRESCE se o conteudo pedir, em vez de
-            recortar. E o `py` encolhe em tela baixa pelo mesmo motivo que o
-            corpo do display encolhe -- ver `.display-vitrine` no globals.css,
-            onde esta o defeito que isto conserta. */}
+            recortar. O espaco vertical das quinas ja encolhe em tela baixa:
+            `pt-8 lg:pt-12` no topo e `pb-14 lg:pb-20` na base, sem simetria
+            entre os dois porque a base carrega a manchete e a acao primaria,
+            que pedem mais folga que a etiqueta do topo. */}
         {/* O HEROI DE QUINAS, 04/09/2026.
 
             O QUE ELE ERA: manchete grande alinhada a esquerda, o argumento
@@ -354,13 +355,23 @@ export default async function PaginaInicial() {
               com `letter-spacing: 0.18em`, nao cabia numa linha so e estourava
               a borda direita da viewport. `max-w-40` forca a quebra em duas
               linhas ate `md`; o corpo continua o mesmo definido por
-              `.etiqueta-vitrine` -- ele e o piso de legibilidade, nao mexe. */}
-          <Revelar className={`${COLUNA} flex justify-end pt-8 lg:pt-12`}>
+              `.etiqueta-vitrine` -- ele e o piso de legibilidade, nao mexe.
+
+              SEM `Revelar` AQUI, DE PROPOSITO: esta etiqueta e a etiqueta de
+              honestidade -- "satisfacao inferida, nao perguntada" -- e e o
+              primeiro pixel da pagina. `Revelar` nasce com `opacity: 0` e so
+              chega a visivel quando o IntersectionObserver do `whileInView`
+              dispara; se o observer falhar para este no, ela fica invisivel
+              EM SILENCIO, sem erro e sem fallback, e a primeira tela deixa de
+              dizer em qualquer lugar que a satisfacao e estimada. Uma regra
+              que existe para nunca depender de JavaScript nao pode nascer
+              atras de um gate de JavaScript. */}
+          <div className={`${COLUNA} flex justify-end pt-8 lg:pt-12`}>
             <p className="etiqueta-vitrine flex max-w-40 items-center gap-2.5 text-right text-muted-foreground md:max-w-none">
               <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
               <span className="min-w-0">satisfação inferida · sem pesquisa</span>
             </p>
-          </Revelar>
+          </div>
 
           {/* A BASE. Em telas estreitas as quinas se desfazem numa pilha:
               quina em 390px de largura e um empilhamento com nome pomposo, e o
@@ -377,9 +388,11 @@ export default async function PaginaInicial() {
               {/* O GLITCH, e so nesta frase. `enableOnHover` porque glitch
                   perpetuo atras de um <h1> e a decoracao-pela-decoracao que o
                   DESIGN.md §6 proibe -- e porque no repouso a frase precisa ser
-                  lida sem esforco, ja que ela E a manchete. E <span> dentro do
-                  <h1> com texto real, entao busca e leitor de tela recebem a
-                  manchete inteira -- nao ha canvas nem imagem ali.
+                  lida sem esforco, ja que ela E a manchete. O mecanismo de
+                  acessibilidade e concreto: o `GlitchText` renderiza um <span>
+                  dentro do <h1> que carrega o texto real via `data-text` MAIS
+                  o conteudo do proprio elemento -- entao busca e leitor de
+                  tela recebem a manchete inteira, nao ha canvas nem imagem ali.
                   SEM `.display-aurora` AQUI: background-clip: text recorta TODO
                   o conteudo do elemento, inclusive os filhos -- transformava o
                   🙂 numa bolha branca e apagava o ambar do text-dito-texto, que
