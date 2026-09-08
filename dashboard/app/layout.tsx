@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Atelier } from "@/components/shell/Atelier";
 import { Movimento } from "@/components/shell/Movimento";
@@ -21,6 +22,32 @@ const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--fonte-jetbrains",
   display: "swap",
+});
+
+/**
+ * A DISPLAY DA VITRINE, e só dela — DESIGN.md §4. Mona Sans variável, a mesma
+ * da landonorris.com, escolhida em 04/09/2026 pelo diagnóstico da nota de
+ * reformulação: as seis referências usam grotescas de autoria, e a Inter
+ * carrega a memória de "aplicação moderna bem-feita".
+ *
+ * O corte usado é `MonaSansVF[opsz,wght].woff2` (eixos `opsz` e `wght`), não
+ * o corte com `wdth` do mesmo release: nenhuma regra desta tarefa aciona o
+ * eixo de largura (`.display-vitrine` e `.titulo-vitrine` só definem
+ * `font-family`, e a primeira trava `font-weight: 500`), então o corte com
+ * `wdth` seria 2,2x o tamanho por um eixo morto. O `opsz`, ao contrário, serve
+ * ao caso: é uma display em corpo grande, e o ajuste óptico automático é
+ * ganho de graça. O nome do arquivo não foi alterado — ele anuncia os eixos
+ * que de fato tem.
+ *
+ * `next/font/local` a partir do arquivo VERSIONADO no repo, e não
+ * `next/font/google`: o binário está em app/fontes/, servido do próprio
+ * deploy. Nenhuma chamada de rede, nem no build nem em runtime.
+ */
+const mona = localFont({
+  src: "./fontes/MonaSansVF[opsz,wght].woff2",
+  variable: "--fonte-mona",
+  display: "swap",
+  weight: "200 900",
 });
 
 const DESCRICAO =
@@ -66,7 +93,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // intencional e e o ponto do script.
     <html
       lang="pt-BR"
-      className={`dark ${inter.variable} ${jetbrains.variable}`}
+      className={`dark ${inter.variable} ${jetbrains.variable} ${mona.variable}`}
       suppressHydrationWarning
     >
       <head>

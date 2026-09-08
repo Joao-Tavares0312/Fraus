@@ -236,6 +236,12 @@
   --fonte-mono: var(--fonte-jetbrains), ui-monospace, "Cascadia Mono",
     "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
 
+  /* A display da vitrine. Ela NAO entra em --fonte-sans: quem manda no corpo,
+     no rotulo e no dado continua sendo a Inter, e a fonte de display segue
+     proibida ali (DESIGN.md secao 4). O fallback e a propria pilha de sistema,
+     para o caso de o .woff2 falhar em carregar. */
+  --fonte-display: var(--fonte-mona), ui-sans-serif, system-ui, sans-serif;
+
   --duration-sidebar: 300ms;
 
   /* --- chassi --- */
@@ -1007,6 +1013,7 @@
      de antes. O piso de 2,6rem garante que a manchete nunca vire corpo de texto
      num celular deitado. */
   .display-vitrine {
+    font-family: var(--fonte-display);
     font-size: clamp(2.6rem, min(8vw, 10.5vh), 6.5rem);
     line-height: 0.95;
     letter-spacing: -0.035em;
@@ -1014,6 +1021,7 @@
     text-wrap: balance;
   }
   .titulo-vitrine {
+    font-family: var(--fonte-display);
     font-size: clamp(2.1rem, 4.6vw, 3.75rem);
     line-height: 1.02;
     letter-spacing: -0.028em;
