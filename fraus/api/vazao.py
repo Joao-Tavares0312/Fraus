@@ -54,6 +54,13 @@ CAMINHOS_LIMITADOS = ("/auth/entrar", "/auth/registrar")
 # que uma chave vazada impoe passa a ser contavel -- e OWASP API4:2023.
 INGESTOES_POR_JANELA = 120
 
+# O webhook tem o MESMO numero e a mesma janela, e isso e deliberado: as duas
+# rotas fazem o mesmo trabalho depois de autenticar (`fraus/api/registro.py`) e
+# custam o mesmo -- o Motor inteiro por conversa. Dois numeros diferentes para
+# o mesmo custo seriam duas reguas para a mesma pergunta, e a divergencia
+# apareceria em silencio no dia em que alguem ajustasse so uma.
+ENTREGAS_POR_JANELA = 120
+
 
 class LimitadorDeVazao:
     """Janela deslizante por IP, em memoria. Reinicia com o processo -- que e
@@ -85,21 +92,37 @@ class LimitadorDeVazao:
         return max(1, int(fila[0] + self._janela_s - agora) + 1)
 
 
-def barrar_se_exceder(limitador: LimitadorDeVazao, identidade: str) -> None:
-    """Versao do teto para quem roda DENTRO da rota, ja com o pedido autenticado.
+def segundos_ate_a_vaga(limitador: LimitadorDeVazao, identidade: str) -> int | None:
+    """`None` se pode passar; senao, quantos segundos faltam para a proxima vaga.
 
-    Levanta 429 em vez de devolver resposta porque, na rota, `HTTPException` e
-    o caminho que o FastAPI ja conhece -- e o mesmo `Retry-After` do
-    middleware, pela mesma razao: recusar sem dizer quando tentar de novo
-    deixa "continue batendo" como unica pista.
+    A primitiva que as DUAS rotas de escrita usam, e ela devolve numero em vez
+    de levantar porque as duas recusam de formas diferentes: `/ingestao`
+    levanta `HTTPException` direto, e o webhook precisa que a recusa vire linha
+    em `entregas_webhook` ANTES de virar resposta (ver `rotas/webhook.py`).
+    Uma funcao que ja levantasse forcaria o webhook a capturar a propria
+    excecao para registrar -- e registro que depende de alguem lembrar de
+    capturar e o registro que um dia falta.
     """
     agora = time.monotonic()
     if limitador.permite(identidade, agora):
+        return None
+    return limitador.proxima_vaga_em(identidade, agora)
+
+
+def barrar_se_exceder(limitador: LimitadorDeVazao, identidade: str) -> None:
+    """O teto de `/ingestao`, que recusa direto com 429.
+
+    `HTTPException` e o caminho que o FastAPI ja conhece, e o `Retry-After` sai
+    pelo mesmo motivo do middleware: recusar sem dizer quando tentar de novo
+    deixa "continue batendo" como unica pista.
+    """
+    espera = segundos_ate_a_vaga(limitador, identidade)
+    if espera is None:
         return
     raise HTTPException(
         status_code=429,
         detail="muitas escritas desta fonte -- aguarde antes de mandar de novo",
-        headers={"Retry-After": str(limitador.proxima_vaga_em(identidade, agora))},
+        headers={"Retry-After": str(espera)},
     )
 
 

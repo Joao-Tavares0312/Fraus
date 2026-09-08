@@ -512,6 +512,34 @@ retreino.
 todos polares as duas somam 1 por construção. Emoji neutro quebra a soma. O
 número honesto é o do corpus, acima.
 
+### Feita — O teto de vazão do webhook — 08/09/2026
+
+Fechou a metade que sobrou de manhã: `/ingestao` ganhou teto e o webhook não,
+sendo que ele é o **outro** caminho de escrita pela rede, com a mesma exposição
+(OWASP API4:2023) e **pior** em um aspecto — a rota é anônima por desenho, e
+cada entrega aceita roda o Motor inteiro.
+
+120 entregas por minuto por fonte, mesmo número de `/ingestao` de propósito: as
+duas rotas fazem o mesmo trabalho depois de autenticar e custam o mesmo. Mas
+**contadores separados** — uma fonte pode receber pelos dois caminhos, e janela
+compartilhada faria o volume de uma rota cortar a outra.
+
+**Três decisões que valem ser lidas antes de mexer:**
+
+1. **O teto vive logo depois do HMAC**, e aqui isso pesa mais que em
+   `/ingestao`: o `fonte_id` vem **na URL**, então qualquer anônimo escolhe
+   contra qual fonte bater. Contar a tentativa recusada transformaria o teto no
+   caminho mais curto para derrubar a integração alheia.
+2. **O 429 é `Recusa`, não `HTTPException` direta** — toda recusa desta rota
+   vira linha em `entregas_webhook`, e um 429 invisível ali seria justamente a
+   recusa que o operador precisava ver: é ela que explica por que a plataforma
+   começou a retentar. `Recusa` ganhou `cabecalhos` para o `Retry-After`.
+3. **Isso só é seguro porque `entrega_ja_vista` conta apenas veredito
+   "aceita".** Se um dia ela passar a contar qualquer veredito, este 429 vira
+   uma forma de queimar um `webhook-id` legítimo — a plataforma retenta o mesmo
+   id e leva "duplicada", e o atendimento some em silêncio. Há teste para isso
+   (`test_o_429_nao_queima_o_webhook_id_para_a_retentativa`).
+
 ### P1 — Hospedagem
 
 `Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**

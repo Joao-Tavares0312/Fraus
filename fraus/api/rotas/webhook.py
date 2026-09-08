@@ -28,6 +28,7 @@ from fraus import assinatura
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoIngestao
 from fraus.api.registro import registrar_conversa, resumo_validacao
+from fraus.api.vazao import ENTREGAS_POR_JANELA, LimitadorDeVazao, segundos_ate_a_vaga
 
 router = APIRouter()
 
@@ -65,12 +66,18 @@ class Recusa(Exception):
 
     def __init__(
         self, status: int, veredito: str, motivo: str, publico: str | None = None,
+        cabecalhos: dict[str, str] | None = None,
     ) -> None:
         super().__init__(motivo)
         self.status = status
         self.veredito = veredito
         self.motivo = motivo
         self.publico = publico if publico is not None else motivo
+        # So o 429 usa, para o `Retry-After`. Existe aqui, e nao no ponto de
+        # levantamento, porque quem transforma `Recusa` em resposta e o
+        # `except` la de cima -- sem isto o cabecalho teria de ser reconstruido
+        # la, longe de quem sabe por que ele existe.
+        self.cabecalhos = cabecalhos
 
 
 # `status_code=201` no DECORADOR, e nao so no JSONResponse do fim: o schema
@@ -133,12 +140,17 @@ async def receber(
         resultado = _passar_pelo_porteiro(
             ctx, fonte, fonte_id, corpo,
             webhook_id, webhook_timestamp, webhook_signature,
+            request.app.state.limitador_de_webhook,
         )
     except Recusa as recusa:
         # O DETALHE vai para a tabela; a REDE recebe a versao publica. Ver a
         # docstring de `Recusa`.
         registrar(recusa.veredito, recusa.motivo)
-        raise HTTPException(status_code=recusa.status, detail=recusa.publico) from recusa
+        raise HTTPException(
+            status_code=recusa.status,
+            detail=recusa.publico,
+            headers=recusa.cabecalhos,
+        ) from recusa
 
     if resultado is None:
         # Passo 7: reentrega. 200, NAO erro -- o Standard Webhooks manda a
@@ -166,6 +178,7 @@ def _passar_pelo_porteiro(
     webhook_id: str | None,
     webhook_timestamp: str | None,
     webhook_signature: str | None,
+    limitador: LimitadorDeVazao,
 ) -> dict | None:
     """Os passos 2 a 9. Devolve o veredito, ou None se for reentrega.
 
@@ -240,6 +253,34 @@ def _passar_pelo_porteiro(
         webhook_id, webhook_timestamp, corpo, segredo, webhook_signature
     ):
         raise Recusa(401, "assinatura", "assinatura nao confere")
+
+    # Passo 5b: o TETO DE VAZAO -- OWASP API4:2023. Cada entrega aceita roda o
+    # Motor inteiro em CPU, e esta rota e ANONIMA por desenho: sem teto, um
+    # laco de shell com o segredo de uma fonte enche o banco e ocupa o
+    # processo.
+    #
+    # A POSICAO E LOGO DEPOIS DA ASSINATURA, e aqui isso pesa mais que em
+    # `/ingestao`: o `fonte_id` vem na URL, entao qualquer anonimo escolhe
+    # contra qual fonte bater. Contar a tentativa RECUSADA transformaria o teto
+    # no caminho mais curto para derrubar a integracao de outra pessoa --
+    # defesa que o atacante usa como arma. Depois do HMAC, quem chega aqui
+    # provou ter o segredo da fonte, e a fonte e uma identidade que o lado de
+    # fora nao forja.
+    #
+    # E `Recusa`, e nao `HTTPException` direta, porque toda recusa desta rota
+    # vira linha em `entregas_webhook`: um 429 invisivel ali seria justamente a
+    # recusa que o operador precisava ver, a que explica por que a plataforma
+    # comecou a retentar. Isso e seguro para o dedupe SO PORQUE
+    # `entrega_ja_vista` conta apenas veredito "aceita" -- ver o comentario
+    # dela em `fraus/db.py`.
+    espera = segundos_ate_a_vaga(limitador, str(fonte_id))
+    if espera is not None:
+        raise Recusa(
+            429, "vazao",
+            f"teto de {ENTREGAS_POR_JANELA} entregas por minuto atingido",
+            "muitas entregas desta fonte -- aguarde antes de mandar de novo",
+            {"Retry-After": str(espera)},
+        )
 
     # Passo 6: o TIPO da fonte. So fonte cadastrada como `webhook` recebe
     # entrega por esta rota -- uma fonte `csv` que por acidente nomeie uma

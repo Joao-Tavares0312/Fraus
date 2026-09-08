@@ -401,7 +401,9 @@ na resposta, em `motivos`.
 chave de acesso levam 401 aqui, de propósito: uma credencial por rota. O
 **canal** é o da fonte cadastrada, não o que vier no corpo.
 
-**Tem teto: 120 escritas por minuto, por fonte.** Passou disso, `429` com
+**Tem teto: 120 escritas por minuto, por fonte** — e o webhook tem o mesmo, com
+contador próprio (uma fonte pode receber pelos dois caminhos, e janela
+compartilhada faria a importação por uma rota cortar a integração da outra). Passou disso, `429` com
 `Retry-After`. Cada escrita roda o Motor inteiro (BERTimbau, emoção, ironia,
 fusor) em CPU, e sem teto uma chave vazada valia um laço de shell ocupando o
 processo — [OWASP API4:2023](https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/).
