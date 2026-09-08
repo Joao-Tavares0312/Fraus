@@ -15,7 +15,7 @@ import {
   type LegacyColumnDef,
   type LegacyRow,
 } from "@tanstack/react-table/legacy";
-import type { Categoria, Desfecho } from "@/lib/api";
+import type { Categoria, Contestacao, Desfecho } from "@/lib/api";
 import {
   EXPLICACAO_DESFECHO,
   ROTULO_CATEGORIA,
@@ -42,6 +42,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
+import { MarcaContestacao } from "./MarcaContestacao";
 import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
 import { ausenciaNoFim } from "@/lib/ordenacao";
@@ -63,6 +64,8 @@ export type LinhaConversa = {
   latencia_mediana_bot_s: number | null;
   latencia_mediana_humano_s: number | null;
   desfecho: Desfecho;
+  /** `null` quase sempre -- ver `MarcaContestacao`. */
+  contestacao: Contestacao | null;
 };
 
 const colunas = legacyCreateColumnHelper<LinhaConversa>();
@@ -267,6 +270,9 @@ export function TabelaConversas({
               <div className="flex min-w-0 flex-col items-start gap-1">
                 <span className="num estimado text-foreground">{nota}</span>
                 <EtiquetaCategoria categoria={linha.categoria} />
+                {/* Depois da categoria, nao no lugar dela: a marca acompanha
+                    o veredito, nao o substitui. */}
+                <MarcaContestacao contestacao={linha.contestacao} />
               </div>
             );
           },
@@ -335,6 +341,7 @@ export function TabelaConversas({
       "desfecho",
       "nota_inferida",
       "categoria",
+      "contestada",
     ];
     // Celula VAZIA para tempo que nao existiu -- nunca 0. Numa planilha, o
     // zero entraria em media e faria a operacao parecer mais rapida do que foi.
@@ -355,12 +362,19 @@ export function TabelaConversas({
       ROTULO_DESFECHO[linha.desfecho],
       linha.nota === null ? ROTULO_SEM_SINAL : String(linha.nota),
       linha.categoria ? ROTULO_CATEGORIA[linha.categoria] : ROTULO_SEM_SINAL,
+      // A ressalva acompanha o numero para FORA da tela tambem: quem exporta
+      // leva a planilha para uma reuniao onde a marca da tela nao chega.
+      linha.contestacao === null ? "" : "sim",
     ]);
 
     const texto = [
       [`# Fraus — atendimentos de ${rotuloDoPeriodo}`],
       ["# nota_inferida é estimativa a partir do texto, não NPS declarado"],
       ["# tempo em branco = essa espera não existiu; não é zero"],
+      [
+        "# contestada = elogio saturado contra espera longa; a nota NÃO foi" +
+          " alterada e a linha conta nos indicadores",
+      ],
       cabecalho,
       ...corpo,
     ]

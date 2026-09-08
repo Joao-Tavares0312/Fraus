@@ -385,6 +385,33 @@ Corrigidos, e agora `test_o_CLAUDE_md_declara_o_mesmo_numero_de_features`
 amarra o número do `CLAUDE.md` a `len(NOMES_FEATURES)` — a documentação que
 governa toda sessão de agente passa a envelhecer com barulho.
 
+### Feita — A contestação: o tempo contesta o elogio — 08/09/2026
+
+A frase canônica continua em 99,93/10/promotor, e agora ela **avisa**. Quando
+`score > 95` e `latencia_mediana_s > 180`, `/conversas` e `/conversas/{id}`
+devolvem `contestacao` — derivada na leitura, sem coluna nova e sem chamada de
+modelo, valendo retroativamente para o que já está no banco. A tabela de
+Atendimentos e a tela do atendimento mostram a marca; o CSV leva a coluna.
+
+**Ela marca, não corrige** — nenhum agregado muda, e há teste provando isso
+(`test_o_atendimento_contestado_continua_contando_no_NPS`). Tirar do agregado
+esvaziaria o indicador em silêncio se o limiar estivesse mal calibrado.
+
+**Por que não virou feature 40**, e esta é a parte que economiza a próxima
+sessão: o corpus não pode ensinar a interação tempo × texto. O texto vem do
+B2W, a latência sai de distribuição **por rótulo**, e satisfeito-e-lento está
+rotulado *satisfeito* por construção — a feature nasceria com peso **positivo**,
+repetindo o modo de falha que tirou `ironia_prob_*` do vetor em 04/09. Isso é
+leitura do corpus, **não experimento**; medir custaria um retreino e a API fora
+do ar. Fica condicionado a corpus de atendimento real, a mesma condição da
+cabeça de ironia.
+
+Desenho, alternativas recusadas e as referências em
+`docs/superpowers/specs/2026-09-08-abstencao-por-contestacao-design.md`.
+
+O único número sem procedência é o **limiar de score em 95** — o de tempo vem
+de IJHCI 2025. Está declarado assim no código e na spec.
+
 ### P1 — Hospedagem
 
 `Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**

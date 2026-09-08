@@ -956,6 +956,34 @@ que o projeto existe para não cometer.
 - **O SentiLex-PT é léxico de julgamento social:** anota polaridade dirigida a
   entidades humanas. `gostar`, `adorar` e `odiar` valem **0** nele — quem lê
   afeto do próprio falante é o transformer, não o léxico.
+- **A ironia de atendimento continua escapando do score, e agora ela é
+  marcada.** A frase canônica — *"que atendimento maravilhoso, só esperei 3
+  horas"* — pontua **99,93 / nota 10 / promotor**. Nenhuma feature agregada de
+  conversa reverte uma probabilidade saturada por mensagem: a
+  `incongruencia_situacao_negativa` dispara nela e perde, com −0,193 contra os
+  +2,78 de `texto_prob_satisfeito_media`.
+
+  Desde 08/09/2026 o atendimento nessa situação carrega uma **contestação**:
+  quando o score passa de 95 **e** a latência mediana passa de 180 s (a faixa
+  crítica de *From Seconds to Sentiments*, IJHCI 2025), a tela escreve "leitura
+  contestada — elogio saturado contra espera de 3 h" ao lado da nota, e o CSV
+  leva a coluna `contestada`.
+
+  **Ela marca, não corrige.** Score, nota e categoria seguem exibidos e o
+  atendimento continua contando no NPS, no CSAT e na contenção. Tirar do
+  agregado seria mais honesto no caso isolado e mais perigoso no conjunto — um
+  limiar mal calibrado esvaziaria o indicador em silêncio.
+
+  **Por que não virou a feature 40 do fusor.** O corpus não pode ensiná-la: o
+  texto vem do B2W e a latência sai de distribuição por rótulo, então
+  satisfeito-e-lento está rotulado *satisfeito* por construção, e a interação
+  nasceria com peso **positivo** — o mesmo modo de falha que tirou
+  `ironia_prob_*` do vetor em 04/09. Fica como trabalho futuro condicionado a
+  corpus de atendimento real, a mesma condição que trava o retreino da cabeça
+  de ironia. Base formal da abstenção: *The Art of Abstention* (ACL 2021); a
+  **composição** dos dois sinais é desenho nosso, sem receita publicada, e está
+  declarada assim em
+  [docs/superpowers/specs/2026-09-08-abstencao-por-contestacao-design.md](docs/superpowers/specs/2026-09-08-abstencao-por-contestacao-design.md).
 
 ## Pendências
 

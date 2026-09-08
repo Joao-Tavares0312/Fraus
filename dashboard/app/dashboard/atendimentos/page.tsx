@@ -36,6 +36,11 @@ function paraLinha(resumo: ResumoConversa): LinhaConversa {
     latencia_mediana_bot_s: resumo.latencia_mediana_bot_s,
     latencia_mediana_humano_s: resumo.latencia_mediana_humano_s,
     desfecho: resumo.desfecho,
+    // Tambem derivada no servidor, pelo mesmo motivo da nota: a regra
+    // (`score > 95 E latencia > 180s`) mora em `fraus/contestacao.py`, e uma
+    // copia dela aqui divergiria na primeira vez que um dos dois limiares
+    // mudasse.
+    contestacao: resumo.contestacao,
   };
 }
 

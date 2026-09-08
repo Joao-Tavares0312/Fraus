@@ -19,6 +19,7 @@ from fraus.api.caminhos import resolver_dentro_da_raiz
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoImportacao
 from fraus.api.periodo import no_recorte, recorte_ou_400
+from fraus.contestacao import contestacao
 from fraus.indicadores import nota_0_10
 from fraus.ingest.csv_driver import carregar_csv
 from fraus.resumo import resumir
@@ -147,15 +148,32 @@ def listar(
     # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
     faixas = ctx.faixas_vigentes()
     return [
-        {
-            **linha,
-            "categoria": ctx.categoria_de(linha["score"], faixas),
-            "nota": nota_0_10(linha["score"]) if linha["score"] is not None else None,
-            **resumir(conversa),
-        }
+        _com_derivacoes(linha["score"], ctx.categoria_de(linha["score"], faixas), linha, conversa)
         for linha, conversa in ctx.banco.listar_com_conversa()
         if no_recorte(conversa.iniciada_em, inicio, fim)
     ]
+
+
+def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
+    """A ficha derivada NA LEITURA, identica para a lista e para o detalhe.
+
+    As duas rotas passam por aqui de proposito: a lista e o detalhe nao podem
+    derivar nota, categoria ou contestacao por caminhos diferentes -- e a mesma
+    razao pela qual `resumir` ja era compartilhada pelas duas.
+
+    A `contestacao` sai do `score` gravado e da `latencia_mediana_s` que
+    `resumir` acabou de derivar dos timestamps. Nenhum dos dois custa uma
+    chamada de modelo, e nenhum dos dois esta persistido como veredito -- por
+    isso a marca vale retroativamente para o que ja esta no banco.
+    """
+    ficha = resumir(conversa)
+    return {
+        **base,
+        "categoria": categoria,
+        "nota": nota_0_10(score) if score is not None else None,
+        **ficha,
+        "contestacao": contestacao(score, ficha["latencia_mediana_s"]),
+    }
 
 
 @router.get("/conversas/{conversa_id}")
@@ -166,17 +184,16 @@ def detalhar(
     if achado is None:
         raise HTTPException(status_code=404, detail="conversa nao encontrada")
     conversa, score, _categoria_gravada = achado
-    return {
-        **conversa.model_dump(mode="json"),
-        "score": score,
-        "categoria": ctx.categoria_de(score, ctx.faixas_vigentes()),
-        "nota": nota_0_10(score) if score is not None else None,
-        # A MESMA ficha operacional de `/conversas`, pela mesma funcao. A
-        # lista e o detalhe nao podem calcular tempo de resposta por
-        # caminhos diferentes: seria a divergencia que a nota derivada no
-        # servidor ja existe para evitar, repetida na coluna do lado.
-        **resumir(conversa),
-    }
+    # A MESMA ficha derivada de `/conversas`, pela mesma funcao. A lista e o
+    # detalhe nao podem calcular tempo de resposta -- nem contestacao -- por
+    # caminhos diferentes: seria a divergencia que a nota derivada no servidor
+    # ja existe para evitar, repetida na coluna do lado.
+    return _com_derivacoes(
+        score,
+        ctx.categoria_de(score, ctx.faixas_vigentes()),
+        {**conversa.model_dump(mode="json"), "score": score},
+        conversa,
+    )
 
 
 @router.get("/conversas/{conversa_id}/atribuicao")
