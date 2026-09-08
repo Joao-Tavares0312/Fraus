@@ -496,7 +496,30 @@ Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
 
 ## 8. Armadilhas já pagas — não repita
 
-0. **`fullPage` do Playwright/headless NÃO dispara `whileInView`.** Confirmado
+0. **A vitrine NÃO rola na horizontal — e o `scrollWidth` maior que a viewport
+   não prova que role.** Medido em 08/09/2026 na `main` e na
+   `feat/tipografia-e-heroi`, com resultado idêntico nas duas: em 360/390/440px
+   o `document.scrollWidth` dá viewport + 96px, e mesmo assim
+   `window.scrollTo(9999, 0)` deixa o `scrollX` em **0**. Motivo:
+   `body { overflow-x: hidden }` (globals.css) **propaga para o viewport**,
+   porque o `html` não declara overflow — então o excesso é recortado e não
+   vira barra de rolagem. Os 96px são o `fixed inset-0` do ateliê (que se
+   dimensiona pelo viewport de LAYOUT, e portanto acompanha o excesso em vez de
+   causá-lo) mais a esteira `w-max`, que é faixa rolante por desenho.
+   Nenhum conteúdo fica inalcançável: o container de conteúdo mede exatamente a
+   viewport.
+
+   **Antes de "consertar transbordo" nesta vitrine, meça `window.scrollX` depois
+   de um `scrollTo`, não o `scrollWidth`.** Uma sessão já gastou uma hora
+   perseguindo isso.
+
+   Duas armadilhas de método que apareceram no mesmo dia: **a primeira carga
+   depois de `npm run dev` não é representativa** (ela mediu "sem transbordo" e
+   a segunda mediu 96px — o servidor ainda estava compilando), e uma sonda que
+   procura o culpado do transbordo precisa ignorar quem tem ancestral
+   recortante, senão lista só vítimas.
+
+1. **`fullPage` do Playwright/headless NÃO dispara `whileInView`.** Confirmado
    de novo em 08/09/2026: a tela de Atendimentos sai com a tabela em branco na
    captura, e o DOM desmente — o HTML servido tem o conteúdo. Capture por
    viewport com rolagem, ou confira o HTML com `curl` em vez da imagem. Pelo
