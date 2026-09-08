@@ -186,6 +186,26 @@ def conferir_sinal_por_familia(fusor: Fusor) -> list[str]:
 
     if suspeitas:
         print(f"\n{len(suspeitas)} feature(s) com sinal suspeito: {', '.join(suspeitas)}")
+        # Tres delas ja foram investigadas ate o fim em 08/09/2026 e NAO sao
+        # defeito: sao pesos de correcao de features redundantes. O aviso
+        # continua saindo de proposito -- o dia em que ele parar de sair para a
+        # quarta feature e o dia em que ele deixa de servir --, mas quem o le
+        # precisa saber onde esta a resposta, senao reinvestiga o mesmo caso a
+        # cada retreino.
+        conhecidas = {
+            "texto_prob_satisfeito_ultima",
+            "emoji_frac_positivos",
+            "emoji_frac_negativos",
+        }
+        if conhecidas.intersection(suspeitas):
+            print(
+                "  Destas, texto_prob_satisfeito_ultima, emoji_frac_positivos e\n"
+                "  emoji_frac_negativos JA FORAM EXPLICADAS (08/09/2026): sao\n"
+                "  correcao de colinearidade, e o efeito LIQUIDO de cada familia\n"
+                "  aponta para o lado certo. Rode\n"
+                "  `uv run python scripts/investigar_sinais_invertidos.py`\n"
+                "  antes de investigar de novo."
+            )
     else:
         print("\nnenhuma feature com sinal contrario ao esperado (das que tem expectativa declarada).")
     return suspeitas

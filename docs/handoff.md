@@ -475,6 +475,43 @@ distribuição no corpus, e o corpus não tem latência de três horas.
 teto; passar a escala log; ou aceitar e declarar como limitação. As duas
 primeiras exigem retreino. Decisão do dono do projeto — não tomada.
 
+### Feita — Os três sinais invertidos do fusor — 08/09/2026
+
+`conferir_fusor.py` marca três features como suspeitas desde o fusor de 35, e o
+aviso sobreviveu a todos os retreinos: `texto_prob_satisfeito_ultima` (−0,49),
+`emoji_frac_positivos` (−0,19) e `emoji_frac_negativos` (+0,59), todas com
+sinal oposto ao esperado. Lido isolado, o terceiro diz "mais emoji negativo
+empurra para satisfeito".
+
+**A leitura isolada é que está errada.** Cada uma tem uma irmã forte com o sinal
+certo — `emoji_score_medio` (+1,55), `texto_prob_satisfeito_media` (+2,78) — e
+no corpus do simulador elas se movem quase juntas:
+
+```
+corr(score_medio, frac_positivos) = +0,941
+corr(score_medio, frac_negativos) = -0,903
+corr(frac_positivos, frac_negativos) = -0,885     (254 de 300 conversas)
+```
+
+Features colineares dividem um efeito único: a forte fica com ele, a redundante
+vira termo de correção com sinal frequentemente oposto. **O efeito líquido da
+família é o que se interpreta**, e ele aponta certo: de 4 emojis negativos a 4
+positivos a contribuição somada da família emoji vai de **−0,06 para +1,93**;
+no texto, de P(satisfeito) 0,05 a 0,95, de **−2,23 para +4,56**.
+
+`uv run python scripts/investigar_sinais_invertidos.py` reproduz tudo em
+segundos, sem BERTimbau.
+
+**O aviso do `conferir_fusor.py` continua saindo, de propósito** — o dia em que
+ele parar de sair para a quarta feature é o dia em que ele deixa de servir. Ele
+agora aponta para este laudo, para ninguém reinvestigar o mesmo caso a cada
+retreino.
+
+**Uma armadilha de sonda que quase entrou no laudo:** varrendo só emoji polar,
+`corr(frac_pos, frac_neg)` dá **−1,000** — mas isso é artefato, porque com
+todos polares as duas somam 1 por construção. Emoji neutro quebra a soma. O
+número honesto é o do corpus, acima.
+
 ### P1 — Hospedagem
 
 `Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**
