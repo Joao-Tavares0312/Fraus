@@ -511,6 +511,71 @@ para 93,25, e em 300 s ainda estava em 99,21.
 
 Decisão do dono do projeto — **não tomada**.
 
+### Feita — Os três sinais invertidos do fusor — 08/09/2026
+
+`conferir_fusor.py` marca três features como suspeitas desde o fusor de 35, e o
+aviso sobreviveu a todos os retreinos: `texto_prob_satisfeito_ultima` (−0,49),
+`emoji_frac_positivos` (−0,19) e `emoji_frac_negativos` (+0,59), todas com
+sinal oposto ao esperado. Lido isolado, o terceiro diz "mais emoji negativo
+empurra para satisfeito".
+
+**A leitura isolada é que está errada.** Cada uma tem uma irmã forte com o sinal
+certo — `emoji_score_medio` (+1,55), `texto_prob_satisfeito_media` (+2,78) — e
+no corpus do simulador elas se movem quase juntas:
+
+```
+corr(score_medio, frac_positivos) = +0,941
+corr(score_medio, frac_negativos) = -0,903
+corr(frac_positivos, frac_negativos) = -0,885     (254 de 300 conversas)
+```
+
+Features colineares dividem um efeito único: a forte fica com ele, a redundante
+vira termo de correção com sinal frequentemente oposto. **O efeito líquido da
+família é o que se interpreta**, e ele aponta certo: de 4 emojis negativos a 4
+positivos a contribuição somada da família emoji vai de **−0,06 para +1,93**;
+no texto, de P(satisfeito) 0,05 a 0,95, de **−2,23 para +4,56**.
+
+`uv run python scripts/investigar_sinais_invertidos.py` reproduz tudo em
+segundos, sem BERTimbau.
+
+**O aviso do `conferir_fusor.py` continua saindo, de propósito** — o dia em que
+ele parar de sair para a quarta feature é o dia em que ele deixa de servir. Ele
+agora aponta para este laudo, para ninguém reinvestigar o mesmo caso a cada
+retreino.
+
+**Uma armadilha de sonda que quase entrou no laudo:** varrendo só emoji polar,
+`corr(frac_pos, frac_neg)` dá **−1,000** — mas isso é artefato, porque com
+todos polares as duas somam 1 por construção. Emoji neutro quebra a soma. O
+número honesto é o do corpus, acima.
+
+### Feita — O teto de vazão do webhook — 08/09/2026
+
+Fechou a metade que sobrou de manhã: `/ingestao` ganhou teto e o webhook não,
+sendo que ele é o **outro** caminho de escrita pela rede, com a mesma exposição
+(OWASP API4:2023) e **pior** em um aspecto — a rota é anônima por desenho, e
+cada entrega aceita roda o Motor inteiro.
+
+120 entregas por minuto por fonte, mesmo número de `/ingestao` de propósito: as
+duas rotas fazem o mesmo trabalho depois de autenticar e custam o mesmo. Mas
+**contadores separados** — uma fonte pode receber pelos dois caminhos, e janela
+compartilhada faria o volume de uma rota cortar a outra.
+
+**Três decisões que valem ser lidas antes de mexer:**
+
+1. **O teto vive logo depois do HMAC**, e aqui isso pesa mais que em
+   `/ingestao`: o `fonte_id` vem **na URL**, então qualquer anônimo escolhe
+   contra qual fonte bater. Contar a tentativa recusada transformaria o teto no
+   caminho mais curto para derrubar a integração alheia.
+2. **O 429 é `Recusa`, não `HTTPException` direta** — toda recusa desta rota
+   vira linha em `entregas_webhook`, e um 429 invisível ali seria justamente a
+   recusa que o operador precisava ver: é ela que explica por que a plataforma
+   começou a retentar. `Recusa` ganhou `cabecalhos` para o `Retry-After`.
+3. **Isso só é seguro porque `entrega_ja_vista` conta apenas veredito
+   "aceita".** Se um dia ela passar a contar qualquer veredito, este 429 vira
+   uma forma de queimar um `webhook-id` legítimo — a plataforma retenta o mesmo
+   id e leva "duplicada", e o atendimento some em silêncio. Há teste para isso
+   (`test_o_429_nao_queima_o_webhook_id_para_a_retentativa`).
+
 ### P1 — Hospedagem
 
 `Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**

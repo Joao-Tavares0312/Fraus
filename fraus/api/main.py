@@ -47,8 +47,8 @@ from fraus.api.rotas.analise import (TETO_ARQUIVO_ANALISE,
                                      TETO_CONVERSAS_ANALISE)
 from fraus.api.rotas.modelo import TETO_LEXICON, TETO_TEXTO_SIMULACAO
 from fraus.api.seguranca import registrar_middleware_de_acesso
-from fraus.api.vazao import (INGESTOES_POR_JANELA, LimitadorDeVazao,
-                             registrar_middleware_de_vazao)
+from fraus.api.vazao import (ENTREGAS_POR_JANELA, INGESTOES_POR_JANELA,
+                             LimitadorDeVazao, registrar_middleware_de_vazao)
 from fraus.db import Banco
 from fraus.fusor import Fusor
 from fraus.motor import Motor  # reexportado: `from fraus.api.main import Motor` segue valendo
@@ -139,6 +139,11 @@ def criar_app(
     # teste para o proximo, e em producao seria compartilhado entre instalacoes
     # montadas no mesmo processo.
     app.state.limitador_de_ingestao = LimitadorDeVazao(INGESTOES_POR_JANELA)
+    # O webhook tem limitador PROPRIO, e nao divide o de `/ingestao`: uma fonte
+    # pode legitimamente receber pelos dois caminhos, e uma janela compartilhada
+    # faria a integracao por webhook ser cortada por causa do volume de uma
+    # importacao pela outra rota. Mesmo teto, contadores separados.
+    app.state.limitador_de_webhook = LimitadorDeVazao(ENTREGAS_POR_JANELA)
 
     registrar_middleware_de_acesso(app, ctx)
 

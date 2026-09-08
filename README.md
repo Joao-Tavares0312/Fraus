@@ -401,7 +401,9 @@ na resposta, em `motivos`.
 chave de acesso levam 401 aqui, de propósito: uma credencial por rota. O
 **canal** é o da fonte cadastrada, não o que vier no corpo.
 
-**Tem teto: 120 escritas por minuto, por fonte.** Passou disso, `429` com
+**Tem teto: 120 escritas por minuto, por fonte** — e o webhook tem o mesmo, com
+contador próprio (uma fonte pode receber pelos dois caminhos, e janela
+compartilhada faria a importação por uma rota cortar a integração da outra). Passou disso, `429` com
 `Retry-After`. Cada escrita roda o Motor inteiro (BERTimbau, emoção, ironia,
 fusor) em CPU, e sem teto uma chave vazada valia um laço de shell ocupando o
 processo — [OWASP API4:2023](https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/).
@@ -1148,12 +1150,29 @@ banca:
 - **E também não resolveu o que foi feita para resolver:** a frase canônica
   segue saindo promotor quando o relógio não a contradiz — 99,69 com 181 s de
   espera. Ver item 0 de [Falta](#falta).
-- **Três features têm sinal contra-intuitivo** — `texto_prob_satisfeito_ultima`
-  (−0,49, esperado positivo), `emoji_frac_positivos` (−0,19, esperado positivo) e
-  `emoji_frac_negativos` (+0,59, esperado negativo). **Não é regressão deste
-  retreino:** os mesmos três sinais estão no artefato de 38 features
-  (−0,50 / −0,18 / +0,60), conferido lado a lado. Fica registrado como ponto em
-  aberto, não como novidade.
+- **Três features têm sinal contra-intuitivo, e a investigação fechou em
+  08/09/2026** — `texto_prob_satisfeito_ultima` (−0,49, esperado positivo),
+  `emoji_frac_positivos` (−0,19, esperado positivo) e `emoji_frac_negativos`
+  (+0,59, esperado negativo). Não é regressão de retreino: os mesmos sinais
+  estão no artefato de 38 (−0,50 / −0,18 / +0,60).
+
+  **São correção de colinearidade, não erro de aprendizado.** Cada uma tem uma
+  irmã forte que carrega o mesmo sinal com o sinal certo — `emoji_score_medio`
+  (+1,55) e `texto_prob_satisfeito_media` (+2,78) —, e no corpus elas se movem
+  praticamente juntas: `corr(score_medio, frac_positivos) = +0,94`,
+  `corr(score_medio, frac_negativos) = −0,90`. Quando features dividem um efeito
+  único, a mais forte fica com ele e a redundante recebe um peso pequeno de
+  ajuste, com sinal frequentemente oposto — **o coeficiente individual deixa de
+  significar "o efeito desta feature"**.
+
+  O que importa é o efeito **líquido** da família, e ele aponta para o lado
+  certo. Indo de 4 emojis negativos a 4 positivos, a contribuição somada das
+  cinco features de emoji vai de **−0,06 para +1,93**; no texto, de
+  P(satisfeito) 0,05 a 0,95, vai de **−2,23 para +4,56**.
+
+  Reproduza com `uv run python scripts/investigar_sinais_invertidos.py`. O aviso
+  de `conferir_fusor.py` **continua saindo de propósito**: a próxima inversão
+  pode não ter esta explicação.
 
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),
