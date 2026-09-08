@@ -220,7 +220,41 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_CAMINHO_CHAVES` | `.fraus-chaves.txt` | onde a **primeira subida** grava a mestra e a chave de acesso que ela gera. Única cópia em claro delas; fora do git, e criado com permissão **`0600`** — só o dono lê (em POSIX; no Windows quem manda é a ACL herdada da pasta) |
 | `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra, uma chave de acesso ou um **token de sessão** — exceto `POST /ingestao` (chave de fonte), o webhook (assinatura própria) e as públicas (`/saude`, `/acesso/estado`, `/auth/estado`, `/auth/registrar`, `/auth/entrar`) |
 | `FRAUS_JWT_SEGREDO` | (nenhum) | assina o **JWT de sessão** do login de usuário (`POST /auth/entrar`). Sem ela, o login responde 503 dizendo o que falta, `/auth/estado` anuncia `disponivel: false` e a dashboard abre **sem exigir login** — o modo aberto local, mesmo contrato da API sem mestra |
+| `FRAUS_CODIGO_CONVITE` | (nenhum) | o código exigido para **criar conta** em `POST /auth/registrar`. Sem ela o cadastro fica **aberto** — o certo para uso local, e perigoso quando a API está publicada: ver *A porta destrancada*, logo abaixo. Não confundir com a de baixo: esta decide **se** a conta pode nascer; `FRAUS_CODIGO_DEV` decide **com qual papel** |
 | `FRAUS_CODIGO_DEV` | (nenhum) | o código de convite que permite um cadastro nascer com papel **`dev`** (administra Integrações, Modelo, Configurações, importação e léxico). Sem ela, nenhum cadastro nasce dev — todo mundo nasce `usuario` (analista: Visão geral e Atendimentos). Código errado é 403 explícito, nunca rebaixamento silencioso |
+
+#### A porta destrancada — leia antes de publicar a API
+
+Definir `FRAUS_CHAVE_MESTRA` **não fecha a API** se o login de usuário estiver
+ligado e o cadastro estiver aberto. A sequência abaixo roda inteira, sem
+credencial nenhuma:
+
+| Passo | Resposta |
+|---|---|
+| `GET /conversas` anônimo | **401** — a mestra parece proteger |
+| `POST /auth/registrar` | **201** — conta criada |
+| `POST /auth/entrar` | **200** — devolve o JWT |
+| `GET /conversas` com o JWT | **200** — lê tudo |
+
+`/auth/registrar` é isenta de credencial por desenho (quem se cadastra ainda
+não tem nenhuma), e o middleware de acesso aceita uma sessão válida do mesmo
+jeito que aceita a mestra. **Deixar de ser anônimo é de graça.**
+
+O conserto é uma variável: `FRAUS_CODIGO_CONVITE`. Com ela definida, criar
+conta exige o código. Desde 08/09/2026 a API **avisa no boot** quando a
+combinação perigosa está no ar — mestra ligada, login ligado, convite ausente:
+
+```
+ATENCAO: a API responde 401 para anonimo, mas o CADASTRO esta aberto.
+  POST /auth/registrar -> POST /auth/entrar -> o JWT le tudo que a
+  mestra protege. Deixar de ser anonimo custa tres chamadas.
+  Defina FRAUS_CODIGO_CONVITE para exigir codigo em /auth/registrar,
+  ou nao publique esta instalacao fora da maquina.
+```
+
+Continua sendo **aviso, não recusa de subir**: cadastro aberto é o
+comportamento certo em `localhost`, que é o uso declarado do projeto. O que
+faltava era a frase, não a tranca.
 
 #### A autenticação já vem ligada
 
@@ -366,6 +400,15 @@ na resposta, em `motivos`.
 **chave de fonte** (`frs_...`) é a única credencial aceita nele — a mestra e a
 chave de acesso levam 401 aqui, de propósito: uma credencial por rota. O
 **canal** é o da fonte cadastrada, não o que vier no corpo.
+
+**Tem teto: 120 escritas por minuto, por fonte.** Passou disso, `429` com
+`Retry-After`. Cada escrita roda o Motor inteiro (BERTimbau, emoção, ironia,
+fusor) em CPU, e sem teto uma chave vazada valia um laço de shell ocupando o
+processo — [OWASP API4:2023](https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/).
+A contagem é **por fonte autenticada**, nunca pela chave crua: o id da fonte
+vem em texto claro dentro da chave, então contar antes de conferir o hash
+deixaria um anônimo gastar a janela da integração legítima — a defesa viraria
+a arma. Duas fontes não dividem janela, e o teto não alcança leitura.
 
 ```bash
 curl -X POST 127.0.0.1:8000/ingestao \

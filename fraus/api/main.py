@@ -47,7 +47,8 @@ from fraus.api.rotas.analise import (TETO_ARQUIVO_ANALISE,
                                      TETO_CONVERSAS_ANALISE)
 from fraus.api.rotas.modelo import TETO_LEXICON, TETO_TEXTO_SIMULACAO
 from fraus.api.seguranca import registrar_middleware_de_acesso
-from fraus.api.vazao import registrar_middleware_de_vazao
+from fraus.api.vazao import (INGESTOES_POR_JANELA, LimitadorDeVazao,
+                             registrar_middleware_de_vazao)
 from fraus.db import Banco
 from fraus.fusor import Fusor
 from fraus.motor import Motor  # reexportado: `from fraus.api.main import Motor` segue valendo
@@ -132,6 +133,13 @@ def criar_app(
     # ROTAS, onde o custo de fato acontece.
     registrar_middleware_de_vazao(app)
 
+    # Teto de `/ingestao`, que roda na ROTA e nao aqui -- ver o docstring de
+    # `fraus/api/vazao.py` para o porque. Mora em `app.state` e nao em modulo
+    # para nascer e morrer com o app: um contador global vazaria a janela de um
+    # teste para o proximo, e em producao seria compartilhado entre instalacoes
+    # montadas no mesmo processo.
+    app.state.limitador_de_ingestao = LimitadorDeVazao(INGESTOES_POR_JANELA)
+
     registrar_middleware_de_acesso(app, ctx)
 
     # O CORS precisa ficar POR FORA do middleware de chave: em Starlette, o
@@ -160,6 +168,44 @@ def criar_app(
     app.include_router(auth.router)
 
     return app
+
+
+def aviso_de_porta_destrancada(
+    mestra_ligada: bool, jwt_segredo: str | None, codigo_convite: str | None
+) -> str | None:
+    """A frase que faltava para a combinacao que PARECE fechada e nao esta.
+
+    COM MESTRA + LOGIN DE USUARIO + SEM CONVITE, um `GET /conversas` anonimo
+    responde 401 -- e quem opera conclui, razoavelmente, que trancou a API. Mas
+    `POST /auth/registrar` e isento de credencial por desenho (quem se cadastra
+    ainda nao tem nenhuma) e `acesso_autorizado` aceita qualquer sessao valida
+    do mesmo jeito que aceita a mestra. Registrar, entrar e ler leva tres
+    chamadas. Reproduzido contra a instalacao publicada em 02/09/2026.
+
+    A DEFESA JA EXISTE -- `FRAUS_CODIGO_CONVITE`, ver
+    `fraus.api.rotas.auth.papel_do_cadastro`. O que faltava era ela deixar de
+    ser silenciosa: os unicos avisos de boot falavam de AUSENCIA de
+    autenticacao, e esta configuracao nao e ausencia, e as duas portas ligadas
+    com uma delas sem tranca.
+
+    AVISO, NAO RECUSA DE SUBIR. A invariante 7 recusa por modelo ausente porque
+    predicao errada e pior que estar fora do ar; aqui e o contrario -- cadastro
+    aberto e o comportamento certo para uso local, que e o uso declarado do
+    projeto. Recusar puniria o caso comum para avisar o raro.
+
+    `mestra_ligada` e booleano, e nao a chave, porque a tranca ligada por BOTAO
+    (gravada no banco) conta igual a do ambiente: quem clicou tem a mesma
+    crenca de ter fechado a API. Ver `Contexto.autenticacao_ligada`.
+    """
+    if not (mestra_ligada and jwt_segredo and not codigo_convite):
+        return None
+    return (
+        "ATENCAO: a API responde 401 para anonimo, mas o CADASTRO esta aberto.\n"
+        "  POST /auth/registrar -> POST /auth/entrar -> o JWT le tudo que a\n"
+        "  mestra protege. Deixar de ser anonimo custa tres chamadas.\n"
+        "  Defina FRAUS_CODIGO_CONVITE para exigir codigo em /auth/registrar,\n"
+        "  ou nao publique esta instalacao fora da maquina."
+    )
 
 
 def criar_app_padrao() -> FastAPI:
@@ -214,6 +260,19 @@ def criar_app_padrao() -> FastAPI:
             f"defina FRAUS_CHAVE_MESTRA."
         )
 
+    codigo_convite = os.environ.get("FRAUS_CODIGO_CONVITE") or None
+
+    # Depois de `ligar_no_primeiro_uso`, de proposito: a mestra que ele acabou
+    # de gravar tranca a API tanto quanto a do ambiente, e o aviso tem de
+    # enxergar as duas.
+    destrancada = aviso_de_porta_destrancada(
+        mestra_ligada=chave_mestra is not None or banco.hash_da_chave_mestra() is not None,
+        jwt_segredo=os.environ.get("FRAUS_JWT_SEGREDO") or None,
+        codigo_convite=codigo_convite,
+    )
+    if destrancada is not None:
+        print(destrancada)
+
     return criar_app(
         banco=banco,
         motor=motor,
@@ -225,8 +284,9 @@ def criar_app_padrao() -> FastAPI:
         codigo_dev=os.environ.get("FRAUS_CODIGO_DEV") or None,
         # Sem esta variavel o cadastro segue ABERTO -- o comportamento de
         # sempre, certo para quem roda em casa. Definir e a decisao de quem
-        # publica a API na internet.
-        codigo_convite=os.environ.get("FRAUS_CODIGO_CONVITE") or None,
+        # publica a API na internet, e `aviso_de_porta_destrancada` (acima)
+        # existe para essa decisao nao passar batida.
+        codigo_convite=codigo_convite,
     )
 
 

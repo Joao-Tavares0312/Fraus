@@ -186,6 +186,26 @@ def test_contrato_tem_trinta_e_nove_features_com_incongruencia():
         assert chave in NOMES_FEATURES
 
 
+def test_o_CLAUDE_md_declara_o_mesmo_numero_de_features():
+    """O contrato ja era travado em codigo, e ainda assim o `CLAUDE.md` passou
+    dias dizendo "38 chaves" na invariante 9 e "(35)" no mapa de arquivos --
+    numeros de duas revisoes diferentes, nenhum deles o vigente. Aquele arquivo
+    governa toda sessao de agente: um numero errado la vira decisao errada aqui.
+
+    Este teste amarra os dois. E o unico jeito de a documentacao envelhecer com
+    barulho em vez de em silencio.
+    """
+    from pathlib import Path
+
+    texto = Path(__file__).resolve().parents[1].joinpath("CLAUDE.md").read_text(
+        encoding="utf-8"
+    )
+    quantas = len(NOMES_FEATURES)
+    assert f"**As {quantas} chaves de feature**" in texto
+    assert f"`NOMES_FEATURES` ({quantas})" in texto
+    assert f"{quantas} features" in texto
+
+
 def test_contrato_nao_tem_duplicata():
     assert len(set(NOMES_FEATURES)) == len(NOMES_FEATURES)
 

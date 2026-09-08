@@ -56,6 +56,12 @@ from fraus.sinais.texto import features_texto
 # derruba-la empurravam para cima. A cabeca isolada acerta essa frase (0,998);
 # quem lia ao contrario era o fusor, e so por causa do corpus.
 #
+# E subiu de 38 para 39 no MESMO dia, 04/09/2026:
+# `incongruencia_situacao_negativa` entrou (commit 12a0eea) para alcancar
+# elogio contra situacao negativa -- a frase canonica do projeto. Ela dispara e
+# tem peso negativo, mas nao vence `texto_prob_satisfeito_media` quando o
+# BERTimbau le a frase como elogio sincero: ver docs/handoff.md.
+#
 # A cabeca de ironia CONTINUA carregada e obrigatoria (invariante 7) e
 # CONTINUA aparecendo por mensagem na dashboard, onde e honesta -- so parou de
 # PONTUAR. Se voce esta se perguntando por que existe `fraus/sinais/ironia.py`
@@ -101,7 +107,7 @@ NOMES_FEATURES = [
     "estilo_palavrao_intensidade",
     "estilo_palavrao_dirigido",
     "estilo_frac_censurado",
-    # incongruencia (5)
+    # incongruencia (6)
     "incongruencia_polaridade",
     "incongruencia_emoji_texto",
     "incongruencia_marcador_contraste",

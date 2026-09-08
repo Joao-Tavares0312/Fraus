@@ -1,4 +1,15 @@
-"""Teto de tentativas em `/auth/entrar` e `/auth/registrar`.
+"""Teto de tentativas em `/auth/entrar`, `/auth/registrar` e `/ingestao`.
+
+DOIS TETOS, DUAS IDENTIDADES, e confundi-los seria o proximo bug. O de
+`/auth/*` roda em MIDDLEWARE e conta POR IP, porque as rotas sao isentas de
+credencial e nao existe identidade melhor antes delas. O de `/ingestao` roda
+na ROTA, depois de `fonte_autorizada`, e conta POR FONTE: no middleware ele so
+poderia contar pela chave crua, e `credencial.fonte_da_chave` le o id da fonte
+SEM conferir o hash -- um anonimo mandando `frs_3_lixo` gastaria a janela da
+fonte 3 e derrubaria a integracao legitima. Defesa que o atacante usa como
+arma e pior que nenhuma.
+
+O resto deste docstring e sobre o teto de `/auth/*`.
 
 O CUSTO E O PROBLEMA, nao o acerto. `usuarios.CUSTO_N = 2**14` (fraus/usuarios.py)
 faz cada derivacao scrypt pedir ~16 MB, e `/auth/entrar` deriva MESMO para
@@ -23,7 +34,7 @@ derrubou o servidor: um unico IP, um laco de shell.
 import time
 from collections import defaultdict, deque
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 # 20 tentativas por minuto e generoso para uso humano (ninguem erra a senha
@@ -34,6 +45,14 @@ TENTATIVAS_POR_JANELA = 20
 JANELA_S = 60.0
 
 CAMINHOS_LIMITADOS = ("/auth/entrar", "/auth/registrar")
+
+# `/ingestao` tem teto proprio, com outro numero e outra identidade -- ver
+# `LimitadorDeVazao` e `fraus/api/rotas/ingestao.py`. 120 por minuto e duas
+# escritas por segundo: muito acima do que atendimento humano gera (uma
+# conversa por atendimento encerrado) e ainda assim um teto, onde antes nao
+# havia nenhum. Cada escrita roda o Motor inteiro em CPU, entao o custo maximo
+# que uma chave vazada impoe passa a ser contavel -- e OWASP API4:2023.
+INGESTOES_POR_JANELA = 120
 
 
 class LimitadorDeVazao:
@@ -64,6 +83,24 @@ class LimitadorDeVazao:
         if not fila:
             return 1
         return max(1, int(fila[0] + self._janela_s - agora) + 1)
+
+
+def barrar_se_exceder(limitador: LimitadorDeVazao, identidade: str) -> None:
+    """Versao do teto para quem roda DENTRO da rota, ja com o pedido autenticado.
+
+    Levanta 429 em vez de devolver resposta porque, na rota, `HTTPException` e
+    o caminho que o FastAPI ja conhece -- e o mesmo `Retry-After` do
+    middleware, pela mesma razao: recusar sem dizer quando tentar de novo
+    deixa "continue batendo" como unica pista.
+    """
+    agora = time.monotonic()
+    if limitador.permite(identidade, agora):
+        return
+    raise HTTPException(
+        status_code=429,
+        detail="muitas escritas desta fonte -- aguarde antes de mandar de novo",
+        headers={"Retry-After": str(limitador.proxima_vaga_em(identidade, agora))},
+    )
 
 
 def registrar_middleware_de_vazao(app: FastAPI) -> None:

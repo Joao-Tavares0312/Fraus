@@ -24,7 +24,7 @@ CSV / Discord / WhatsApp
  │por      │+ posi-  │escala-  │ses +    │-PT02 +  │binária  │alta +   │emoji×   │
  │mensagem │ção      │ção      │desprezo │negação  │(*)      │palavrão │texto    │
  └────┬────┴────┬────┴────┬────┴────┬────┴────┬────┴─────────┴────┬────┴────┬────┘
-            ↓  38 features                                     (*) por mensagem,
+            ↓  39 features                                     (*) por mensagem,
       Fusor (LogisticRegression + StandardScaler)                   direto p/ dashboard
             ↓  score 0–100
    nota 0–10 → categoria NPS → indicadores agregados
@@ -55,10 +55,11 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex e o ranking de emoji |
 | `fraus/api/rotas/lexico.py` | cadastrar, listar e revogar termo curado |
 | `fraus/assinatura.py` | HMAC do webhook — o segredo mora no ambiente, nunca no banco |
+| `fraus/api/vazao.py` | dois tetos: `/auth/*` por IP em middleware, `/ingestao` por fonte na rota |
 | `fraus/api/registro.py` | o miolo de derivação, compartilhado pelas duas rotas de entrada |
 | `fraus/api/rotas/webhook.py` | webhook assinado por fonte, com registro de entrega |
 | `scripts/preparar_sentilex.py` | converte o SentiLex bruto em `fraus/dados/sentilex_pt02.csv` |
-| `fraus/fusor.py` | `NOMES_FEATURES` (35) e o `Fusor` |
+| `fraus/fusor.py` | `NOMES_FEATURES` (39) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
 | `fraus/configuracao.py` | configuração vigente: padrão de fábrica no código, delta no banco |
 | `fraus/db.py` | SQLite, sem ORM |
@@ -103,12 +104,15 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
 8. **A ordem das classes é 0 insatisfeito, 1 neutro, 2 satisfeito** — no notebook,
    no sinal de texto, no fusor e nos indicadores. Inverter não gera erro: faz o
    sistema pontuar ao contrário em silêncio.
-9. **As 38 chaves de feature** produzidas pelas SETE famílias do vetor batem
+9. **As 39 chaves de feature** produzidas pelas SETE famílias do vetor batem
    exatamente com `NOMES_FEATURES`. `vetorizar` levanta `KeyError` em falta —
    nunca zero silencioso. Emoção, léxico, ironia e estilo entraram no vetor em
    21/08/2026; a família `incongruencia_*` entrou em 03/09/2026; a ironia SAIU
    de novo em 04/09/2026 (`ironia_prob_media`/`ironia_prob_max` medem sentimento
-   positivo, não ironia, no corpus de treino — ver `docs/treinamento.md`).
+   positivo, não ironia, no corpus de treino — ver `docs/treinamento.md`), e
+   `incongruencia_situacao_negativa` entrou no mesmo dia — daí 40 − 2 + 1 = 39.
+   O número aqui é o contrato: se ele divergir de `len(NOMES_FEATURES)`, é este
+   arquivo que está errado, e ele governa toda sessão de agente.
    `montar_features` exige DOIS classificadores (texto, emoção); o `Motor`
    continua exigindo os TRÊS (a ironia entra na leitura por mensagem, não no
    vetor), e a API não sobe sem os três modelos treinados.

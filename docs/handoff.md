@@ -355,6 +355,36 @@ que anexa a chave de acesso no servidor Next e nunca a deixa chegar ao
 navegador. Ver `README.md` e `docs/hospedagem.md`. Falta só mesclar a branch em
 `main`.
 
+### Feita — A porta destrancada e o teto de `/ingestao` — 08/09/2026
+
+Duas coisas que o levantamento de 08/09 achou, e uma que ele achou mentindo.
+
+**A porta destrancada.** Com `FRAUS_CHAVE_MESTRA` + `FRAUS_JWT_SEGREDO` e sem
+`FRAUS_CODIGO_CONVITE`, três chamadas (`registrar` → `entrar` → `GET
+/conversas`) leem tudo que a mestra protege. **A tranca já existia** desde
+02/09 — o que não existia era alguém dizer que ela estava aberta: os avisos de
+boot só falavam de *ausência* de autenticação, e essa combinação não é
+ausência, é as duas portas ligadas com uma delas destrancada. Agora
+`aviso_de_porta_destrancada` (`fraus/api/main.py`) grita na subida. Continua
+sendo aviso e não recusa de subir: cadastro aberto é o certo em `localhost`,
+que é o uso declarado. `tests/test_aviso_de_porta_destrancada.py`.
+
+**O teto de `/ingestao`.** 120 escritas por minuto, por fonte, com
+`Retry-After` — OWASP API4:2023. Ele vive **na rota**, depois de
+`fonte_autorizada`, e não no middleware onde mora o teto de `/auth/*`: o
+middleware roda antes da autenticação e só poderia contar pela chave crua, mas
+`credencial.fonte_da_chave` lê o id **sem conferir hash**, então um anônimo
+mandando `frs_3_lixo` gastaria a janela da fonte 3. Defesa que o atacante usa
+como arma é pior que nenhuma. `tests/test_vazao_de_ingestao.py`.
+
+**A documentação que mentia.** O docstring de `fraus/credencial.py` afirmava
+que "o resto da API continua sem autenticação" — verdade quando escrito, falso
+desde 25/08. E o `CLAUDE.md` dizia "38 chaves de feature" na invariante 9 e
+"(35)" no mapa: dois números de duas revisões, nenhum o vigente (**39**).
+Corrigidos, e agora `test_o_CLAUDE_md_declara_o_mesmo_numero_de_features`
+amarra o número do `CLAUDE.md` a `len(NOMES_FEATURES)` — a documentação que
+governa toda sessão de agente passa a envelhecer com barulho.
+
 ### P1 — Hospedagem
 
 `Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**
