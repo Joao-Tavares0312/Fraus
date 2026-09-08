@@ -1,19 +1,46 @@
 # Abstenção por contestação — o tempo contesta o elogio
 
 **Data:** 08/09/2026
-**Estado:** desenho aprovado, pronto para plano de implementação
+**Estado:** implementado em 08/09/2026, com a medição da tabela abaixo feita
+contra a API real depois da implementação
 
 ## O problema
 
 A frase canônica do projeto — *"que atendimento maravilhoso, só esperei 3
-horas"* — pontua **99,93 / nota 10 / promotor**. Ela é o caso de manual da
-ironia de atendimento e o sistema a lê como o elogio mais sincero do banco.
+horas"* — é o caso de manual da ironia de atendimento, e o sistema a lê como
+elogio sincero: a cabeça de texto dá **0,858 de satisfeito** para ela.
+
+> **Medição de 08/09/2026 — o "99,93" que circula na documentação deste projeto
+> é o caso RÁPIDO, e faltava esse qualificador em todo lugar, inclusive na
+> primeira versão desta spec.** A mesma fala, contra a API real, só variando o
+> relógio:
+>
+> | latência | score | nota | categoria | contestada |
+> |---:|---:|---:|---|---|
+> | 10 s | 99,92 | 10 | promotor | — |
+> | 179 s | 99,70 | 10 | promotor | — |
+> | **181 s** | **99,69** | **10** | **promotor** | **SIM** |
+> | **300 s** | **99,21** | **10** | **promotor** | **SIM** |
+> | 600 s | 93,25 | 9 | promotor | — |
+> | 1800 s | 17,19 | 2 | detrator | — |
+> | 10800 s | 0,00 | 0 | detrator | — |
+>
+> Com as três horas **dentro do próprio log**, o relógio já derruba o score
+> sozinho. Os 99,9 aparecem quando a conversa registrada é rápida — o que é
+> real e comum: o cliente abre um atendimento novo e ironiza sobre uma espera
+> que aconteceu **fora** daquele log.
+>
+> **A janela da marca é estreita de propósito, e a estreiteza é a feature:**
+> abaixo de 180 s não há contradição a marcar; acima de ~10 min o modelo já
+> acerta sem ajuda. A contestação cobre a faixa de ~3 a ~9 minutos, onde o
+> texto satura e o tempo ainda não venceu. Se um dia ela parecer inútil por
+> marcar pouco, é este bloco que precisa ser lido antes de alargá-la.
 
 `incongruencia_situacao_negativa` entrou no vetor em 04/09/2026 exatamente para
 alcançá-la. **Não alcançou.** Ela dispara e ganhou peso −0,193, mas não vence
 `texto_prob_satisfeito_media`, que pesa **+2,78**, quando o BERTimbau lê a
-frase como elogio sincero com 99% de confiança. Nenhuma feature agregada de
-conversa reverte uma probabilidade saturada por mensagem.
+frase como elogio sincero. Nenhuma feature agregada de conversa reverte uma
+probabilidade saturada por mensagem.
 
 ## Por que NÃO uma feature nova no fusor
 
@@ -55,14 +82,14 @@ com uma diferença deliberada — **a abstenção não apaga o número**.
 
 Quando o veredito está saturado e o tempo o contradiz, o atendimento ganha uma
 **contestação**: uma marca derivada, ao lado do score, que a tela mostra e o
-export leva. O score continua 99,93, a nota continua 10, a categoria continua
-promotor, e o atendimento **continua contando no NPS**.
+export leva. O score continua o que o modelo deu, a nota continua 10, a
+categoria continua promotor, e o atendimento **continua contando no NPS**.
 
 ```
-Atendimento #482                      99,93
+Atendimento sweep-00300s              99,21
   nota 10 · promotor
   ⚠ leitura contestada — elogio saturado
-    contra espera de 3h12. Ver transcrição.
+    contra espera de 5 min. Ver transcrição.
 
 NPS: -40  (inclui este)
 ```
@@ -100,7 +127,8 @@ Três ganhos da troca, além de ser a única viável:
 - contesta o **veredito exibido** em vez de um intermediário que a tela nunca
   mostra — o que é mais fácil de defender, não menos.
 
-Na frase canônica o resultado é o mesmo: score 99,93 > 95, latência 10800s > 180.
+Na frase canônica com espera de 5 minutos — o falso promotor real, medido:
+score 99,21 > 95, latência 300 s > 180.
 
 ## Componentes
 
@@ -120,9 +148,9 @@ escrever a frase sem duplicar a regra em TypeScript (invariante 3):
 ```python
 {
     "motivo": "elogio_contra_espera",
-    "latencia_mediana_s": 11520.0,
+    "latencia_mediana_s": 300.0,
     "limiar_s": 180,
-    "score": 99.93,
+    "score": 99.21,
     "limiar_score": 95,
 }
 ```
@@ -157,7 +185,7 @@ seguem idênticos, contando o atendimento contestado como sempre contaram.
 
 - **Atendimentos** — marca na linha, discreta, ao lado da nota.
 - **Transcrição** — bloco com a frase por extenso ("elogio saturado contra
-  espera de 3h12"), montada a partir dos campos que a API já mandou.
+  espera de 5 min"), montada a partir dos campos que a API já mandou.
 
 Segue `dashboard/DESIGN.md`. A marca **não pode depender de JavaScript** para
 aparecer, pela mesma regra que tirou a etiqueta de honestidade do `Revelar` na
@@ -193,6 +221,34 @@ dados sintéticos: limitação declarada, não segredo.
 amaciam a confiança da sentença isolada, mas não usam sinal de conversa — são
 ortogonais ao problema, e com conjunto de calibração pequeno podem piorar a
 superconfiança.
+
+## O que a verificação achou de quebra, e não é desta spec
+
+Atribuição da mesma conversa com **3 horas** de espera (uma única fala do
+cliente, que a cabeça de texto lê como 86% satisfeito):
+
+```
+latencia_primeira_resposta_s   -85,405
+duracao_total_s                -35,759
+latencia_mediana_s             -20,569
+latencia_p90_s                 -12,326
+texto_prob_satisfeito_media     +4,574   ← o texto inteiro
+```
+
+**O tempo pesa 20× o texto.** As features de latência não têm teto, e o corpus
+de treino nunca passou de minutos (medianas 5/30/200 s): em 3 horas o z-score
+do `StandardScaler` explode e o relógio assume o controle da nota. A conversa
+sai com score `4,4e-24`.
+
+O critério do próprio `docs/treinamento.md` diz o que isso é: *"se as features
+que lideram forem as circunstanciais (tempo, contagem de turnos), procure o
+vazamento."* É a invariante 10 se manifestando **em runtime**, não no treino —
+a guarda de vazamento olha a distribuição no corpus, e o corpus não tem
+latência de três horas.
+
+Não está resolvido aqui e **não deve ser**: clipar a latência, passar a log ou
+aceitar e declarar são três decisões diferentes, e a terceira não é obviamente
+errada. Fica como pendência própria em `docs/handoff.md`.
 
 ## Fora de escopo
 

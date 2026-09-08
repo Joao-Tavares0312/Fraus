@@ -770,7 +770,7 @@ ordem lá é a ordem de importância.
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável e, desde 04/09/2026, não pontua mais** — ver pendência 1 |
-| **Fusor** | ✅ ⚠️ | **contrato em 39 features desde 04/09/2026** e **artefato em dia desde 08/09/2026**: `n_features_in_ = 39`, classes `[0 1 2]`, acurácia **0,950** e F1-macro **0,950** (contra 0,943 do fusor de 38). A API real sobe. O ⚠️ é outro: `incongruencia_situacao_negativa` entrou para alcançar a frase canônica e **não a alcançou** — ela continua pontuando 99,93 / nota 10 / promotor (item 0 de [Falta](#falta)). A feature não nasceu morta — peso −0,193 no eixo satisfeito−insatisfeito —, só não é suficiente. Confira qualquer artefato com `uv run python scripts/conferir_fusor.py` |
+| **Fusor** | ✅ ⚠️ | **contrato em 39 features desde 04/09/2026** e **artefato em dia desde 08/09/2026**: `n_features_in_ = 39`, classes `[0 1 2]`, acurácia **0,950** e F1-macro **0,950** (contra 0,943 do fusor de 38). A API real sobe. O ⚠️ é outro: `incongruencia_situacao_negativa` entrou para alcançar a frase canônica e **não a alcançou** — ela continua saindo promotor sempre que o relógio não a contradiz — medido em 08/09/2026: 99,69 com 181 s de espera, 99,21 com 300 s (item 0 de [Falta](#falta)). A feature não nasceu morta — peso −0,193 no eixo satisfeito−insatisfeito —, só não é suficiente. Confira qualquer artefato com `uv run python scripts/conferir_fusor.py` |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -791,7 +791,13 @@ Em ordem, com o detalhe em [Pendências](#pendências):
 
 0. **A ironia continua escapando do score — limitação declarada, e a tentativa
    de conserto FALHOU.** A frase canônica do projeto, `"que atendimento
-   maravilhoso, so esperei 3 horas"`, pontua **99,93 / nota 10 / promotor**.
+   maravilhoso, so esperei 3 horas"`, sai **promotor sempre que o relógio não a
+   contradiz** — 99,69 com 181 s de espera, 99,21 com 300 s, medidos em
+   08/09/2026 contra a API real. (Com três horas *dentro do log* o relógio já
+   derruba o score sozinho, para 0,00; os 99,9 são o caso rápido, que é real e
+   comum — o cliente ironiza sobre uma espera ocorrida **fora** daquele
+   atendimento. Desde 08/09/2026 a faixa do meio carrega a **contestação**, ver
+   [Limitações conhecidas](#limitações-conhecidas).)
 
    A rota proposta foi implementada e treinada: `incongruencia_situacao_negativa`
    (lista curada de situação negativa de atendimento, desenho em
@@ -958,16 +964,35 @@ que o projeto existe para não cometer.
   afeto do próprio falante é o transformer, não o léxico.
 - **A ironia de atendimento continua escapando do score, e agora ela é
   marcada.** A frase canônica — *"que atendimento maravilhoso, só esperei 3
-  horas"* — pontua **99,93 / nota 10 / promotor**. Nenhuma feature agregada de
-  conversa reverte uma probabilidade saturada por mensagem: a
-  `incongruencia_situacao_negativa` dispara nela e perde, com −0,193 contra os
-  +2,78 de `texto_prob_satisfeito_media`.
+  horas"* — sai como **promotor sempre que o relógio não a contradiz**. Nenhuma
+  feature agregada de conversa reverte uma probabilidade saturada por mensagem:
+  a `incongruencia_situacao_negativa` dispara nela e perde, com −0,193 contra
+  os +2,78 de `texto_prob_satisfeito_media`.
 
-  Desde 08/09/2026 o atendimento nessa situação carrega uma **contestação**:
+  **Quanto a conversa pontua depende do relógio**, e isto foi medido em
+  08/09/2026 contra a API real, com a mesma fala e só a latência variando:
+
+  | latência | score | nota | categoria | contestada |
+  |---:|---:|---:|---|---|
+  | 10 s | 99,92 | 10 | promotor | — |
+  | 179 s | 99,70 | 10 | promotor | — |
+  | **181 s** | **99,69** | **10** | **promotor** | **SIM** |
+  | **300 s** | **99,21** | **10** | **promotor** | **SIM** |
+  | 600 s | 93,25 | 9 | promotor | — |
+  | 1800 s | 17,19 | 2 | detrator | — |
+  | 10800 s | 0,00 | 0 | detrator | — |
+
+  Com as três horas **dentro do log**, o relógio já derruba o score sozinho. Os
+  99,9 são o caso rápido — real e comum: o cliente abre um atendimento novo e
+  ironiza sobre uma espera que aconteceu **fora** daquele log.
+
+  Desde 08/09/2026 o atendimento na faixa do meio carrega uma **contestação**:
   quando o score passa de 95 **e** a latência mediana passa de 180 s (a faixa
   crítica de *From Seconds to Sentiments*, IJHCI 2025), a tela escreve "leitura
-  contestada — elogio saturado contra espera de 3 h" ao lado da nota, e o CSV
-  leva a coluna `contestada`.
+  contestada — elogio saturado contra espera de 5 min" ao lado da nota, e o CSV
+  leva a coluna `contestada`. **A janela é estreita de propósito** — de ~3 a ~9
+  minutos: abaixo disso não há contradição a marcar, e acima o modelo já acerta
+  sem ajuda.
 
   **Ela marca, não corrige.** Score, nota e categoria seguem exibidos e o
   atendimento continua contando no NPS, no CSAT e na contenção. Tirar do
@@ -1121,7 +1146,8 @@ banca:
   situação negativa cobre entrega e promessa não cumprida, que aparecem em
   review de produto.
 - **E também não resolveu o que foi feita para resolver:** a frase canônica
-  segue em 99,93 / nota 10 / satisfeito. Ver item 0 de [Falta](#falta).
+  segue saindo promotor quando o relógio não a contradiz — 99,69 com 181 s de
+  espera. Ver item 0 de [Falta](#falta).
 - **Três features têm sinal contra-intuitivo** — `texto_prob_satisfeito_ultima`
   (−0,49, esperado positivo), `emoji_frac_positivos` (−0,19, esperado positivo) e
   `emoji_frac_negativos` (+0,59, esperado negativo). **Não é regressão deste

@@ -1,12 +1,35 @@
 """Quando o tempo contesta o elogio: a marca que acompanha o numero.
 
 A frase canonica do projeto -- "que atendimento maravilhoso, so esperei 3
-horas" -- pontua 99,93 / nota 10 / promotor. E o caso de manual da ironia de
-atendimento, e o sistema a le como o elogio mais sincero do banco.
+horas" -- e o caso de manual da ironia de atendimento, e o sistema a le como
+elogio sincero: a cabeca de texto da 0,858 de satisfeito para ela.
 `incongruencia_situacao_negativa` entrou no vetor em 04/09/2026 para alcanca-la:
-dispara nela e PERDE, porque pesa -0,193 contra os +2,78 de
+dispara e PERDE, porque pesa -0,193 contra os +2,78 de
 `texto_prob_satisfeito_media`. Nenhuma feature agregada de conversa reverte uma
 probabilidade saturada por mensagem.
+
+QUANTO A CONVERSA DE FATO PONTUA DEPENDE DO RELOGIO, e isto foi MEDIDO em
+08/09/2026 contra a API real, com a mesma fala e so a latencia variando:
+
+    latencia    score    nota  categoria   contestada
+        10 s    99,92      10  promotor    --
+       179 s    99,70      10  promotor    --
+       181 s    99,69      10  promotor    SIM
+       300 s    99,21      10  promotor    SIM
+       600 s    93,25       9  promotor    --
+      1800 s    17,19       2  detrator    --
+     10800 s     0,00       0  detrator    --
+
+O "99,93" que circula na documentacao deste projeto e o caso RAPIDO -- que e
+real e comum: o cliente abre um atendimento novo e ironiza sobre uma espera que
+aconteceu FORA daquele log. Com as 3 horas dentro do proprio log, o relogio ja
+derruba o score sozinho.
+
+E POR ISSO QUE A JANELA DA MARCA E ESTREITA DE PROPOSITO, e a estreiteza e a
+feature: abaixo de 180 s nao ha contradicao para marcar, acima de ~10 min o
+modelo ja acerta sem ajuda. A contestacao cobre so a faixa de ~3 a ~9 minutos,
+onde o texto satura e o tempo ainda nao venceu. Se um dia ela parecer inutil
+por marcar pouco, e este paragrafo que precisa ser lido antes de alarga-la.
 
 REGRA DECLARADA, NAO PESO APRENDIDO -- e isso e decisao, nao atalho. A rota
 obvia seria uma feature 40 cruzando tempo x texto, que e o que a literatura

@@ -1,4 +1,4 @@
-# Handoff — Fraus, 31/08/2026 (atualizado — LP na raiz e autenticação de usuário)
+# Handoff — Fraus, atualizado em 08/09/2026 (contestação, teto de vazão e a porta destrancada)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -24,19 +24,30 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 ---
 
-## 2. Estado atual — 31/08/2026
+## 2. Estado atual — 08/09/2026
 
 | | |
 |---|---|
-| Branch | `feat/lp-e-autenticacao` (webhook foi mesclado na main via PR #20; agora: LP pública na raiz, telas em `/dashboard/*`, login/cadastro com JWT e papéis dev/usuario — ver spec `docs/superpowers/specs/2026-08-31-lp-e-autenticacao-design.md`) |
-| Testes | **595 passed, 1 deselected** |
-| Modelos | os três em `modelos/`, 1,3 GB, **fora do git** |
-| API | `uv run python scripts/api_demo.py` → :8000 |
-| Dashboard | `cd dashboard && npm run build && npx next start -p 3000` |
+| Testes | **767 passed, 1 deselected** (Python) · **69** (front) — 08/09/2026 |
+| Modelos | os três em `modelos/`, 1,3 GB, **fora do git**; fusor em dia (39 features, acurácia 0,950) |
+| API real | `uv run uvicorn fraus.api.main:app --port 8001` → confira `/saude`, tem de dizer `"motor":"real"` |
+| API dublê | `uv run python scripts/api_demo.py` → :8000. **Só para trabalho de interface sem modelo.** Números sintéticos com cara de predição — invariante 7 |
+| Dashboard | `cd dashboard && npm run dev` (ou `npm run build && npx next start`) |
 
-Sem `FRAUS_CHAVE_MESTRA` no ambiente, a API sobe **aberta**, como sempre — é o
-modo de desenvolvimento local e o que os comandos acima assumem. Definir a
-variável liga a exigência de `Authorization: Bearer` em toda rota, exceto duas,
+**A API nasce FECHADA**, e este parágrafo dizia o contrário até 08/09/2026. Na
+primeira subida ela gera a mestra e uma chave de acesso e grava as duas em
+`.fraus-chaves.txt` (caminho configurável por `FRAUS_CAMINHO_CHAVES`),
+anunciando no boot. A dashboard lê a chave desse arquivo sozinha. `curl` na mão
+precisa de `Authorization: Bearer <mestra>`; sem isso você toma 401 e vai achar
+que quebrou alguma coisa.
+
+**Armadilha de sessão: se você definir `FRAUS_CHAVE_MESTRA` e
+`FRAUS_JWT_SEGREDO` sem `FRAUS_CODIGO_CONVITE`, a API responde 401 para anônimo
+e mesmo assim está aberta** — `registrar` → `entrar` → o JWT lê tudo. Desde
+08/09/2026 o boot grita quando essa combinação sobe. Ver `README.md`, seção "A
+porta destrancada".
+
+Com a mestra ligada, toda rota exige `Authorization: Bearer`, exceto duas,
 que têm credencial própria: `POST /ingestao` (chave de fonte `frs_`) e
 `POST /integracoes/webhook/{fonte_id}` (assinatura HMAC no corpo). A segunda é
 **anônima por desenho** — a plataforma externa não tem, nem pode ter, uma chave
@@ -78,17 +89,24 @@ deriva mesmo para e-mail inexistente).
 ### Como subir
 
 ```bash
-uv run python scripts/api_demo.py            # :8000, carrega os 3 modelos
-cd dashboard && npm run build && npx next start -p 3000
+uv run uvicorn fraus.api.main:app --port 8001   # a API REAL, carrega os 3 modelos
+cd dashboard && npm run dev
 ```
 
-O boot da API imprime qual motor subiu. Se aparecer "motor dublê", os pesos não
-estão em `modelos/` — números sintéticos, **não** predição.
+**Não suba `scripts/api_demo.py` achando que é a API.** Ele é o motor dublê:
+devolve números sintéticos com cara de predição, e a dashboard não distingue.
+Uma sessão já perdeu um dia inteiro com isso — inclusive os pesos por feature,
+que saíam numa progressão `0,2 / 0,25 / 0,3` e passavam por peso de regressão.
+
+**Como saber em qual você está, em uma linha:** `curl -s :8001/saude` responde
+`{"status":"ok","motor":"real"}` ou `"motor":"duble"`. Desde a PR #32 os
+caminhos dos artefatos ancoram na raiz do projeto, então o diretório de onde
+você lança o uvicorn não decide mais o motor — mas confira mesmo assim.
 
 ### Comandos de verificação
 
 ```bash
-uv run pytest -q                 # 551 passed, 1 deselected
+uv run pytest -q                 # 767 passed, 1 deselected
 uv run pytest -m lento           # o de minutos, obrigatório ao mexer no gerador
 cd dashboard && npx tsc --noEmit # tipos
 cd dashboard && npm run contraste # WCAG AA, por cálculo
@@ -297,11 +315,15 @@ precisam ser reescritos, não mantidos por inércia.
 
 ### P0 — A ironia continua escapando do score
 
-**O contrato está em 39 features e o artefato em `modelos/` é o de 38 — a API
-não sobe até o notebook 02 rodar de novo.** Isso é o comportamento correto da
-invariante 7, não um bug: `Fusor.carregar` valida a dimensão. O fusor de 38
-(acurácia 0,943) está descrito em `docs/treinamento.md`. Confira qualquer
-artefato com `uv run python scripts/conferir_fusor.py`.
+**RESOLVIDO em 08/09/2026 o que travava esta seção:** o artefato foi
+retreinado no contrato de 39 (`n_features_in_ = 39`, acurácia e F1-macro
+**0,950**, contra 0,943 do de 38) e a API real sobe — verificado nesta data,
+`{"status":"ok","motor":"real"}`. A recusa anterior era o comportamento correto
+da invariante 7, não um bug: `Fusor.carregar` valida a dimensão. Confira
+qualquer artefato com `uv run python scripts/conferir_fusor.py`.
+
+**O que continua P0 é o caso em si:** a frase canônica segue saindo promotor
+sempre que o relógio não a contradiz.
 
 A feature que ataca o caso foi IMPLEMENTADA em 04/09/2026 e e a razao de o
 contrato ter subido para 39: `incongruencia_situacao_negativa` marca elogio
@@ -316,8 +338,14 @@ polar no lexicon:
 "nao gostei de ficar esperando"             (negado)         -> nao dispara
 ```
 
-**O que ainda NAO se sabe:** qual peso o fusor vai aprender para ela. Ate o
-notebook 02 rodar, a feature existe e e calculada, mas nao move nota nenhuma.
+**O peso, agora medido:** −0,193 no eixo satisfeito−insatisfeito. A feature não
+nasceu morta (nenhuma das 39 ficou com |peso| < 0,02, então o risco da
+invariante 10 não se concretizou), e ainda assim **não vence** os +2,78 de
+`texto_prob_satisfeito_media`. Nenhuma feature agregada de conversa reverte uma
+probabilidade saturada por mensagem — é essa a conclusão que levou à
+**contestação** de 08/09/2026, que marca em vez de corrigir (seção Feita,
+abaixo), e à recusa de tentar a feature 40 cruzando tempo × texto (o corpus não
+pode ensiná-la).
 Ao conferir o artefato novo, o peso dela precisa sair NEGATIVO no eixo
 satisfeito-menos-insatisfeito, como as outras cinco de incongruencia. Peso
 positivo significaria que ela virou detector de satisfacao -- o mesmo modo de
@@ -387,8 +415,8 @@ governa toda sessão de agente passa a envelhecer com barulho.
 
 ### Feita — A contestação: o tempo contesta o elogio — 08/09/2026
 
-A frase canônica continua em 99,93/10/promotor, e agora ela **avisa**. Quando
-`score > 95` e `latencia_mediana_s > 180`, `/conversas` e `/conversas/{id}`
+A frase canônica sai promotor sempre que o relógio não a contradiz, e agora ela
+**avisa**. Quando `score > 95` e `latencia_mediana_s > 180`, `/conversas` e `/conversas/{id}`
 devolvem `contestacao` — derivada na leitura, sem coluna nova e sem chamada de
 modelo, valendo retroativamente para o que já está no banco. A tabela de
 Atendimentos e a tela do atendimento mostram a marca; o CSV leva a coluna.
@@ -412,6 +440,41 @@ Desenho, alternativas recusadas e as referências em
 O único número sem procedência é o **limiar de score em 95** — o de tempo vem
 de IJHCI 2025. Está declarado assim no código e na spec.
 
+**Verificado contra a API real** (`motor: real`), varrendo a latência com a
+mesma fala: 99,92 em 10 s · 99,70 em 179 s · **99,69 em 181 s (contestada)** ·
+**99,21 em 300 s (contestada)** · 93,25 em 600 s · 17,19 em 1800 s · 0,00 em
+10800 s. A janela útil é de ~3 a ~9 minutos, e a estreiteza é a feature: abaixo
+não há contradição a marcar, acima o modelo já acerta sozinho. **O "99,93" que
+circulava aqui era o caso rápido** — com três horas dentro do log a conversa
+pontua 0,00, e faltava esse qualificador em todo lugar.
+
+### P0 — O tempo domina o score fora da distribuição de treino
+
+**Achado de 08/09/2026, e é maior que o trabalho que o encontrou.** Atribuição
+de uma conversa com 3 h de espera e uma única fala do cliente que a cabeça de
+texto lê como 86% satisfeito:
+
+```
+latencia_primeira_resposta_s   -85,405
+duracao_total_s                -35,759
+latencia_mediana_s             -20,569
+latencia_p90_s                 -12,326
+texto_prob_satisfeito_media     +4,574   ← o texto inteiro
+```
+
+O tempo pesa **20× o texto**. As features de latência não têm teto e o corpus
+de treino nunca passou de minutos (medianas 5/30/200 s): em 3 h o z-score do
+`StandardScaler` explode e o relógio assume a nota. A conversa sai em `4,4e-24`.
+
+O critério do próprio `docs/treinamento.md` diz o que isso é: *"se as features
+que lideram forem as circunstanciais (tempo, contagem de turnos), procure o
+vazamento."* É a **invariante 10 em runtime** — a guarda de vazamento olha a
+distribuição no corpus, e o corpus não tem latência de três horas.
+
+**Três saídas, e a terceira não é obviamente errada:** clipar a latência num
+teto; passar a escala log; ou aceitar e declarar como limitação. As duas
+primeiras exigem retreino. Decisão do dono do projeto — não tomada.
+
 ### P1 — Hospedagem
 
 `Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**
@@ -432,6 +495,14 @@ Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
 ---
 
 ## 8. Armadilhas já pagas — não repita
+
+0. **`fullPage` do Playwright/headless NÃO dispara `whileInView`.** Confirmado
+   de novo em 08/09/2026: a tela de Atendimentos sai com a tabela em branco na
+   captura, e o DOM desmente — o HTML servido tem o conteúdo. Capture por
+   viewport com rolagem, ou confira o HTML com `curl` em vez da imagem. Pelo
+   mesmo motivo, `curl` no HTML é a prova mais barata de que algo **não**
+   depende de JavaScript.
+
 
 1. **Data da Totalk é `MM/DD/YYYY`**, não `DD/MM`. Lida como brasileira, espalha
    as mensagens por cinco meses e a latência sai absurda **em silêncio**.
