@@ -27,11 +27,23 @@ QUATRO DECISOES, e o motivo de cada uma:
    caracteres bateram, e isso e suficiente para descobrir o hash byte a byte.
    `hmac.compare_digest` nao vaza.
 
-LIMITE HONESTO DO QUE ISTO PROTEGE: a chave protege a rota de INGESTAO. O resto
-da API -- inclusive a rota que gera a chave -- continua sem autenticacao, porque
-o Fraus roda local (ver README). Quem ja alcanca a API pode gerar uma chave
-nova para si. Isto nao e um sistema de autenticacao: e o que permite um sistema
-externo mandar dado sem receber acesso de escrita ao disco.
+LIMITE HONESTO DO QUE ISTO PROTEGE: a chave `frs_` autentica UMA FONTE na rota
+de ingestao, e nada mais. Ela nao da leitura, nao da acesso a `/integracoes` e
+nao e a credencial de quem OPERA a ferramenta -- essa e a chave de acesso
+`fra_` derivada da mestra `frm_` (`fraus/api/seguranca.py`), ou a sessao de
+usuario (`fraus/api/rotas/auth.py`). Quem alcanca a API JA AUTENTICADO como
+operador pode gerar uma chave de fonte nova para si; e a mesma pessoa que ja
+podia ler tudo, entao a chave nao e a fronteira ali.
+
+Este arquivo dizia, ate 08/09/2026, que "o resto da API continua sem
+autenticacao, porque o Fraus roda local". Era verdade quando foi escrito e
+deixou de ser com a chave de acesso (25/08/2026) e o login de usuario
+(31/08/2026). Ficou aqui tempo demais afirmando que a porta da frente estava
+aberta quando ela nao estava mais -- e docstring de modulo de seguranca que
+mente e pior que docstring nenhum, porque o proximo a ler decide com base nela.
+
+O TETO DE VAZAO da rota de ingestao conta POR FONTE, e nao pela chave crua:
+`fonte_da_chave` le o id sem conferir hash nenhum. Ver `fraus/api/vazao.py`.
 """
 
 import hashlib

@@ -25,6 +25,7 @@ import { Card } from "@/components/ui/card";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
+import { MarcaContestacao } from "@/components/MarcaContestacao";
 import { Painel } from "@/components/Painel";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { Transcricao } from "@/components/Transcricao";
@@ -142,12 +143,22 @@ export default async function PaginaDoAtendimento(
                 </p>
               </>
             ) : (
-              <p className="flex items-baseline gap-1.5">
-                <span className="num estimado text-[1.75rem] leading-none font-semibold tracking-tight text-foreground">
-                  {conversa.nota}
-                </span>
-                <span className="text-sm text-muted-foreground">/ 10</span>
-              </p>
+              <>
+                <p className="flex items-baseline gap-1.5">
+                  <span className="num estimado text-[1.75rem] leading-none font-semibold tracking-tight text-foreground">
+                    {conversa.nota}
+                  </span>
+                  <span className="text-sm text-muted-foreground">/ 10</span>
+                </p>
+                {/* Colada no numero, e nao no aparato da tela: uma ressalva
+                    sobre ESTE numero que morasse no rodape perderia a que
+                    numero se refere (DESIGN.md §4.1). */}
+                <MarcaContestacao
+                  contestacao={conversa.contestacao}
+                  detalhado
+                  className="leading-relaxed"
+                />
+              </>
             )}
           </Card>
 

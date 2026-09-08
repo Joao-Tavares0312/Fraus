@@ -115,6 +115,33 @@ export type Indicadores = {
   total_no_banco?: number;
 };
 
+/**
+ * Quando o tempo contesta o elogio.
+ *
+ * Score saturado convivendo com espera longa: a leitura mais provavel e ironia
+ * ("que atendimento maravilhoso, so esperei 3 horas"), e o modelo nao alcanca
+ * isso -- nenhuma feature agregada de conversa reverte uma probabilidade
+ * saturada por mensagem.
+ *
+ * ELA MARCA, NAO CORRIGE. `score`, `nota` e `categoria` do mesmo objeto
+ * continuam valendo e o atendimento continua contando no NPS. Se um dia este
+ * tipo ganhar `nota` ou `categoria`, alguem vai le-las em vez das derivadas de
+ * verdade, e a regua do NPS passa a ter duas fontes.
+ *
+ * Os quatro numeros vem do servidor de proposito: a frase de tela e montada a
+ * partir deles, e redigitar `score > 95` aqui seria a regra derivada duplicada
+ * no cliente que ja custou divergencia de arredondamento neste projeto.
+ * Derivada em `fraus/contestacao.py`; desenho em
+ * `docs/superpowers/specs/2026-09-08-abstencao-por-contestacao-design.md`.
+ */
+export type Contestacao = {
+  motivo: "elogio_contra_espera";
+  score: number;
+  limiar_score: number;
+  latencia_mediana_s: number;
+  limiar_s: number;
+};
+
 export type ResumoConversa = {
   id: string;
   canal: string;
@@ -149,6 +176,9 @@ export type ResumoConversa = {
   escalou_para_humano: boolean;
   encerrada_em: string | null;
   desfecho: Desfecho;
+
+  /** `null` na esmagadora maioria dos atendimentos -- ver `Contestacao`. */
+  contestacao: Contestacao | null;
 };
 
 /**
@@ -241,7 +271,7 @@ export type Atribuicao = {
   nota: number | null;
   categoria: Categoria | null;
   mensagens: MensagemAtribuida[];
-  /** Peso absoluto GLOBAL de cada uma das 38 features do vetor do fusor --
+  /** Peso absoluto GLOBAL de cada uma das 39 features do vetor do fusor --
    * aprendido no treino, nao especifico desta conversa. */
   importancias: Record<string, number>;
   /** Quanto cada feature pesou NESTA conversa: positivo empurrou para
