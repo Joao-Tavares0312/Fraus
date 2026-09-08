@@ -511,6 +511,43 @@ para 93,25, e em 300 s ainda estava em 99,21.
 
 Decisão do dono do projeto — **não tomada**.
 
+| latência | contrib. tempo | contrib. texto | razão |
+|---:|---:|---:|---:|
+| 60 s | +0,48 | +4,57 | 0,1× |
+| 300 s | −2,97 | +4,57 | 0,7× |
+| **411 s** | **−4,57** | **+4,57** | **1,0× — o empate** |
+| 600 s | −7,29 | +4,57 | 1,6× |
+| 1800 s | −24,54 | +4,57 | 5,4× |
+| 10800 s | −153,96 | +4,57 | 33,7× |
+
+**O relógio empata com o texto em 411 s (6,9 min) e manda a partir dali.** Isso
+é **4,0 desvios** acima da média de `latencia_mediana_s` no treino (67,0 s,
+sigma 85,9 s) — ou seja, o ponto em que o relógio toma a nota está **fora** do
+que o corpus mostrou ao modelo. Cada segundo de espera vale 0,0144 de
+contribuição, **sem teto**.
+
+O laudo bate com a varredura contra a API real: em 600 s o score já tinha caído
+para 93,25, e em 300 s ainda estava em 99,21.
+
+**Três saídas, e a terceira não é obviamente errada:**
+
+1. **Escala log** (`log1p`) nas quatro features de tempo. É a mais defensável
+   tecnicamente: o simulador gera latência **log-normal** de propósito
+   (`docs/treinamento.md`), então a feature é de cauda pesada por construção e
+   o `StandardScaler` — que pressupõe algo próximo de normal — é a ferramenta
+   errada para ela. Custo: retreino, e os nomes `latencia_*_s` passariam a
+   mentir sobre a unidade, então o contrato de 39 chaves mudaria de nome junto.
+2. **Clipar num teto** (algo perto de 600 s). Mais barato de explicar e mantém
+   os nomes. Custo: perde a distinção entre 10 min e 3 h — o que talvez não
+   seja perda, porque acima de certo ponto "muito lento" é só "muito lento".
+   Também exige retreino.
+3. **Aceitar e declarar** como limitação. Custo zero em código, e o preço é
+   defender numa banca um modelo em que o relógio vence o texto a partir de
+   sete minutos — num produto cuja tese é justamente que o texto revela o que o
+   relógio não mostra.
+
+Decisão do dono do projeto — **não tomada**.
+
 ### Feita — Os três sinais invertidos do fusor — 08/09/2026
 
 `conferir_fusor.py` marca três features como suspeitas desde o fusor de 35, e o
