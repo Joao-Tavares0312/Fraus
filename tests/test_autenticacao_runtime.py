@@ -135,7 +135,12 @@ def test_saude_responde_sem_chave_com_autenticacao_ligada(tmp_path):
     # ...e o diagnostico continua respondendo.
     resposta = cliente.get("/saude")
     assert resposta.status_code == 200
-    assert resposta.json() == {"status": "ok"}
+    # Campo a campo, e nao igualdade do corpo inteiro: o que este teste guarda
+    # e que o diagnostico responde SEM credencial. Travar a forma exata do
+    # payload aqui faria qualquer campo novo de diagnostico quebrar um teste de
+    # autenticacao -- foi o que aconteceu quando `motor` entrou em 04/09/2026.
+    # A forma de `/saude` tem dono proprio: tests/test_saude_declara_motor.py.
+    assert resposta.json()["status"] == "ok"
 
 
 def test_sem_ambiente_a_gravada_continua_valendo(tmp_path):
