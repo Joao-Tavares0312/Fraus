@@ -38,11 +38,12 @@ por um classificador leve:
 | **Léxico** | SentiLex-PT02 com escopo de **negação**, mais o [léxico curado](#léxico-curado) | polaridade de procedência independente do BERTimbau |
 | **Ironia** ⚠️ | cabeça binária sobre o IDPT 2021, lida por mensagem | texto positivo com sentido negativo — mas **não entra no score**, ver abaixo |
 | **Estilo** | caixa alta, pontuação, alongamento, palavrão, censura | a forma de escrever carrega afeto que a palavra sozinha não carrega |
-| **Incongruência** | polaridade emoji×texto, marcador de contraste, hipérbole, aspas irônicas | texto e emoji discordando é o formato clássico da ironia |
+| **Incongruência** | polaridade, emoji×texto, marcador de contraste, hipérbole, aspas irônicas e elogio com situação negativa | texto e emoji discordando é o formato clássico da ironia |
 
-Sete das oito famílias — todas menos ironia — somam **38 features** no vetor
-do fusor (as cinco de `incongruencia_*` entraram em 03/09/2026) — ver [contrato
-de features](docs/treinamento.md#contrato-de-features).
+Sete das oito famílias — todas menos ironia — somam **39 features** no vetor
+do fusor: cinco de `incongruencia_*` entraram em 03/09/2026 e a sexta,
+`incongruencia_situacao_negativa`, em 04/09/2026 — ver [contrato de
+features](docs/treinamento.md#contrato-de-features).
 
 ⚠️ *a cabeça de ironia continua treinada, obrigatória e exibida por mensagem
 na dashboard, mas **saiu do vetor do fusor em 04/09/2026**: medida no próprio
@@ -144,8 +145,8 @@ léxico anterior") em vez de esconder, e a contagem ignora o filtro de período 
 propósito: a régua misturada é propriedade do banco, não da semana que se olha.
 
 `POST /conversas/repontuar` zera a divergência. **Limitação declarada:** ele roda
-os três BERTimbau de novo por conversa — o vetor é de 38 features e o fusor exige
-as 38, então não existe recalcular só as três léxicas e as cinco de emoji. Em
+os três BERTimbau de novo por conversa — o vetor é de 39 features e o fusor exige
+as 39, então não existe recalcular só as três léxicas e as cinco de emoji. Em
 dezenas de atendimentos são segundos; em milhares vira trabalho de fila, e a fila
 não existe. A rota é **síncrona de propósito**: uma fila que ninguém observa
 seria pior que uma espera que se vê.
@@ -726,7 +727,7 @@ ordem lá é a ordem de importância.
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável e, desde 04/09/2026, não pontua mais** — ver pendência 1 |
-| **Fusor** | ⚠️ | **contrato em 39 features desde 04/09/2026**: `incongruencia_situacao_negativa` entrou (elogio convivendo com situação negativa de atendimento — a única das seis que alcança a frase canônica). O artefato em `modelos/` ainda é o de 38, então **a API não sobe até o notebook 02 rodar de novo** — falha alta e explícita na carga, por desenho (invariante 7). Medido antes de aceitar, no B2W: dispara em 4,10% / 2,65% / 1,75% dos três rótulos — sinal com gradiente, não previsor unilateral. O fusor de 38 (acurácia 0,943) está descrito em [docs/treinamento.md](docs/treinamento.md#o-fusor-de-38-features--04092026); confira qualquer artefato com `scripts/conferir_fusor.py` |
+| **Fusor** | ✅ ⚠️ | **contrato em 39 features desde 04/09/2026** e **artefato em dia desde 08/09/2026**: `n_features_in_ = 39`, classes `[0 1 2]`, acurácia **0,950** e F1-macro **0,950** (contra 0,943 do fusor de 38). A API real sobe. O ⚠️ é outro: `incongruencia_situacao_negativa` entrou para alcançar a frase canônica e **não a alcançou** — ela continua pontuando 99,93 / nota 10 / promotor (item 0 de [Falta](#falta)). A feature não nasceu morta — peso −0,193 no eixo satisfeito−insatisfeito —, só não é suficiente. Confira qualquer artefato com `uv run python scripts/conferir_fusor.py` |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -734,27 +735,36 @@ ordem lá é a ordem de importância.
 | **Ligar a autenticação sem terminal** | ✅ | botão em Configurações, para instalação antiga ou reaberta; a mestra sobrevive a reiniciar |
 | **Gerenciar chaves sem terminal** | ✅ | painel que emite, lista e revoga chaves de acesso, pedindo a mestra; e `scripts/resetar_mestra.py` para quando ela se perde |
 | **Dashboard sem terminal** | ✅ | **Iniciar API** (sem abrir janela de console) e **Desligar**, este último só para a API que a própria dashboard subiu — travas em [§5](#5-quando-a-api-não-está-no-ar) |
-| **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
+| **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial e **declarando qual motor serve** (`{"status":"ok","motor":"real"\|"duble"}`); a barra lateral escreve "motor dublê — números sintéticos" em vez de "API no ar" quando o que responde é o dublê; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
 | **Agregação no servidor (fim do N+1)** | ✅ | `/serie-temporal`, `/lexico`, `/indicadores` (com tempo mediano) e o recorte `de`/`ate` em `/conversas`; **nenhuma tela baixa transcrição** no caminho feliz |
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
 | **Léxico curado** | ✅ | o que o analista ensina por cima do SentiLex e do ranking de emoji de 2015: cadastro, edição e revogação por rota e por painel; a curadoria **vence** o léxico base e atravessa até o score. Cada escrita versiona, a conversa grava com qual versão foi pontuada, a Visão geral **nomeia** a régua misturada e `POST /conversas/repontuar` a zera |
-| **Suíte** | ✅ | **701 testes** de Python passando, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest) — a primeira lógica **comportamental** dele, o contador do easter egg da marca, é testada; renderização continua coberta por build e contraste |
+| **Suíte** | ✅ | **733 testes** de Python passando e **69** no front (7 arquivos), build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest); renderização continua coberta por build e contraste |
 
 ### Falta
 
 Em ordem, com o detalhe em [Pendências](#pendências):
 
-0. **A ironia continua escapando do score — limitação declarada, não bug.** A
-   frase canônica do projeto, `"que atendimento maravilhoso, so esperei 3
-   horas"`, pontua **99,95 / nota 10 / promotor**. As cinco features de
-   incongruência dão 0,0 nela e disparam numa frase de satisfação genuína: hoje
-   elas pegam entusiasmo, não ironia. A causa é estrutural — todas são função
-   do SentiLex e de emoji, e "só esperei 3 horas" é negativo por pragmática,
-   sem nenhuma palavra polar. A rota proposta (`incongruencia_situacao_negativa`,
-   lista curada de situação negativa de atendimento) está desenhada em
-   [docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md](docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md);
-   custa levar o vetor a 39 features e mais um retreino do notebook 02.
+0. **A ironia continua escapando do score — limitação declarada, e a tentativa
+   de conserto FALHOU.** A frase canônica do projeto, `"que atendimento
+   maravilhoso, so esperei 3 horas"`, pontua **99,93 / nota 10 / promotor**.
+
+   A rota proposta foi implementada e treinada: `incongruencia_situacao_negativa`
+   (lista curada de situação negativa de atendimento, desenho em
+   [docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md](docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md))
+   entrou no vetor em 04/09/2026 e o fusor de 39 features foi treinado em
+   08/09/2026. **Não resolveu.** A feature funciona isoladamente — dispara na
+   frase canônica e ganhou peso −0,193 no eixo satisfeito−insatisfeito, não
+   nasceu morta —, mas uma feature binária com esse peso não vence as de texto
+   (`texto_prob_satisfeito_media` pesa +2,78) quando o BERTimbau lê a frase como
+   elogio sincero com 99% de confiança.
+
+   O diagnóstico honesto é que **o problema não está no vetor, está na cabeça de
+   texto**: nenhuma feature agregada de conversa reverte uma probabilidade
+   saturada por mensagem. Reconhecer isso vale mais para a banca do que mais uma
+   feature — é o limite do desenho, e ele está medido, não suposto. Reproduza com
+   `uv run python scripts/conferir_fusor.py` (seção 5, frases-sonda).
 1. **Retreinar a cabeça de ironia — dívida assumida, não mais bloqueio de
    confiabilidade, mas continua obrigatória para a API subir.** O vazamento
    está medido em `tests/test_ironia_dominio.py` (6 em 10 falas sinceras
@@ -945,9 +955,15 @@ saíram do vetor por causa disso — a ironia não pontua mais**, e este item
 passa a ser sobre a QUALIDADE da leitura por mensagem que a dashboard exibe,
 não sobre o score.
 
-### 2. Retreinar o fusor no contrato vigente (agora 38, era 40)
+### 2. ~~Retreinar o fusor no contrato vigente~~ — RESOLVIDO em 08/09/2026
 
-São duas coisas distintas, e só uma está feita.
+**O artefato está em dia com o contrato de 39 features.** O histórico abaixo fica
+como registro porque o mesmo descompasso aconteceu **quatro vezes** em três
+semanas (16 → 35 → 40 → 38 → 39), e o padrão vale mais que qualquer episódio:
+toda vez que uma feature entra ou sai de `NOMES_FEATURES`, o notebook 02 precisa
+rodar de novo, e até rodar a API real não sobe.
+
+São duas coisas distintas, e as duas estão feitas.
 
 **O contrato subiu — feito em 21/08/2026.** O vetor é de **35 features**, das
 sete famílias — texto, emoji, tempo, emoção, léxico, ironia e estilo. As
@@ -1013,6 +1029,35 @@ certo. Conferência completa em
 [docs/treinamento.md](docs/treinamento.md#o-fusor-de-38-features--04092026),
 reproduzível com `uv run python scripts/conferir_fusor.py`.
 
+**O quarto e último capítulo — 39 features, 08/09/2026.** O contrato subiu para
+39 em 04/09 com `incongruencia_situacao_negativa`, e pela quarta vez o artefato
+ficou para trás. Desta vez a falha foi exatamente a que a invariante 7 pede:
+`FusorIncompativelError` **na carga**, nomeando os dois números e apontando o
+notebook — a API recusou subir por quatro dias, em vez de pontuar errado em
+silêncio.
+
+O retreino rodou: `n_features_in_ = 39`, classes `[0 1 2]`, **acurácia 0,950** e
+**F1-macro 0,950** (900 treino / 300 teste), contra 0,943 do fusor de 38. A
+subida de meio ponto é modesta, que é o esperado ao acrescentar uma feature
+binária e esparsa — salto grande seria sintoma.
+
+Três coisas que o laudo do `conferir_fusor.py` mostra e vale saber antes da
+banca:
+
+- **A feature nova não nasceu morta:** peso −0,193 no eixo satisfeito−insatisfeito,
+  e nenhuma das 39 ficou com |peso| < 0,02. O risco da invariante 10 (feature
+  constante no treino nasce com peso zero) não se concretizou — o catálogo de
+  situação negativa cobre entrega e promessa não cumprida, que aparecem em
+  review de produto.
+- **E também não resolveu o que foi feita para resolver:** a frase canônica
+  segue em 99,93 / nota 10 / satisfeito. Ver item 0 de [Falta](#falta).
+- **Três features têm sinal contra-intuitivo** — `texto_prob_satisfeito_ultima`
+  (−0,49, esperado positivo), `emoji_frac_positivos` (−0,19, esperado positivo) e
+  `emoji_frac_negativos` (+0,59, esperado negativo). **Não é regressão deste
+  retreino:** os mesmos três sinais estão no artefato de 38 features
+  (−0,50 / −0,18 / +0,60), conferido lado a lado. Fica registrado como ponto em
+  aberto, não como novidade.
+
 Existem dois corpora PT-BR reais de ironia, ambos sem download público — a tese de
 [Vieira e Silva (USP, 2025)](https://teses.usp.br/teses/disponiveis/8/8139/tde-28082025-163511/publico/2025_AndressaVieiraESilva_VCorr.pdf),
 com 1.186 exemplos anotados por três humanos, e o
@@ -1064,18 +1109,35 @@ permite a rota morar fora do arquivo que constrói o app.
 ### Servidor de demonstração da interface
 
 O `app` real carrega o BERTimbau do disco e **falha alto** se `modelos/` não
-existir — por design. Enquanto o treino do Colab não roda, a dashboard é
-desenvolvida contra um servidor de demonstração que usa um motor dublê
-(pontuação determinística derivada do texto, sem modelo nenhum) e semeia um
-banco temporário com conversas do simulador, incluindo atendimentos **sem fala
-do cliente** para exercitar o estado "sem sinal":
+existir — por design. O `scripts/api_demo.py` existe para desenvolver a interface
+sem esse custo: ele semeia um banco temporário com conversas do simulador,
+incluindo atendimentos **sem fala do cliente** para exercitar o estado "sem
+sinal".
 
 ```bash
 uv run python scripts/api_demo.py   # http://127.0.0.1:8000
 ```
 
-**Nunca use `scripts/api_demo.py` em produção.** Os números que ele devolve não
-são predição de modelo.
+**Ele NÃO é sempre o dublê**, e essa é a parte que engana: desde que os três
+BERTimbau e o fusor estão no disco, `montar_motor` carrega o **motor real** e só
+cai no dublê quando falta artefato. A precedência é pela **presença dos
+arquivos**, não por uma flag — flag desligada por engano voltaria ao dublê em
+silêncio. `FRAUS_DEMO_DUBLE=1` força o dublê para quem quer iterar na interface
+sem esperar o modelo carregar.
+
+⚠️ **A armadilha, paga em 04/09/2026 e consertada:** os caminhos dos artefatos
+eram relativos, logo resolvidos contra o **diretório de trabalho do processo**.
+Um `uvicorn` lançado de fora da raiz não encontrava nenhum dos quatro, o
+`api_demo` caía para o dublê sem nada quebrar, e a dashboard exibiu número
+sintético com cara de predição por um dia inteiro — inclusive os pesos por
+feature, que saíram numa progressão `0,2 / 0,25 / 0,3` e passaram por peso de
+regressão. Hoje os artefatos ancoram na **raiz do projeto**, e `GET /saude`
+**declara qual motor está servindo** (`motor: "real" | "duble"`), com a dúvida
+caindo sempre para `duble`. A barra lateral escreve "motor dublê — números
+sintéticos" em cor de aviso quando é o caso.
+
+**Nunca use `scripts/api_demo.py` em produção**, nem quando ele está com o motor
+real: o banco é temporário e semeado, e as conversas não são suas.
 
 [^1]: [Conversation logs as a source of insight: predicting user satisfaction for customer service chatbots](https://link.springer.com/article/10.1007/s41233-025-00071-8) — Quality and User Experience, Springer, 2025.
 [^2]: [Refining the prediction of user satisfaction on chat-based AI applications](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11793979/).
