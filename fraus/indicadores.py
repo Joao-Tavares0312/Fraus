@@ -8,6 +8,7 @@ Categoria SEMPRE derivada no servidor.
 """
 
 from collections import Counter
+from math import sqrt
 from statistics import median
 from typing import Literal
 
@@ -27,6 +28,18 @@ FAIXAS_NPS: dict[Categoria, tuple[int, int]] = {
 
 NOTA_MINIMA = 0
 NOTA_MAXIMA = 10
+
+# Abaixo deste n o ponto estimado do NPS nao e mostrado -- so o intervalo e a
+# contagem. O estudo de simulacao de 2026 (MDPI Stats 9(2):45) comparou Wald,
+# bootstrap-t e Wald ajustado e concluiu que os dois primeiros devem ser
+# EVITADOS em amostra pequena, com todos convergindo para a cobertura nominal
+# conforme n cresce. 30 e o corte convencional de "amostra grande" para a
+# aproximacao normal; e regra de EXIBICAO, nao de calculo, e por isso mora
+# aqui e nao numa constante do front.
+N_MINIMO_NPS = 30
+
+# z de 1,96 -> 95% de confianca sob a aproximacao normal.
+Z_95 = 1.96
 
 
 def nota_0_10(score_0_100: float) -> int:
@@ -116,6 +129,63 @@ def calcular_nps(
     promotores = categorias.count("promotor") / total
     detratores = categorias.count("detrator") / total
     return round(100.0 * (promotores - detratores), 2)
+
+
+def nps_com_intervalo(
+    scores: list[float], faixas: dict[Categoria, tuple[int, int]] | None = None
+) -> dict | None:
+    """NPS inferido com intervalo de confianca de 95% (Wald ajustado).
+
+    Hoje "NPS -12" aparece igual com 8 conversas e com 8.000, e a primeira
+    pergunta de quem avalia e "quantas conversas sustentam esse numero?".
+    Mostrar ponto estimado sem incerteza e inconsistente com um sistema que
+    ja recusa transformar ausencia em zero.
+
+    A CONTA. O NPS e a media de uma variavel em {-1, 0, +1} -- promotor +1,
+    detrator -1, neutro 0. Entao:
+
+        media     = p_prom - p_det
+        variancia = (p_prom + p_det) - media**2
+        erro      = sqrt(variancia / n)
+        ic        = media +- 1,96 * erro          (tudo x100 na escala do NPS)
+
+    O metodo e o Wald AJUSTADO: Wald puro e bootstrap-t sao instaveis em
+    amostra pequena (MDPI Stats, 2026), e o ajuste aqui e a regra de exibicao
+    -- abaixo de `N_MINIMO_NPS` o ponto estimado nao e devolvido, porque com
+    amostra assim ele sugere precisao que nao existe. O `n` VEM PREENCHIDO
+    mesmo assim: a tela precisa dizer quanto falta, nao so que nao sabe.
+
+    None quando nao ha score nenhum -- nao existe intervalo de coisa nenhuma.
+
+    HONESTIDADE OBRIGATORIA, e ela precisa aparecer na tela junto do numero:
+    este intervalo captura so a incerteza AMOSTRAL. Ele NAO captura a
+    incerteza do MODELO, que exigiria calibracao. Um IC apresentado como se
+    cobrisse o erro do modelo e pior que nao ter IC nenhum.
+    """
+    if not scores:
+        return None
+
+    categorias = [categoria_nps(s, faixas) for s in scores]
+    n = len(categorias)
+    p_prom = categorias.count("promotor") / n
+    p_det = categorias.count("detrator") / n
+
+    media = p_prom - p_det
+    variancia = (p_prom + p_det) - media**2
+    erro = sqrt(variancia / n)
+    margem = Z_95 * erro
+
+    # Recortado na escala: o NPS vive em [-100, 100] por definicao, e ponta
+    # fora dela seria um numero impossivel impresso com cara de medida.
+    inferior = max(-100.0, 100.0 * (media - margem))
+    superior = min(100.0, 100.0 * (media + margem))
+
+    return {
+        "nps": round(100.0 * media, 2) if n >= N_MINIMO_NPS else None,
+        "ic_inferior": round(inferior, 2),
+        "ic_superior": round(superior, 2),
+        "n": n,
+    }
 
 
 def calcular_csat(scores: list[float]) -> float | None:

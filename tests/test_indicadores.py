@@ -4,7 +4,8 @@ import pytest
 
 from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
                                categoria_nps, containment_rate,
-                               falso_containment, nota_0_10,
+                               falso_containment, N_MINIMO_NPS,
+                               nps_com_intervalo, nota_0_10,
                                serie_diaria, validar_faixas_nps)
 from fraus.fusor import PESO_NEUTRO_NO_SCORE
 from fraus.modelos import Conversa, Mensagem
@@ -310,3 +311,54 @@ def test_falso_containment_usa_o_limiar_das_faixas_recebidas():
     assert falso_containment(registros) == pytest.approx(100.0)  # 5 e detrator de fabrica
     faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
     assert falso_containment(registros, faixas) == pytest.approx(0.0)  # 5 vira neutro
+
+
+# --- intervalo de confianca do NPS -----------------------------------------
+
+
+def test_nps_com_intervalo_devolve_o_ponto_e_as_duas_pontas():
+    """Com amostra suficiente, o ponto estimado bate com `calcular_nps`."""
+    scores = [100.0] * 20 + [75.0] * 10 + [30.0] * 10
+    saida = nps_com_intervalo(scores)
+    assert saida["n"] == 40
+    assert saida["nps"] == pytest.approx(calcular_nps(scores))
+    assert saida["ic_inferior"] < saida["nps"] < saida["ic_superior"]
+
+
+def test_o_intervalo_encolhe_conforme_a_amostra_cresce():
+    """A propriedade que faz o indicador valer: mais dado, menos incerteza."""
+    pequena = nps_com_intervalo([100.0] * 20 + [30.0] * 20)
+    grande = nps_com_intervalo([100.0] * 200 + [30.0] * 200)
+    assert pequena["nps"] == pytest.approx(grande["nps"])
+    largura = lambda s: s["ic_superior"] - s["ic_inferior"]
+    assert largura(grande) < largura(pequena)
+
+
+def test_amostra_pequena_nao_mostra_ponto_estimado_mas_diz_quanto_tem():
+    """n < 30: o ponto sugeriria precisao que nao existe.
+
+    O `n` continua preenchido de proposito -- a tela precisa dizer QUANTO
+    falta, nao so que nao sabe.
+    """
+    saida = nps_com_intervalo([100.0] * 8)
+    assert saida["n"] == 8
+    assert saida["nps"] is None
+
+
+def test_sem_score_nenhum_nao_ha_intervalo_nenhum():
+    assert nps_com_intervalo([]) is None
+
+
+def test_o_intervalo_e_recortado_na_escala_do_nps():
+    """NPS vive em [-100, 100]: ponta fora da escala seria numero impossivel."""
+    saida = nps_com_intervalo([100.0] * 40)
+    assert saida["nps"] == pytest.approx(100.0)
+    assert saida["ic_superior"] == pytest.approx(100.0)
+    assert saida["ic_inferior"] <= 100.0
+
+
+def test_o_intervalo_usa_as_faixas_recebidas():
+    scores = [80.0] * 40  # nota 8: neutro de fabrica, promotor com faixa alternativa
+    assert nps_com_intervalo(scores)["nps"] == pytest.approx(0.0)
+    faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
+    assert nps_com_intervalo(scores, faixas)["nps"] == pytest.approx(100.0)

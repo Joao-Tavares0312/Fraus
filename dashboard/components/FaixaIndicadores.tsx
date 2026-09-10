@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { RessalvaDaTela } from "./AparatoDaTela";
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
 import { DiscordanciaContida } from "./DiscordanciaContida";
+import { IntervaloDoNps } from "./IntervaloDoNps";
 import { pilha } from "@/lib/movimento";
 import {
   CSAT_SAUDAVEL,
@@ -150,6 +151,19 @@ export function FaixaIndicadores({
             : `Sobre ${indicadores.comSinal} atendimento(s) com sinal. ${semSinalTexto ?? ""}`
         }
       />
+
+      {/* A INCERTEZA AMOSTRAL do NPS, colada nele. Sem isto o mesmo "-12"
+          aparecia com 8 atendimentos e com 8.000, e o intervalo e a resposta
+          da tela para "quantas conversas sustentam esse numero?". So aparece
+          quando o SERVIDOR calculou: o plano B deixa `npsIntervalo` nulo de
+          proposito, porque derivar aqui duplicaria N_MINIMO_NPS em
+          TypeScript -- a divergencia que a invariante 3 existe para impedir. */}
+      {erro || !indicadores.npsIntervalo ? null : (
+        <IntervaloDoNps
+          intervalo={indicadores.npsIntervalo}
+          className="-mt-1"
+        />
+      )}
 
       <CartaoIndicador
         rotulo="CSAT inferido"

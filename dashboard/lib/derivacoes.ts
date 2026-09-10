@@ -21,6 +21,7 @@ import lexicoEmoji from "./lexicoEmoji.json";
 import type {
   Categoria,
   DetalheConversa,
+  IntervaloNps,
   Mensagem,
   MensagemAtribuida,
   PontoSerieApi,
@@ -761,6 +762,13 @@ export function tempoMedianoDeResposta(detalhes: DetalheConversa[]): number | nu
  */
 export type IndicadoresDoPeriodo = {
   nps: number | null;
+  /**
+   * Intervalo de confianca do NPS, quando o SERVIDOR o calcula. O plano B
+   * deixa null de proposito: derivar intervalo no cliente duplicaria a regra
+   * de N_MINIMO_NPS em TypeScript, que e exatamente a divergencia que a
+   * invariante 3 existe para impedir.
+   */
+  npsIntervalo?: IntervaloNps | null;
   csat: number | null;
   containment: number | null;
   /**
@@ -818,6 +826,7 @@ export function indicadoresDoPeriodo(
 
   return {
     nps: npsDeCategorias(categorias),
+    npsIntervalo: null,
     csat,
     containment,
     falsoContainment,

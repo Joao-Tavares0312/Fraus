@@ -106,6 +106,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   const indicadores = indicadoresDoServidor.ok
     ? {
         nps: indicadoresDoServidor.dado.nps,
+        npsIntervalo: indicadoresDoServidor.dado.nps_intervalo ?? null,
         csat: indicadoresDoServidor.dado.csat,
         containment: indicadoresDoServidor.dado.total_conversas
           ? indicadoresDoServidor.dado.containment_rate

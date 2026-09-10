@@ -1271,3 +1271,24 @@ def test_content_length_nao_numerico_e_recusado(cliente_com_sinal):
         headers={"content-type": "application/json", "content-length": "abc"},
     )
     assert resposta.status_code == 400
+
+
+def test_indicadores_trazem_o_intervalo_de_confianca_do_nps(cliente, tmp_path):
+    """Uma conversa so: o intervalo existe, e o ponto estimado NAO aparece.
+
+    n=1 esta muito abaixo de N_MINIMO_NPS, e o ponto com essa amostra
+    sugeriria uma precisao que nao existe. A contagem vem preenchida para a
+    tela dizer quanto falta.
+    """
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    intervalo = cliente.get("/indicadores").json()["nps_intervalo"]
+    assert intervalo["n"] == 1
+    assert intervalo["nps"] is None
+    assert intervalo["ic_inferior"] <= intervalo["ic_superior"]
+
+
+def test_sem_score_nenhum_nao_ha_intervalo_de_nps(cliente):
+    assert cliente.get("/indicadores").json()["nps_intervalo"] is None

@@ -12,7 +12,8 @@ from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.periodo import no_recorte, recorte_ou_400
 from fraus.indicadores import (calcular_csat, calcular_nps, containment_rate,
                                contidos_com_score, falso_containment,
-                               lexico_por_classe, serie_diaria,
+                               lexico_por_classe, nps_com_intervalo,
+                               serie_diaria,
                                tempo_mediano_resposta)
 
 router = APIRouter()
@@ -37,6 +38,12 @@ def indicadores(
     scores = [score for _, score in registros if score is not None]
     return {
         "nps": calcular_nps(scores, ctx.faixas_vigentes()),
+        # O MESMO NPS, com a incerteza AMOSTRAL junto. Vem ao lado do campo
+        # antigo, nao no lugar dele: `nps` tem consumidor (export, plano B da
+        # dashboard) e trocar o tipo por um dicionario quebraria os dois.
+        # O intervalo NAO cobre a incerteza do modelo -- ver a docstring de
+        # `nps_com_intervalo`, e a nota que a tela imprime junto.
+        "nps_intervalo": nps_com_intervalo(scores, ctx.faixas_vigentes()),
         "csat": calcular_csat(scores),
         "containment_rate": containment_rate(conversas),
         # Contencao alta com falso containment alto e sucesso falso: o bot

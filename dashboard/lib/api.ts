@@ -89,9 +89,25 @@ export function baseDaApi(): string {
 
 export type Categoria = "detrator" | "neutro" | "promotor";
 
+export type IntervaloNps = {
+  nps: number | null;
+  ic_inferior: number;
+  ic_superior: number;
+  n: number;
+};
+
 export type Indicadores = {
   /** null quando nenhum atendimento tem score: ausencia de dado nao e zero. */
   nps: number | null;
+  /**
+   * O mesmo NPS com a incerteza AMOSTRAL: ponto, as duas pontas do intervalo
+   * de 95% e o n. `nps` DENTRO do intervalo vem null quando a amostra e
+   * pequena demais para um ponto estimado -- e o `n` vem preenchido mesmo
+   * assim, para a tela dizer quanto falta.
+   *
+   * Opcional porque uma API anterior a este campo nao o devolve.
+   */
+  nps_intervalo?: IntervaloNps | null;
   /** null quando nenhum atendimento tem score. */
   csat: number | null;
   /** Contencao NAO depende de score, entao sempre e um numero. */
