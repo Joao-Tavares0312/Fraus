@@ -1,0 +1,41 @@
+# O MESMO site, mais o PDF. Roda no CI (Linux); nao roda no Windows.
+#
+# POR QUE DOIS ARQUIVOS EM VEZ DE UM. O `mkdocs-to-pdf` usa WeasyPrint, que
+# depende das bibliotecas nativas do GTK (`gobject-2.0`, `pango`, `cairo`). No
+# Ubuntu do runner elas vem de um `apt install`; no Windows do dia a dia elas
+# simplesmente nao existem, e o plugin falha no IMPORT -- antes de qualquer
+# opcao de configuracao ser lida, entao nao ha `enabled_if_env` que salve.
+#
+# Com o plugin dentro do `mkdocs.yml` principal, `uv run mkdocs serve` na
+# maquina de quem escreve a documentacao morreria com um OSError sobre
+# `gobject-2.0-0` -- um erro que nao tem nada a ver com o que a pessoa estava
+# fazendo. A previa local precisa funcionar em qualquer maquina; o PDF e
+# artefato de publicacao.
+#
+# `INHERIT` e do proprio MkDocs: este arquivo NAO e uma copia da configuracao,
+# e um delta sobre ela. Tema, nav e mkdocstrings continuam com uma fonte so.
+INHERIT: mkdocs.yml
+
+plugins:
+  - search:
+      lang: pt
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            members_order: source
+  # UM PDF do site inteiro no MESMO build que publica as paginas -- e o formato
+  # de um anexo de monografia, sem passo manual e sem versao que envelhece
+  # separada do site.
+  - to-pdf:
+      output_path: pdf/fraus.pdf
+      cover_title: Fraus
+      cover_subtitle: Medição de satisfação sem LLM em runtime
+      author: João Pedro Tavares Vicente
+      toc_level: 3

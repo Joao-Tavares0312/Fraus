@@ -1,0 +1,72 @@
+# Publica a documentacao em GitHub Pages e gera o PDF no MESMO build.
+#
+# O link publico e o download saem do mesmo `mkdocs build`, entao nao existe
+# passo manual e nao existe PDF mais velho que o site.
+name: docs
+
+on:
+  push:
+    branches: [main]
+  # Manual tambem: permite conferir o site antes de mesclar uma branch grande.
+  workflow_dispatch:
+
+# Somente leitura do repositorio -- o deploy usa OIDC (`id-token`), nao um
+# token de escrita no conteudo.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Uma publicacao por vez. Sem isto, dois merges seguidos disputam o mesmo
+# ambiente e o site pode terminar com o build mais VELHO dos dois.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # O PDF usa WeasyPrint, que depende das bibliotecas NATIVAS do GTK.
+      # Sem este passo o build falha no import do plugin, nao na geracao --
+      # e por isso o `mkdocs.yml` do dia a dia nao carrega o plugin: no
+      # Windows essas libs nao existem e a previa local morreria.
+      - name: Bibliotecas nativas do WeasyPrint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libgdk-pixbuf-2.0-0
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # SO o extra `docs`. Instalar o projeto inteiro traria torch (~500 MB)
+      # para um job que nao roda modelo nenhum -- o `mkdocstrings` le o codigo
+      # como TEXTO, nao o importa.
+      - name: Dependencias da documentacao
+        run: uv sync --extra docs --no-install-project
+
+      # Traz para dentro de docs/ o Markdown que mora fora (DESIGN.md).
+      - name: Reunir a documentacao externa
+        run: uv run python scripts/reunir_docs.py
+
+      # `--strict`: link quebrado derruba o build em vez de virar um 404 numa
+      # pagina publica.
+      - name: Construir o site e o PDF
+        run: uv run mkdocs build --strict --config-file mkdocs-pdf.yml
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
