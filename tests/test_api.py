@@ -1292,3 +1292,22 @@ def test_indicadores_trazem_o_intervalo_de_confianca_do_nps(cliente, tmp_path):
 
 def test_sem_score_nenhum_nao_ha_intervalo_de_nps(cliente):
     assert cliente.get("/indicadores").json()["nps_intervalo"] is None
+
+
+def test_deriva_recusa_responder_com_motor_duble(cliente):
+    """Diagnostico de deriva com motor dublê seria diagnostico inventado.
+
+    A rota le `mean_`/`scale_` de um `StandardScaler` TREINADO. O dublê nao
+    tem nenhum, e devolver um relatorio vazio dali se leria como "nenhuma
+    feature fora da faixa" -- a mesma classe de defeito que fez a tela
+    escrever "API no ar" durante um dia enquanto todo numero era sintetico.
+    E a invariante 7 aplicada a um endpoint de diagnostico.
+    """
+    resposta = cliente.get("/saude/deriva")
+    assert resposta.status_code == 503
+    assert "dubl" in resposta.json()["detail"].lower()
+
+
+def test_deriva_recusa_amostra_absurda(cliente):
+    """O teto existe porque cada conversa da amostra custa uma passagem de BERTimbau."""
+    assert cliente.get("/saude/deriva?n=100000").status_code == 400

@@ -310,6 +310,51 @@ class Fusor:
             return {}
         return dict(zip(NOMES_FEATURES, (float(v) for v in self._diferenca())))
 
+    def distribuicao_de_treino(self) -> dict[str, dict[str, float]]:
+        """Media e desvio de cada feature NO CORPUS DE TREINO, por feature.
+
+        O `StandardScaler` treinado guarda `mean_` e `scale_` -- e isso e o
+        retrato da distribuicao em que o modelo aprendeu, ja gravado dentro do
+        artefato. LER NAO E TREINAR: nao precisa do corpus, nem de notebook,
+        nem de GPU.
+
+        Existe para responder uma pergunta que a invariante 10 so sabia fazer
+        no notebook: "esta conversa esta dentro da faixa em que o modelo foi
+        treinado?". A guarda de vazamento olha a distribuicao no CORPUS; em
+        runtime aparece latencia de tres horas que o corpus nunca teve, o
+        z-score explode e o relogio assume a nota.
+
+        Fusor nao treinado devolve `{}` -- ausencia do retrato, que e
+        diferente de "todas as medias sao zero".
+        """
+        escala = self._pipeline.named_steps["escala"]
+        if not hasattr(escala, "mean_"):
+            return {}
+        return {
+            nome: {"media": float(media), "desvio": float(desvio)}
+            for nome, media, desvio in zip(NOMES_FEATURES, escala.mean_, escala.scale_)
+        }
+
+    def z_das_features(self, features: dict[str, float]) -> dict[str, float]:
+        """Quantos desvios de treino cada feature desta conversa esta da media.
+
+        E exatamente o que o `StandardScaler` entrega ao modelo -- o mesmo
+        numero que multiplica o coeficiente. Por isso a sonda usa `transform`
+        em vez de refazer a conta: uma segunda implementacao da padronizacao
+        divergiria da real no dia em que o pipeline mudasse, e a rota de
+        diagnostico passaria a diagnosticar a si mesma.
+
+        Feature constante no treino tem `scale_` = 1 por decisao do proprio
+        scikit-learn, entao nao ha divisao por zero aqui.
+
+        Fusor nao treinado devolve `{}`.
+        """
+        escala = self._pipeline.named_steps["escala"]
+        if not hasattr(escala, "mean_"):
+            return {}
+        padronizado = escala.transform([vetorizar(features)])[0]
+        return dict(zip(NOMES_FEATURES, (float(v) for v in padronizado)))
+
     def importancias(self) -> dict[str, float]:
         """Peso absoluto medio de cada feature -- alimenta a explicacao na dashboard."""
         coeficientes = self._pipeline.named_steps["modelo"].coef_
