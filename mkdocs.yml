@@ -9,7 +9,7 @@ site_url: ""
 # a sessao de agente le. O site nao tem copia propria de nada, entao nao
 # existe versao que envelhece separada do repositorio.
 docs_dir: docs
-repo_url: https://github.com/joao-ped/Fraus
+repo_url: https://github.com/Joao-Tavares0312/Fraus
 
 theme:
   name: material
