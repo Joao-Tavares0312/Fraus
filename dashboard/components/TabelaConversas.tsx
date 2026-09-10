@@ -66,6 +66,9 @@ export type LinhaConversa = {
   desfecho: Desfecho;
   /** `null` quase sempre -- ver `MarcaContestacao`. */
   contestacao: Contestacao | null;
+  /** Tem nota e pouca fala para sustenta-la -- a cabeca TRACEJADA. */
+  evidencia_fraca?: boolean | null;
+  motivos_evidencia_fraca?: string[];
 };
 
 const colunas = legacyCreateColumnHelper<LinhaConversa>();
@@ -269,7 +272,11 @@ export function TabelaConversas({
             ) : (
               <div className="flex min-w-0 flex-col items-start gap-1">
                 <span className="num estimado text-foreground">{nota}</span>
-                <EtiquetaCategoria categoria={linha.categoria} />
+                <EtiquetaCategoria
+                  categoria={linha.categoria}
+                  evidenciaFraca={linha.evidencia_fraca}
+                  motivosEvidencia={linha.motivos_evidencia_fraca}
+                />
                 {/* Depois da categoria, nao no lugar dela: a marca acompanha
                     o veredito, nao o substitui. */}
                 <MarcaContestacao contestacao={linha.contestacao} />

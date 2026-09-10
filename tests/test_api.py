@@ -1324,3 +1324,34 @@ def test_deriva_recusa_responder_com_motor_duble(cliente):
 def test_deriva_recusa_amostra_absurda(cliente):
     """O teto existe porque cada conversa da amostra custa uma passagem de BERTimbau."""
     assert cliente.get("/saude/deriva?n=100000").status_code == 400
+
+
+def test_o_resumo_marca_evidencia_fraca_e_diz_por_que(cliente_com_sinal, tmp_path):
+    """Duas falas de uma palavra: tem score, e nao ha material para sustenta-lo."""
+    caminho = tmp_path / "curta.csv"
+    caminho.write_text(
+        "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
+        "curta,csv,bot,ola posso ajudar,2026-08-13T10:00:00+00:00,false\n"
+        "curta,csv,cliente,ok,2026-08-13T10:00:08+00:00,false\n"
+        "curta,csv,cliente,valeu,2026-08-13T10:00:15+00:00,false\n",
+        encoding="utf-8",
+    )
+    cliente_com_sinal.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    resumo = cliente_com_sinal.get("/conversas").json()[0]
+    assert resumo["score"] is not None  # tem sinal: nao e o caso da cabeca vazada
+    assert resumo["evidencia_fraca"] is True
+    assert resumo["motivos_evidencia_fraca"] == ["menos de 5 palavras do cliente"]
+
+
+def test_conversa_sem_fala_do_cliente_nao_e_evidencia_fraca_e_sim_ausencia(
+    cliente_com_sinal, tmp_path
+):
+    """"Sem sinal" tem forma propria (a cabeca vazada) e nao vira tracejada."""
+    caminho = tmp_path / "mudo.csv"
+    caminho.write_text(CSV_SEM_CLIENTE, encoding="utf-8")
+    cliente_com_sinal.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    resumo = cliente_com_sinal.get("/conversas").json()[0]
+    assert resumo["score"] is None
+    assert resumo["evidencia_fraca"] is None

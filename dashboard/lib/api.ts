@@ -209,6 +209,21 @@ export type ResumoConversa = {
 
   /** `null` na esmagadora maioria dos atendimentos -- ver `Contestacao`. */
   contestacao: Contestacao | null;
+
+  /**
+   * Tem score, e pouca fala do cliente para sustenta-lo -- a CABECA
+   * TRACEJADA. `null` quando nao ha fala nenhuma: ai o estado e "sem sinal",
+   * que tem forma propria (a cabeca vazada), e confundir os dois perderia a
+   * distincao que o produto inteiro defende.
+   *
+   * Derivada no SERVIDOR a partir de evidencia OBSERVAVEL (quantas mensagens,
+   * quantas palavras), nunca da probabilidade do modelo -- probabilidade nao
+   * calibrada nao e confianca. Por isso o campo nao se chama `confianca`.
+   *
+   * Opcionais: uma API anterior a este campo nao os devolve.
+   */
+  evidencia_fraca?: boolean | null;
+  motivos_evidencia_fraca?: string[];
 };
 
 /**

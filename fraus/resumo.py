@@ -18,6 +18,7 @@ Duas regras que este modulo segue e que o resto do projeto ja seguia:
 
 from statistics import median
 
+from fraus.evidencia import evidencia_fraca, motivos_de_evidencia_fraca
 from fraus.modelos import Conversa
 from fraus.sinais.tempo import RESPONDENTES, latencias_da_conversa
 
@@ -110,4 +111,11 @@ def resumir(conversa: Conversa) -> dict:
         "escalou_para_humano": conversa.escalou_para_humano,
         "encerrada_em": conversa.encerrada_em.isoformat() if conversa.encerrada_em else None,
         "desfecho": desfecho(conversa),
+        # A TERCEIRA FORMA da nota: "tem dado, e nao ha evidencia suficiente
+        # para afirmar" -- distinta de "sem sinal", que ja tem a cabeca
+        # vazada. Derivada no SERVIDOR (invariante 3) e a partir de evidencia
+        # OBSERVAVEL, nunca da probabilidade do modelo: probabilidade nao
+        # calibrada nao e confianca. Ver `fraus/evidencia.py`.
+        "evidencia_fraca": evidencia_fraca(conversa),
+        "motivos_evidencia_fraca": motivos_de_evidencia_fraca(conversa),
     }
