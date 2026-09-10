@@ -29,3 +29,8 @@ node_modules/
 # fonte: e copia de build, e commitar a copia daria duas versoes do mesmo
 # documento divergindo.
 /docs/design.md
+
+# Artefatos da conversao ONNX. Mesma regra de modelos/: peso nao entra no
+# repositorio. E, especificamente, estes NAO foram promovidos -- a medicao de
+# ponta a ponta os recusou (ver docs/encolhimento.md).
+/modelos-onnx/

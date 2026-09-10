@@ -47,6 +47,18 @@ docs = [
     "mkdocs-to-pdf>=0.9",
 ]
 
+# RUNTIME do backend ONNX -- so o `onnxruntime`, que basta para PONTUAR.
+# Ele nao traz torch: a inferencia acontece no grafo exportado, e o tokenizador
+# do `transformers` funciona sem torch instalado. E o que permite uma imagem de
+# deploy sem os 497 MB do torch.
+onnx = ["onnxruntime>=1.20"]
+
+# FERRAMENTA DE CONVERSAO, nunca de deploy. `optimum` exporta o checkpoint para
+# ONNX e o `onnxruntime.quantization` o quantiza -- os dois rodam UMA vez, na
+# maquina de quem converte, e nao tem nada que fazer num container de producao.
+conversao = ["optimum[onnxruntime]>=1.24", "onnxruntime>=1.20"]
+
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
