@@ -140,6 +140,13 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
   porque nenhum corpus público de review em português tem timestamps de diálogo.
   Isso é limitação declarada, não segredo.
 - Estado vazio **nomeia o que falta**. Nunca preencha com número simulado.
+- **A família `emocao_*` faz do Fraus um sistema de reconhecimento de emoção**
+  pela letra do EU AI Act — com obrigação de informar quem está exposto
+  (Art. 50(3), em vigor desde 02/08/2026) e uma fronteira que o produto não
+  cruza: **o Fraus não pontua atendentes**, porque reconhecimento de emoção no
+  local de trabalho é proibido desde fev/2025. "Score de performance por
+  atendente" é violação, não feature. Escopo, base legal e o que já está de pé
+  em [docs/conformidade.md](docs/conformidade.md).
 
 ## Documentos
 

@@ -91,6 +91,31 @@ export function CabecasDeLeitura({
         </ul>
       ) : null}
 
+      {/* A ETIQUETA DE EXPOSICAO -- Art. 50(3) do EU AI Act, em vigor desde
+          02/08/2026. Classificar sete emocoes torna o Fraus, pela letra do
+          regulamento, um sistema de RECONHECIMENTO DE EMOCAO, e o deployer
+          precisa informar as pessoas naturais expostas a ele. Nao importa que
+          rode local, em CPU e sem LLM: o que classifica o sistema e o que ele
+          infere sobre pessoas.
+
+          Mora aqui, e nao numa faixa de aviso propria, pelo mesmo motivo que a
+          etiqueta de estimativa mora colada ao NPS: ressalva longe do numero
+          nao e lida. E segue a regra de ressalva unica -- `ressalvas` e falso
+          quando o painel se repete por mensagem, e ai a etiqueta vale uma vez
+          no cabecalho de quem repete.
+
+          Linguagem de gente, nao citacao de artigo. Escopo e base legal
+          inteiros em docs/conformidade.md. */}
+      {ressalvas && emocao ? (
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          <strong>Isto é leitura automática de emoção.</strong> As classes
+          acima são inferidas do texto por um modelo — nunca declaradas por
+          quem escreveu, e nunca conferidas por uma pessoa antes de aparecerem
+          aqui. Elas descrevem <strong>o cliente</strong>: o Fraus não pontua
+          atendentes, e isso é uma regra do produto, não uma pendência.
+        </p>
+      ) : null}
+
       {ressalvas && emocao && "desprezo" in emocao ? (
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           <strong>desprezo</strong> não é uma classe treinada: nenhum corpus em
