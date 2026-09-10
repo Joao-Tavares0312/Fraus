@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { RessalvaDaTela } from "./AparatoDaTela";
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
+import { DiscordanciaContida } from "./DiscordanciaContida";
 import { pilha } from "@/lib/movimento";
 import {
   CSAT_SAUDAVEL,
@@ -192,6 +193,18 @@ export function FaixaIndicadores({
         trilho={trilhoDeLatencia(limiares)}
         explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
       />
+
+      {/* O FALSO CONTAINMENT vem logo DEPOIS da taxa de contencao e da
+          latencia, e nao como quinto cartao: ele e a leitura critica dos dois
+          numeros acima. Composicao propria porque e o unico ponto da tela
+          onde dito e medido se contradizem -- ver DiscordanciaContida. */}
+      {erro ? null : (
+        <DiscordanciaContida
+          percentual={indicadores.falsoContainment}
+          contidos={indicadores.contidosComSinal}
+          className="border-t border-linha pt-3"
+        />
+      )}
     </motion.section>
     {/* O METODO dos quatro indicadores vira UM aparato so, no pe da tela --
         antes cada cartao carregava o proprio paragrafo e a pilha inteira

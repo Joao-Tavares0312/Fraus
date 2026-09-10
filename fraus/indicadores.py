@@ -187,6 +187,47 @@ def containment_rate(conversas: list[Conversa]) -> float:
     return round(100.0 * contidas / len(conversas), 2)
 
 
+def contidos_com_score(registros: list[tuple[Conversa, float | None]]) -> int:
+    """Quantos atendimentos NAO escalaram e tem score -- o denominador honesto.
+
+    A tela precisa dele para dizer "3 de 12" em vez de so um percentual: sem o
+    denominador, 33% sobre tres atendimentos parece a mesma coisa que 33%
+    sobre trezentos.
+    """
+    return sum(
+        1 for conversa, score in registros
+        if not conversa.escalou_para_humano and score is not None
+    )
+
+
+def falso_containment(
+    registros: list[tuple[Conversa, float | None]],
+    faixas: dict[Categoria, tuple[int, int]] | None = None,
+) -> float | None:
+    """Percentual de atendimentos contidos que sairam DETRATORES.
+
+    Conteve e o cliente saiu insatisfeito e sucesso falso: a metrica de
+    contencao sobe enquanto a experiencia piora. So o atendimento COM score
+    entra na conta -- conversa sem fala do cliente nao e nem sucesso nem
+    fracasso, e o denominador precisa dizer sobre quantos se esta falando.
+
+    O limiar de insatisfacao e a categoria `detrator` das faixas VIGENTES,
+    recebidas por parametro (invariante 4) -- nunca um 6 digitado aqui.
+
+    None quando nenhum atendimento contido tem score -- nunca 0.0, que se
+    leria como "nenhum contido saiu insatisfeito", afirmacao que ninguem
+    mediu.
+    """
+    contidos = [
+        score for conversa, score in registros
+        if not conversa.escalou_para_humano and score is not None
+    ]
+    if not contidos:
+        return None
+    detratores = sum(1 for score in contidos if categoria_nps(score, faixas) == "detrator")
+    return round(100.0 * detratores / len(contidos), 2)
+
+
 def tempo_mediano_resposta(registros: list[tuple[Conversa, float | None]]) -> float | None:
     """Mediana de TODAS as esperas cliente -> resposta do conjunto.
 

@@ -763,6 +763,14 @@ export type IndicadoresDoPeriodo = {
   nps: number | null;
   csat: number | null;
   containment: number | null;
+  /**
+   * Percentual dos atendimentos CONTIDOS que sairam detratores -- o sucesso
+   * falso. null quando nenhum contido tem sinal: 0 se leria como "nenhum
+   * contido saiu insatisfeito", que ninguem mediu.
+   */
+  falsoContainment: number | null;
+  /** O denominador da fracao acima, para a tela poder dizer "3 de 12". */
+  contidosComSinal: number;
   total: number;
   semSinal: number;
   /** Quantas conversas entraram nos calculos de NPS/CSAT (as com categoria). */
@@ -796,10 +804,24 @@ export function indicadoresDoPeriodo(
       : (100 * detalhes.filter((d) => !d.escalou_para_humano).length) /
         detalhes.length;
 
+  // Contido E com sinal: quem escalou nao foi contido, e quem nao tem
+  // categoria nao e nem sucesso nem fracasso.
+  const contidosComSinal = detalhes.filter(
+    (d) => !d.escalou_para_humano && d.categoria !== null,
+  );
+  const falsoContainment =
+    contidosComSinal.length === 0
+      ? null
+      : (100 *
+          contidosComSinal.filter((d) => d.categoria === "detrator").length) /
+        contidosComSinal.length;
+
   return {
     nps: npsDeCategorias(categorias),
     csat,
     containment,
+    falsoContainment,
+    contidosComSinal: contidosComSinal.length,
     total,
     semSinal,
     comSinal: categorias.length,

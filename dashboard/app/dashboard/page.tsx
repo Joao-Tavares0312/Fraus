@@ -110,6 +110,12 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
         containment: indicadoresDoServidor.dado.total_conversas
           ? indicadoresDoServidor.dado.containment_rate
           : null,
+        // `?? null` e `?? 0` aqui NAO sao o zero proibido: eles cobrem uma API
+        // antiga que nao devolve os campos. O ausente vira null (nao sei) e o
+        // denominador vira 0, que e o que faz a peca dizer "sem sinal" em vez
+        // de inventar percentual.
+        falsoContainment: indicadoresDoServidor.dado.falso_containment ?? null,
+        contidosComSinal: indicadoresDoServidor.dado.contidos_com_score ?? 0,
         total: indicadoresDoServidor.dado.total_conversas,
         semSinal: indicadoresDoServidor.dado.sem_sinal,
         comSinal:

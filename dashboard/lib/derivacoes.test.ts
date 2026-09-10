@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { categoriaDaNota, distribuicaoDeNotas, FAIXAS_NPS } from "./derivacoes";
-import type { ResumoConversa } from "./api";
+import {
+  categoriaDaNota,
+  distribuicaoDeNotas,
+  FAIXAS_NPS,
+  indicadoresDoPeriodo,
+} from "./derivacoes";
+import type { DetalheConversa, ResumoConversa } from "./api";
 
 /**
  * A invariante 4: a faixa de NPS vigente e passada POR PARAMETRO, nunca
@@ -71,5 +76,55 @@ describe("distribuicao colore as barras pelas faixas vigentes", () => {
     );
     expect(semSinal).toBe(2);
     expect(barras[0].quantidade).toBe(1);
+  });
+});
+
+/**
+ * Falso containment no PLANO B (o agregado do servidor caiu).
+ *
+ * O numero e o cruzamento de contido x detrator, e o unico jeito de errar sem
+ * quebrar nada e contar o detrator ESCALADO -- que nao foi contido, e portanto
+ * nao e sucesso falso nenhum.
+ */
+function detalhe(
+  categoria: "detrator" | "neutro" | "promotor" | null,
+  escalou: boolean,
+): DetalheConversa {
+  return { categoria, escalou_para_humano: escalou } as DetalheConversa;
+}
+
+describe("falso containment do plano B", () => {
+  it("conta o contido que saiu detrator", () => {
+    const saida = indicadoresDoPeriodo(
+      [],
+      [detalhe("detrator", false), detalhe("promotor", false)],
+    );
+    expect(saida.falsoContainment).toBeCloseTo(50);
+    expect(saida.contidosComSinal).toBe(2);
+  });
+
+  it("nao conta o detrator ESCALADO -- escalar nao e conter", () => {
+    const saida = indicadoresDoPeriodo(
+      [],
+      [detalhe("detrator", true), detalhe("promotor", false)],
+    );
+    expect(saida.falsoContainment).toBeCloseTo(0);
+    expect(saida.contidosComSinal).toBe(1);
+  });
+
+  it("contido sem sinal fica fora das duas pontas da fracao", () => {
+    const saida = indicadoresDoPeriodo(
+      [],
+      [detalhe(null, false), detalhe("detrator", false)],
+    );
+    expect(saida.falsoContainment).toBeCloseTo(100);
+    expect(saida.contidosComSinal).toBe(1);
+  });
+
+  it("sem nenhum contido pontuado e null, nunca 0", () => {
+    expect(indicadoresDoPeriodo([], []).falsoContainment).toBeNull();
+    expect(
+      indicadoresDoPeriodo([], [detalhe(null, false)]).falsoContainment,
+    ).toBeNull();
   });
 });

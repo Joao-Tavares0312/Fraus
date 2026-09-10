@@ -209,6 +209,9 @@ def test_indicadores_agregam_o_que_foi_importado(cliente, tmp_path):
     assert indicadores["nps"] == 100.0
     assert indicadores["csat"] == 100.0
     assert indicadores["containment_rate"] == 100.0
+    # A conversa do CSV sai promotora e foi contida: sucesso de verdade.
+    assert indicadores["falso_containment"] == 0.0
+    assert indicadores["contidos_com_score"] == 1
     assert indicadores["total_conversas"] == 1
 
 
@@ -221,6 +224,10 @@ def test_indicadores_sem_dado_nao_quebra(cliente):
     assert indicadores["csat"] is None
     # Contencao NAO depende de score, entao continua sendo um numero.
     assert indicadores["containment_rate"] == 0.0
+    # Falso containment PRECISA de score: sem nenhum contido pontuado nao ha
+    # o que afirmar, e 0.0 se leria como "nenhum contido saiu insatisfeito".
+    assert indicadores["falso_containment"] is None
+    assert indicadores["contidos_com_score"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +259,9 @@ def test_conversa_sem_fala_do_cliente_nao_vira_zero(cliente_com_sinal, tmp_path)
     assert indicadores["nps"] is None  # nao entra em NPS
     assert indicadores["csat"] is None  # nem em CSAT
     assert indicadores["containment_rate"] == 100.0  # mas conta na contencao
+    # ...e fica FORA do falso containment, que so fala de quem tem score.
+    assert indicadores["falso_containment"] is None
+    assert indicadores["contidos_com_score"] == 0
     assert indicadores["total_conversas"] == 1
     assert indicadores["sem_sinal"] == 1
 

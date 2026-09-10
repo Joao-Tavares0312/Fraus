@@ -96,6 +96,16 @@ export type Indicadores = {
   csat: number | null;
   /** Contencao NAO depende de score, entao sempre e um numero. */
   containment_rate: number;
+  /**
+   * Percentual dos atendimentos CONTIDOS que sairam detratores -- o sucesso
+   * falso. `null` quando nenhum contido tem score, nunca 0.
+   *
+   * Opcional porque uma API anterior a este indicador nao o devolve, e
+   * `undefined` ali significa "nao sei", que nao pode virar zero.
+   */
+  falso_containment?: number | null;
+  /** Denominador do campo acima -- a tela diz "3 de 12", nao so o percentual. */
+  contidos_com_score?: number;
   total_conversas: number;
   sem_sinal: number;
   /**
