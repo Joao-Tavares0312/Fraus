@@ -249,10 +249,25 @@ def serie_diaria(
     ]
 
 
-def containment_rate(conversas: list[Conversa]) -> float:
-    """Percentual de conversas resolvidas sem intervencao humana."""
+def containment_rate(conversas: list[Conversa]) -> float | None:
+    """Percentual de conversas resolvidas sem intervencao humana.
+
+    None no conjunto VAZIO -- nunca 0.0, que se leria como "nenhum atendimento
+    foi contido", o pior numero da escala, onde nao houve atendimento nenhum.
+
+    A distincao que importa e que esta funcao NAO depende de score: conversa
+    sem fala do cliente nao tem NPS nem CSAT e mesmo assim conta como contida
+    (ha teste exigindo 100% nesse caso). O que a ausencia de score nao mede,
+    ela continua medindo. So o conjunto vazio nao tem resposta.
+
+    Ate 10/09/2026 devolvia 0.0, e o front nao acreditava: `page.tsx` escrevia
+    `total_conversas ? containment_rate : null`. A guarda no cliente era a
+    prova de que alguem ja tinha sentido o problema -- e ela so protegia a
+    dashboard. Export, webhook e qualquer terceiro lendo /indicadores recebiam
+    o zero. Uma ponta so decide agora.
+    """
     if not conversas:
-        return 0.0
+        return None
     contidas = sum(1 for c in conversas if not c.escalou_para_humano)
     return round(100.0 * contidas / len(conversas), 2)
 

@@ -222,8 +222,21 @@ def test_indicadores_sem_dado_nao_quebra(cliente):
     # medido apresentado no lugar de "nao medimos".
     assert indicadores["nps"] is None
     assert indicadores["csat"] is None
-    # Contencao NAO depende de score, entao continua sendo um numero.
-    assert indicadores["containment_rate"] == 0.0
+    # A CONTENCAO TAMBEM E None NO CONJUNTO VAZIO -- mudou em 10/09/2026.
+    #
+    # O comentario aqui defendia `0.0` com um raciocinio CERTO: contencao nao
+    # depende de score, entao ela continua medida quando NPS e CSAT nao estao
+    # (ver `test_conversa_sem_fala_do_cliente_nao_vira_zero`, que segue
+    # exigindo 100%). Esse caso nao mudou e nao pode mudar.
+    #
+    # O que estava errado e o conjunto VAZIO, onde nada foi medido. A prova de
+    # que alguem ja tinha sentido isso estava no front: `page.tsx` escrevia
+    # `total_conversas ? containment_rate : null`, ou seja, o cliente nao
+    # acreditava no numero do servidor. Servidor e cliente discordando sobre o
+    # mesmo campo, e nada explicando por que -- e qualquer consumidor que nao
+    # fosse a dashboard (export, webhook, terceiro lendo /indicadores) recebia
+    # "0% de contencao", o pior numero da escala, para um conjunto vazio.
+    assert indicadores["containment_rate"] is None
     # Falso containment PRECISA de score: sem nenhum contido pontuado nao ha
     # o que afirmar, e 0.0 se leria como "nenhum contido saiu insatisfeito".
     assert indicadores["falso_containment"] is None

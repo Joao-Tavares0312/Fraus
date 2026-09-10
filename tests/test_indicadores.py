@@ -362,3 +362,14 @@ def test_o_intervalo_usa_as_faixas_recebidas():
     assert nps_com_intervalo(scores)["nps"] == pytest.approx(0.0)
     faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
     assert nps_com_intervalo(scores, faixas)["nps"] == pytest.approx(100.0)
+
+
+def test_containment_de_conjunto_vazio_e_ausencia_nao_zero():
+    """Nenhuma conversa nao e "0% de contencao" -- e nao houve o que conter.
+
+    Era a UNICA funcao deste modulo que devolvia zero em colecao vazia. O
+    `?? 0` proibido no front tambem mora no Python, na forma de `return 0.0`
+    em early-return -- e ele e mais dificil de ver ali, porque parece
+    inicializacao em vez de afirmacao.
+    """
+    assert containment_rate([]) is None

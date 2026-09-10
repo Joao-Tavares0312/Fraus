@@ -110,8 +110,12 @@ export type Indicadores = {
   nps_intervalo?: IntervaloNps | null;
   /** null quando nenhum atendimento tem score. */
   csat: number | null;
-  /** Contencao NAO depende de score, entao sempre e um numero. */
-  containment_rate: number;
+  /**
+   * Contencao NAO depende de score: conversa sem fala do cliente nao tem NPS
+   * nem CSAT e mesmo assim conta como contida. So o conjunto VAZIO vem
+   * `null` -- nao houve o que conter.
+   */
+  containment_rate: number | null;
   /**
    * Percentual dos atendimentos CONTIDOS que sairam detratores -- o sucesso
    * falso. `null` quando nenhum contido tem score, nunca 0.
