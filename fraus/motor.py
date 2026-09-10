@@ -5,6 +5,7 @@ por acidente de crescimento, e a borda da API nao e lugar de regra de modelo:
 quem chama o Motor e a rota, nao o contrario.
 """
 
+from fraus.deriva import resumo_de_deriva
 from fraus.fusor import Fusor, montar_features
 from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
                                  desprezo_derivado)
@@ -187,6 +188,32 @@ class Motor:
             # que e outra coisa.
             "sinais_fora_do_score": ["prob_ironia"],
         }
+
+    def deriva_da_amostra(self, conversas, curadoria=None) -> dict | None:
+        """Quais features desta amostra sairam da faixa de treino do fusor.
+
+        DIAGNOSTICO, nunca predicao: nada aqui muda score, nota ou categoria de
+        conversa nenhuma. Existe porque a guarda da invariante 10 roda no
+        notebook, sobre o CORPUS, e o corpus do sinal de tempo nunca passou de
+        minutos -- ele nao tem o que dizer sobre a conversa de tres horas que
+        aparece em producao e faz o relogio assumir a nota.
+
+        CUSTA UMA PASSAGEM DE MODELO POR CONVERSA, porque as features so
+        existem depois do BERTimbau. Por isso quem chama corta a amostra: esta
+        rota e um exame pedido, nao um agregado de tela.
+
+        Conversa sem fala do cliente fica de fora -- ela nao tem features, e
+        contar como "dentro da faixa" seria inventar uma medida tranquilizadora
+        a partir de ausencia de dado.
+        """
+        zs = [
+            self._fusor.z_das_features(
+                montar_features(conversa, self._classificador, self._emocao, curadoria)
+            )
+            for conversa in conversas
+            if conversa.tem_sinal_cliente
+        ]
+        return resumo_de_deriva(zs, self._fusor.distribuicao_de_treino())
 
     def importancias(self) -> dict:
         """Peso global de cada feature -- usado pela ficha do modelo em `/modelo`."""

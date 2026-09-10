@@ -50,6 +50,7 @@ cinco linhas. A gramática entra como **estrutura e ritmo**, não como fantasia:
 | a pausa | intervalo proporcional à latência | silêncio com duração notada é exatamente a espera |
 | a ligadura | marcação do trecho que puxou a nota | atribuição por sentença |
 | a dinâmica | peso e tamanho do tipo, não cor | intensidade sem gastar canal de cor |
+| **a cabeça tracejada** | atendimento **medido com evidência fraca** | o valor está na escala, e a linha que o afirma é interrompida |
 | **a cabeça vazada** | atendimento **sem sinal** | ocupa o tempo e não soa: a regra "ausência não é zero" vira forma |
 
 A cabeça vazada é a peça mais importante desta lista. O princípio de produto
@@ -74,6 +75,42 @@ aplicada errado. O modo é **Operate**: expressão nunca obscurece a tarefa.
 > renderiza `<CabecaVazada comRotulo={false} />` (o rótulo por extenso já é
 > escrito por `EtiquetaCategoria` logo depois do anel), então o ausente deixou
 > de competir por posição com os três valores reais.
+
+> **Emenda de 10/09/2026 — a terceira forma fecha o trio.** Havia duas formas,
+> cheia e vazada, e entre elas um caso sem notação: **tem dado e não há
+> evidência suficiente para afirmar**. Uma conversa cujo cliente escreveu só
+> "ok" saía **cheia**, com a mesma confiança visual de uma de 40 turnos — as
+> duas tinham nota, só uma tinha material para sustentá-la.
+>
+> | forma | significado |
+> |---|---|
+> | cheia | medido, com evidência |
+> | **tracejada** | medido, evidência fraca |
+> | vazada | não medido |
+>
+> A tracejada **mantém a cor da classe** e troca o preenchimento por contorno
+> interrompido (`border-dashed`, `bg-transparent`). Não vira cinza: cinza é
+> fora da escala, e é o significado reservado à ausência — a categoria
+> continua valendo, o que está em dúvida é quanta fala a sustenta. E não vira
+> meio-preenchida: isso seria uma segunda leitura quantitativa competindo com
+> a nota.
+>
+> Ela vive dentro de `EtiquetaCategoria`, não num componente que quem chama
+> escolhe. Esse é o **slot único da cabeça** — tabela, piores atendimentos,
+> ficha do grafo e tela do atendimento passam todos por ele —, e três formas
+> oferecidas em quatro lugares dariam uma que ninguém lembraria de trocar, e
+> ela continuaria anunciando confiança que não existe.
+>
+> **O critério nunca é a probabilidade do modelo.** Probabilidade não
+> calibrada não é confiança, e apresentá-la como se fosse é exatamente a
+> desonestidade que este produto recusa. A evidência é **observável** —
+> quantas mensagens o cliente mandou, quantas palavras escreveu — derivada em
+> `fraus/evidencia.py`, no servidor. Pelo mesmo motivo o campo se chama
+> `evidencia_fraca` e **não** `confianca`.
+>
+> Rótulo obrigatório, como na vazada — e aqui ele vai além de nomear o estado
+> e imprime o **motivo**: "evidência fraca" não aciona ninguém, "menos de 5
+> palavras do cliente" aciona.
 
 ---
 

@@ -3,7 +3,9 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
-                               categoria_nps, containment_rate, nota_0_10,
+                               categoria_nps, containment_rate,
+                               falso_containment, N_MINIMO_NPS,
+                               nps_com_intervalo, nota_0_10,
                                serie_diaria, validar_faixas_nps)
 from fraus.fusor import PESO_NEUTRO_NO_SCORE
 from fraus.modelos import Conversa, Mensagem
@@ -252,3 +254,122 @@ def test_lote_equilibrado_entre_as_classes_puras_da_nps_zero():
         for satisfeito, neutro in ((0.0, 0.0), (0.0, 1.0), (1.0, 0.0))
     ]
     assert calcular_nps(puros) == 0.0
+
+
+# --- falso containment ------------------------------------------------------
+
+
+def _atendimento(indice: int, escalou: bool, score: float | None):
+    conversa = Conversa(
+        id=f"fc{indice}",
+        canal="csv",
+        iniciada_em=BASE,
+        escalou_para_humano=escalou,
+        mensagens=[Mensagem(autor="cliente", texto="ok", enviada_em=BASE)],
+    )
+    return (conversa, score)
+
+
+def test_contido_e_detrator_conta_como_falso_containment():
+    registros = [_atendimento(1, escalou=False, score=100.0),
+                 _atendimento(2, escalou=False, score=20.0)]
+    assert falso_containment(registros) == pytest.approx(50.0)
+
+
+def test_contido_e_promotor_nao_conta():
+    registros = [_atendimento(1, escalou=False, score=100.0)]
+    assert falso_containment(registros) == pytest.approx(0.0)
+
+
+def test_escalado_e_detrator_nao_conta_porque_nao_foi_contido():
+    """O teste que pega a implementacao errada: escalar nao e conter.
+
+    Quem conta detrator escalado esta medindo insatisfacao, nao falso
+    sucesso -- e o indicador perde justamente o que o torna interessante.
+    """
+    registros = [_atendimento(1, escalou=True, score=20.0),
+                 _atendimento(2, escalou=False, score=100.0)]
+    assert falso_containment(registros) == pytest.approx(0.0)
+
+
+def test_contido_sem_score_fica_fora_do_numerador_e_do_denominador():
+    registros = [_atendimento(1, escalou=False, score=None),
+                 _atendimento(2, escalou=False, score=20.0)]
+    assert falso_containment(registros) == pytest.approx(100.0)
+
+
+def test_nenhum_contido_com_score_e_ausencia_nao_zero():
+    """0.0 se leria como "nenhum contido saiu insatisfeito" -- ninguem mediu."""
+    assert falso_containment([]) is None
+    assert falso_containment([_atendimento(1, escalou=False, score=None)]) is None
+    assert falso_containment([_atendimento(2, escalou=True, score=20.0)]) is None
+
+
+def test_falso_containment_usa_o_limiar_das_faixas_recebidas():
+    """Invariante 4: o limiar de detrator vem das faixas, nunca digitado."""
+    registros = [_atendimento(1, escalou=False, score=50.0)]  # nota 5
+    assert falso_containment(registros) == pytest.approx(100.0)  # 5 e detrator de fabrica
+    faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
+    assert falso_containment(registros, faixas) == pytest.approx(0.0)  # 5 vira neutro
+
+
+# --- intervalo de confianca do NPS -----------------------------------------
+
+
+def test_nps_com_intervalo_devolve_o_ponto_e_as_duas_pontas():
+    """Com amostra suficiente, o ponto estimado bate com `calcular_nps`."""
+    scores = [100.0] * 20 + [75.0] * 10 + [30.0] * 10
+    saida = nps_com_intervalo(scores)
+    assert saida["n"] == 40
+    assert saida["nps"] == pytest.approx(calcular_nps(scores))
+    assert saida["ic_inferior"] < saida["nps"] < saida["ic_superior"]
+
+
+def test_o_intervalo_encolhe_conforme_a_amostra_cresce():
+    """A propriedade que faz o indicador valer: mais dado, menos incerteza."""
+    pequena = nps_com_intervalo([100.0] * 20 + [30.0] * 20)
+    grande = nps_com_intervalo([100.0] * 200 + [30.0] * 200)
+    assert pequena["nps"] == pytest.approx(grande["nps"])
+    largura = lambda s: s["ic_superior"] - s["ic_inferior"]
+    assert largura(grande) < largura(pequena)
+
+
+def test_amostra_pequena_nao_mostra_ponto_estimado_mas_diz_quanto_tem():
+    """n < 30: o ponto sugeriria precisao que nao existe.
+
+    O `n` continua preenchido de proposito -- a tela precisa dizer QUANTO
+    falta, nao so que nao sabe.
+    """
+    saida = nps_com_intervalo([100.0] * 8)
+    assert saida["n"] == 8
+    assert saida["nps"] is None
+
+
+def test_sem_score_nenhum_nao_ha_intervalo_nenhum():
+    assert nps_com_intervalo([]) is None
+
+
+def test_o_intervalo_e_recortado_na_escala_do_nps():
+    """NPS vive em [-100, 100]: ponta fora da escala seria numero impossivel."""
+    saida = nps_com_intervalo([100.0] * 40)
+    assert saida["nps"] == pytest.approx(100.0)
+    assert saida["ic_superior"] == pytest.approx(100.0)
+    assert saida["ic_inferior"] <= 100.0
+
+
+def test_o_intervalo_usa_as_faixas_recebidas():
+    scores = [80.0] * 40  # nota 8: neutro de fabrica, promotor com faixa alternativa
+    assert nps_com_intervalo(scores)["nps"] == pytest.approx(0.0)
+    faixas = {"detrator": (0, 4), "neutro": (5, 7), "promotor": (8, 10)}
+    assert nps_com_intervalo(scores, faixas)["nps"] == pytest.approx(100.0)
+
+
+def test_containment_de_conjunto_vazio_e_ausencia_nao_zero():
+    """Nenhuma conversa nao e "0% de contencao" -- e nao houve o que conter.
+
+    Era a UNICA funcao deste modulo que devolvia zero em colecao vazia. O
+    `?? 0` proibido no front tambem mora no Python, na forma de `return 0.0`
+    em early-return -- e ele e mais dificil de ver ali, porque parece
+    inicializacao em vez de afirmacao.
+    """
+    assert containment_rate([]) is None

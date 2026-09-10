@@ -363,3 +363,52 @@ def test_sem_curadoria_o_vetor_e_o_de_antes():
     assert montar_features(
         conversa, _TextoDuble(), _EmocaoDuble()
     ) == montar_features(conversa, _TextoDuble(), _EmocaoDuble(), None)
+
+
+# --- o retrato da distribuicao de treino ------------------------------------
+#
+# O `StandardScaler` treinado carrega `mean_` e `scale_` POR FEATURE. Isso e o
+# retrato da distribuicao em que o modelo aprendeu, ja gravado dentro do
+# artefato: ler nao e treinar. E o que permite responder "esta conversa esta
+# dentro da faixa em que o modelo foi treinado?" sem corpus, sem notebook e
+# sem Colab.
+
+
+def test_a_distribuicao_de_treino_cobre_as_39_features():
+    distribuicao = _fusor_treinado().distribuicao_de_treino()
+    assert set(distribuicao) == set(NOMES_FEATURES)
+    assert distribuicao["latencia_mediana_s"]["media"] == pytest.approx(154.0)
+    assert distribuicao["latencia_mediana_s"]["desvio"] > 0
+
+
+def test_fusor_nao_treinado_nao_tem_distribuicao_nenhuma():
+    """`{}` e a ausencia do retrato -- diferente de "todas as medias sao 0"."""
+    assert Fusor().distribuicao_de_treino() == {}
+
+
+def test_o_z_de_uma_conversa_dentro_da_faixa_e_pequeno():
+    fusor = _fusor_treinado()
+    dentro = fusor.z_das_features(_features(latencia_mediana_s=8.0))
+    assert abs(dentro["latencia_mediana_s"]) < 4.0
+
+
+def test_o_z_explode_fora_da_faixa_de_treino():
+    """Tres horas de espera contra um corpus que nunca passou de minutos.
+
+    E a invariante 10 se manifestando em RUNTIME: a guarda de vazamento olha a
+    distribuicao no corpus, e o corpus nao tem latencia de tres horas.
+    """
+    fusor = _fusor_treinado()
+    fora = fusor.z_das_features(_features(latencia_mediana_s=10800.0))
+    assert fora["latencia_mediana_s"] > 4.0
+
+
+def test_feature_constante_no_treino_nao_estoura_o_z():
+    """Desvio zero e divisao por zero -- o scaler guarda scale_=1 nesse caso.
+
+    Se isto quebrar, a rota de deriva cai inteira por causa de uma feature que
+    nunca variou no treino, que e o oposto de um diagnostico util.
+    """
+    fusor = _fusor_treinado()
+    z = fusor.z_das_features(_features())
+    assert all(valor == valor for valor in z.values())  # nenhum NaN

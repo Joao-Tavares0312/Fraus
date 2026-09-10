@@ -106,10 +106,19 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   const indicadores = indicadoresDoServidor.ok
     ? {
         nps: indicadoresDoServidor.dado.nps,
+        npsIntervalo: indicadoresDoServidor.dado.nps_intervalo ?? null,
         csat: indicadoresDoServidor.dado.csat,
-        containment: indicadoresDoServidor.dado.total_conversas
-          ? indicadoresDoServidor.dado.containment_rate
-          : null,
+        // A guarda `total_conversas ? ... : null` que morava aqui saiu em
+        // 10/09/2026: ela existia porque o servidor devolvia 0.0 no conjunto
+        // vazio e o cliente nao acreditava. Agora o servidor diz `null`, e
+        // uma ponta so decide -- o `?? null` cobre apenas API antiga.
+        containment: indicadoresDoServidor.dado.containment_rate ?? null,
+        // `?? null` e `?? 0` aqui NAO sao o zero proibido: eles cobrem uma API
+        // antiga que nao devolve os campos. O ausente vira null (nao sei) e o
+        // denominador vira 0, que e o que faz a peca dizer "sem sinal" em vez
+        // de inventar percentual.
+        falsoContainment: indicadoresDoServidor.dado.falso_containment ?? null,
+        contidosComSinal: indicadoresDoServidor.dado.contidos_com_score ?? 0,
         total: indicadoresDoServidor.dado.total_conversas,
         semSinal: indicadoresDoServidor.dado.sem_sinal,
         comSinal:

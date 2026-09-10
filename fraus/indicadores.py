@@ -8,6 +8,7 @@ Categoria SEMPRE derivada no servidor.
 """
 
 from collections import Counter
+from math import sqrt
 from statistics import median
 from typing import Literal
 
@@ -27,6 +28,18 @@ FAIXAS_NPS: dict[Categoria, tuple[int, int]] = {
 
 NOTA_MINIMA = 0
 NOTA_MAXIMA = 10
+
+# Abaixo deste n o ponto estimado do NPS nao e mostrado -- so o intervalo e a
+# contagem. O estudo de simulacao de 2026 (MDPI Stats 9(2):45) comparou Wald,
+# bootstrap-t e Wald ajustado e concluiu que os dois primeiros devem ser
+# EVITADOS em amostra pequena, com todos convergindo para a cobertura nominal
+# conforme n cresce. 30 e o corte convencional de "amostra grande" para a
+# aproximacao normal; e regra de EXIBICAO, nao de calculo, e por isso mora
+# aqui e nao numa constante do front.
+N_MINIMO_NPS = 30
+
+# z de 1,96 -> 95% de confianca sob a aproximacao normal.
+Z_95 = 1.96
 
 
 def nota_0_10(score_0_100: float) -> int:
@@ -118,6 +131,63 @@ def calcular_nps(
     return round(100.0 * (promotores - detratores), 2)
 
 
+def nps_com_intervalo(
+    scores: list[float], faixas: dict[Categoria, tuple[int, int]] | None = None
+) -> dict | None:
+    """NPS inferido com intervalo de confianca de 95% (Wald ajustado).
+
+    Hoje "NPS -12" aparece igual com 8 conversas e com 8.000, e a primeira
+    pergunta de quem avalia e "quantas conversas sustentam esse numero?".
+    Mostrar ponto estimado sem incerteza e inconsistente com um sistema que
+    ja recusa transformar ausencia em zero.
+
+    A CONTA. O NPS e a media de uma variavel em {-1, 0, +1} -- promotor +1,
+    detrator -1, neutro 0. Entao:
+
+        media     = p_prom - p_det
+        variancia = (p_prom + p_det) - media**2
+        erro      = sqrt(variancia / n)
+        ic        = media +- 1,96 * erro          (tudo x100 na escala do NPS)
+
+    O metodo e o Wald AJUSTADO: Wald puro e bootstrap-t sao instaveis em
+    amostra pequena (MDPI Stats, 2026), e o ajuste aqui e a regra de exibicao
+    -- abaixo de `N_MINIMO_NPS` o ponto estimado nao e devolvido, porque com
+    amostra assim ele sugere precisao que nao existe. O `n` VEM PREENCHIDO
+    mesmo assim: a tela precisa dizer quanto falta, nao so que nao sabe.
+
+    None quando nao ha score nenhum -- nao existe intervalo de coisa nenhuma.
+
+    HONESTIDADE OBRIGATORIA, e ela precisa aparecer na tela junto do numero:
+    este intervalo captura so a incerteza AMOSTRAL. Ele NAO captura a
+    incerteza do MODELO, que exigiria calibracao. Um IC apresentado como se
+    cobrisse o erro do modelo e pior que nao ter IC nenhum.
+    """
+    if not scores:
+        return None
+
+    categorias = [categoria_nps(s, faixas) for s in scores]
+    n = len(categorias)
+    p_prom = categorias.count("promotor") / n
+    p_det = categorias.count("detrator") / n
+
+    media = p_prom - p_det
+    variancia = (p_prom + p_det) - media**2
+    erro = sqrt(variancia / n)
+    margem = Z_95 * erro
+
+    # Recortado na escala: o NPS vive em [-100, 100] por definicao, e ponta
+    # fora dela seria um numero impossivel impresso com cara de medida.
+    inferior = max(-100.0, 100.0 * (media - margem))
+    superior = min(100.0, 100.0 * (media + margem))
+
+    return {
+        "nps": round(100.0 * media, 2) if n >= N_MINIMO_NPS else None,
+        "ic_inferior": round(inferior, 2),
+        "ic_superior": round(superior, 2),
+        "n": n,
+    }
+
+
 def calcular_csat(scores: list[float]) -> float | None:
     """Percentual de atendimentos com nota >= 7. Sem score algum devolve None."""
     if not scores:
@@ -179,12 +249,68 @@ def serie_diaria(
     ]
 
 
-def containment_rate(conversas: list[Conversa]) -> float:
-    """Percentual de conversas resolvidas sem intervencao humana."""
+def containment_rate(conversas: list[Conversa]) -> float | None:
+    """Percentual de conversas resolvidas sem intervencao humana.
+
+    None no conjunto VAZIO -- nunca 0.0, que se leria como "nenhum atendimento
+    foi contido", o pior numero da escala, onde nao houve atendimento nenhum.
+
+    A distincao que importa e que esta funcao NAO depende de score: conversa
+    sem fala do cliente nao tem NPS nem CSAT e mesmo assim conta como contida
+    (ha teste exigindo 100% nesse caso). O que a ausencia de score nao mede,
+    ela continua medindo. So o conjunto vazio nao tem resposta.
+
+    Ate 10/09/2026 devolvia 0.0, e o front nao acreditava: `page.tsx` escrevia
+    `total_conversas ? containment_rate : null`. A guarda no cliente era a
+    prova de que alguem ja tinha sentido o problema -- e ela so protegia a
+    dashboard. Export, webhook e qualquer terceiro lendo /indicadores recebiam
+    o zero. Uma ponta so decide agora.
+    """
     if not conversas:
-        return 0.0
+        return None
     contidas = sum(1 for c in conversas if not c.escalou_para_humano)
     return round(100.0 * contidas / len(conversas), 2)
+
+
+def contidos_com_score(registros: list[tuple[Conversa, float | None]]) -> int:
+    """Quantos atendimentos NAO escalaram e tem score -- o denominador honesto.
+
+    A tela precisa dele para dizer "3 de 12" em vez de so um percentual: sem o
+    denominador, 33% sobre tres atendimentos parece a mesma coisa que 33%
+    sobre trezentos.
+    """
+    return sum(
+        1 for conversa, score in registros
+        if not conversa.escalou_para_humano and score is not None
+    )
+
+
+def falso_containment(
+    registros: list[tuple[Conversa, float | None]],
+    faixas: dict[Categoria, tuple[int, int]] | None = None,
+) -> float | None:
+    """Percentual de atendimentos contidos que sairam DETRATORES.
+
+    Conteve e o cliente saiu insatisfeito e sucesso falso: a metrica de
+    contencao sobe enquanto a experiencia piora. So o atendimento COM score
+    entra na conta -- conversa sem fala do cliente nao e nem sucesso nem
+    fracasso, e o denominador precisa dizer sobre quantos se esta falando.
+
+    O limiar de insatisfacao e a categoria `detrator` das faixas VIGENTES,
+    recebidas por parametro (invariante 4) -- nunca um 6 digitado aqui.
+
+    None quando nenhum atendimento contido tem score -- nunca 0.0, que se
+    leria como "nenhum contido saiu insatisfeito", afirmacao que ninguem
+    mediu.
+    """
+    contidos = [
+        score for conversa, score in registros
+        if not conversa.escalou_para_humano and score is not None
+    ]
+    if not contidos:
+        return None
+    detratores = sum(1 for score in contidos if categoria_nps(score, faixas) == "detrator")
+    return round(100.0 * detratores / len(contidos), 2)
 
 
 def tempo_mediano_resposta(registros: list[tuple[Conversa, float | None]]) -> float | None:

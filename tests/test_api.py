@@ -209,6 +209,9 @@ def test_indicadores_agregam_o_que_foi_importado(cliente, tmp_path):
     assert indicadores["nps"] == 100.0
     assert indicadores["csat"] == 100.0
     assert indicadores["containment_rate"] == 100.0
+    # A conversa do CSV sai promotora e foi contida: sucesso de verdade.
+    assert indicadores["falso_containment"] == 0.0
+    assert indicadores["contidos_com_score"] == 1
     assert indicadores["total_conversas"] == 1
 
 
@@ -219,8 +222,25 @@ def test_indicadores_sem_dado_nao_quebra(cliente):
     # medido apresentado no lugar de "nao medimos".
     assert indicadores["nps"] is None
     assert indicadores["csat"] is None
-    # Contencao NAO depende de score, entao continua sendo um numero.
-    assert indicadores["containment_rate"] == 0.0
+    # A CONTENCAO TAMBEM E None NO CONJUNTO VAZIO -- mudou em 10/09/2026.
+    #
+    # O comentario aqui defendia `0.0` com um raciocinio CERTO: contencao nao
+    # depende de score, entao ela continua medida quando NPS e CSAT nao estao
+    # (ver `test_conversa_sem_fala_do_cliente_nao_vira_zero`, que segue
+    # exigindo 100%). Esse caso nao mudou e nao pode mudar.
+    #
+    # O que estava errado e o conjunto VAZIO, onde nada foi medido. A prova de
+    # que alguem ja tinha sentido isso estava no front: `page.tsx` escrevia
+    # `total_conversas ? containment_rate : null`, ou seja, o cliente nao
+    # acreditava no numero do servidor. Servidor e cliente discordando sobre o
+    # mesmo campo, e nada explicando por que -- e qualquer consumidor que nao
+    # fosse a dashboard (export, webhook, terceiro lendo /indicadores) recebia
+    # "0% de contencao", o pior numero da escala, para um conjunto vazio.
+    assert indicadores["containment_rate"] is None
+    # Falso containment PRECISA de score: sem nenhum contido pontuado nao ha
+    # o que afirmar, e 0.0 se leria como "nenhum contido saiu insatisfeito".
+    assert indicadores["falso_containment"] is None
+    assert indicadores["contidos_com_score"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +272,9 @@ def test_conversa_sem_fala_do_cliente_nao_vira_zero(cliente_com_sinal, tmp_path)
     assert indicadores["nps"] is None  # nao entra em NPS
     assert indicadores["csat"] is None  # nem em CSAT
     assert indicadores["containment_rate"] == 100.0  # mas conta na contencao
+    # ...e fica FORA do falso containment, que so fala de quem tem score.
+    assert indicadores["falso_containment"] is None
+    assert indicadores["contidos_com_score"] == 0
     assert indicadores["total_conversas"] == 1
     assert indicadores["sem_sinal"] == 1
 
@@ -1261,3 +1284,74 @@ def test_content_length_nao_numerico_e_recusado(cliente_com_sinal):
         headers={"content-type": "application/json", "content-length": "abc"},
     )
     assert resposta.status_code == 400
+
+
+def test_indicadores_trazem_o_intervalo_de_confianca_do_nps(cliente, tmp_path):
+    """Uma conversa so: o intervalo existe, e o ponto estimado NAO aparece.
+
+    n=1 esta muito abaixo de N_MINIMO_NPS, e o ponto com essa amostra
+    sugeriria uma precisao que nao existe. A contagem vem preenchida para a
+    tela dizer quanto falta.
+    """
+    caminho = tmp_path / "entrada.csv"
+    caminho.write_text(CSV, encoding="utf-8")
+    cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    intervalo = cliente.get("/indicadores").json()["nps_intervalo"]
+    assert intervalo["n"] == 1
+    assert intervalo["nps"] is None
+    assert intervalo["ic_inferior"] <= intervalo["ic_superior"]
+
+
+def test_sem_score_nenhum_nao_ha_intervalo_de_nps(cliente):
+    assert cliente.get("/indicadores").json()["nps_intervalo"] is None
+
+
+def test_deriva_recusa_responder_com_motor_duble(cliente):
+    """Diagnostico de deriva com motor dublê seria diagnostico inventado.
+
+    A rota le `mean_`/`scale_` de um `StandardScaler` TREINADO. O dublê nao
+    tem nenhum, e devolver um relatorio vazio dali se leria como "nenhuma
+    feature fora da faixa" -- a mesma classe de defeito que fez a tela
+    escrever "API no ar" durante um dia enquanto todo numero era sintetico.
+    E a invariante 7 aplicada a um endpoint de diagnostico.
+    """
+    resposta = cliente.get("/saude/deriva")
+    assert resposta.status_code == 503
+    assert "dubl" in resposta.json()["detail"].lower()
+
+
+def test_deriva_recusa_amostra_absurda(cliente):
+    """O teto existe porque cada conversa da amostra custa uma passagem de BERTimbau."""
+    assert cliente.get("/saude/deriva?n=100000").status_code == 400
+
+
+def test_o_resumo_marca_evidencia_fraca_e_diz_por_que(cliente_com_sinal, tmp_path):
+    """Duas falas de uma palavra: tem score, e nao ha material para sustenta-lo."""
+    caminho = tmp_path / "curta.csv"
+    caminho.write_text(
+        "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
+        "curta,csv,bot,ola posso ajudar,2026-08-13T10:00:00+00:00,false\n"
+        "curta,csv,cliente,ok,2026-08-13T10:00:08+00:00,false\n"
+        "curta,csv,cliente,valeu,2026-08-13T10:00:15+00:00,false\n",
+        encoding="utf-8",
+    )
+    cliente_com_sinal.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    resumo = cliente_com_sinal.get("/conversas").json()[0]
+    assert resumo["score"] is not None  # tem sinal: nao e o caso da cabeca vazada
+    assert resumo["evidencia_fraca"] is True
+    assert resumo["motivos_evidencia_fraca"] == ["menos de 5 palavras do cliente"]
+
+
+def test_conversa_sem_fala_do_cliente_nao_e_evidencia_fraca_e_sim_ausencia(
+    cliente_com_sinal, tmp_path
+):
+    """"Sem sinal" tem forma propria (a cabeca vazada) e nao vira tracejada."""
+    caminho = tmp_path / "mudo.csv"
+    caminho.write_text(CSV_SEM_CLIENTE, encoding="utf-8")
+    cliente_com_sinal.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    resumo = cliente_com_sinal.get("/conversas").json()[0]
+    assert resumo["score"] is None
+    assert resumo["evidencia_fraca"] is None

@@ -1,0 +1,93 @@
+site_name: Fraus
+site_description: >-
+  Satisfação do cliente inferida de atendimentos de chatbot, sem LLM em runtime
+site_author: João Pedro Tavares Vicente
+# Sem barra final e sem host fixo: quem publica no GitHub Pages recebe o
+# caminho do repositorio, e cravar um host aqui quebraria a previa local.
+site_url: ""
+# O Markdown que ja existe FICA ONDE ESTA -- `docs/` e o mesmo diretorio que
+# a sessao de agente le. O site nao tem copia propria de nada, entao nao
+# existe versao que envelhece separada do repositorio.
+docs_dir: docs
+repo_url: https://github.com/Joao-Tavares0312/Fraus
+
+theme:
+  name: material
+  language: pt-BR
+  palette:
+    # Dois temas ESCUROS e a decisao do dashboard/DESIGN.md, e o site herda a
+    # mesma escolha: alternar para claro aqui daria ao leitor da documentacao
+    # uma identidade que o produto nao tem.
+    scheme: slate
+    primary: black
+    accent: amber
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - search.suggest
+    - toc.follow
+
+plugins:
+  - search:
+      lang: pt
+  # AS DOCSTRINGS DESTE PROJETO SAO A DOCUMENTACAO, e este plugin e a unica
+  # razao pela qual a escolha foi MkDocs. Elas nao descrevem o QUE o codigo
+  # faz -- descrevem POR QUE ele e assim, e varias explicam um defeito real
+  # que a regra evita. Nenhum gerador do mundo JS le docstring de Python:
+  # com Fumadocs/Docusaurus/Starlight isso viraria MDX copiado a mao, que
+  # apodrece na primeira mudanca de codigo.
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            members_order: source
+  # O PDF NAO MORA AQUI, e isso e deliberado -- ver `mkdocs-pdf.yml`.
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+
+# As specs e as notas de trabalho ficam FORA do nav de proposito: elas sao o
+# diario do projeto (decisoes, bibliografia, planos), e jogar 38 arquivos na
+# navegacao afogaria as dez paginas que alguem de fora precisa ler. Elas
+# continuam versionadas e continuam linkaveis.
+not_in_nav: |
+  superpowers/
+  notas/
+  colab.md
+
+nav:
+  - Início: index.md
+  - A tese: tese.md
+  - Invariantes: invariantes.md
+  - Arquitetura: arquitetura.md
+  - Treinamento: treinamento.md
+  - Estado e pendências: handoff.md
+  - Hospedagem: hospedagem.md
+  # Copiado de dashboard/DESIGN.md no build (`scripts/reunir_docs.py`), nunca
+  # a mao: copia manual e a documentacao divergindo do produto em uma semana.
+  - Design da interface: design.md
+  - Conformidade (AI Act): conformidade.md
+  - Encolher os modelos: encolhimento.md
+  - Limitações conhecidas: limitacoes.md
+  - Referência de código:
+      - Indicadores: referencia/indicadores.md
+      - Modelo canônico: referencia/modelos.md
+      - Fusor: referencia/fusor.md
+      - Sinais: referencia/sinais.md
+      - Evidência e deriva: referencia/diagnostico.md

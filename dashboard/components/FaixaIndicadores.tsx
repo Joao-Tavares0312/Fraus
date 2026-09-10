@@ -3,6 +3,8 @@
 import { motion } from "motion/react";
 import { RessalvaDaTela } from "./AparatoDaTela";
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
+import { DiscordanciaContida } from "./DiscordanciaContida";
+import { IntervaloDoNps } from "./IntervaloDoNps";
 import { pilha } from "@/lib/movimento";
 import {
   CSAT_SAUDAVEL,
@@ -150,6 +152,19 @@ export function FaixaIndicadores({
         }
       />
 
+      {/* A INCERTEZA AMOSTRAL do NPS, colada nele. Sem isto o mesmo "-12"
+          aparecia com 8 atendimentos e com 8.000, e o intervalo e a resposta
+          da tela para "quantas conversas sustentam esse numero?". So aparece
+          quando o SERVIDOR calculou: o plano B deixa `npsIntervalo` nulo de
+          proposito, porque derivar aqui duplicaria N_MINIMO_NPS em
+          TypeScript -- a divergencia que a invariante 3 existe para impedir. */}
+      {erro || !indicadores.npsIntervalo ? null : (
+        <IntervaloDoNps
+          intervalo={indicadores.npsIntervalo}
+          className="-mt-1"
+        />
+      )}
+
       <CartaoIndicador
         rotulo="CSAT inferido"
         qualificacao="estimativa"
@@ -192,6 +207,18 @@ export function FaixaIndicadores({
         trilho={trilhoDeLatencia(limiares)}
         explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
       />
+
+      {/* O FALSO CONTAINMENT vem logo DEPOIS da taxa de contencao e da
+          latencia, e nao como quinto cartao: ele e a leitura critica dos dois
+          numeros acima. Composicao propria porque e o unico ponto da tela
+          onde dito e medido se contradizem -- ver DiscordanciaContida. */}
+      {erro ? null : (
+        <DiscordanciaContida
+          percentual={indicadores.falsoContainment}
+          contidos={indicadores.contidosComSinal}
+          className="border-t border-linha pt-3"
+        />
+      )}
     </motion.section>
     {/* O METODO dos quatro indicadores vira UM aparato so, no pe da tela --
         antes cada cartao carregava o proprio paragrafo e a pilha inteira

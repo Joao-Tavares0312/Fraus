@@ -31,6 +31,33 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]
+# Gerador do site de documentacao. Extra SEPARADO pelo mesmo motivo que o
+# `dev` e opt-in: quem so quer subir a API nao baixa um gerador de site.
+# `uv sync --extra docs` para trabalhar na documentacao.
+#
+# `mkdocstrings` e a razao de a escolha ser MkDocs e nao uma ferramenta do
+# mundo JS: as docstrings deste projeto explicam POR QUE o codigo e assim, e
+# nenhum gerador em Next/Astro le docstring de Python -- teria que reescrever
+# tudo a mao em MDX, que e a receita para a documentacao divergir do codigo no
+# dia seguinte. `mkdocs-to-pdf` cospe o PDF do site inteiro no mesmo
+# `mkdocs build`, que e o formato de um anexo de monografia.
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=1.0",
+    "mkdocs-to-pdf>=0.9",
+]
+
+# RUNTIME do backend ONNX -- so o `onnxruntime`, que basta para PONTUAR.
+# Ele nao traz torch: a inferencia acontece no grafo exportado, e o tokenizador
+# do `transformers` funciona sem torch instalado. E o que permite uma imagem de
+# deploy sem os 497 MB do torch.
+onnx = ["onnxruntime>=1.20"]
+
+# FERRAMENTA DE CONVERSAO, nunca de deploy. `optimum` exporta o checkpoint para
+# ONNX e o `onnxruntime.quantization` o quantiza -- os dois rodam UMA vez, na
+# maquina de quem converte, e nao tem nada que fazer num container de producao.
+conversao = ["optimum[onnxruntime]>=1.24", "onnxruntime>=1.20"]
+
 
 [build-system]
 requires = ["hatchling"]

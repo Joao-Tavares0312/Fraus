@@ -89,13 +89,43 @@ export function baseDaApi(): string {
 
 export type Categoria = "detrator" | "neutro" | "promotor";
 
+export type IntervaloNps = {
+  nps: number | null;
+  ic_inferior: number;
+  ic_superior: number;
+  n: number;
+};
+
 export type Indicadores = {
   /** null quando nenhum atendimento tem score: ausencia de dado nao e zero. */
   nps: number | null;
+  /**
+   * O mesmo NPS com a incerteza AMOSTRAL: ponto, as duas pontas do intervalo
+   * de 95% e o n. `nps` DENTRO do intervalo vem null quando a amostra e
+   * pequena demais para um ponto estimado -- e o `n` vem preenchido mesmo
+   * assim, para a tela dizer quanto falta.
+   *
+   * Opcional porque uma API anterior a este campo nao o devolve.
+   */
+  nps_intervalo?: IntervaloNps | null;
   /** null quando nenhum atendimento tem score. */
   csat: number | null;
-  /** Contencao NAO depende de score, entao sempre e um numero. */
-  containment_rate: number;
+  /**
+   * Contencao NAO depende de score: conversa sem fala do cliente nao tem NPS
+   * nem CSAT e mesmo assim conta como contida. So o conjunto VAZIO vem
+   * `null` -- nao houve o que conter.
+   */
+  containment_rate: number | null;
+  /**
+   * Percentual dos atendimentos CONTIDOS que sairam detratores -- o sucesso
+   * falso. `null` quando nenhum contido tem score, nunca 0.
+   *
+   * Opcional porque uma API anterior a este indicador nao o devolve, e
+   * `undefined` ali significa "nao sei", que nao pode virar zero.
+   */
+  falso_containment?: number | null;
+  /** Denominador do campo acima -- a tela diz "3 de 12", nao so o percentual. */
+  contidos_com_score?: number;
   total_conversas: number;
   sem_sinal: number;
   /**
@@ -179,6 +209,21 @@ export type ResumoConversa = {
 
   /** `null` na esmagadora maioria dos atendimentos -- ver `Contestacao`. */
   contestacao: Contestacao | null;
+
+  /**
+   * Tem score, e pouca fala do cliente para sustenta-lo -- a CABECA
+   * TRACEJADA. `null` quando nao ha fala nenhuma: ai o estado e "sem sinal",
+   * que tem forma propria (a cabeca vazada), e confundir os dois perderia a
+   * distincao que o produto inteiro defende.
+   *
+   * Derivada no SERVIDOR a partir de evidencia OBSERVAVEL (quantas mensagens,
+   * quantas palavras), nunca da probabilidade do modelo -- probabilidade nao
+   * calibrada nao e confianca. Por isso o campo nao se chama `confianca`.
+   *
+   * Opcionais: uma API anterior a este campo nao os devolve.
+   */
+  evidencia_fraca?: boolean | null;
+  motivos_evidencia_fraca?: string[];
 };
 
 /**

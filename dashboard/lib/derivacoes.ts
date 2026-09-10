@@ -21,6 +21,7 @@ import lexicoEmoji from "./lexicoEmoji.json";
 import type {
   Categoria,
   DetalheConversa,
+  IntervaloNps,
   Mensagem,
   MensagemAtribuida,
   PontoSerieApi,
@@ -761,8 +762,23 @@ export function tempoMedianoDeResposta(detalhes: DetalheConversa[]): number | nu
  */
 export type IndicadoresDoPeriodo = {
   nps: number | null;
+  /**
+   * Intervalo de confianca do NPS, quando o SERVIDOR o calcula. O plano B
+   * deixa null de proposito: derivar intervalo no cliente duplicaria a regra
+   * de N_MINIMO_NPS em TypeScript, que e exatamente a divergencia que a
+   * invariante 3 existe para impedir.
+   */
+  npsIntervalo?: IntervaloNps | null;
   csat: number | null;
   containment: number | null;
+  /**
+   * Percentual dos atendimentos CONTIDOS que sairam detratores -- o sucesso
+   * falso. null quando nenhum contido tem sinal: 0 se leria como "nenhum
+   * contido saiu insatisfeito", que ninguem mediu.
+   */
+  falsoContainment: number | null;
+  /** O denominador da fracao acima, para a tela poder dizer "3 de 12". */
+  contidosComSinal: number;
   total: number;
   semSinal: number;
   /** Quantas conversas entraram nos calculos de NPS/CSAT (as com categoria). */
@@ -796,10 +812,25 @@ export function indicadoresDoPeriodo(
       : (100 * detalhes.filter((d) => !d.escalou_para_humano).length) /
         detalhes.length;
 
+  // Contido E com sinal: quem escalou nao foi contido, e quem nao tem
+  // categoria nao e nem sucesso nem fracasso.
+  const contidosComSinal = detalhes.filter(
+    (d) => !d.escalou_para_humano && d.categoria !== null,
+  );
+  const falsoContainment =
+    contidosComSinal.length === 0
+      ? null
+      : (100 *
+          contidosComSinal.filter((d) => d.categoria === "detrator").length) /
+        contidosComSinal.length;
+
   return {
     nps: npsDeCategorias(categorias),
+    npsIntervalo: null,
     csat,
     containment,
+    falsoContainment,
+    contidosComSinal: contidosComSinal.length,
     total,
     semSinal,
     comSinal: categorias.length,

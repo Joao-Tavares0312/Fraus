@@ -64,6 +64,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/configuracao.py` | configuração vigente: padrão de fábrica no código, delta no banco |
 | `fraus/db.py` | SQLite, sem ORM |
 | `fraus/api/main.py` | FastAPI: `criar_app` (fábrica) e `app` (lazy, PEP 562) |
+| `fraus/evidencia.py` | evidência fraca (a cabeça tracejada) — observável, nunca probabilidade |
+| `fraus/deriva.py` | deriva de distribuição — a invariante 10 como alarme de runtime |
 | `dashboard/` | Next.js — ver `dashboard/DESIGN.md` |
 | `notebooks/` | treino no Colab (BERTimbau, depois fusor) |
 | `scripts/api_demo.py` | servidor de demonstração, motor dublê — **nunca em produção** |
@@ -76,7 +78,16 @@ uv run pytest -q
 uv run python scripts/api_demo.py      # API de demonstração, sem modelo
 uv run uvicorn fraus.api.main:app      # API real — exige modelos/ treinado
 cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há package.json na raiz
+
+uv sync --extra docs                   # gerador do site (extra opt-in, como o dev)
+uv run python scripts/reunir_docs.py   # traz dashboard/DESIGN.md para docs/
+uv run mkdocs serve                    # prévia local do site
+uv run mkdocs build --strict           # link quebrado derruba o build
 ```
+
+O **PDF** não sai no `mkdocs.yml` do dia a dia: ele usa WeasyPrint, que exige
+as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
+(`INHERIT` do principal) e roda só no CI Linux — ver `.github/workflows/docs.yml`.
 
 ---
 
@@ -140,6 +151,13 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
   porque nenhum corpus público de review em português tem timestamps de diálogo.
   Isso é limitação declarada, não segredo.
 - Estado vazio **nomeia o que falta**. Nunca preencha com número simulado.
+- **A família `emocao_*` faz do Fraus um sistema de reconhecimento de emoção**
+  pela letra do EU AI Act — com obrigação de informar quem está exposto
+  (Art. 50(3), em vigor desde 02/08/2026) e uma fronteira que o produto não
+  cruza: **o Fraus não pontua atendentes**, porque reconhecimento de emoção no
+  local de trabalho é proibido desde fev/2025. "Score de performance por
+  atendente" é violação, não feature. Escopo, base legal e o que já está de pé
+  em [docs/conformidade.md](docs/conformidade.md).
 
 ## Documentos
 
@@ -147,3 +165,5 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
 - `docs/superpowers/plans/2026-08-13-dolos-implementacao.md` — plano de implementação
 - `docs/treinamento.md` — os dois notebooks e os artefatos
 - `dashboard/DESIGN.md` — sistema de design da interface
+- `docs/conformidade.md` — EU AI Act: o que obriga e o que **proíbe** (não pontuar atendente)
+- `mkdocs.yml` — o site publicado, que lê o Markdown de `docs/` e as docstrings do Python
