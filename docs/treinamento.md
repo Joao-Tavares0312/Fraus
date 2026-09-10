@@ -679,3 +679,39 @@ Nao tem notebook: e **deterministico**, nao treinado — `fraus/sinais/estilo.py
 **A excecao do `kkkk`.** Alongamento de caractere (`MINIMO_ALONGAMENTO = 3` repeticoes seguidas) e tratado como enfase, exceto para as letras de riso (`k`, `h`): "kkkk" e o marcador POSITIVO mais comum do chat brasileiro, e contar risada junto de "naooooo" inverteria o sentido da feature em boa parte das conversas reais.
 
 **Limitacao a declarar:** o lexicon de palavrao e curadoria propria, nao recurso academico publicado. Diferente do SentiLex-PT02 (Silva, Carvalho e Sarmento, PROPOR 2012) e do Emoji Sentiment Ranking usados pelos outros sinais, `palavroes_ptbr.csv` nao tem paper citavel nem revisao por pares — a cobertura e a gradacao vieram de julgamento proprio, e isso precisa aparecer no relatorio como o que e.
+
+
+---
+
+## Notebook 05 — calibração, e por que ele não retreina nada
+
+Acrescentado em 10/09/2026. Ele ajusta **um escalar por cabeça** (a
+temperatura) sobre os checkpoints que já existem, e mede o quanto isso aproxima
+a confiança declarada da frequência empírica — o **ECE**, mais o diagrama de
+confiabilidade.
+
+**Temperature scaling não muda a decisão do modelo.** Dividir todos os logits
+pelo mesmo `T > 0` preserva a ordem, então acurácia e F1 ficam idênticos. É a
+única forma de calibração que não pode piorar o classificador — e o notebook
+tem uma asserção que falha se o `argmax` mudar, porque isso seria defeito de
+código, não propriedade do método.
+
+Ele produz `modelos/calibracao.json`. **Nada no runtime consome esse arquivo
+ainda, e isso é deliberado:** aplicar a temperatura muda o score de toda
+conversa do banco, e a régua deste projeto para trocar o que gera número é
+medir o efeito em `score`/`nota`/`categoria` antes de promover — a mesma
+disciplina que recusou a quantização int8 (ver `docs/encolhimento.md`).
+
+**A ironia é o caso a não confundir.** Calibrar vai melhorar o ECE dela e ela
+vai continuar errando 6 em 10 falas sinceras de atendimento. Temperatura ajusta
+*o quanto* o modelo se diz confiante, não *sobre o que* ele está confiante.
+Apresentar a melhora do ECE como conserto do domínio seria falso.
+
+## Notebook 02 — a seção 10 é uma pendência, não uma etapa
+
+A saturação das features de tempo está descrita lá com a medição, o conserto
+(`winsorizar no p99` + `log1p` antes do scaler) e — o que mais importa — **o
+acoplamento**: a transformação precisa existir no notebook *e* no runtime, ou o
+score sai errado em silêncio. Um `fusor.joblib` treinado sem a compressão contra
+um runtime que comprime continua tendo `n_features_in_ = 39`, então
+`Fusor.carregar` **não pega** essa incompatibilidade.
