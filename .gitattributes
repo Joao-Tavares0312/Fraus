@@ -1,0 +1,20 @@
+# Fim de linha. Existe por um motivo concreto, nao por higiene.
+#
+# Este projeto e desenvolvido no Windows e EXECUTADO no Linux (a VM Ampere da
+# Oracle, o container, o runner do GitHub Actions). O Git do Windows converte
+# LF em CRLF ao gravar na copia de trabalho -- e um shell script com CRLF nao
+# roda no Linux: o kernel le `#!/usr/bin/env bash\r` e responde
+#
+#     bad interpreter: /usr/bin/env bash^M: No such file or directory
+#
+# O erro nao menciona fim de linha em lugar nenhum, e o `^M` passa por sujeira
+# do terminal. Ja custou tarde de gente.
+*.sh text eol=lf
+
+# Mesmo motivo, outros arquivos que o Linux le como script ou configuracao.
+Dockerfile   text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+
+# Notebook e JSON: o diff ja e ruim: CRLF o tornaria ilegivel.
+*.ipynb      text eol=lf
