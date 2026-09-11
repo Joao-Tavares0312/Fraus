@@ -127,7 +127,7 @@ E duas variáveis amarram tudo:
 ```bash
 # na Vercel, no projeto da dashboard
 FRAUS_API_URL=https://api.seu-dominio.com
-NEXT_PUBLIC_URL_DOCS=https://joao-tavares0312.github.io/Fraus/
+NEXT_PUBLIC_URL_DOCS=https://joao-tavares0312.github.io/fraus-docs/
 
 # na VM, no docker run
 FRAUS_ORIGENS=https://sua-dashboard.vercel.app
