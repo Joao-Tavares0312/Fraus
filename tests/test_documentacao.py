@@ -170,3 +170,107 @@ def test_o_pdf_herda_o_PUBLICO_e_nao_o_interno():
     interno levaria o codigo-fonte e as specs para dentro dele.
     """
     assert "INHERIT: mkdocs-publico.yml" in PDF.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# O que o `--strict` NAO pega, e por isso passou seis dias de pe.
+#
+# `--strict` confere link entre PAGINAS. Ele nao confere se o CSS declarado
+# existe no site construido, e rebaixa ancora quebrada a INFO. Os dois defeitos
+# abaixo sobreviveram a todos os builds verdes; quem os achou foi o WeasyPrint,
+# porque ele e o unico que tenta CARREGAR o que as paginas prometem.
+# ---------------------------------------------------------------------------
+
+
+def _bloco_exclude_docs() -> list[str]:
+    """As linhas de padrao de `exclude_docs`, sem comentario nem vazio."""
+    texto = PUBLICO.read_text(encoding="utf-8")
+    bloco = texto[texto.index("exclude_docs:"):texto.index("nav:")]
+    return [
+        linha.strip()
+        for linha in bloco.splitlines()[1:]
+        if linha.strip() and not linha.strip().startswith("#")
+    ]
+
+
+def test_o_css_declarado_chega_ao_site_em_vez_de_virar_link_quebrado():
+    """`exclude_docs` nao esconde pagina: ele tira o arquivo do BUILD.
+
+    `extra_css` faz cada pagina emitir um `<link>` para o arquivo. Excluir esse
+    arquivo do build nao apaga o `<link>` -- deixa as duas pontas: a tag em
+    toda pagina, e nenhum arquivo do outro lado. O site publicou CSS 404 em
+    todas as paginas e nada reclamou, porque `--strict` confere link entre
+    paginas e nao a existencia de `extra_css`.
+
+    O comentario que autorizava a exclusao dizia que "o CSS e copiado para o
+    site pelo proprio tema". Nao e: quem copia e o MkDocs, como parte do
+    `docs_dir`, e `exclude_docs` acontece antes.
+    """
+    import fnmatch
+
+    declarados = re.findall(
+        r"^\s*-\s*(\S+\.css)\s*$",
+        CONFIG.read_text(encoding="utf-8"),
+        re.M,
+    )
+    assert declarados, "esperado ao menos um `extra_css` em mkdocs.yml"
+
+    padroes = _bloco_exclude_docs()
+    for css in declarados:
+        casou = [p for p in padroes if fnmatch.fnmatch(css, p.lstrip("/"))]
+        assert not casou, (
+            f"`extra_css: {css}` e excluido do build publico por {casou} -- "
+            "toda pagina vai apontar para um arquivo que nao existe"
+        )
+
+
+def _slug(titulo: str) -> str:
+    """O mesmo slug do `toc` do Python-Markdown, que e quem gera os `id`.
+
+    Reimplementar e o preco de nao arrastar o markdown para o teste, e a regra
+    e curta: tira acento, descarta o que nao e palavra, junta espaco em hifen.
+    O caso que importa e o travessao -- ele nao e `\\w`, entao VIRA NADA, e
+    `"Sinal lexico -- SentiLex"` colapsa para UM hifen. Escrever o link com
+    dois, imitando o travessao, gera ancora que nao existe.
+    """
+    import unicodedata
+
+    texto = unicodedata.normalize("NFKD", titulo)
+    texto = texto.encode("ascii", "ignore").decode()
+    texto = re.sub(r"[^\w\s-]", "", texto).strip().lower()
+    return re.sub(r"[-\s]+", "-", texto)
+
+
+def _paginas_publicas() -> list[Path]:
+    """Os `.md` que o recorte publico constroi."""
+    fora = {"superpowers", "notas"}
+    arquivos = {p.strip("/") for p in _bloco_exclude_docs() if p.endswith(".md")}
+    return [
+        p
+        for p in sorted(DOCS.rglob("*.md"))
+        if not fora & set(p.relative_to(DOCS).parts) and p.name not in arquivos
+    ]
+
+
+@pytest.mark.parametrize(
+    "pagina", _paginas_publicas(), ids=lambda p: p.name
+)
+def test_ancora_da_propria_pagina_existe(pagina: Path):
+    """Ancora quebrada e INFO no MkDocs, entao `--strict` passa por cima.
+
+    Ela nao derruba build nenhum: so entrega ao leitor um link que nao leva a
+    lugar nenhum, e no PDF vira erro do WeasyPrint -- que e onde esta apareceu.
+    """
+    texto = pagina.read_text(encoding="utf-8")
+    titulos = {
+        _slug(re.sub(r"[`*\[\]]", "", t))
+        for t in re.findall(r"^#{1,6}\s+(.+?)\s*$", texto, re.M)
+    }
+    quebradas = [
+        alvo
+        for alvo in re.findall(r"\]\(#([^)]+)\)", texto)
+        if alvo not in titulos
+    ]
+    assert not quebradas, (
+        f"{pagina.name} aponta para ancora que nao existe: {quebradas}"
+    )

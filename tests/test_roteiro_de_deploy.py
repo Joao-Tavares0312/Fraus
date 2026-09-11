@@ -105,6 +105,57 @@ def test_o_script_de_provisionamento_faz_parse():
     assert processo.returncode == 0, processo.stderr
 
 
+def test_a_imagem_instala_o_projeto_em_vez_de_listar_dependencia_a_mao():
+    """Lista de dependencia escrita a mao no Dockerfile envelhece em silencio.
+
+    Ate 11/09/2026 o Dockerfile mantinha uma copia manual das dependencias, em
+    paralelo a do `pyproject.toml`. As duas divergiram: faltavam `pyjwt`,
+    `openpyxl`, `python-docx`, `pypdf` e `python-multipart`. A imagem
+    CONSTRUIA sem reclamar -- e so morria no boot, com `ModuleNotFoundError:
+    No module named 'jwt'`, a uma distancia enorme da causa.
+
+    Quem acrescenta uma dependencia mexe no pyproject e nao tem motivo nenhum
+    para lembrar deste arquivo. A unica defesa que funciona e nao haver duas
+    listas.
+    """
+    linhas = [
+        linha
+        for linha in (RAIZ / "Dockerfile").read_text(encoding="utf-8").splitlines()
+        if not linha.lstrip().startswith("#")
+    ]
+    dockerfile = "\n".join(linhas)
+
+    assert "pip install --no-cache-dir ." in dockerfile, (
+        "o Dockerfile precisa instalar o PROJETO (`pip install .`), e nao "
+        "repetir as dependencias do pyproject.toml"
+    )
+
+    # O torch e a excecao legitima: ele precisa de tratamento por arquitetura
+    # (indice de CPU no x86, pin de versao no ARM) e por isso vem antes.
+    import tomllib
+
+    declaradas = tomllib.loads(
+        (RAIZ / "pyproject.toml").read_text(encoding="utf-8")
+    )["project"]["dependencies"]
+
+    # SO as linhas de instalacao. Procurar o nome do pacote no arquivo inteiro
+    # acusaria `uvicorn` (que aparece no CMD) e `joblib` (no caminho
+    # `/modelos/fusor.joblib` do ENV) -- mencao nao e instalacao, e uma sonda
+    # que confunde as duas mede texto em vez de comportamento.
+    instalacoes = "\n".join(
+        linha.lower() for linha in linhas if "pip install" in linha
+    )
+    repetidas = [
+        spec
+        for spec in declaradas
+        if not spec.lower().startswith("torch")
+        and re.split(r"[<>=!\[ ]", spec.strip())[0].lower() in instalacoes
+    ]
+    assert repetidas == [], (
+        f"dependencia repetida no Dockerfile fora do pyproject: {repetidas}"
+    )
+
+
 def test_o_script_nao_regera_segredo_em_execucao_repetida():
     """A regra que torna o script seguro de repetir, presa no arquivo.
 

@@ -62,13 +62,42 @@ jobs:
       - name: Reunir a documentacao externa
         run: uv run python scripts/reunir_docs.py
 
-      # `mkdocs-pdf.yml` herda de `mkdocs-publico.yml`, entao o site E o PDF
-      # saem do MESMO recorte. `--strict`: link quebrado derruba o build em vez
+      # O SITE sai daqui, com `--strict`: link quebrado derruba o build em vez
       # de virar um 404 numa pagina publica.
-      - name: Construir o site publico e o PDF
+      - name: Construir o site publico
         env:
           FRAUS_URL_DASHBOARD: ${{ vars.FRAUS_URL_DASHBOARD }}
-        run: uv run mkdocs build --strict --config-file mkdocs-pdf.yml
+        run: uv run mkdocs build --strict --config-file mkdocs-publico.yml
+
+      # O PDF sai de um SEGUNDO build, e SEM `--strict`. Os dois detalhes sao
+      # deliberados e custaram uma sessao para entender.
+      #
+      # POR QUE UM SEGUNDO BUILD. `mkdocs-pdf.yml` herda do publico, entao o
+      # recorte e o mesmo -- mas construir os dois de uma vez significa que o
+      # HTML publicado e o HTML renderizado para PDF sao o mesmo artefato, e
+      # eles nao querem as mesmas coisas. Separado, cada um fica com o que
+      # precisa sem negociar com o outro.
+      #
+      # POR QUE SEM `--strict`. O `mkdocs-to-pdf` usa a flag `strict` do MkDocs
+      # para um fim diferente do site: ele CONTA os registros de nivel ERROR do
+      # WeasyPrint e derruba o build com a soma. E o WeasyPrint emite um erro
+      # por cada ancora de numero de linha do Material (`anchor_linenums`) --
+      # foram 76 -- porque essas ancoras existem no HTML mas sao desenhadas por
+      # CSS, e ele so registra ancora de elemento que gera caixa. Nenhuma delas
+      # e defeito: "va para a linha 3 deste bloco" nao quer dizer nada dentro
+      # de um PDF de 14 artigos.
+      #
+      # Nada de guarda se perde nisso: a confererencia de link entre paginas ja
+      # rodou no passo acima, com `--strict`, sobre o mesmo conteudo. Este passo
+      # e renderizacao, nao validacao.
+      - name: Construir o PDF
+        env:
+          FRAUS_URL_DASHBOARD: ${{ vars.FRAUS_URL_DASHBOARD }}
+        run: |
+          uv run mkdocs build --config-file mkdocs-pdf.yml -d site-pdf
+          mkdir -p site/pdf
+          cp site-pdf/pdf/fraus.pdf site/pdf/fraus.pdf
+          ls -l site/pdf/fraus.pdf
 
       # A ULTIMA TRAVA, e ela existe porque as anteriores sao configuracao e
       # esta e o artefato. Se qualquer coisa escapar do recorte, o job morre
@@ -89,6 +118,14 @@ jobs:
             fi
           done
           test "$vazou" -eq 0
+          # O PDF vem de um build separado e e COPIADO para dentro de site/. Um
+          # erro nessa copia nao derrubaria nada por si -- publicaria um site
+          # cuja home promete um anexo que nao esta la. A home o referencia em
+          # HTML cru, que o `--strict` nao valida, entao a confererencia e aqui.
+          if [ ! -s site/pdf/fraus.pdf ] ; then
+            echo "::error::o PDF nao chegou em site/pdf/fraus.pdf"
+            exit 1
+          fi
           echo "recorte conferido: $(find site -name '*.html' | wc -l) paginas"
 
       - name: Publicar no repositorio publico

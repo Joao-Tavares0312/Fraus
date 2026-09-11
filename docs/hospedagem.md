@@ -423,9 +423,16 @@ docker build -t fraus-api .
 3 GB maior:
 
 ```bash
-docker run --rm fraus-api du -sh /usr/local/lib/python3.12/site-packages/torch
-# esperado: ~500M. Se vier em GB, veio CUDA junto.
+docker run --rm fraus-api python -c "import torch; print(torch.__version__, torch.version.cuda)"
+# esperado: uma versao terminada em "+cpu" e None. Ex.: 2.14.0+cpu None
 ```
+
+!!! warning "Não confira isso por tamanho"
+    A versão anterior deste passo mandava medir `~500 MB` com `du`. Em
+    11/09/2026 o build mediu **769 MB de `torch 2.14.0+cpu`** — CPU puro, sem
+    um pacote `nvidia` sequer. A biblioteca engordou entre versões, e a sonda
+    de tamanho acusaria CUDA onde não há. `torch.version.cuda` é o fato;
+    megabyte é palpite.
 
 Agora as credenciais. **Gere e GUARDE** — a mestra não é recuperável:
 

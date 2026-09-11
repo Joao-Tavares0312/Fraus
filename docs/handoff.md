@@ -576,12 +576,37 @@ compartilhada faria o volume de uma rota cortar a outra.
    id e leva "duplicada", e o atendimento some em silêncio. Há teste para isso
    (`test_o_429_nao_queima_o_webhook_id_para_a_retentativa`).
 
-### P1 — Hospedagem
+### P0 — Hospedagem — BLOQUEADA POR CAPACIDADE DA ORACLE, 11/09/2026
 
-`Dockerfile` e `docs/hospedagem.md` prontos. A API **não cabe em serverless**
-(torch instalado = 497 MB contra teto de 250 MB da Vercel, mais 1,3 GB de
-pesos). Precisa de container com volume e ~2 GB de RAM. O front na Vercel é um
-comando — e mostra "API não respondeu" até a API ter endereço.
+> Estado completo, com o que foi medido e o que foi descartado:
+> **[notas/2026-09-11-deploy-na-oracle.md](notas/2026-09-11-deploy-na-oracle.md)**
+
+A API **não cabe em serverless** (torch instalado mede 769 MB contra o teto de
+500 MB da Vercel, mais 1,3 GB de pesos). Precisa de container com volume e
+~2 GB de RAM.
+
+**Tudo está pronto menos a máquina.** A `oci` CLI está autenticada, a VCN e a
+Security List existem (22, 80 e 443 abertas), e
+`scripts/provisionar_oracle.sh <IP>` executa o deploy inteiro num comando. O
+`Dockerfile` foi **ensaiado em container real** e devolve `motor: real` com
+predição correta — inclusive `None` para conversa sem fala do cliente.
+
+O que falta é hardware: `Out of capacity for shape VM.Standard.A1.Flex`, em
+~35 tentativas. Já descartado por medição — não é a imagem, não é o tamanho do
+shape (1/6 e 2/12 falham igual), não é cota (`used 0, available 2`), e **não é
+resolvível trocando de região**: recurso Always Free só existe na região de
+origem, que é `sa-saopaulo-1`. Um laço destacado segue pedindo a máquina.
+
+A alavanca que sobra é upgrade para **Pay As You Go** — mantém a franquia
+gratuita e costuma destravar a fila de A1, mas exige cartão e passa a cobrar
+qualquer coisa além dela. Decisão do João.
+
+### P1 — O site público da documentação
+
+O workflow, o recorte e as três camadas de guarda contra vazamento estão
+prontos e testados. Faltam três valores que só o João pode criar no
+repositório privado: o secret `DEPLOY_KEY_DOCS` e as variáveis `REPO_DOCS` e
+`FRAUS_URL_DASHBOARD`. Passo a passo na nota citada acima.
 
 ### P2 — Dívida de escala
 
