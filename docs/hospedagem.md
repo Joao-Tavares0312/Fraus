@@ -8,12 +8,35 @@ moram no mesmo lugar:
 | **dashboard** (Next.js) | CPU por milissegundos, nenhum estado | sim |
 | **API** (FastAPI + BERTimbau) | 1,8 GB de disco, RAM, banco que persiste | **não** |
 
+## O que mudou em 2026, e o que não mudou
+
+> **Atualizado em 11/09/2026.** Duas premissas desta página envelheceram, e uma
+> delas era o argumento principal. Os números abaixo foram medidos nesta data,
+> não estimados.
+
+**O teto da Vercel subiu.** O limite de função Python passou de 250 MB para
+**500 MB** em 24/02/2026, e há **Large Functions** (até 5 GB, em Fluid compute)
+ainda em beta. O argumento "só o torch já é o dobro do teto" deixou de valer.
+
+**E mesmo assim a API não vai para lá**, por três motivos que o tamanho nunca
+foi:
+
+1. **RAM.** Medido: **1.056 MB de RSS** com os três modelos carregados e uma
+   pontuação executada. Isso é o piso, não o pico sob carga.
+2. **Cold start.** Carregar 1,3 GB de pesos a cada instância fria é dezenas de
+   segundos, toda vez que a função dorme.
+3. **Disco que persiste.** O SQLite precisa sobreviver entre requisições.
+
+Caber em 500 MB exigiria a quantização int8 — que foi **medida e recusada**:
+1,7% dos atendimentos trocavam de categoria, um deles de detrator para
+promotor. Ver [Encolher os modelos](encolhimento.md).
+
 ## Por que a API não vai para a Vercel
 
 Não é preferência, é medida:
 
-- `torch` instalado ocupa **497 MB**. O teto de uma função da Vercel é **250 MB**
-  descompactado — só a biblioteca já é o dobro.
+- `torch` instalado ocupa **497 MB**, contra teto de **500 MB** — e sobram 3 MB
+  para os 1,3 GB de pesos, o FastAPI e o scikit-learn.
 - Os três BERTimbau somam **1,3 GB** de pesos.
 - Cada requisição roda inferência em CPU. A rota `/analisar` faz uma passada de
   modelo **por palavra** do cliente; isso leva segundos e estoura o tempo máximo
@@ -23,9 +46,64 @@ Não é preferência, é medida:
 
 O mesmo raciocínio vale para Lambda e Cloud Functions.
 
-## Onde a API cabe
+## Onde a API cabe — as opções gratuitas, conferidas em 11/09/2026
 
-Qualquer host de **container com volume**: Render, Railway, Fly.io ou uma VM.
+O requisito que elimina quase todo mundo é **~1,1 GB de RAM medidos** mais um
+**volume que persista**.
+
+| host | RAM grátis | dorme? | serve? |
+|---|---|---|---|
+| **Oracle Cloud Always Free** | 4 ARM cores / **24 GB** | **não** | ✅ **a recomendação** |
+| Google Cloud Run | até 4 GB, 2M req/mês | sim (escala a zero) | ⚠️ sem volume — pesos na imagem ou baixados no boot |
+| Render free | **512 MB** | sim, 30–50 s para acordar | ❌ não cabe |
+| Hugging Face Spaces | 2 vCPU / 16 GB | — | ❌ Docker Space exige **PRO** desde 2026 |
+| Railway | crédito único de US$ 5 | — | ❌ é teste, não plano grátis |
+
+### Por que Oracle Always Free, e não Cloud Run
+
+Você pediu custo zero e aceitou cold start — e o detalhe é que **com Oracle você
+não precisa aceitar**: a VM fica ligada, `docker run` sobe o `Dockerfile` desta
+raiz **sem nenhuma alteração**, e os volumes de `/modelos` e `/dados` funcionam
+porque há disco de verdade.
+
+No Cloud Run seria preciso mudar o desenho: sem volume persistente, ou os
+1,3 GB de pesos entram na imagem (e cada deploy reenvia tudo, o que o
+`Dockerfile` recusa por escrito) ou são baixados a cada instância fria. E o
+SQLite precisaria virar Postgres — o `psycopg` já está nas dependências, então
+não é impossível, é só outro projeto.
+
+O preço da Oracle é você administrar uma VM: `docker`, um `systemd` para
+reiniciar sozinho, e TLS. Meia tarde, uma vez.
+
+> **Na semana da banca isso importa mais que tudo:** uma instância que não
+> dorme não tem o momento "professor, espera carregar".
+
+## As três peças, e onde cada uma mora
+
+```
+dashboard (Next.js)   ->  Vercel            grátis, já está lá
+documentação (MkDocs) ->  GitHub Pages      grátis, publica no mesmo build
+API (FastAPI+BERTimbau) -> Oracle Always Free VM   grátis, sempre no ar
+```
+
+E duas variáveis amarram tudo:
+
+```bash
+# na Vercel, no projeto da dashboard
+FRAUS_API_URL=https://api.seu-dominio.com
+NEXT_PUBLIC_URL_DOCS=https://joao-tavares0312.github.io/Fraus/
+
+# na VM, no docker run
+FRAUS_ORIGENS=https://sua-dashboard.vercel.app
+```
+
+`FRAUS_ORIGENS` não tem padrão de propósito: sem ele a API só aceita origem
+local e a dashboard publicada toma erro de CORS. **Falha visível, que se
+conserta — em vez de uma porta aberta que ninguém nota.**
+
+## Onde a API cabe — o requisito técnico
+
+Qualquer host de **container com volume**: uma VM, Render pago, Railway, Fly.io.
 O `Dockerfile` na raiz está pronto e espera duas coisas montadas:
 
 - `/modelos` — os pesos (1,3 GB). **Não estão na imagem** de propósito: assar
