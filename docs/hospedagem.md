@@ -293,6 +293,20 @@ Sem a mestra, vale o aviso de sempre: feche o túnel depois de demonstrar.
 > Esta página **não vai para o site público** (`exclude_docs` em
 > `mkdocs-publico.yml`): ela nomeia variáveis de segredo e descreve a topologia.
 
+!!! tip "Os passos 2 a 8 estão automatizados"
+    ```bash
+    uv run python scripts/abrir_portas_oracle.py   # o firewall da NUVEM
+    scripts/provisionar_oracle.sh SEU_IP [dominio.com]   # o resto
+    ```
+    O script é **idempotente**: rodar de novo depois de uma falha no meio não
+    refaz o que já deu certo — e, em particular, **não regera segredo**. Um
+    `.env` que já existe é lido, nunca reescrito, porque recriar a
+    `FRAUS_CHAVE_MESTRA` invalidaria em silêncio a chave que a Vercel usa, e o
+    sintoma ("401 em tudo") apareceria horas depois, longe da causa.
+
+    O texto abaixo continua sendo a fonte do **porquê** de cada passo. Leia-o
+    quando algo falhar — o script executa as decisões, esta página as explica.
+
 ## 0. O que você precisa antes de começar
 
 - conta na Oracle Cloud (a gratuita basta);
@@ -376,14 +390,20 @@ exit          # sai e entra de novo — o grupo só vale em sessão nova
 Da **sua máquina**:
 
 ```bash
-# O codigo (o repositorio e privado; mandar por scp evita credencial na VM)
-rsync -av --exclude modelos --exclude .git --exclude dashboard \
-      --exclude node_modules --exclude site \
-      ./ ubuntu@SEU_IP:~/fraus/
+# O codigo (o repositorio e privado; mandar por tar evita credencial na VM)
+tar -czf - --exclude=.git --exclude=modelos --exclude=dashboard \
+           --exclude=node_modules --exclude=site . \
+  | ssh ubuntu@SEU_IP "mkdir -p ~/fraus && tar -xzf - -C ~/fraus"
 
 # Os pesos. 1,3 GB -- aqui e onde o tempo vai.
-rsync -av --progress modelos/ ubuntu@SEU_IP:~/fraus-modelos/
+tar -czhf - -C modelos . \
+  | ssh ubuntu@SEU_IP "mkdir -p ~/fraus-modelos && tar -xzf - -C ~/fraus-modelos"
 ```
+
+!!! warning "`tar | ssh`, e não `rsync`"
+    O **Git Bash do Windows não traz `rsync`** — e é nele que este projeto é
+    desenvolvido. A versão anterior deste passo pedia `rsync` e falhava na
+    máquina de quem escreveu o roteiro. `tar` e `ssh` existem dos dois lados.
 
 !!! tip "Os modelos ficam FORA da imagem, de propósito"
     O `Dockerfile` recusa assar os pesos: cada deploy reenviaria 1,3 GB por uma
