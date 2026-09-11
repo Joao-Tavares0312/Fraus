@@ -35,6 +35,12 @@ INHERIT: mkdocs-publico.yml
 #
 # Regra, entao: qualquer opcao de seguranca do `mkdocs-publico.yml` precisa ser
 # REPETIDA aqui, e ha teste amarrando as duas (`tests/test_documentacao.py`).
+# Sem este hook, um build que morre por erro do WeasyPrint nao diz QUAL erro --
+# o plugin conta os registros e ninguem os imprime. O arquivo explica o
+# encanamento; ele nao muda o que e construido, so o que e dito.
+hooks:
+  - scripts/hook_log_weasyprint.py
+
 plugins:
   - search:
       lang: pt
