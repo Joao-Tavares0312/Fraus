@@ -21,6 +21,8 @@ theme:
     scheme: slate
     primary: black
     accent: amber
+  logo: assets/fraus-logo.svg
+  favicon: assets/fraus-logo.svg
   features:
     - navigation.sections
     - navigation.top
@@ -50,6 +52,12 @@ plugins:
             separate_signature: true
             members_order: source
   # O PDF NAO MORA AQUI, e isso e deliberado -- ver `mkdocs-pdf.yml`.
+# A identidade do produto vestindo o site. Os tokens OKLCH sao os mesmos de
+# `dashboard/app/globals.css` -- ver o cabecalho do arquivo para por que eles
+# sao copiados e nao importados.
+extra_css:
+  - assets/fraus.css
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -72,6 +80,15 @@ not_in_nav: |
   colab.md
 
 nav:
+  # A VOLTA PARA O PRODUTO. O MkDocs aceita URL absoluta no nav, e e por isso
+  # que este item existe aqui em vez de virar um botao no tema: um link no nav
+  # aparece no menu lateral E na navegacao movel, sem CSS proprio.
+  #
+  # O endereco vem do AMBIENTE porque ele muda entre a previa local
+  # (localhost:3000) e o deploy. Cravar o de producao faria a previa local
+  # mandar quem clica para outro lugar -- e o default e o de producao porque
+  # o site publicado e quem tem leitor de verdade.
+  - "← Dashboard": !ENV [FRAUS_URL_DASHBOARD, "https://fraus-one.vercel.app/dashboard"]
   - Início: index.md
   - A tese: tese.md
   - Invariantes: invariantes.md

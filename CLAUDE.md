@@ -81,9 +81,16 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
 
 uv sync --extra docs                   # gerador do site (extra opt-in, como o dev)
 uv run python scripts/reunir_docs.py   # traz dashboard/DESIGN.md para docs/
-uv run mkdocs serve                    # prévia local do site
-uv run mkdocs build --strict           # link quebrado derruba o build
+uv run mkdocs serve -a localhost:8001  # prévia local — 8001, a 8000 é da API
+uv run mkdocs build --strict           # build INTERNO (tudo, com codigo-fonte)
+uv run mkdocs build --strict --config-file mkdocs-publico.yml   # o que vai pro ar
 ```
+
+**O repositório é privado e o site é público**, e a fronteira entre os dois é
+`mkdocs-publico.yml`: ele exclui `superpowers/`, `notas/`, `handoff.md` e
+`hospedagem.md`, e desliga o `show_source` (que embute o **corpo das funções**
+no HTML). `not_in_nav` **não** exclui do build — só silencia o aviso. Guardas
+em `tests/test_documentacao.py` e no workflow.
 
 O **PDF** não sai no `mkdocs.yml` do dia a dia: ele usa WeasyPrint, que exige
 as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`

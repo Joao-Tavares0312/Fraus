@@ -87,3 +87,86 @@ def test_nenhuma_pagina_publica_carrega_valor_de_segredo():
             if suspeitos.search(linha):
                 achados.append(f"{pagina.relative_to(RAIZ)}:{numero}")
     assert achados == [], f"valor plausivel de segredo em pagina publicada: {achados}"
+
+
+# ---------------------------------------------------------------------------
+# O RECORTE PUBLICO
+#
+# O repositorio do Fraus e privado e vai continuar privado. O site, nao -- ele
+# mora num repositorio publico separado, porque GitHub Pages a partir de repo
+# privado exige plano pago.
+#
+# Isso cria uma fronteira que NAO E VISIVEL no codigo: os mesmos arquivos
+# Markdown geram dois sites, e so um deles sai para a internet. Estes testes
+# sao a fronteira escrita, porque a alternativa e alguem acrescentar uma pagina
+# e descobrir o vazamento pelo Google.
+# ---------------------------------------------------------------------------
+
+PUBLICO = RAIZ / "mkdocs-publico.yml"
+PDF = RAIZ / "mkdocs-pdf.yml"
+
+# O que nunca pode atravessar, e por que cada um.
+FORA_DO_PUBLICO = {
+    "superpowers/": "specs e planos -- o diario de decisao do projeto",
+    "notas/": "notas de trabalho",
+    "handoff.md": 'tem a secao "a porta destrancada", que descreve a '
+                  "arquitetura de autenticacao pelo lado de dentro",
+    "hospedagem.md": "nomes de variavel de segredo e topologia de deploy",
+}
+
+
+@pytest.mark.parametrize("caminho,motivo", sorted(FORA_DO_PUBLICO.items()))
+def test_o_build_publico_exclui_o_que_e_interno(caminho, motivo):
+    """`exclude_docs`, e NAO `not_in_nav` -- a diferenca e o vazamento.
+
+    `not_in_nav` so silencia o aviso de pagina fora do menu: o MkDocs continua
+    CONSTRUINDO o arquivo, que fica acessivel por URL direta e listado no
+    `sitemap.xml`. Quem tira do build e `exclude_docs`.
+    """
+    texto = PUBLICO.read_text(encoding="utf-8")
+    bloco = texto[texto.index("exclude_docs:"):texto.index("nav:")]
+    assert caminho in bloco, f"{caminho} precisa sair do site publico: {motivo}"
+
+
+@pytest.mark.parametrize("config", [PUBLICO, PDF])
+def test_nenhum_artefato_publicado_embute_codigo_fonte(config):
+    """`show_source: true` coloca o CORPO das funcoes dentro do HTML e do PDF.
+
+    Num repositorio publico isso e um atalho util. Num que se decidiu manter
+    privado, e publicar o codigo por outra porta -- e nada no build reclama.
+
+    O PDF entra aqui junto porque ele reescreve a lista de plugins inteira (o
+    MkDocs substitui listas em vez de somar), entao ele pode reintroduzir o
+    `true` sem tocar no config publico. Ja aconteceu uma vez.
+
+    A sonda le so as linhas de CONFIGURACAO, descartando comentario: os dois
+    arquivos EXPLICAM o perigo em prosa, e a primeira versao deste teste
+    falhou contra o proprio texto que documenta a regra. Sonda que casa
+    comentario mede a documentacao, nao o comportamento.
+    """
+    linhas = [
+        linha.split("#", 1)[0]
+        for linha in config.read_text(encoding="utf-8").splitlines()
+        if not linha.lstrip().startswith("#")
+    ]
+    configuracao = "\n".join(linhas)
+    assert "show_source: false" in configuracao, (
+        f"{config.name} precisa declarar `show_source: false` explicitamente"
+    )
+    assert "show_source: true" not in configuracao, (
+        f"{config.name} embute o codigo-fonte no artefato publicado"
+    )
+
+
+def test_o_config_publico_herda_o_principal_em_vez_de_copiar():
+    """Duas copias da configuracao divergem; a que diverge e a que ninguem le."""
+    assert "INHERIT: mkdocs.yml" in PUBLICO.read_text(encoding="utf-8")
+
+
+def test_o_pdf_herda_o_PUBLICO_e_nao_o_interno():
+    """O anexo da monografia circula em banca e vai para biblioteca.
+
+    PDF e o formato mais dificil de despublicar que existe: herdar o config
+    interno levaria o codigo-fonte e as specs para dentro dele.
+    """
+    assert "INHERIT: mkdocs-publico.yml" in PDF.read_text(encoding="utf-8")

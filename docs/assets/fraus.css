@@ -1,0 +1,174 @@
+/* ---------------------------------------------------------------------------
+   O SITE DE DOCUMENTACAO VESTIDO COM A IDENTIDADE DO PRODUTO.
+
+   Os valores sao OS MESMOS de `dashboard/app/globals.css` -- o espaco profundo
+   (tema de fabrica), em OKLCH. Eles estao COPIADOS aqui, e nao importados, por
+   um motivo que vale registrar antes de alguem tentar "consertar":
+
+   o `globals.css` do dashboard e um arquivo do Tailwind v4, com `@theme`,
+   `@custom-variant` e camadas que o MkDocs nao processa. Importa-lo no site
+   traria 900 linhas de diretiva que o navegador ignora, para aproveitar doze
+   variaveis. O que se copia aqui e a PALETA, que e decisao fechada e
+   documentada (`DESIGN.md` 3.1 e 8), nao codigo vivo.
+
+   O QUE ISSO NAO E. Nao e uma tentativa de fazer o site parecer a dashboard.
+   Os dois sao superficies diferentes -- uma opera, a outra explica -- e o que
+   eles compartilham e a identidade, nao a composicao. A regra mestra da
+   dashboard (acima da linha e o DITO, abaixo e o MEDIDO) nao se aplica a
+   documentacao, porque aqui nao ha dado: ha prosa.
+
+   Se a paleta do produto mudar, este arquivo muda junto. Ele e pequeno de
+   proposito, e a divergencia aparece na primeira olhada lado a lado.
+   --------------------------------------------------------------------------- */
+
+[data-md-color-scheme="slate"] {
+  /* Espaco profundo. O fundo NAO e preto puro, e a recusa e herdada palavra
+     por palavra do DESIGN.md: preto puro faz a regua flutuar no vacuo e
+     transforma dado em neon. Azul-marinho fundissimo TEM cor. */
+  --md-default-bg-color: oklch(0.128 0.022 264);
+  --md-default-bg-color--light: oklch(0.186 0.026 264);
+  --md-default-bg-color--lighter: oklch(0.258 0.028 266);
+  --md-default-fg-color: oklch(0.975 0.006 250);
+  --md-default-fg-color--light: oklch(0.845 0.02 254);
+  --md-default-fg-color--lighter: oklch(0.745 0.032 258);
+  --md-default-fg-color--lightest: oklch(0.4 0.03 262);
+
+  /* O DOURADO DO MONOGRAMA, lido das paradas do gradiente do SVG da logo.
+     Ele e a cor de ACAO e de FOCO -- link, marcador, estado ativo -- e nunca
+     cor de dado. No site nao ha dado, entao ele reina sozinho. */
+  --md-primary-fg-color: oklch(0.83 0.095 84);
+  --md-primary-fg-color--light: oklch(0.88 0.075 82);
+  --md-primary-fg-color--dark: oklch(0.642 0.084 76);
+  --md-primary-bg-color: oklch(0.15 0.02 84);
+  --md-accent-fg-color: oklch(0.88 0.075 82);
+
+  --md-typeset-a-color: oklch(0.83 0.095 84);
+
+  /* O AMBAR DO "DITO" so aparece em um lugar aqui: citacao. Um bloco de
+     citacao E fala -- e o unico elemento da documentacao que carrega o mesmo
+     significado que o ambar carrega na dashboard. */
+  --fraus-dito: oklch(0.83 0.19 60);
+  --fraus-medido: oklch(0.74 0.2 265);
+  --fraus-linha: oklch(0.94 0.03 240 / 30%);
+  --fraus-card: oklch(0.186 0.026 264);
+
+  --md-code-bg-color: oklch(0.178 0.026 264);
+  --md-code-fg-color: oklch(0.93 0.012 250);
+  --md-code-hl-string-color: oklch(0.83 0.19 60);
+  --md-code-hl-number-color: oklch(0.74 0.2 265);
+  --md-code-hl-keyword-color: oklch(0.83 0.095 84);
+  --md-code-hl-comment-color: oklch(0.62 0.03 260);
+
+  --md-footer-bg-color: oklch(0.11 0.02 264);
+  --md-footer-bg-color--dark: oklch(0.1 0.018 264);
+}
+
+/* A tipografia e a MESMA do produto: Inter no texto, JetBrains Mono no dado.
+   Nao ha `next/font` aqui para baixar no build, entao elas vem da fonte
+   publica -- e a pilha de fallback existe porque um site de documentacao tem
+   que ser legivel mesmo com a rede do auditorio caindo. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+body,
+.md-typeset {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+.md-typeset code,
+.md-typeset pre,
+.md-typeset kbd {
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+/* A LINHA. Na dashboard ela e a regua que afirma dito/medido; aqui ela e so
+   separacao -- mesmo token, papel mais modesto, e vale dizer isso em vez de
+   fingir que a metafora atravessa. */
+.md-typeset hr {
+  border-bottom-color: var(--fraus-linha);
+}
+
+.md-typeset h2 {
+  border-bottom: 1px solid var(--fraus-linha);
+  padding-bottom: 0.3rem;
+}
+
+/* CITACAO = FALA. E o unico elemento onde o ambar do "dito" tem o mesmo
+   significado que tem na dashboard, entao e o unico que o recebe. */
+.md-typeset blockquote {
+  border-left: 2px solid var(--fraus-dito);
+  color: var(--md-default-fg-color--light);
+}
+
+/* TABELA. A regra do produto: agrupa-se por espaco e regua, nao por caixa.
+   Entao a tabela perde a borda externa e mantem so a linha que separa. */
+.md-typeset table:not([class]) {
+  background: transparent;
+  border: none;
+  font-size: 0.76rem;
+}
+
+.md-typeset table:not([class]) th {
+  background: transparent;
+  border-bottom: 1px solid var(--fraus-linha);
+  color: var(--md-default-fg-color);
+  font-weight: 600;
+}
+
+.md-typeset table:not([class]) td {
+  border-top: 1px solid var(--fraus-linha);
+}
+
+/* NUMERO E TABULAR. A dashboard inteira usa `tabular-nums` em dado, e uma
+   tabela de medicao na documentacao tem exatamente o mesmo problema: digito de
+   largura variavel faz coluna de numero dancar entre as linhas. */
+.md-typeset table:not([class]) td:has(> code),
+.md-typeset table:not([class]) code {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ADMONITION sem caixa pesada: filete a esquerda, fundo quase nada. */
+.md-typeset .admonition,
+.md-typeset details {
+  background: var(--fraus-card);
+  border: none;
+  border-left: 2px solid var(--md-primary-fg-color);
+  border-radius: 0.25rem;
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-left-color: var(--fraus-dito);
+}
+
+/* A REFERENCIA DE CODIGO gerada pelo mkdocstrings. Cada simbolo ganha o
+   filete do "medido": ali o texto descreve o que o sistema MEDE, e e o unico
+   lugar do site em que esse azul significa o mesmo que na dashboard. */
+.md-typeset .doc-heading {
+  border-left: 2px solid var(--fraus-medido);
+  padding-left: 0.6rem;
+}
+
+.md-typeset .doc-object {
+  margin-bottom: 1.6rem;
+}
+
+/* O cabecalho nao usa o dourado como FUNDO. O DESIGN.md e explicito: o
+   dourado e cor de acao e foco, e uma barra inteira dele transformaria a cor
+   de acao em cor de cromo -- ela para de sinalizar o que e clicavel. */
+.md-header,
+.md-tabs {
+  background-color: oklch(0.11 0.02 264);
+  box-shadow: 0 0 0 1px var(--fraus-linha);
+}
+
+.md-header__title {
+  font-weight: 600;
+}
+
+/* O botao "voltar para a dashboard" no cabecalho. Ele e a unica ACAO do site,
+   entao e o unico elemento que recebe o dourado preenchido. */
+.md-header__source .md-source {
+  font-size: 0.66rem;
+}

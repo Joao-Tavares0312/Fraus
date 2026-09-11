@@ -14,8 +14,27 @@
 #
 # `INHERIT` e do proprio MkDocs: este arquivo NAO e uma copia da configuracao,
 # e um delta sobre ela. Tema, nav e mkdocstrings continuam com uma fonte so.
-INHERIT: mkdocs.yml
+#
+# E ele herda do PUBLICO, nao do principal, desde 11/09/2026. O PDF e o anexo
+# da monografia -- um documento que circula em banca, vai para biblioteca e sai
+# do controle de quem escreveu. Herdar do config interno faria o anexo carregar
+# o codigo-fonte, as 38 specs e a secao "a porta destrancada" para dentro de um
+# PDF, que e o formato mais dificil de despublicar que existe.
+INHERIT: mkdocs-publico.yml
 
+# A LISTA DE PLUGINS PRECISA SER REESCRITA INTEIRA, e isso e uma armadilha
+# real, nao burocracia de YAML: `plugins` e uma LISTA, e o MkDocs SUBSTITUI a
+# lista herdada em vez de somar. Declarar so o `to-pdf` aqui apagaria a busca e
+# o mkdocstrings do build.
+#
+# A consequencia perigosa e a outra ponta: como a lista e reescrita, ela
+# reescreve TAMBEM o `show_source: false` que o config publico definiu. Este
+# arquivo ja esteve com `true` herdado da versao anterior -- e o PDF teria
+# levado o codigo-fonte inteiro para dentro do anexo da monografia, sem nada no
+# build reclamando.
+#
+# Regra, entao: qualquer opcao de seguranca do `mkdocs-publico.yml` precisa ser
+# REPETIDA aqui, e ha teste amarrando as duas (`tests/test_documentacao.py`).
 plugins:
   - search:
       lang: pt
@@ -25,7 +44,8 @@ plugins:
           paths: [.]
           options:
             docstring_style: google
-            show_source: true
+            # Espelha o config publico. Ver o bloco acima antes de mexer.
+            show_source: false
             show_root_heading: true
             show_signature_annotations: true
             separate_signature: true

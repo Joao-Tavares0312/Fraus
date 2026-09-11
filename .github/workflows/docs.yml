@@ -1,7 +1,21 @@
-# Publica a documentacao em GitHub Pages e gera o PDF no MESMO build.
+# Publica a documentacao NUM OUTRO REPOSITORIO, publico, e gera o PDF no
+# mesmo build.
 #
-# O link publico e o download saem do mesmo `mkdocs build`, entao nao existe
-# passo manual e nao existe PDF mais velho que o site.
+# POR QUE DOIS REPOSITORIOS. Este aqui e PRIVADO e vai continuar privado. O
+# GitHub Pages a partir de repositorio privado exige plano pago, entao o site
+# mora num repositorio publico separado que contem APENAS O SITE CONSTRUIDO --
+# nunca o codigo, nunca as specs, nunca o `docs/` cru.
+#
+# A fronteira nao e so de hospedagem, e de CONTEUDO: o build usa
+# `mkdocs-publico.yml`, que exclui as specs, o handoff e o roteiro de deploy, e
+# desliga o `show_source` do mkdocstrings. Sem esse recorte, publicar o site
+# seria publicar o repositorio por outra porta -- o `show_source` embute o
+# corpo das funcoes dentro do HTML. Ha teste amarrando isso
+# (`tests/test_documentacao.py`).
+#
+# O BUILD ACONTECE AQUI, e nao no repositorio publico, e isso e o que faz o
+# arranjo funcionar: o `mkdocstrings` precisa do codigo-fonte Python para ler
+# as docstrings, e o codigo so existe deste lado. O publico recebe HTML pronto.
 name: docs
 
 on:
@@ -10,29 +24,25 @@ on:
   # Manual tambem: permite conferir o site antes de mesclar uma branch grande.
   workflow_dispatch:
 
-# Somente leitura do repositorio -- o deploy usa OIDC (`id-token`), nao um
-# token de escrita no conteudo.
+# Sem `pages: write` nem `id-token`: este repositorio NAO publica Pages. Ele so
+# le a si mesmo e empurra para o outro, com a chave de deploy.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Uma publicacao por vez. Sem isto, dois merges seguidos disputam o mesmo
-# ambiente e o site pode terminar com o build mais VELHO dos dois.
 concurrency:
-  group: pages
+  group: docs
   cancel-in-progress: false
 
 jobs:
-  build:
+  publicar:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # O PDF usa WeasyPrint, que depende das bibliotecas NATIVAS do GTK.
-      # Sem este passo o build falha no import do plugin, nao na geracao --
-      # e por isso o `mkdocs.yml` do dia a dia nao carrega o plugin: no
-      # Windows essas libs nao existem e a previa local morreria.
+      # O PDF usa WeasyPrint, que depende das bibliotecas NATIVAS do GTK. Sem
+      # este passo o build falha no IMPORT do plugin, nao na geracao -- e por
+      # isso o `mkdocs.yml` do dia a dia nao o carrega: no Windows essas libs
+      # nao existem e a previa local morreria.
       - name: Bibliotecas nativas do WeasyPrint
         run: |
           sudo apt-get update
@@ -48,25 +58,57 @@ jobs:
       - name: Dependencias da documentacao
         run: uv sync --extra docs --no-install-project
 
-      # Traz para dentro de docs/ o Markdown que mora fora (DESIGN.md).
+      # Traz para dentro de docs/ o Markdown e a marca que moram fora.
       - name: Reunir a documentacao externa
         run: uv run python scripts/reunir_docs.py
 
-      # `--strict`: link quebrado derruba o build em vez de virar um 404 numa
-      # pagina publica.
-      - name: Construir o site e o PDF
+      # `mkdocs-pdf.yml` herda de `mkdocs-publico.yml`, entao o site E o PDF
+      # saem do MESMO recorte. `--strict`: link quebrado derruba o build em vez
+      # de virar um 404 numa pagina publica.
+      - name: Construir o site publico e o PDF
+        env:
+          FRAUS_URL_DASHBOARD: ${{ vars.FRAUS_URL_DASHBOARD }}
         run: uv run mkdocs build --strict --config-file mkdocs-pdf.yml
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
+      # A ULTIMA TRAVA, e ela existe porque as anteriores sao configuracao e
+      # esta e o artefato. Se qualquer coisa escapar do recorte, o job morre
+      # ANTES de empurrar -- despublicar do GitHub e mais dificil que nao
+      # publicar, e o Google ja pode ter indexado.
+      - name: Conferir o que foi construido antes de publicar
+        run: |
+          set -e
+          vazou=0
+          if grep -rq "Source code in" site/ ; then
+            echo "::error::o site construido embute codigo-fonte (show_source)"
+            vazou=1
+          fi
+          for proibido in superpowers notas handoff hospedagem colab ; do
+            if [ -e "site/$proibido" ] ; then
+              echo "::error::'$proibido' entrou no site publico"
+              vazou=1
+            fi
+          done
+          test "$vazou" -eq 0
+          echo "recorte conferido: $(find site -name '*.html' | wc -l) paginas"
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publicar no repositorio publico
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          # Chave de deploy com ESCRITA no repositorio publico, guardada como
+          # segredo AQUI. Um `GITHUB_TOKEN` nao serve: ele so tem poder no
+          # repositorio em que o workflow roda.
+          #
+          # Como criar, uma vez:
+          #   ssh-keygen -t ed25519 -C "fraus-docs" -f chave -N ""
+          #   publico:  Settings > Deploy keys > Add  (chave.pub, MARQUE "Allow write access")
+          #   privado:  Settings > Secrets > Actions > New  (chave, nome DEPLOY_KEY_DOCS)
+          deploy_key: ${{ secrets.DEPLOY_KEY_DOCS }}
+          external_repository: ${{ vars.REPO_DOCS }}
+          publish_branch: gh-pages
+          publish_dir: ./site
+          # O repositorio publico e um ESPELHO do build, nao um historico de
+          # edicoes: cada publicacao substitui a anterior por completo. Sem
+          # isso, um arquivo que sai do recorte hoje continuaria servido
+          # amanha, porque ninguem o apagou.
+          force_orphan: true
+          commit_message: "docs: site publicado a partir do repositorio privado"

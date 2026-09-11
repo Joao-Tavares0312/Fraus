@@ -23,15 +23,42 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# O torch de CPU vem do indice proprio do PyTorch: o pacote do PyPI arrasta as
-# bibliotecas de CUDA (varios GB) que nunca serao usadas num host sem GPU.
+# O TORCH DE CPU, E AS DUAS ARMADILHAS DE ARQUITETURA.
+#
+# x86_64: o pacote do PyPI arrasta as bibliotecas de CUDA (varios GB) que nunca
+# serao usadas num host sem GPU. Por isso o indice proprio do PyTorch,
+# `/whl/cpu`, que so tem a variante de CPU.
+#
+# aarch64 (ARM): o indice `/whl/cpu` NAO publica wheel de ARM, entao apontar
+# para ele ali simplesmente nao resolve o pacote. E o PyPI mudou de lado
+# embaixo: ate a versao 2.10, `pip install torch` em aarch64 trazia a variante
+# de CPU; a partir da 2.11 ele passou a trazer a COM CUDA por padrao -- a mesma
+# armadilha do x86, com a diferenca de que aqui nao ha indice alternativo para
+# fugir dela.
+#
+# A saida em ARM e fixar a ultima serie em que o PyPI ainda entrega CPU. Isso e
+# um PIN POR MOTIVO EXTERNO, nao preferencia: quando o PyTorch publicar wheel
+# de CPU para ARM num indice proprio, esta linha some.
+#
+# A Oracle Always Free e ARM (Ampere A1) -- as VMs x86 gratuitas dela tem 1 GB
+# de RAM e a API mede 1.056 MB, entao nao ha escolha de arquitetura ali.
+#
+# CONFIRA DEPOIS DE CONSTRUIR, porque o erro e silencioso -- a imagem funciona,
+# so fica 3 GB maior:
+#   docker run --rm fraus-api python -c "import torch; print(torch.__version__)"
+#   docker run --rm fraus-api du -sh /usr/local/lib/python3.12/site-packages/torch
+# Esperado: ~500 MB. Se vier em GB, veio CUDA junto.
 COPY pyproject.toml README.md ./
-RUN pip install --no-cache-dir \
-        --extra-index-url https://download.pytorch.org/whl/cpu \
-        torch --index-url https://download.pytorch.org/whl/cpu \
+RUN set -eux; \
+    if [ "$(uname -m)" = "aarch64" ]; then \
+        pip install --no-cache-dir "torch==2.10.*"; \
+    else \
+        pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu; \
+    fi \
     && pip install --no-cache-dir \
         "pydantic>=2.7" "emoji>=2.12" "transformers>=4.44" \
-        "scikit-learn==1.6.1" "joblib>=1.4" "fastapi>=0.115" "uvicorn>=0.30"
+        "scikit-learn==1.6.1" "joblib>=1.4" "fastapi>=0.115" "uvicorn>=0.30" \
+        "psycopg[binary,pool]>=3.2"
 
 # scikit-learn PINADO em 1.6.1: e a versao que gerou o `fusor.joblib`. Versao
 # diferente desserializa com aviso de que o resultado PODE ser invalido, e um
