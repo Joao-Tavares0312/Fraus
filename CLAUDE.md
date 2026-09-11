@@ -81,7 +81,7 @@ cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há p
 
 uv sync --extra docs                   # gerador do site (extra opt-in, como o dev)
 uv run python scripts/reunir_docs.py   # traz dashboard/DESIGN.md para docs/
-uv run mkdocs serve                    # prévia local do site
+uv run mkdocs serve -a localhost:8001  # prévia local — 8001, a 8000 é da API
 uv run mkdocs build --strict           # link quebrado derruba o build
 ```
 

@@ -21,6 +21,14 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 DOCS = RAIZ / "docs"
 
+# A MARCA. Ela mora em `dashboard/public/` porque e o produto que a serve; o
+# site precisa dela para o cabecalho e o favicon. Copia de build, como o resto.
+ATIVOS = {
+    RAIZ / "dashboard" / "public" / "fraus-logo.svg": (
+        DOCS / "assets" / "fraus-logo.svg"
+    ),
+}
+
 # origem -> destino dentro de docs/, com o aviso que vai no topo do gerado.
 COPIAS = {
     RAIZ / "dashboard" / "DESIGN.md": (
@@ -50,6 +58,17 @@ def reunir() -> list[Path]:
             encoding="utf-8",
         )
         gerados.append(destino)
+
+    # Os ativos binarios vao sem aviso no topo, pela razao obvia: um comentario
+    # HTML dentro de um SVG usado como favicon nao ajuda ninguem e alguns
+    # leitores engasgam.
+    for origem, destino in ATIVOS.items():
+        if not origem.exists():
+            raise SystemExit(f"ativo esperado nao existe: {origem}")
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_bytes(origem.read_bytes())
+        gerados.append(destino)
+
     return gerados
 
 

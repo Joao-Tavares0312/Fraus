@@ -6,6 +6,8 @@ import { useState } from "react";
 import {
   Activity,
   BarChart3,
+  BookOpen,
+  ExternalLink,
   LogOut,
   MessagesSquare,
   PlugZap,
@@ -71,6 +73,53 @@ const AJUSTES = [
 ] as const;
 
 /**
+ * A DOCUMENTACAO -- o unico item do menu que sai do aplicativo.
+ *
+ * Ela e um site proprio (MkDocs), e nao uma rota do Next, por um motivo
+ * concreto: as docstrings do Python sao metade da documentacao deste projeto,
+ * e nenhuma ferramenta do mundo JS as le. Trazer tudo para dentro do
+ * dashboard significaria reescreve-las a mao em MDX, que apodrece na primeira
+ * mudanca de codigo.
+ *
+ * O que ela NAO faz e parecer outro produto: o site importa os mesmos tokens
+ * OKLCH (`docs/assets/fraus.css`), a mesma tipografia e o mesmo monograma.
+ *
+ * A SAIDA E SINALIZADA, nao disfarcada. O item leva o icone de link externo e
+ * abre em aba nova: um item de menu que parece interno e troca o site inteiro
+ * quebra o botao "voltar" e faz quem clicou perder o filtro de periodo ativo.
+ *
+ * O endereco vem do AMBIENTE (`NEXT_PUBLIC_URL_DOCS`) porque muda entre a
+ * previa local e o deploy. Sem ele, o item NAO aparece -- item de menu que
+ * leva a uma pagina que nao existe e pior que item ausente.
+ */
+function ItemDaDocumentacao({ url }: { url: string }) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        tooltip="Documentação (abre em nova aba)"
+        className="transition-colors duration-150 ease-fluid [&>svg]:text-muted-foreground [&>svg]:transition-colors [&>svg]:duration-150 hover:[&>svg]:text-sidebar-foreground"
+        render={
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+        }
+      >
+        <BookOpen aria-hidden />
+        <span className="flex flex-1 items-center justify-between gap-2">
+          Documentação
+          {/* O icone de saida e `aria-hidden` porque o rotulo acessivel ja
+              diz "abre em nova aba" no tooltip do botao -- anunciar duas
+              vezes e o mesmo defeito que a CabecaVazada ja pagou. */}
+          <ExternalLink aria-hidden className="size-3 shrink-0 opacity-50" />
+        </span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+/**
  * Quem esta logado e a porta de saida. So renderiza com sessao ativa: no modo
  * aberto (sem FRAUS_JWT_SEGREDO na API) nao ha de quem sair, e um botao
  * "Sair" que nao muda nada seria promessa vazia.
@@ -133,6 +182,14 @@ export function NavegacaoLateral({
 }) {
   const caminho = usePathname();
   const parametros = useSearchParams();
+  // Lido aqui, e nao dentro do item: o GRUPO inteiro depende dele. Um
+  // `SidebarGroupLabel` "Referência" sem nenhum item abaixo e a mesma promessa
+  // vazia que faz o grupo "Ajustes" sumir para o papel `usuario`.
+  //
+  // `NEXT_PUBLIC_` e obrigatorio: este componente e de CLIENTE, e variavel sem
+  // esse prefixo e `undefined` no navegador -- o item simplesmente nunca
+  // apareceria, sem erro nenhum dizendo por que.
+  const urlDaDocumentacao = process.env.NEXT_PUBLIC_URL_DOCS;
   const secoes =
     papel === "dev" ? SECOES : SECOES.filter((s) => SECOES_DO_USUARIO.has(s.href));
 
@@ -210,6 +267,25 @@ export function NavegacaoLateral({
             <SidebarMenu>{secoes.map(itemDaSecao)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* A DOCUMENTACAO fica em grupo proprio, e NAO dentro de "Seções":
+            aquele grupo e a lista de telas do produto, e um link que sai do
+            aplicativo no meio delas leria como mais uma tela. Ela tambem NAO
+            entra em "Ajustes", que e o grupo do que MUDA o comportamento do
+            sistema -- ler documentacao nao muda nada.
+
+            Ela aparece para os DOIS papeis de proposito: `usuario` analisa e
+            precisa saber o que "NPS inferido" significa tanto quanto `dev`. */}
+        {urlDaDocumentacao && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Referência</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <ItemDaDocumentacao url={urlDaDocumentacao} />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* O grupo inteiro some para o papel `usuario`: mostrar o rotulo
             "Ajustes" sem nenhum item seria uma promessa vazia. */}
