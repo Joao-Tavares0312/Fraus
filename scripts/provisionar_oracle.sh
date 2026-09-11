@@ -142,9 +142,16 @@ docker build -t fraus-api . 2>&1 | tail -5
 
 # O torch com CUDA num host sem GPU nao QUEBRA -- so faz a imagem crescer
 # alguns GB. Falha silenciosa merece sonda explicita.
-tamanho=$(docker run --rm fraus-api du -sm /usr/local/lib/python3.12/site-packages/torch | cut -f1)
-echo "   torch: ${tamanho} MB"
-[ "$tamanho" -lt 1200 ] || { echo "veio CUDA junto -- ver o comentario de arquitetura no Dockerfile" >&2 ; exit 1 ; }
+#
+# A sonda pergunta a PROPRIA BIBLIOTECA, e nao mede megabyte: em 11/09/2026 o
+# torch 2.14.0+cpu media 769 MB de CPU puro, sem um pacote nvidia sequer, e um
+# limiar de tamanho acusaria CUDA onde nao ha. `torch.version.cuda` e o fato.
+versao=$(docker run --rm fraus-api python -c "import torch; print(torch.__version__, torch.version.cuda)")
+echo "   torch: $versao"
+case "$versao" in
+    *" None") : ;;
+    *) echo "veio CUDA junto ($versao) -- ver o comentario de arquitetura no Dockerfile" >&2 ; exit 1 ;;
+esac
 FIM
 
 # ---------------------------------------------------------------------------
