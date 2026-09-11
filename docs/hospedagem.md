@@ -282,3 +282,270 @@ qualquer um pode chamá-la e gerar tentativas recusadas. A mestra não fecha ess
 porta — o segredo do webhook é que fecha. Publique sabendo disso.
 
 Sem a mestra, vale o aviso de sempre: feche o túnel depois de demonstrar.
+
+---
+
+# Passo a passo: subir a API na Oracle Ampere A1
+
+> Escrito em 11/09/2026. O alvo é **custo zero e sempre no ar**. São ~40 minutos
+> na primeira vez, e a maior parte é espera de download.
+>
+> Esta página **não vai para o site público** (`exclude_docs` em
+> `mkdocs-publico.yml`): ela nomeia variáveis de segredo e descreve a topologia.
+
+## 0. O que você precisa antes de começar
+
+- conta na Oracle Cloud (a gratuita basta);
+- uma chave SSH (`ssh-keygen -t ed25519`) — a pública vai para a instância;
+- os **1,3 GB de modelos** na sua máquina, em `modelos/`;
+- a URL da dashboard na Vercel;
+- um subdomínio apontando para a VM, se quiser HTTPS com certificado válido.
+
+---
+
+## 1. Criar a instância — e o passo que todo mundo erra
+
+Console → **Compute → Instances → Create instance**.
+
+| campo | valor |
+|---|---|
+| Image | **Ubuntu 24.04** (Canonical) |
+| Shape | **VM.Standard.A1.Flex** — *Ampere*, não AMD |
+| OCPUs / RAM | **2 OCPU / 12 GB** |
+| SSH key | cole sua chave pública |
+
+!!! warning "As VMs x86 grátis não servem"
+    As *Always Free* AMD têm **1 GB de RAM** e a API mede **1.056 MB**. Tem que
+    ser a ARM.
+
+!!! danger "\"Out of host capacity\""
+    É o erro mais comum da Oracle grátis, e **não é culpa sua**: a capacidade
+    ARM é disputada. Tente outro *availability domain* (AD-1, AD-2, AD-3) ou
+    outro horário. Não adianta insistir no mesmo botão.
+
+**Por que 2 OCPU e não 4:** a conta gratuita dá 4 no total. Deixando 2 livres
+você consegue criar uma segunda instância depois sem destruir esta.
+
+---
+
+## 2. Abrir a porta — os DOIS lugares
+
+Este é o passo que faz as pessoas perderem uma hora: a Oracle bloqueia em
+**dois** níveis, e abrir só um não dá nenhum erro — a conexão só fica pendurada.
+
+**2.1 — Security List (o firewall da nuvem)**
+
+Networking → *Virtual Cloud Networks* → sua VCN → *Security Lists* → *Default* →
+**Add Ingress Rules**:
+
+| Source CIDR | Protocol | Port |
+|---|---|---|
+| `0.0.0.0/0` | TCP | **80** |
+| `0.0.0.0/0` | TCP | **443** |
+
+**2.2 — iptables (o firewall dentro da máquina)**
+
+A imagem Ubuntu da Oracle vem com regras que **descartam tudo menos a 22**.
+Isso não está em lugar nenhum do assistente de criação:
+
+```bash
+ssh ubuntu@SEU_IP
+
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+> Se você abriu a Security List e a conexão ainda expira, **é este passo que
+> está faltando**. Não é DNS, não é Docker.
+
+---
+
+## 3. Docker
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker ubuntu
+exit          # sai e entra de novo — o grupo só vale em sessão nova
+```
+
+---
+
+## 4. Mandar o código e os modelos
+
+Da **sua máquina**:
+
+```bash
+# O codigo (o repositorio e privado; mandar por scp evita credencial na VM)
+rsync -av --exclude modelos --exclude .git --exclude dashboard \
+      --exclude node_modules --exclude site \
+      ./ ubuntu@SEU_IP:~/fraus/
+
+# Os pesos. 1,3 GB -- aqui e onde o tempo vai.
+rsync -av --progress modelos/ ubuntu@SEU_IP:~/fraus-modelos/
+```
+
+!!! tip "Os modelos ficam FORA da imagem, de propósito"
+    O `Dockerfile` recusa assar os pesos: cada deploy reenviaria 1,3 GB por uma
+    mudança de uma linha. Eles entram por volume — e é exatamente por isso que
+    a Oracle serve e o Cloud Run não.
+
+---
+
+## 5. Construir e subir
+
+```bash
+cd ~/fraus
+docker build -t fraus-api .
+```
+
+**Confira que o `torch` veio sem CUDA** — o erro é silencioso, a imagem só fica
+3 GB maior:
+
+```bash
+docker run --rm fraus-api du -sh /usr/local/lib/python3.12/site-packages/torch
+# esperado: ~500M. Se vier em GB, veio CUDA junto.
+```
+
+Agora as credenciais. **Gere e GUARDE** — a mestra não é recuperável:
+
+```bash
+openssl rand -hex 32          # FRAUS_CHAVE_MESTRA
+openssl rand -hex 32          # FRAUS_JWT_SEGREDO
+```
+
+`~/fraus/.env`:
+
+```bash
+FRAUS_CHAVE_MESTRA=<o primeiro hex>
+FRAUS_JWT_SEGREDO=<o segundo hex>
+FRAUS_CODIGO_CONVITE=<uma frase sua>
+FRAUS_ORIGENS=https://sua-dashboard.vercel.app
+
+# OPCIONAL: Postgres do Supabase no lugar do SQLite. Com ele, o banco
+# sobrevive a recriar o container -- e `fraus/db.py` ja aceita os dois.
+# FRAUS_BANCO_URL=postgresql://...
+```
+
+!!! danger "A porta destrancada"
+    `FRAUS_CHAVE_MESTRA` + `FRAUS_JWT_SEGREDO` **sem** `FRAUS_CODIGO_CONVITE`
+    deixa a API **aberta**: qualquer um faz `registrar` → `entrar` e o JWT lê
+    tudo que a mestra protege. A API grita isso no boot — **leia o log da
+    primeira subida.**
+
+`~/fraus/compose.yml`:
+
+```yaml
+services:
+  api:
+    image: fraus-api
+    restart: always          # volta sozinha depois de reboot da VM
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"   # SO local: quem fala com a internet e o Caddy
+    volumes:
+      - /home/ubuntu/fraus-modelos:/modelos:ro
+      - /home/ubuntu/fraus-dados:/dados
+```
+
+```bash
+docker compose up -d
+docker compose logs -f        # espere "motor":"real"
+curl -s localhost:8000/saude  # {"status":"ok","motor":"real"}
+```
+
+> **Se disser `"motor":"duble"`, pare.** Os modelos não foram encontrados, e a
+> API está pronta para servir número sintético com cara de predição.
+
+---
+
+## 6. HTTPS com o Caddy
+
+A dashboard está em `https://`, então o navegador **recusa** chamar uma API em
+`http://` — *mixed content*. HTTPS não é opcional aqui.
+
+O Caddy emite e renova o certificado sozinho:
+
+```bash
+sudo apt install -y caddy
+```
+
+`/etc/caddy/Caddyfile`:
+
+```
+api.seu-dominio.com {
+    reverse_proxy 127.0.0.1:8000
+}
+```
+
+```bash
+sudo systemctl restart caddy
+curl -s https://api.seu-dominio.com/saude
+```
+
+!!! note "Sem domínio próprio"
+    O Let's Encrypt não emite certificado para IP. Um subdomínio gratuito
+    (DuckDNS, por exemplo) resolve — e o Caddy funciona igual.
+
+---
+
+## 7. Ligar as pontas
+
+Na **Vercel**, projeto da dashboard:
+
+```
+FRAUS_API_URL        = https://api.seu-dominio.com
+FRAUS_CHAVE_ACESSO   = fra_...        (gerada pela mestra)
+NEXT_PUBLIC_URL_DOCS = https://<usuario>.github.io/fraus-docs/
+```
+
+A chave de acesso sai da mestra:
+
+```bash
+curl -X POST https://api.seu-dominio.com/acesso/chaves \
+     -H "Authorization: Bearer $FRAUS_CHAVE_MESTRA" \
+     -H "Content-Type: application/json" \
+     -d '{"nome":"dashboard"}'
+```
+
+Redeploy na Vercel e a dashboard passa a ler dado real.
+
+---
+
+## 8. Sobreviver ao reboot
+
+`restart: always` do compose já religa os containers, mas só se o Docker subir.
+Garanta os dois:
+
+```bash
+sudo systemctl enable docker
+sudo systemctl enable caddy
+```
+
+Teste de verdade — `sudo reboot`, espere dois minutos, e:
+
+```bash
+curl -s https://api.seu-dominio.com/saude
+```
+
+Se responder `{"status":"ok","motor":"real"}`, acabou.
+
+---
+
+## Conferência final
+
+- [ ] `/saude` responde `"motor":"real"` **pela URL pública**
+- [ ] a dashboard na Vercel mostra dado real, não estado vazio
+- [ ] `docker compose logs` **não** tem aviso de porta destrancada
+- [ ] sobreviveu a um `reboot`
+- [ ] a `FRAUS_CHAVE_MESTRA` está guardada **fora da VM**
+
+## Quando algo não responde
+
+| sintoma | causa quase sempre |
+|---|---|
+| conexão pendura, sem erro | **iptables** (passo 2.2), não a Security List |
+| `"motor":"duble"` | volume de `/modelos` errado ou vazio |
+| dashboard vazia, API respondendo | `FRAUS_ORIGENS` não tem a URL exata da Vercel |
+| 401 em tudo | falta `FRAUS_CHAVE_ACESSO` na Vercel |
+| imagem gigante | `torch` veio com CUDA — reveja o passo 5 |
