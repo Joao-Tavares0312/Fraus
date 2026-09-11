@@ -45,9 +45,16 @@ exclude_docs: |
   hospedagem.md
   colab.md
 
-  # O CSS e copiado para o site pelo proprio tema; a fonte dele nao precisa
-  # virar pagina.
-  assets/*.css
+  # NAO ACRESCENTE `assets/*.css` AQUI. Ja esteve, com o comentario dizendo
+  # que "o CSS e copiado para o site pelo proprio tema" -- e nao e: quem copia
+  # e o MkDocs, como parte do `docs_dir`, e `exclude_docs` roda ANTES disso.
+  #
+  # O resultado foi o site publicando, em TODAS as paginas, um `<link>` para um
+  # `assets/fraus.css` que o build tinha acabado de jogar fora. `--strict` nao
+  # reclama: ele confere link entre paginas, nao a existencia de `extra_css`.
+  # Quem achou foi o WeasyPrint, meses depois, porque ele tenta CARREGAR.
+  #
+  # `exclude_docs` nao esconde pagina -- ele tira o arquivo do build.
 
 # O nav herdado cita `handoff.md` e `hospedagem.md`, que acabaram de sair do
 # build -- entao ele precisa ser reescrito aqui inteiro. MkDocs nao sabe
