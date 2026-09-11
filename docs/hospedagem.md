@@ -81,10 +81,46 @@ reiniciar sozinho, e TLS. Meia tarde, uma vez.
 ## As três peças, e onde cada uma mora
 
 ```
-dashboard (Next.js)   ->  Vercel            grátis, já está lá
-documentação (MkDocs) ->  GitHub Pages      grátis, publica no mesmo build
+dashboard (Next.js)     -> Vercel                  grátis, já está lá
+documentação (MkDocs)   -> repositório PÚBLICO      grátis, espelho do build
 API (FastAPI+BERTimbau) -> Oracle Always Free VM   grátis, sempre no ar
 ```
+
+### Por que a documentação mora em outro repositório
+
+Este repositório é **privado e continua privado**. GitHub Pages a partir de
+repositório privado exige plano pago — então o site mora num repositório
+público separado que contém **apenas o site construído**: nunca o código,
+nunca as specs, nunca o `docs/` cru.
+
+**O build acontece do lado privado**, e é isso que faz o arranjo funcionar: o
+`mkdocstrings` precisa do código Python para ler as docstrings, e o código só
+existe aqui. O repositório público recebe HTML pronto.
+
+E a fronteira não é só de hospedagem, é de **conteúdo**. O build público usa
+`mkdocs-publico.yml`, que:
+
+- **exclui** `superpowers/`, `notas/`, `handoff.md`, `hospedagem.md` (esta
+  página) e `colab.md`;
+- **desliga `show_source`** do mkdocstrings.
+
+> ⚠️ **`not_in_nav` não exclui nada.** Ele só silencia o aviso de página fora
+> do menu — o MkDocs continua construindo o arquivo, que fica acessível por URL
+> direta e listado no `sitemap.xml`. Quem tira do build é `exclude_docs`. Essa
+> confusão custou, no build de 10/09/2026, **38 specs publicadas** e 12 blocos
+> de código-fonte embutidos no HTML.
+
+Há três camadas defendendo isso, porque uma só falharia em silêncio:
+
+1. `tests/test_documentacao.py` — amarra as exclusões e o `show_source: false`
+   nos **dois** configs publicados (o do site e o do PDF);
+2. o workflow **inspeciona o `site/` construído** antes de empurrar, e morre se
+   algo escapou;
+3. `force_orphan` — cada publicação substitui a anterior por completo, então
+   um arquivo que sai do recorte hoje não continua servido amanhã.
+
+O PDF do anexo herda do config **público** pelo mesmo motivo: PDF é o formato
+mais difícil de despublicar que existe.
 
 E duas variáveis amarram tudo:
 

@@ -1,0 +1,97 @@
+# A DOCUMENTACAO QUE VAI PARA A INTERNET.
+#
+# O repositorio do Fraus e PRIVADO e vai continuar privado. Isso nao e detalhe
+# de hospedagem: e a restricao que governa este arquivo inteiro.
+#
+# O `mkdocs.yml` principal e a documentacao INTERNA -- ele publica tudo, porque
+# quem o roda ja tem o repositorio na mao. Este aqui e o recorte que um
+# estranho pode ver, e ele existe porque a diferenca entre os dois NAO e obvia:
+# o build padrao levava para o ar, sem avisar ninguem,
+#
+#   - o CODIGO-FONTE de cada modulo documentado (`show_source: true` embute o
+#     corpo das funcoes dentro do HTML -- 12 blocos so na pagina de
+#     indicadores);
+#   - as 38 specs de `docs/superpowers/`, que sao o diario de decisao do
+#     projeto, com alternativas recusadas e bibliografia de trabalho;
+#   - o `handoff.md`, que tem uma secao chamada "a porta destrancada"
+#     descrevendo passo a passo a combinacao de variaveis que deixa a API
+#     acessivel sem autenticacao.
+#
+# `not_in_nav` NAO resolve isso, e essa e a armadilha: ele so silencia o AVISO
+# de pagina fora do menu. O MkDocs continua CONSTRUINDO e publicando o arquivo,
+# que fica acessivel por URL direta e indexado no `sitemap.xml`. Quem exclui de
+# verdade e `exclude_docs`.
+#
+# Uso:  uv run mkdocs build --strict --config-file mkdocs-publico.yml
+
+INHERIT: mkdocs.yml
+
+# O que NAO atravessa para o lado publico. Sintaxe de .gitignore.
+exclude_docs: |
+  # O diario de decisao do projeto: specs, planos e bibliografia de trabalho.
+  # Nada aqui e segredo em si -- e material de quem CONSTROI, e publicar
+  # alternativa recusada fora de contexto confunde mais do que informa.
+  superpowers/
+  notas/
+
+  # Estado, pendencias e a secao "a porta destrancada". Este e o arquivo cuja
+  # publicacao contradiz diretamente a decisao de manter o repositorio
+  # privado: ele descreve a arquitetura de autenticacao pelo lado de dentro.
+  handoff.md
+
+  # Roteiro de deploy: nomes de variavel de segredo, topologia e as duas rotas
+  # de escrita que sao anonimas por desenho. E mapa para quem quiser bater na
+  # API, e nao interessa a ninguem que so queira entender o trabalho.
+  hospedagem.md
+  colab.md
+
+  # O CSS e copiado para o site pelo proprio tema; a fonte dele nao precisa
+  # virar pagina.
+  assets/*.css
+
+# O nav herdado cita `handoff.md` e `hospedagem.md`, que acabaram de sair do
+# build -- entao ele precisa ser reescrito aqui inteiro. MkDocs nao sabe
+# remover um item de nav herdado; ele substitui a chave.
+nav:
+  - "← Dashboard": !ENV [FRAUS_URL_DASHBOARD, "https://fraus-one.vercel.app/dashboard"]
+  - Início: index.md
+  - A tese: tese.md
+  - Invariantes: invariantes.md
+  - Arquitetura: arquitetura.md
+  - Treinamento: treinamento.md
+  - Design da interface: design.md
+  - Conformidade (AI Act): conformidade.md
+  - Encolher os modelos: encolhimento.md
+  - Limitações conhecidas: limitacoes.md
+  - Referência de código:
+      - Indicadores: referencia/indicadores.md
+      - Modelo canônico: referencia/modelos.md
+      - Fusor: referencia/fusor.md
+      - Sinais: referencia/sinais.md
+      - Evidência e deriva: referencia/diagnostico.md
+
+plugins:
+  - search:
+      lang: pt
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            # A DIFERENCA QUE IMPORTA, e a razao de este arquivo existir.
+            #
+            # `show_source: true` embute o corpo de cada funcao documentada
+            # dentro do HTML publicado. Num repositorio publico isso e um
+            # atalho util; num repositorio que se decidiu manter privado, e
+            # publicar o codigo de qualquer jeito -- por outra porta, sem
+            # ninguem perceber, porque nada no build reclama.
+            #
+            # As DOCSTRINGS continuam saindo, e elas sao o que vale: neste
+            # projeto elas explicam POR QUE o codigo e assim. O que fica de
+            # fora e o COMO.
+            show_source: false
+            show_root_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            members_order: source
