@@ -665,11 +665,15 @@ export default async function PaginaInicial() {
               <span className="text-medido-texto">score 0–100</span>
               <ArrowRight aria-hidden className="size-3.5 shrink-0" />
               <span className="text-medido-texto">
-                NPS estimado<span className="align-super text-[9px]">*</span>
+                NPS estimado
               </span>
             </div>
-            <p className="etiqueta-vitrine mt-3 text-right text-muted-foreground/70">
-              * estimado a partir do texto — e rotulado assim em toda tela
+            {/* Sem asterisco: a marca de 9px era a parte da ressalva que o
+                projetor apagava primeiro, e a nota em /70 de opacidade vinha
+                logo atrás. A estimativa é a tese — ela se escreve por extenso. */}
+            <p className="etiqueta-vitrine mt-3 text-right text-muted-foreground">
+              o NPS é estimado a partir do texto, nunca perguntado — e rotulado
+              assim em toda tela
             </p>
           </Revelar>
         </section>
