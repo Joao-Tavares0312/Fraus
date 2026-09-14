@@ -102,7 +102,7 @@ export function EscalaNps({
               />
               <span
                 className={cn(
-                  "text-[0.625rem] leading-tight",
+                  "text-[0.6875rem] leading-tight",
                   conflito
                     ? "text-destructive"
                     : orfa

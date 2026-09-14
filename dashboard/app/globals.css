@@ -928,6 +928,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* O FOCO DE TECLADO QUE NINGUEM DESENHOU. Botao, campo e aba trazem anel
+     proprio (e `outline-none` junto, na camada de utilitarios, que vence
+     esta). Quem sobrava -- <summary> das ressalvas, link de texto, painel de
+     aba -- caia no contorno padrao do navegador herdando `outline-ring/50`:
+     dourado a meia opacidade sobre o espaco, o primeiro detalhe que um
+     projetor apaga. Contorno cheio de 2px na cor de foco, so em :focus-visible
+     (clique de mouse nao acende). */
+  :where(a, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
   body {
     @apply bg-background text-foreground;
     /* O `body` NUNCA rola na horizontal: conteudo largo rola no proprio container. */

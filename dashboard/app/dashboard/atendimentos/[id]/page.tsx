@@ -126,7 +126,7 @@ export default async function PaginaDoAtendimento(
               </h2>
               <Badge
                 variant="outline"
-                className="rounded-sm text-[0.625rem] text-muted-foreground"
+                className="rounded-sm text-[0.6875rem] text-muted-foreground"
               >
                 estimativa
               </Badge>
@@ -316,7 +316,7 @@ function Celula({
         {qualificacao ? (
           <Badge
             variant="outline"
-            className="rounded-sm text-[0.625rem] text-muted-foreground"
+            className="rounded-sm text-[0.6875rem] text-muted-foreground"
           >
             {qualificacao}
           </Badge>

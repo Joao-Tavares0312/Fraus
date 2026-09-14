@@ -36,11 +36,11 @@ export function PartituraExemplo() {
       {/* A RÉGUA — a linha que separa as duas vozes. Os rótulos ficam nas
           pontas, no fluxo (a versão com position:absolute os empilhava). */}
       <div className="flex items-center gap-3 px-5 py-1" aria-hidden>
-        <span className="font-mono text-[10px] uppercase tracking-widest text-dito-texto">
+        <span className="font-mono text-[0.6875rem] uppercase tracking-widest text-dito-texto">
           dito ↑
         </span>
         <span className="h-px flex-1 bg-linha" />
-        <span className="font-mono text-[10px] uppercase tracking-widest text-medido-texto">
+        <span className="font-mono text-[0.6875rem] uppercase tracking-widest text-medido-texto">
           ↓ medido
         </span>
       </div>
@@ -68,7 +68,7 @@ export function PartituraExemplo() {
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
               <div className="h-full w-[28%] rounded-full bg-medido" />
             </div>
-            <div className="mt-1.5 flex justify-between font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            <div className="mt-1.5 flex justify-between font-mono text-[0.6875rem] uppercase tracking-widest text-muted-foreground">
               <span>score 0–100</span>
               <span>detrator · estimado</span>
             </div>

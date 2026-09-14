@@ -260,7 +260,13 @@ export default async function PaginaInicial() {
       : { href: "/dashboard", rotulo: "Abrir a dashboard" };
 
   return (
-    <div className="relative">
+    // `overflow-x-clip`, e nao `hidden`: a marca do fecho sangra 96px pela
+    // borda direita de proposito ("cortada pela borda da tela"), e ate
+    // 14/09/2026 quem cortava era o `overflow-x: hidden` do body -- que barra o
+    // arraste mas NAO a rolagem programatica: `scrollTo(9999, 0)` a 390px
+    // andava 96px. `clip` recorta sem criar conteiner de rolagem, entao o
+    // header fixo, o `whileInView` e o scroll da janela seguem intactos.
+    <div className="relative overflow-x-clip">
       {/* O FIO DE PROGRESSO DE LEITURA, colado na borda de baixo do header.
           CSS puro via `animation-timeline: scroll()` — nenhum listener, nenhum
           quadro de JavaScript. Ver `.progresso-leitura` no globals.css sobre por
@@ -577,7 +583,7 @@ export default async function PaginaInicial() {
               ))}
             </div>
             <div className={`${COLUNA} pb-6`}>
-              <p className="etiqueta-vitrine text-muted-foreground/70">
+              <p className="etiqueta-vitrine text-muted-foreground">
                 fatos do código · fraus.fusor.NOMES_FEATURES
               </p>
             </div>
@@ -665,11 +671,15 @@ export default async function PaginaInicial() {
               <span className="text-medido-texto">score 0–100</span>
               <ArrowRight aria-hidden className="size-3.5 shrink-0" />
               <span className="text-medido-texto">
-                NPS estimado<span className="align-super text-[9px]">*</span>
+                NPS estimado
               </span>
             </div>
-            <p className="etiqueta-vitrine mt-3 text-right text-muted-foreground/70">
-              * estimado a partir do texto — e rotulado assim em toda tela
+            {/* Sem asterisco: a marca de 9px era a parte da ressalva que o
+                projetor apagava primeiro, e a nota em /70 de opacidade vinha
+                logo atrás. A estimativa é a tese — ela se escreve por extenso. */}
+            <p className="etiqueta-vitrine mt-3 text-right leading-normal text-muted-foreground">
+              o NPS é estimado a partir do texto, nunca perguntado — e rotulado
+              assim em toda tela
             </p>
           </Revelar>
         </section>
@@ -772,7 +782,7 @@ export default async function PaginaInicial() {
                   </li>
                 ))}
               </ul>
-              <p className="etiqueta-vitrine mt-3 text-right text-muted-foreground/70">
+              <p className="etiqueta-vitrine mt-3 text-right text-muted-foreground">
                 exemplo ilustrativo
               </p>
             </Revelar>

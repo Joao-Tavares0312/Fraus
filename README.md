@@ -883,15 +883,23 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 
 #### P1 — visual
 
-- [ ] Piso de 11–12px no lugar dos 20 usos de `text-[9px]`/`text-[10px]`
-  (ilegíveis em projetor).
-- [ ] Tema claro ou modo "apresentação" de alto contraste para a banca.
-- [ ] Anel de foco `focus-visible` onde há `outline-none` sem substituto
-  (`components/ui/tabs.tsx:76`, `components/shell/RevelacaoFraus.tsx:161`).
-- [ ] "NPS estimado" como texto visível, não asterisco (`app/page.tsx:668`).
-- [ ] Testar a 390px o grafo (`components/grafo/desenho.ts`) e
-  `atendimentos/[id]`.
-- [ ] Rodar `npm run contraste` nos textos com `opacity-60/70` do `Analisador`.
+- [x] **Piso de 11px** — **feito em 14/09/2026**, com guarda em
+  `lib/tipografia.test.ts`. As etiquetas "estimativa" estavam em 10px.
+- [ ] **Tema claro / modo apresentação para projetor** — decisão do dono do
+  projeto (DESIGN.md §8: tema é decisão dele). Não feito.
+- [x] **Foco de teclado** — contorno cheio de 2px em `:focus-visible` para quem
+  não desenhava anel próprio; `TabsContent` ganhou anel.
+- [x] **"NPS estimado"** sem asterisco de 9px; a nota virou frase direta.
+- [x] **Celular (390px)** — conferido com Playwright. Achados e corrigidos:
+  hidratação falhando em toda tela da dashboard abaixo de 768px; cabeçalho do
+  atendimento espremido; vitrine rolando 96px na horizontal (a armadilha 0 do
+  handoff media errado: `overflow-x: hidden` não barra rolagem programática).
+  O grafo cabe.
+- [x] **Contraste de texto atenuado** — `muted-foreground` a 60–70% saía
+  2,8–3,4:1 sobre o vidro; opacidade removida, guarda em
+  `lib/opacidade-de-texto.test.ts`.
+- [x] **Vitrine sem WebGL** — a página inteira caía; agora só o campo de
+  partículas some.
 
 #### P2
 

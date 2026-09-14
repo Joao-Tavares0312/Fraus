@@ -56,7 +56,7 @@ export function CabecasDeLeitura({
     <div className="flex flex-col gap-3">
       {!compacto ? (
         <p className="text-xs text-muted-foreground">
-          <span className="uppercase tracking-wide opacity-70">
+          <span className="uppercase tracking-wide">
             leitura por frase
           </span>{" "}
           — a média da emoção por conversa entra nas features do fusor desde
@@ -139,7 +139,7 @@ export function CabecasDeLeitura({
                 oposto do que a frase diz. O sujeito da desconfianca e a cabeca,
                 que erra 6 em 10 falas sinceras; este numero especifico pode
                 estar certo, e no caso ironico geralmente esta. */}
-            <span className="text-[11px] text-muted-foreground opacity-70">
+            <span className="text-[11px] text-muted-foreground">
               cabeça pouco confiável
             </span>
           </div>

@@ -33,7 +33,11 @@ export function CabecalhoPagina({
       <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <SidebarTrigger className="sem-impressao -ml-1 mt-0.5 shrink-0" />
-          <div className="min-w-0 flex-1">
+          {/* `basis-64`: sem base, o titulo encolhia sem limite e as acoes
+              nunca desciam de linha -- a 390px o subtitulo virava uma coluna
+              de uma ou duas palavras ao lado de "Todos os atendimentos". Com
+              base, quando os dois nao cabem, as acoes quebram para baixo. */}
+          <div className="min-w-0 flex-1 basis-64">
             <h1 className="text-lg leading-tight font-semibold tracking-tight text-foreground">
               {titulo}
             </h1>

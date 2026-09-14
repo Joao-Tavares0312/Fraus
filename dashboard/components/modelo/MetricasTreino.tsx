@@ -169,7 +169,7 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
             : "não entra no fusor — cabeça treinada, mas ainda não pontua"}
         </span>
         {cabeca.classes.length > 0 ? (
-          <span className="num text-xs text-muted-foreground opacity-70">
+          <span className="num text-xs text-muted-foreground">
             {cabeca.classes.join(" · ")}
           </span>
         ) : null}

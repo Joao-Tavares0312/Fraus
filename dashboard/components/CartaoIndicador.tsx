@@ -106,7 +106,7 @@ export function CartaoIndicador({
         {qualificacao ? (
           <Badge
             variant="outline"
-            className="shrink-0 rounded-sm text-[0.625rem] text-muted-foreground"
+            className="shrink-0 rounded-sm text-[0.6875rem] text-muted-foreground"
           >
             {qualificacao}
           </Badge>
