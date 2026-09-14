@@ -633,7 +633,7 @@ function SinaisDeLeitura({
     // fato valer para a transcricao inteira.
     <details key={String(aberto)} open={aberto} className="group">
       <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 text-xs text-muted-foreground marker:text-muted-foreground">
-        <span className="text-[11px] uppercase tracking-wide opacity-70">
+        <span className="text-[11px] uppercase tracking-wide">
           leitura por frase
         </span>
         {emocaoTop ? (
@@ -645,10 +645,10 @@ function SinaisDeLeitura({
         {mensagem.prob_ironia !== null ? (
           <span>
             ironia <span className="num">{mensagem.prob_ironia.toFixed(2)}</span>{" "}
-            <span className="opacity-70">(pouco confiável)</span>
+            <span>(pouco confiável)</span>
           </span>
         ) : null}
-        <span className="opacity-60 group-open:hidden">— ver tudo</span>
+        <span className="group-open:hidden">— ver tudo</span>
       </summary>
 
       <div className="mt-3 flex flex-col gap-3 border-l border-linha pl-3">

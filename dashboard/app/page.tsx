@@ -577,7 +577,7 @@ export default async function PaginaInicial() {
               ))}
             </div>
             <div className={`${COLUNA} pb-6`}>
-              <p className="etiqueta-vitrine text-muted-foreground/70">
+              <p className="etiqueta-vitrine text-muted-foreground">
                 fatos do código · fraus.fusor.NOMES_FEATURES
               </p>
             </div>
@@ -776,7 +776,7 @@ export default async function PaginaInicial() {
                   </li>
                 ))}
               </ul>
-              <p className="etiqueta-vitrine mt-3 text-right text-muted-foreground/70">
+              <p className="etiqueta-vitrine mt-3 text-right text-muted-foreground">
                 exemplo ilustrativo
               </p>
             </Revelar>

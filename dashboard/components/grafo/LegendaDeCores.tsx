@@ -40,7 +40,7 @@ export function LegendaDeCores({ tipos }: { tipos: Set<TipoDeNo> }) {
 function Familia({ titulo, tipos }: { titulo: string; tipos: TipoDeNo[] }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span className="tracking-wide uppercase opacity-70">{titulo}</span>
+      <span className="tracking-wide uppercase">{titulo}</span>
       {tipos.map((tipo) => (
         <span key={tipo} className="flex items-center gap-1.5">
           {/*
