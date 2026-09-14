@@ -122,7 +122,20 @@ const Particles: React.FC<ParticlesProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const renderer = new Renderer({ dpr: pixelRatio, depth: false, alpha: true });
+    // SEM WEBGL, SEM CAMPO -- e nunca sem pagina. O `Renderer` do ogl lanca
+    // quando o navegador nao da contexto WebGL (aceleracao de hardware
+    // desligada, VM, area de trabalho remota: a maquina de uma sala de
+    // apresentacao). Sem esta guarda o erro subia do efeito e a vitrine
+    // INTEIRA virava "This page couldn't load" -- o enfeite derrubando o
+    // conteudo. Medido em 14/09/2026 num Chromium sem GPU. O hero ja e cena
+    // completa sem as particulas; e o mesmo destino de reduced-motion.
+    let renderer: Renderer;
+    try {
+      renderer = new Renderer({ dpr: pixelRatio, depth: false, alpha: true });
+      if (!renderer.gl) return;
+    } catch {
+      return;
+    }
     const gl = renderer.gl;
     container.appendChild(gl.canvas);
     gl.clearColor(0, 0, 0, 0);
