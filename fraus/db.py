@@ -188,6 +188,24 @@ CREATE TABLE IF NOT EXISTS entregas_webhook (
 );
 CREATE INDEX IF NOT EXISTS idx_entregas_fonte ON entregas_webhook(fonte_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_entregas_dedupe ON entregas_webhook(fonte_id, webhook_id);
+
+-- Perfil de mapeamento: qual coluna faz qual papel num export que o Fraus nao
+-- conhece por nome. Confirmado uma vez pelo analista, aplicado sozinho no
+-- proximo arquivo com as MESMAS colunas (a `assinatura`).
+--
+-- SO NOMES DE COLUNA ENTRAM AQUI, nunca celula: a amostra que o analista viu na
+-- previa e dado de cliente e nao tem motivo para ficar em disco.
+CREATE TABLE IF NOT EXISTS perfis_mapeamento (
+    id {SERIAL},
+    nome TEXT NOT NULL,
+    assinatura TEXT NOT NULL,
+    colunas_json TEXT NOT NULL,
+    papeis_json TEXT NOT NULL,
+    ordem_data TEXT,
+    criado_em TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_perfis_mapeamento_assinatura
+    ON perfis_mapeamento(assinatura);
 """
 
 # Os vereditos possiveis de uma entrega, num lugar so. A tela pinta cada um de
@@ -1100,6 +1118,59 @@ class Banco:
                 (tipo, termo),
             ).fetchone()
         return dict(linha)
+
+    @staticmethod
+    def _perfil(linha) -> dict:
+        registro = dict(linha)
+        registro["colunas"] = json.loads(registro.pop("colunas_json"))
+        registro["papeis"] = json.loads(registro.pop("papeis_json"))
+        return registro
+
+    def salvar_perfil_mapeamento(
+        self,
+        nome: str,
+        assinatura: str,
+        colunas: list[str],
+        papeis: dict[str, str | None],
+        ordem_data: str | None,
+    ) -> dict:
+        """Cria ou EDITA pela assinatura -- a mesma estrutura tem um perfil so."""
+        agora = datetime.now(timezone.utc).isoformat()
+        with self._conectar() as conexao:
+            conexao.execute(
+                "INSERT INTO perfis_mapeamento "
+                "(nome, assinatura, colunas_json, papeis_json, ordem_data, criado_em) "
+                "VALUES (?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(assinatura) DO UPDATE SET "
+                "nome = excluded.nome, colunas_json = excluded.colunas_json, "
+                "papeis_json = excluded.papeis_json, ordem_data = excluded.ordem_data, "
+                "criado_em = excluded.criado_em",
+                (nome, assinatura, json.dumps(colunas, ensure_ascii=False),
+                 json.dumps(papeis, ensure_ascii=False), ordem_data, agora),
+            )
+            linha = conexao.execute(
+                "SELECT * FROM perfis_mapeamento WHERE assinatura = ?", (assinatura,)
+            ).fetchone()
+        return self._perfil(linha)
+
+    def listar_perfis_mapeamento(self) -> list[dict]:
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                f"SELECT * FROM perfis_mapeamento ORDER BY {self._ordem('criado_em')} DESC, id DESC"
+            ).fetchall()
+        return [self._perfil(linha) for linha in linhas]
+
+    def perfil_por_assinatura(self, assinatura: str) -> dict | None:
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT * FROM perfis_mapeamento WHERE assinatura = ?", (assinatura,)
+            ).fetchone()
+        return self._perfil(linha) if linha else None
+
+    def apagar_perfil_mapeamento(self, perfil_id: int) -> bool:
+        with self._conectar() as conexao:
+            cursor = conexao.execute("DELETE FROM perfis_mapeamento WHERE id = ?", (perfil_id,))
+        return cursor.rowcount > 0
 
     def listar_curados(self) -> list[dict]:
         with self._conectar() as conexao:

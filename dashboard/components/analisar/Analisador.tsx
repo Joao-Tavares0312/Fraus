@@ -4,7 +4,12 @@ import { useRef, useState } from "react";
 import { FileText, RefreshCw, Upload } from "lucide-react";
 import {
   analisarUpload,
+  previaUpload,
+  salvarPerfilMapeamento,
   type ConversaAnalisada,
+  type MapeamentoConfirmado,
+  type OrdemData,
+  type PreviaLeitura,
   type MensagemAnalisada,
   type ResultadoAnalise,
 } from "@/lib/api";
@@ -28,11 +33,12 @@ import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { TextoComPesos } from "./TextoComPesos";
+import { ConferenciaDeColunas } from "./ConferenciaDeColunas";
 
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
 const TETO_BYTES = 200_000;
 
-const ACEITOS = ".csv,.xlsx,.xlsm,.docx,.pdf";
+const ACEITOS = ".csv,.tsv,.xlsx,.xlsm,.json,.jsonl,.txt,.docx,.pdf";
 
 export function Analisador() {
   const entrada = useRef<HTMLInputElement>(null);
@@ -42,6 +48,10 @@ export function Analisador() {
   /** O último arquivo escolhido, para "tentar de novo" sem reabrir o seletor. */
   const [ultimo, setUltimo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<ResultadoAnalise | null>(null);
+  /** Leitura inferida aguardando conferência. Nula quando o formato é conhecido. */
+  const [previa, setPrevia] = useState<PreviaLeitura | null>(null);
+  /** Falha ao gravar o perfil — não impede a análise, mas não pode sumir. */
+  const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null);
   /**
    * Contador, não booleano: dragenter/dragleave disparam para CADA filho que
    * o cursor cruza, e um booleano apagaria o realce ao passar sobre o ícone
@@ -52,6 +62,8 @@ export function Analisador() {
   async function analisar(escolhido: File) {
     setErro(null);
     setResultado(null);
+    setPrevia(null);
+    setAvisoPerfil(null);
     setArquivo(escolhido.name);
     setUltimo(escolhido);
 
@@ -62,11 +74,67 @@ export function Analisador() {
       return;
     }
 
+    // A prévia vem ANTES do modelo: é só leitura, responde rápido e diz se as
+    // colunas foram inferidas. Formato conhecido segue direto para a análise;
+    // inferido para na conferência — coluna errada não dá erro, dá nota errada.
     setOcupado(true);
+    const lida = await previaUpload(escolhido);
+    if (!lida.ok) {
+      setOcupado(false);
+      setErro(lida.erro);
+      return;
+    }
+    if (lida.dado.mapeamento) {
+      setOcupado(false);
+      setPrevia(lida.dado);
+      return;
+    }
     const resposta = await analisarUpload(escolhido);
     setOcupado(false);
     if (resposta.ok) setResultado(resposta.dado);
     else setErro(resposta.erro);
+  }
+
+  async function ajustar(mapeamento: MapeamentoConfirmado, ordemData: OrdemData | null) {
+    if (!ultimo) return;
+    setOcupado(true);
+    const lida = await previaUpload(ultimo, { mapeamento, ordemData });
+    setOcupado(false);
+    if (lida.ok) {
+      setErro(null);
+      setPrevia(lida.dado);
+    } else {
+      setErro(lida.erro);
+    }
+  }
+
+  async function confirmar(
+    mapeamento: MapeamentoConfirmado,
+    ordemData: OrdemData | null,
+    salvarComo: string | null,
+  ) {
+    if (!ultimo || !previa?.mapeamento) return;
+    setOcupado(true);
+    setErro(null);
+    if (salvarComo) {
+      const salvo = await salvarPerfilMapeamento({
+        nome: salvarComo,
+        colunas: previa.mapeamento.colunas,
+        papeis: mapeamento,
+        ordem_data: ordemData,
+      });
+      if (!salvo.ok) {
+        setAvisoPerfil(`O perfil não foi salvo: ${salvo.erro} A análise seguiu com as colunas escolhidas.`);
+      }
+    }
+    const resposta = await analisarUpload(ultimo, { mapeamento, ordemData });
+    setOcupado(false);
+    if (resposta.ok) {
+      setPrevia(null);
+      setResultado(resposta.dado);
+    } else {
+      setErro(resposta.erro);
+    }
   }
 
   async function aoEscolher(evento: React.ChangeEvent<HTMLInputElement>) {
@@ -90,26 +158,30 @@ export function Analisador() {
       >
         <div className="flex flex-col gap-3 px-5 py-4">
           <div className="text-sm text-muted-foreground">
-            <p>Aceito quatro formatos, e leio cada um pelo que ele consegue dar:</p>
+            <p>Leio planilha, JSON, WhatsApp e transcrição — e descubro as colunas sozinho:</p>
             <ul className="mt-1.5 flex flex-col gap-1 text-xs">
               <li>
-                <strong className="text-foreground">.csv</strong> e{" "}
-                <strong className="text-foreground">.xlsx</strong> — no formato
-                do Fraus (
-                <code className="num">
-                  conversa_id, canal, autor, texto, enviada_em,
-                  escalou_para_humano
-                </code>
-                ) ou o export da Totalk, que reconheço sozinho. Trazem horário,
-                então a conversa recebe nota.
+                <strong className="text-foreground">.csv</strong>,{" "}
+                <strong className="text-foreground">.xlsx</strong> e{" "}
+                <strong className="text-foreground">.json</strong> — qualquer
+                estrutura com uma coluna de fala e uma de quem falou. Reconheço
+                o formato do Fraus e o export da Totalk; nos outros,{" "}
+                <strong>infiro</strong> qual coluna é texto, autor, data e
+                conversa, e o resultado diz o que inferi. Com horário, a
+                conversa recebe nota.
               </li>
               <li>
-                <strong className="text-foreground">.docx</strong> e{" "}
-                <strong className="text-foreground">.pdf</strong> — transcrição
-                em linhas <code className="num">Autor: mensagem</code>, com o
-                autor sendo cliente, bot ou atendente. Sem horário no texto{" "}
-                <strong>não há nota</strong>, só a leitura por mensagem — o
-                porquê aparece no resultado.
+                <strong className="text-foreground">.txt</strong> do{" "}
+                <em>Exportar conversa</em> do WhatsApp — traz horário, recebe
+                nota; quem abre a conversa é lido como cliente.
+              </li>
+              <li>
+                <strong className="text-foreground">.docx</strong>,{" "}
+                <strong className="text-foreground">.pdf</strong> e .txt em
+                prosa — transcrição em linhas{" "}
+                <code className="num">Autor: mensagem</code>. Sem horário no
+                texto <strong>não há nota</strong>, só a leitura por mensagem —
+                o porquê aparece no resultado.
               </li>
             </ul>
           </div>
@@ -212,6 +284,27 @@ export function Analisador() {
               </Button>
             </div>
           </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {previa?.mapeamento && arquivo ? (
+        <ConferenciaDeColunas
+          previa={previa}
+          ocupado={ocupado}
+          nomeArquivo={arquivo}
+          aoAjustar={ajustar}
+          aoConfirmar={confirmar}
+          aoCancelar={() => {
+            setPrevia(null);
+            entrada.current?.click();
+          }}
+        />
+      ) : null}
+
+      {avisoPerfil ? (
+        <Alert>
+          <AlertTitle>Perfil de mapeamento</AlertTitle>
+          <AlertDescription>{avisoPerfil}</AlertDescription>
         </Alert>
       ) : null}
 

@@ -5,7 +5,11 @@ Cada formato entra por onde ele de fato consegue:
 - **csv / xlsx**: tabela. Tentam o layout canonico do Fraus e, se ele nao
   estiver la, o export da Totalk. Trazem horario, entao a conversa e pontuada
   normalmente.
-- **docx / pdf**: prosa. Viram transcricao (`fraus.ingest.transcricao`), que
+- **json / jsonl / txt de WhatsApp / csv de estrutura desconhecida**: desde
+  14/09/2026 caem no mapeador (`fraus.ingest.mapeador`), que descobre qual
+  coluna e o texto, o autor, a data e a conversa, e relata o que inferiu. Um
+  export novo nao pede adaptador novo.
+- **docx / pdf / txt em prosa**: prosa. Viram transcricao (`fraus.ingest.transcricao`), que
   quase nunca carrega horario -- e sem horario NAO HA NOTA, so a leitura por
   mensagem. Ver o modulo de transcricao para o porque.
 
@@ -18,13 +22,18 @@ recusa nesta camada nomeia o que se esperava e o que se achou.
 import csv
 import io
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from fraus.ingest import totalk
+from fraus.ingest import leitores, mapeador, totalk
 from fraus.ingest.csv_driver import carregar_linhas
 from fraus.ingest.transcricao import ler as ler_transcricao
 from fraus.modelos import Conversa
+from fraus.seguranca.pii import censurar_pii
+
+# Linhas da tabela devolvidas na previa para o analista conferir as colunas.
+LINHAS_DE_AMOSTRA = 5
 
 EXTENSOES = {
     ".csv": "csv",
@@ -32,6 +41,10 @@ EXTENSOES = {
     ".xlsm": "xlsx",
     ".docx": "docx",
     ".pdf": "pdf",
+    ".tsv": "csv",
+    ".json": "json",
+    ".jsonl": "json",
+    ".txt": "txt",
 }
 
 COLUNAS_CANONICAS = {
@@ -80,6 +93,25 @@ class Extracao:
     """Falso quando nao ha horario: sem ele nao ha latencia, logo nao ha nota."""
     avisos: list[str] = field(default_factory=list)
     rejeitadas: list[dict] = field(default_factory=list)
+    mapeamento: dict | None = None
+    """So quando as colunas foram INFERIDAS: papel -> coluna, confianca e motivo.
+    None para formato reconhecido (Fraus, Totalk, transcricao), que nao tem o
+    que conferir."""
+    amostra: list[list[str]] = field(default_factory=list)
+    """Primeiras linhas, JA censuradas -- a previa mostra dado de cliente real."""
+    perfil: dict | None = None
+    """O perfil salvo que decidiu o mapeamento, quando houve um."""
+
+
+@dataclass
+class OpcoesDeLeitura:
+    """O que quem chama sabe sobre o arquivo e a heuristica nao sabe."""
+
+    forcado: dict[str, str | None] | None = None
+    ordem_data: str | None = None
+    perfil_para: Callable[[str], dict | None] | None = None
+    """Busca perfil por assinatura de colunas. Injetado para `ingest` nao
+    conhecer o banco."""
 
 
 def _extensao(nome: str) -> str:
@@ -215,9 +247,18 @@ def _texto_do_pdf(dados: bytes) -> str:
     return texto
 
 
-def _de_tabela(linhas: list[list[str]], origem: str) -> Extracao:
-    """Tenta o layout canonico e, se nao for ele, o export da Totalk."""
+def _de_tabela(
+    linhas: list[list[str]], origem: str, opcoes: OpcoesDeLeitura | None = None
+) -> Extracao:
+    """Tenta o layout canonico, o export da Totalk e, por fim, o mapeador.
+
+    Mapeamento confirmado pelo analista pula os dois reconhecimentos: quem
+    confirmou colunas quer ESSA leitura, nao a que o nome das colunas sugere.
+    """
+    opcoes = opcoes or OpcoesDeLeitura()
     cabecalho = {str(c).strip() for c in linhas[0]}
+    if opcoes.forcado:
+        return _mapeada(linhas[0], linhas[1:], origem, opcoes)
 
     if COLUNAS_CANONICAS <= cabecalho:
         saida = io.StringIO(newline="")
@@ -256,12 +297,58 @@ def _de_tabela(linhas: list[list[str]], origem: str) -> Extracao:
             rejeitadas=[linha.model_dump() for linha in resultado.ignoradas],
         )
 
-    faltando = sorted(COLUNAS_CANONICAS - cabecalho)
-    raise ArquivoIlegivelError(
-        f"não reconheci as colunas de {origem}. Faltam, para o formato do Fraus: "
-        f"{', '.join(faltando)}. Encontrei: {', '.join(sorted(cabecalho)[:10])}"
-        + ("…" if len(cabecalho) > 10 else "")
-        + ". Também aceito o export da Totalk, que precisa de 'Mensagem/Quem enviou' e 'Conversa'."
+    return _mapeada(linhas[0], linhas[1:], origem, opcoes)
+
+
+def _mapeada(
+    colunas: list[str], linhas: list[list[str]], origem: str, opcoes: OpcoesDeLeitura | None = None
+) -> Extracao:
+    """Estrutura desconhecida: o mapeador descobre os papeis e relata o que inferiu.
+
+    Ordem de autoridade: o que veio confirmado nesta requisicao, depois o
+    perfil salvo para esta assinatura de colunas, depois a heuristica.
+    """
+    opcoes = opcoes or OpcoesDeLeitura()
+    colunas = [str(c).strip() for c in colunas]
+    forcado, ordem_data, perfil = opcoes.forcado, opcoes.ordem_data, None
+    if forcado is None and opcoes.perfil_para is not None:
+        perfil = opcoes.perfil_para(mapeador.assinatura(colunas))
+        if perfil is not None:
+            forcado = perfil["papeis"]
+            ordem_data = ordem_data or perfil.get("ordem_data")
+    try:
+        resultado = mapeador.converter(colunas, linhas, origem, forcado, ordem_data)
+    except mapeador.MapeamentoInsuficienteError as erro:
+        faltando = sorted(COLUNAS_CANONICAS - {str(c).strip() for c in colunas})
+        raise ArquivoIlegivelError(
+            f"{erro} Se preferir o formato do Fraus, faltam: {', '.join(faltando)}. "
+            "Também aceito o export da Totalk ('Mensagem/Quem enviou' e 'Conversa')."
+        ) from erro
+    mapa = resultado.mapeamento
+    avisos = list(resultado.avisos)
+    if perfil is not None:
+        avisos.insert(0, f"Apliquei o perfil salvo “{perfil['nome']}”, que casa com as colunas deste arquivo.")
+    return Extracao(
+        conversas=resultado.conversas,
+        formato=f"{origem} com colunas inferidas",
+        tem_tempo=resultado.tem_tempo,
+        avisos=avisos,
+        rejeitadas=resultado.rejeitadas,
+        mapeamento={
+            "colunas": mapa.colunas,
+            "assinatura": mapeador.assinatura(mapa.colunas),
+            "papeis": {
+                papel: {"coluna": a.coluna, "confianca": a.confianca, "motivo": a.motivo}
+                for papel, a in mapa.papeis.items()
+            },
+            "ordem_data": mapa.ordem_data,
+            "data_ambigua": mapa.data_ambigua,
+        },
+        amostra=[
+            [censurar_pii(str(celula)) for celula in linha]
+            for linha in linhas[:LINHAS_DE_AMOSTRA]
+        ],
+        perfil={"id": perfil["id"], "nome": perfil["nome"]} if perfil else None,
     )
 
 
@@ -286,7 +373,7 @@ def _de_prosa(texto: str, nome: str, origem: str) -> Extracao:
     if not transcricao.tem_tempo:
         avisos.append(
             "Sem horário nas mensagens: não há latência para medir, e latência "
-            "é uma das 38 features do fusor. Por isso esta conversa NÃO "
+            "é feature do fusor. Por isso esta conversa NÃO "
             "recebe nota — preencher o tempo com zero faria o modelo ler como se "
             "toda resposta tivesse sido instantânea, e a nota sairia melhor do "
             "que a verdade. A leitura por mensagem (classificação, emoção, ironia "
@@ -314,27 +401,44 @@ def _de_prosa(texto: str, nome: str, origem: str) -> Extracao:
     )
 
 
-def extrair(nome: str, dados: bytes) -> Extracao:
+def extrair(nome: str, dados: bytes, opcoes: OpcoesDeLeitura | None = None) -> Extracao:
     """Ponto unico de entrada: decide pelo nome e le pelo conteudo."""
     formato = _extensao(nome)
 
     if formato == "csv":
-        try:
-            texto = dados.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            # Export de Windows costuma sair em latin-1. Tentar e melhor que
-            # recusar um arquivo que so tem acento em outra tabela.
-            try:
-                texto = dados.decode("latin-1")
-            except UnicodeDecodeError as erro:
-                raise ArquivoIlegivelError(f"CSV com codificacao ilegivel: {erro}") from erro
-        linhas = [linha for linha in csv.reader(io.StringIO(texto, newline="")) if any(linha)]
-        if not linhas:
+        # Export de Windows costuma sair em cp1252/latin-1, e o Excel pt-BR
+        # separa por `;`. Os dois sao resolvidos no leitor, nao recusados.
+        texto, _ = leitores.decodificar(dados)
+        (cabecalho, corpo), _ = leitores.tabela_de_csv(texto)
+        if not cabecalho:
             raise ArquivoIlegivelError("o CSV esta vazio")
-        return _de_tabela(linhas, "CSV")
+        return _de_tabela([cabecalho, *corpo], "CSV", opcoes)
+
+    if formato == "json":
+        texto, _ = leitores.decodificar(dados)
+        try:
+            colunas, linhas = leitores.tabela_de_json(texto)
+        except ValueError as erro:
+            raise ArquivoIlegivelError(
+                "JSON ilegivel: nem um documento JSON nem JSON Lines (um objeto por linha)."
+            ) from erro
+        if not linhas:
+            raise ArquivoIlegivelError(
+                "não achei nenhuma lista de registros no JSON. Espero uma lista de "
+                "mensagens, ex.: [{\"autor\": \"cliente\", \"texto\": \"oi\", \"data\": \"...\"}]."
+            )
+        return _de_tabela([colunas, *linhas], "JSON", opcoes)
+
+    if formato == "txt":
+        texto, _ = leitores.decodificar(dados)
+        whatsapp = leitores.tabela_de_whatsapp(texto)
+        if whatsapp is not None:
+            colunas, linhas = whatsapp
+            return _mapeada(colunas, linhas, "WhatsApp", opcoes)
+        return _de_prosa(texto, nome, "txt")
 
     if formato == "xlsx":
-        return _de_tabela(_linhas_da_planilha(dados), "planilha")
+        return _de_tabela(_linhas_da_planilha(dados), "planilha", opcoes)
 
     if formato == "docx":
         return _de_prosa(_texto_do_docx(dados), nome, "docx")
