@@ -622,7 +622,14 @@ Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
 
 ## 8. Armadilhas já pagas — não repita
 
-0. **A vitrine NÃO rola na horizontal — e o `scrollWidth` maior que a viewport
+0. **CORRIGIDO em 14/09/2026 — a vitrine ROLAVA sim, e o texto abaixo media
+   errado.** `overflow-x: hidden` no body barra o arraste, **não** a rolagem
+   programática: re-medido, `scrollTo(9999, 0)` a 390px andava **96px**. O
+   culpado era a marca do fecho (`absolute -right-24`), e o conserto é
+   `overflow-x-clip` no invólucro de `app/page.tsx` (`scrollWidth` 486 → 390,
+   header sticky intacto). O parágrafo original fica como registro:
+
+   ~~A vitrine NÃO rola na horizontal~~ — e o `scrollWidth` maior que a viewport
    não prova que role.** Medido em 08/09/2026 na `main` e na
    `feat/tipografia-e-heroi`, com resultado idêntico nas duas: em 360/390/440px
    o `document.scrollWidth` dá viewport + 96px, e mesmo assim
