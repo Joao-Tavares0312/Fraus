@@ -31,6 +31,7 @@ AS INVARIANTES QUE VALEM AQUI:
 - o texto passa por `censurar_pii` aqui, porque isto e uma porta de entrada.
 """
 
+import hashlib
 import re
 import unicodedata
 from collections import Counter
@@ -81,6 +82,9 @@ PAPEL_DO_AUTOR: dict[Autor, tuple[str, ...]] = {
 }
 
 
+ORDENS_DE_DATA = ("dia/mes", "mes/dia")
+
+
 class MapeamentoInsuficienteError(ValueError):
     """Nao deu para achar os papeis obrigatorios. A mensagem diz o que se achou."""
 
@@ -89,6 +93,19 @@ def _normalizar(texto: str) -> str:
     sem_acento = unicodedata.normalize("NFKD", str(texto).strip().lower())
     limpo = "".join(c for c in sem_acento if not unicodedata.combining(c))
     return re.sub(r"[\s_\-/.]+", " ", limpo).strip()
+
+
+def assinatura(colunas: list[str]) -> str:
+    """Identidade de uma ESTRUTURA de arquivo: as colunas, sem ordem, caixa ou acento.
+
+    E a chave do perfil de mapeamento. O mesmo sistema exporta sempre as mesmas
+    colunas, entao o que o analista confirmou uma vez vale para o proximo
+    arquivo dele -- e so para ele: um export com uma coluna a mais e outra
+    estrutura, e cai de novo na inferencia em vez de herdar um mapa que talvez
+    nao sirva.
+    """
+    chave = "|".join(sorted(_normalizar(c) for c in colunas))
+    return hashlib.sha256(chave.encode("utf-8")).hexdigest()[:32]
 
 
 # --- datas -------------------------------------------------------------------
@@ -147,7 +164,7 @@ def _saltos_para_tras(datas: list[datetime | None], grupos: list[str] | None) ->
 
 
 def interpretar_datas(
-    valores: list[str], grupos: list[str] | None = None
+    valores: list[str], grupos: list[str] | None = None, ordem: str | None = None
 ) -> tuple[list[datetime | None], RelatoDatas]:
     """Parseia uma COLUNA inteira de datas, decidindo a ordem pela coluna, nao pela celula.
 
@@ -161,13 +178,19 @@ def interpretar_datas(
        tras dentro de cada conversa (mensagens de um atendimento sao gravadas
        em ordem);
     3. empate: dia/mes (o publico e brasileiro), marcado como ambiguo e avisado.
+
+    `ordem` e a resposta de quem CONHECE o sistema de origem (confirmada na
+    previa ou gravada no perfil) e encerra a questao antes das tres regras.
     """
     relato = RelatoDatas()
     achados = [_BARRA.match(v.strip()) for v in valores]
     com_barra = [a for a in achados if a]
 
     dia_primeiro = True
-    if com_barra:
+    if com_barra and ordem in ORDENS_DE_DATA:
+        dia_primeiro = ordem == "dia/mes"
+        relato.ordem = ordem
+    elif com_barra:
         primeiro_grande = any(int(a["a"]) > 12 for a in com_barra)
         segundo_grande = any(int(a["b"]) > 12 for a in com_barra)
         if primeiro_grande and not segundo_grande:
@@ -322,6 +345,8 @@ class PapelAtribuido:
 class Mapeamento:
     papeis: dict[str, PapelAtribuido]
     colunas: list[str]
+    ordem_data: str | None = None
+    data_ambigua: bool = False
 
     def coluna(self, papel: str) -> str | None:
         atribuido = self.papeis.get(papel)
@@ -431,10 +456,46 @@ def _decidir_autores(
     return papeis, avisos
 
 
-def converter(colunas: list[str], linhas: list[list[str]], origem: str) -> ResultadoMapeado:
+def _aplicar_forcado(mapa: Mapeamento, forcado: dict[str, str | None]) -> None:
+    """O que o analista confirmou vence a heuristica, papel a papel.
+
+    `None` num papel quer dizer "este arquivo nao tem essa coluna" -- e diferente
+    de o papel nao aparecer, que deixa a inferencia decidir. Coluna que nao
+    existe no arquivo e recusa nomeando, nunca papel descartado em silencio:
+    um perfil velho aplicado a um export que renomeou a coluna precisa falhar
+    alto, nao montar conversa sem texto.
+    """
+    for papel, coluna in forcado.items():
+        if papel not in SINONIMOS:
+            raise MapeamentoInsuficienteError(
+                f"papel desconhecido no mapeamento: '{papel}'. Papéis: {', '.join(SINONIMOS)}."
+            )
+        if coluna is None:
+            mapa.papeis.pop(papel, None)
+            continue
+        if coluna not in mapa.colunas:
+            raise MapeamentoInsuficienteError(
+                f"o mapeamento aponta {papel} para a coluna '{coluna}', que não existe "
+                f"neste arquivo. Colunas: {', '.join(mapa.colunas[:12])}."
+            )
+        for outro, atribuido in list(mapa.papeis.items()):
+            if atribuido.coluna == coluna and outro != papel:
+                del mapa.papeis[outro]
+        mapa.papeis[papel] = PapelAtribuido(coluna, mapa.colunas.index(coluna), 1.0, "confirmado")
+
+
+def converter(
+    colunas: list[str],
+    linhas: list[list[str]],
+    origem: str,
+    forcado: dict[str, str | None] | None = None,
+    ordem_data: str | None = None,
+) -> ResultadoMapeado:
     if not linhas:
         raise MapeamentoInsuficienteError(f"{origem} não tem linhas depois do cabeçalho.")
     mapa = mapear(colunas, linhas)
+    if forcado:
+        _aplicar_forcado(mapa, forcado)
 
     faltando = [papel for papel in OBRIGATORIOS if papel not in mapa.papeis]
     if faltando:
@@ -455,17 +516,26 @@ def converter(colunas: list[str], linhas: list[list[str]], origem: str) -> Resul
         return linha[atribuido.indice].strip()
 
     grupos = [valor(l, "conversa_id") or "conversa" for l in linhas]
+    def _descrever(papel: str, a: PapelAtribuido) -> str:
+        # Coluna confirmada nao leva numero: a nota e da heuristica, e quem
+        # decidiu foi o analista -- exibir "1,00" fingiria uma medicao.
+        if a.motivo == "confirmado":
+            return f"{papel} ← '{a.coluna}'"
+        return f"{papel} ← '{a.coluna}' ({a.confianca:.2f}, {a.motivo})".replace(".", ",", 1)
+
+    confirmadas = all(a.motivo == "confirmado" for a in mapa.papeis.values())
     avisos = [
-        "Colunas inferidas: " + "; ".join(
-            f"{papel} ← '{a.coluna}' ({a.confianca:.2f}, {a.motivo})".replace(".", ",", 1)
-            for papel, a in mapa.papeis.items()
-        ) + "."
+        ("Colunas confirmadas: " if confirmadas else "Colunas inferidas: ")
+        + "; ".join(_descrever(p, a) for p, a in mapa.papeis.items()) + "."
     ]
 
     tem_tempo = "enviada_em" in mapa.papeis
     if tem_tempo:
-        datas, relato = interpretar_datas([valor(l, "enviada_em") for l in linhas], grupos)
+        datas, relato = interpretar_datas(
+            [valor(l, "enviada_em") for l in linhas], grupos, ordem_data
+        )
         avisos.extend(relato.avisos)
+        mapa.ordem_data, mapa.data_ambigua = relato.ordem, relato.ambigua
     else:
         inicio = datetime.now(timezone.utc).replace(microsecond=0)
         datas = [inicio + timedelta(seconds=i) for i in range(len(linhas))]

@@ -11,13 +11,16 @@ JSON, e `/analisar/arquivo` recebe multipart -- porque formato binario
 terco por nada.
 """
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+import json
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
 
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoAnalise
 from fraus.indicadores import nota_0_10
-from fraus.ingest.arquivos import ArquivoIlegivelError, extrair
+from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
+from fraus.ingest.mapeador import ORDENS_DE_DATA
 from fraus.resumo import resumir
 from fraus.sinais.palavras import contar_palavras
 
@@ -91,9 +94,87 @@ def analisar(
     return montar_analise(ctx, extracao)
 
 
+def opcoes_de_leitura(
+    ctx: Contexto, mapeamento: str | None, ordem_data: str | None
+) -> OpcoesDeLeitura:
+    """Traduz os campos de formulario em opcoes de leitura, recusando alto.
+
+    O mapeamento diz so QUAL COLUNA FAZ QUAL PAPEL -- nunca score, nota ou
+    categoria (invariante 3). Um objeto com outra forma e 400 aqui, antes de
+    qualquer parse de arquivo.
+    """
+    forcado = None
+    if mapeamento:
+        try:
+            forcado = json.loads(mapeamento)
+        except json.JSONDecodeError as erro:
+            raise HTTPException(
+                status_code=400,
+                detail='mapeamento precisa ser JSON: {"texto": "coluna", "autor": "coluna", ...}',
+            ) from erro
+        if not isinstance(forcado, dict) or not all(
+            isinstance(v, (str, type(None))) for v in forcado.values()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="mapeamento precisa ser um objeto papel -> nome de coluna (ou null)",
+            )
+    if ordem_data is not None and ordem_data not in ORDENS_DE_DATA:
+        raise HTTPException(
+            status_code=400, detail=f"ordem_data precisa ser {' ou '.join(ORDENS_DE_DATA)}"
+        )
+    return OpcoesDeLeitura(
+        forcado=forcado or None,
+        ordem_data=ordem_data,
+        perfil_para=ctx.banco.perfil_por_assinatura,
+    )
+
+
+@router.post("/analisar/previa")
+async def previa(
+    arquivo: UploadFile = File(...),
+    mapeamento: str | None = Form(None),
+    ordem_data: str | None = Form(None),
+    ctx: Contexto = Depends(obter_contexto),
+) -> dict:
+    """Como o arquivo SERIA lido -- sem modelo e sem gravar nada.
+
+    E a etapa de conferencia antes da analise: quando as colunas foram
+    inferidas, devolve o mapeamento sugerido com confianca e motivo por papel,
+    as primeiras linhas (censuradas) e o perfil salvo que casou, se houver.
+    Formato reconhecido (Fraus, Totalk, transcricao) volta com `mapeamento`
+    nulo -- nao ha o que conferir.
+
+    Nao roda BERTimbau: so leitura e mapeamento, entao responde em
+    milissegundos e pode ser chamada a cada ajuste de coluna na tela.
+    """
+    dados = await ler_ate_o_teto(arquivo, TETO_ARQUIVO_ANALISE)
+    if not dados:
+        raise HTTPException(status_code=400, detail="arquivo vazio")
+    opcoes = opcoes_de_leitura(ctx, mapeamento, ordem_data)
+    extracao = await run_in_threadpool(
+        extrair_ou_400, arquivo.filename or "arquivo", dados, opcoes
+    )
+    return {
+        "formato": extracao.formato,
+        "tem_tempo": extracao.tem_tempo,
+        "conversas": len(extracao.conversas),
+        "mensagens": sum(len(c.mensagens) for c in extracao.conversas),
+        "avisos": extracao.avisos,
+        "total_rejeitadas": len(extracao.rejeitadas),
+        "rejeitadas": extracao.rejeitadas[:LIMITE_MOTIVOS],
+        "mapeamento": extracao.mapeamento,
+        "amostra": extracao.amostra,
+        "perfil": extracao.perfil,
+    }
+
+
 @router.post("/analisar/arquivo")
 async def analisar_arquivo(
-    arquivo: UploadFile = File(...), ctx: Contexto = Depends(obter_contexto)
+    arquivo: UploadFile = File(...),
+    mapeamento: str | None = Form(None),
+    ordem_data: str | None = Form(None),
+    ctx: Contexto = Depends(obter_contexto),
 ) -> dict:
     """Mesma analise, aceitando csv, xlsx, json, txt, docx ou pdf.
 
@@ -115,6 +196,7 @@ async def analisar_arquivo(
     dados = await ler_ate_o_teto(arquivo, TETO_ARQUIVO_ANALISE)
     if not dados:
         raise HTTPException(status_code=400, detail="arquivo vazio")
+    opcoes = opcoes_de_leitura(ctx, mapeamento, ordem_data)
 
     # O TRABALHO PESADO SAI DO EVENT LOOP, e este e o ponto todo desta rota.
     #
@@ -135,17 +217,19 @@ async def analisar_arquivo(
     # justamente por isso. A assimetria entre as duas era acidental, nao uma
     # decisao -- e so uma delas pagava o preco.
     return await run_in_threadpool(
-        _extrair_e_analisar, ctx, arquivo.filename or "arquivo", dados
+        _extrair_e_analisar, ctx, arquivo.filename or "arquivo", dados, opcoes
     )
 
 
-def _extrair_e_analisar(ctx: Contexto, nome: str, dados: bytes) -> dict:
+def _extrair_e_analisar(
+    ctx: Contexto, nome: str, dados: bytes, opcoes: OpcoesDeLeitura | None = None
+) -> dict:
     """As duas etapas de CPU, juntas, para uma ida so ao threadpool.
 
     Separadas seriam dois saltos de contexto sem ganho nenhum: nada entre elas
     precisa do event loop de volta.
     """
-    return montar_analise(ctx, extrair_ou_400(nome, dados))
+    return montar_analise(ctx, extrair_ou_400(nome, dados, opcoes))
 
 
 async def ler_ate_o_teto(arquivo: UploadFile, teto: int) -> bytes:
@@ -179,7 +263,7 @@ async def ler_ate_o_teto(arquivo: UploadFile, teto: int) -> bytes:
     return b"".join(pedacos)
 
 
-def extrair_ou_400(nome: str, dados: bytes):
+def extrair_ou_400(nome: str, dados: bytes, opcoes: OpcoesDeLeitura | None = None):
     """Traduz toda falha de leitura em 400 que NOMEIA o que se esperava.
 
     Arquivo que nao entra e o caso comum, nao a excecao: as pessoas
@@ -187,7 +271,7 @@ def extrair_ou_400(nome: str, dados: bytes):
     um "formato invalido" seco obrigaria a adivinhar qual e o problema.
     """
     try:
-        return extrair(nome, dados)
+        return extrair(nome, dados, opcoes)
     except ArquivoIlegivelError as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
     except KeyError as erro:
@@ -330,4 +414,6 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
         "formato": resultado.formato,
         "tem_tempo": resultado.tem_tempo,
         "avisos": resultado.avisos,
+        "mapeamento": resultado.mapeamento,
+        "perfil": resultado.perfil,
     }

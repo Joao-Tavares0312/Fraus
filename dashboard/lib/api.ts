@@ -1049,7 +1049,7 @@ export type ResultadoAnalise = {
   /**
    * Falso quando o arquivo nao traz horario (tipico de .docx e .pdf).
    *
-   * Sem horario nao ha latencia, e latencia e uma das 35 features do
+   * Sem horario nao ha latencia, e latencia e feature do
    * fusor -- entao a conversa NAO recebe nota. Nao e falha: e a resposta
    * honesta. Zerar o tempo faria o modelo ler como se toda resposta tivesse
    * sido instantanea e a nota sairia melhor que a verdade.
@@ -1057,6 +1057,62 @@ export type ResultadoAnalise = {
   tem_tempo: boolean;
   /** O que a leitura teve que inferir. Exibir sempre, não só quando dá errado. */
   avisos: string[];
+  /** Presente só quando as colunas foram INFERIDAS pelo mapeador. */
+  mapeamento: MapeamentoInferido | null;
+  perfil: { id: number; nome: string } | null;
+};
+
+/** Os papéis que o mapeador procura. `texto` e `autor` são obrigatórios. */
+export const PAPEIS = ["texto", "autor", "enviada_em", "conversa_id", "canal"] as const;
+export type Papel = (typeof PAPEIS)[number];
+export type OrdemData = "dia/mes" | "mes/dia";
+
+export type PapelAtribuido = {
+  coluna: string;
+  /** 0–1. "confirmado" no motivo quando veio do analista ou de perfil. */
+  confianca: number;
+  motivo: string;
+};
+
+export type MapeamentoInferido = {
+  colunas: string[];
+  assinatura: string;
+  papeis: Partial<Record<Papel, PapelAtribuido>>;
+  ordem_data: OrdemData | null;
+  /** Nenhum campo passou de 12: a ordem foi desempatada ou suposta. */
+  data_ambigua: boolean;
+};
+
+/** O que o analista confirma: papel -> coluna, `null` = "o arquivo não tem". */
+export type MapeamentoConfirmado = Partial<Record<Papel, string | null>>;
+
+export type OpcoesDeLeitura = {
+  mapeamento?: MapeamentoConfirmado;
+  ordemData?: OrdemData | null;
+};
+
+export type PreviaLeitura = {
+  formato: string;
+  tem_tempo: boolean;
+  conversas: number;
+  mensagens: number;
+  avisos: string[];
+  total_rejeitadas: number;
+  rejeitadas: { numero_linha: number; motivo: string }[];
+  mapeamento: MapeamentoInferido | null;
+  /** Primeiras linhas, já censuradas pelo servidor. */
+  amostra: string[][];
+  perfil: { id: number; nome: string } | null;
+};
+
+export type PerfilMapeamento = {
+  id: number;
+  nome: string;
+  assinatura: string;
+  colunas: string[];
+  papeis: MapeamentoConfirmado;
+  ordem_data: OrdemData | null;
+  criado_em: string;
 };
 
 /**
@@ -1078,36 +1134,70 @@ export const analisarArquivo = (csv: string) =>
  */
 export async function analisarUpload(
   arquivo: File,
+  opcoes: OpcoesDeLeitura = {},
 ): Promise<Resultado<ResultadoAnalise>> {
-  return proteger(
-    (async () => {
-      const corpo = new FormData();
-      corpo.append("arquivo", arquivo);
-      // Sem Content-Type a mao: o `fetch` precisa gerar o boundary do
-      // multipart, e fixa-lo aqui quebraria o parse do lado da API.
-      const resposta = await fetch(urlDaApi("/analisar/arquivo"), {
-        method: "POST",
-        headers: await cabecalhosDaApi(),
-        body: corpo,
-        // Teto largo: a inferencia roda em CPU e mediu 21,8 s no arquivo maior
-        // que o teto de mensagens deixa passar. Mas nao INFINITO -- foi
-        // exatamente aqui que a tela ficou 60 s presa esperando uma API que
-        // havia travado, e o 502 do proxy chegou antes de qualquer aviso nosso.
-        signal: AbortSignal.timeout(ESPERA_ANALISE_MS),
-      });
-      if (falhouNoProxy(resposta.status)) {
-        throw new Error(`${MARCA_API_FORA} ${urlDaApi("")}`);
-      }
-      if (!resposta.ok) {
-        // O `detail` do FastAPI e a mensagem que NOMEIA o que se esperava --
-        // ela e o produto principal de uma recusa, e perde-la deixaria o
-        // operador com "erro 400" e nada para consertar.
-        const erro = await resposta.json().catch(() => null);
-        throw new Error(erro?.detail ?? `A API respondeu ${resposta.status}.`);
-      }
-      return (await resposta.json()) as ResultadoAnalise;
-    })(),
-  );
+  return proteger(enviarArquivo<ResultadoAnalise>("/analisar/arquivo", arquivo, opcoes, ESPERA_ANALISE_MS));
+}
+
+/**
+ * Como o arquivo SERIA lido, sem modelo e sem gravar nada -- a etapa de
+ * conferência de colunas. Rápida: pode ser chamada a cada ajuste na tela.
+ */
+export async function previaUpload(
+  arquivo: File,
+  opcoes: OpcoesDeLeitura = {},
+): Promise<Resultado<PreviaLeitura>> {
+  return proteger(enviarArquivo<PreviaLeitura>("/analisar/previa", arquivo, opcoes, ESPERA_ESCRITA_MS));
+}
+
+export const listarPerfisMapeamento = () =>
+  proteger(buscar<PerfilMapeamento[]>("/perfis-mapeamento"));
+
+export const salvarPerfilMapeamento = (perfil: {
+  nome: string;
+  colunas: string[];
+  papeis: MapeamentoConfirmado;
+  ordem_data: OrdemData | null;
+}) => proteger(escrever<PerfilMapeamento>("/perfis-mapeamento", "POST", perfil));
+
+export const apagarPerfilMapeamento = (id: number) =>
+  proteger(escrever<void>(`/perfis-mapeamento/${id}`, "DELETE"));
+
+async function enviarArquivo<T>(
+  rota: string,
+  arquivo: File,
+  opcoes: OpcoesDeLeitura,
+  espera: number,
+): Promise<T> {
+  const corpo = new FormData();
+  corpo.append("arquivo", arquivo);
+  // O mapeamento diz só qual coluna faz qual papel -- nunca nota
+  // (invariante 3): o veredito continua saindo do servidor.
+  if (opcoes.mapeamento) corpo.append("mapeamento", JSON.stringify(opcoes.mapeamento));
+  if (opcoes.ordemData) corpo.append("ordem_data", opcoes.ordemData);
+  // Sem Content-Type a mao: o `fetch` precisa gerar o boundary do
+  // multipart, e fixa-lo aqui quebraria o parse do lado da API.
+  const resposta = await fetch(urlDaApi(rota), {
+    method: "POST",
+    headers: await cabecalhosDaApi(),
+    body: corpo,
+    // Teto largo: a inferencia roda em CPU e mediu 21,8 s no arquivo maior
+    // que o teto de mensagens deixa passar. Mas nao INFINITO -- foi
+    // exatamente aqui que a tela ficou 60 s presa esperando uma API que
+    // havia travado, e o 502 do proxy chegou antes de qualquer aviso nosso.
+    signal: AbortSignal.timeout(espera),
+  });
+  if (falhouNoProxy(resposta.status)) {
+    throw new Error(`${MARCA_API_FORA} ${urlDaApi("")}`);
+  }
+  if (!resposta.ok) {
+    // O `detail` do FastAPI e a mensagem que NOMEIA o que se esperava --
+    // ela e o produto principal de uma recusa, e perde-la deixaria o
+    // operador com "erro 400" e nada para consertar.
+    const erro = await resposta.json().catch(() => null);
+    throw new Error(erro?.detail ?? `A API respondeu ${resposta.status}.`);
+  }
+  return (await resposta.json()) as T;
 }
 
 export type PontoSerieApi = {

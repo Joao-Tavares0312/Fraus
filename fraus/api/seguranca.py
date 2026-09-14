@@ -229,6 +229,10 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
         return True
     if caminho.startswith("/lexico") and metodo != "GET":
         return True
+    # Perfil de mapeamento muda como TODO arquivo futuro daquela estrutura e
+    # lido -- e configuracao da instalacao, como o lexico curado.
+    if caminho.startswith("/perfis-mapeamento") and metodo != "GET":
+        return True
     return False
 
 

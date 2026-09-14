@@ -177,3 +177,42 @@ def test_pii_e_censurada_na_entrada():
     )
     extracao = converter(colunas, linhas, "CSV")
     assert "529.982.247-25" not in extracao.conversas[0].mensagens[0].texto
+
+
+# ---------------------------------------------------------------------------
+# o que o analista confirma vence o que a heuristica inferiu
+
+
+def test_mapeamento_forcado_vence_a_inferencia_e_e_relatado_como_confirmado():
+    colunas, linhas = _tabela(ZENDESK)
+    resultado = converter(colunas, linhas, "CSV", forcado={"conversa_id": None, "texto": "body"})
+    assert "conversa_id" not in resultado.mapeamento.papeis
+    assert len(resultado.conversas) == 1
+    assert resultado.mapeamento.papeis["texto"].motivo == "confirmado"
+
+
+def test_mapeamento_forcado_com_coluna_inexistente_e_recusado_nomeando():
+    colunas, linhas = _tabela(ZENDESK)
+    with pytest.raises(MapeamentoInsuficienteError) as erro:
+        converter(colunas, linhas, "CSV", forcado={"texto": "mensagem"})
+    assert "mensagem" in str(erro.value)
+
+
+def test_papel_desconhecido_no_forcado_e_recusado():
+    colunas, linhas = _tabela(ZENDESK)
+    with pytest.raises(MapeamentoInsuficienteError):
+        converter(colunas, linhas, "CSV", forcado={"nota": "body"})
+
+
+def test_ordem_de_data_confirmada_encerra_a_ambiguidade():
+    datas, relato = interpretar_datas(["01/02/2026 10:00"], ordem="mes/dia")
+    assert datas[0].month == 1 and datas[0].day == 2
+    assert relato.ambigua is False
+    assert not any("ambígua" in aviso for aviso in relato.avisos)
+
+
+def test_assinatura_ignora_ordem_caixa_e_acento_das_colunas():
+    from fraus.ingest.mapeador import assinatura
+
+    assert assinatura(["Conteúdo", "Data"]) == assinatura(["data", "conteudo"])
+    assert assinatura(["a", "b"]) != assinatura(["a", "c"])
