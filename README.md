@@ -891,7 +891,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
 | **Léxico curado** | ✅ | o que o analista ensina por cima do SentiLex e do ranking de emoji de 2015: cadastro, edição e revogação por rota e por painel; a curadoria **vence** o léxico base e atravessa até o score. Cada escrita versiona, a conversa grava com qual versão foi pontuada, a Visão geral **nomeia** a régua misturada e `POST /conversas/repontuar` a zera |
-| **Suíte** | ✅ | **733 testes** de Python passando e **69** no front (7 arquivos), build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest); renderização continua coberta por build e contraste |
+| **Suíte** | ✅ | **909 testes** de Python passando e **77** no front (8 arquivos) — contados em 14/09/2026, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest); renderização continua coberta por build e contraste |
 
 ### Falta
 

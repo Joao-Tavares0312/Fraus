@@ -28,7 +28,7 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 | | |
 |---|---|
-| Testes | **767 passed, 1 deselected** (Python) · **69** (front) — 08/09/2026 |
+| Testes | **909 passed, 1 deselected** (Python) · **77** (front, 8 arquivos) — 14/09/2026 |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git**; fusor em dia (39 features, acurácia 0,950) |
 | API real | `uv run uvicorn fraus.api.main:app --port 8001` → confira `/saude`, tem de dizer `"motor":"real"` |
 | API dublê | `uv run python scripts/api_demo.py` → :8000. **Só para trabalho de interface sem modelo.** Números sintéticos com cara de predição — invariante 7 |
@@ -106,7 +106,7 @@ você lança o uvicorn não decide mais o motor — mas confira mesmo assim.
 ### Comandos de verificação
 
 ```bash
-uv run pytest -q                 # 767 passed, 1 deselected
+uv run pytest -q                 # 909 passed, 1 deselected
 uv run pytest -m lento           # o de minutos, obrigatório ao mexer no gerador
 cd dashboard && npx tsc --noEmit # tipos
 cd dashboard && npm run contraste # WCAG AA, por cálculo
@@ -204,7 +204,7 @@ lista, ela para de ser lida.
 | arquivo | o que é |
 |---|---|
 | `modelos.py` | modelo canônico: `Conversa`, `Mensagem`. Timestamp **timezone-aware** obrigatório |
-| `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 35 |
+| `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 39 |
 | `resumo.py` | ficha operacional: contagem por autor, latências **separadas** bot/humano, `desfecho` |
 | `indicadores.py` | NPS, CSAT, contenção, série diária |
 | `credencial.py` | chave de fonte (`frs_`): gerar, hash, conferir em tempo constante |
@@ -218,6 +218,9 @@ lista, ela para de ser lida.
 | `ingest/csv_driver.py` | o driver **canônico** |
 | `ingest/totalk.py` | adaptador do export da Totalk |
 | `ingest/transcricao.py` | prosa (`Autor: mensagem`) de docx/pdf |
+| `ingest/leitores.py` | formato → tabela: codificação, delimitador, JSON aninhado, WhatsApp `.txt` — só biblioteca padrão |
+| `ingest/mapeador.py` | tabela de estrutura desconhecida → `Conversa`: papel de cada coluna por nome + conteúdo, ordem da data pela coluna, tudo relatado como aviso |
+| `api/rotas/perfis.py` | `/perfis-mapeamento` — o mapeamento de colunas que o analista confirmou, chaveado pela assinatura das colunas |
 | `ingest/arquivos.py` | decide o formato e traduz erro em mensagem útil |
 | `ingest/gerador_ironia.py` | corpus sintético blindado contra vazamento |
 | `api/main.py` | ~1200 linhas. `criar_app(banco, motor, raiz)` recebe tudo por parâmetro |
