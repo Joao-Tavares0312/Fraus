@@ -103,17 +103,17 @@ export function SegredoDoWebhook({
 
       {editando ? (
         <form
-          className="flex flex-wrap items-end gap-2"
+          className="flex flex-col gap-1"
           onSubmit={async (evento) => {
             evento.preventDefault();
             // Fecha só com o aceite: na recusa o nome digitado ainda é preciso.
             if (await aoTrocarVariavel(variavelEmEdicao.trim() || null)) setEditando(false);
           }}
         >
-          <div className="flex min-w-0 flex-col gap-1">
-            <Label htmlFor={`${identificador}-variavel`} className="text-xs font-normal text-muted-foreground">
-              Nome da variável de ambiente — o nome, nunca o segredo
-            </Label>
+          <Label htmlFor={`${identificador}-variavel`} className="text-xs font-normal text-muted-foreground">
+            Nome da variável de ambiente — o nome, nunca o segredo
+          </Label>
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               id={`${identificador}-variavel`}
               className="num h-8 w-64 max-w-full"
@@ -122,13 +122,13 @@ export function SegredoDoWebhook({
               autoFocus
               onChange={(evento) => setVariavelEmEdicao(evento.target.value)}
             />
+            <Button type="submit" size="sm" disabled={ocupada}>
+              Salvar
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setEditando(false)} disabled={ocupada}>
+              Cancelar
+            </Button>
           </div>
-          <Button type="submit" size="sm" disabled={ocupada}>
-            Salvar
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => setEditando(false)} disabled={ocupada}>
-            Cancelar
-          </Button>
         </form>
       ) : (
         <Button

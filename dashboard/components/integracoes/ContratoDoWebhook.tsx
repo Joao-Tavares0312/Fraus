@@ -119,7 +119,7 @@ export function ContratoDoWebhook({
     `        {"autor":"bot","texto":"vou verificar","enviada_em":"2026-08-14T10:00:12-03:00"}`,
     `      ]}'`,
   ].join("\n");
-  const exemploPython = EXEMPLO_PYTHON.replace("{URL}", url);
+  const exemploPython = EXEMPLO_PYTHON.trim().replace("{URL}", url);
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
