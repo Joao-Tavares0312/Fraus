@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -77,7 +77,6 @@ describe("o piso de 11px", () => {
   const PISO_PX = 11;
 
   function arquivos(pasta: string): string[] {
-    const { readdirSync, statSync } = require("node:fs") as typeof import("node:fs");
     return readdirSync(pasta).flatMap((nome: string) => {
       const caminho = join(pasta, nome);
       if (statSync(caminho).isDirectory()) return arquivos(caminho);
