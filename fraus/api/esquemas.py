@@ -63,6 +63,15 @@ class PedidoChaveAcesso(BaseModel):
     nome: str = Field(min_length=1)
 
 
+class PedidoPerfilMapeamento(BaseModel):
+    """So nomes de coluna e papeis. Sem campo de conteudo, sem campo de nota."""
+
+    nome: str = Field(min_length=1, max_length=80)
+    colunas: list[str] = Field(min_length=1, max_length=200)
+    papeis: dict[str, str | None]
+    ordem_data: str | None = None
+
+
 class PedidoCurado(BaseModel):
     """Entrada de `POST /lexico/curado`.
 

@@ -797,30 +797,41 @@ ausente no venv; `uv sync --extra dev` resolve).
 Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 `transcricao`). O desenho proposto, **sem LLM em runtime** (invariante 1):
 
-- [ ] **Camada leitor** (`fraus/ingest/leitores/`): formato → tabela.
+- [x] **Camada leitor** — **feita em 14/09/2026** (`fraus/ingest/leitores.py`), só com biblioteca padrão: codificação utf-8→cp1252→latin-1, delimitador por consistência de largura (vence o `;` do Excel pt-BR com vírgula dentro de aspas), JSON/JSONL aninhado com herança do id do pai, WhatsApp Android/iOS. Pendente: MarkItDown para docx/pdf e CleverCSV/charset-normalizer só se um arquivo real vencer as regras. Desenho original: formato → tabela.
   `charset-normalizer` (encoding), `CleverCSV` (dialeto, resolve o `;` do Excel
   pt-BR), `openpyxl` (xlsx), `json` + `json_normalize` (JSON aninhado: Discord,
   Telegram, Zendesk), parser próprio de WhatsApp `.txt` (**não** usar whatstk:
   GPL-3.0), `MarkItDown` para docx/pdf (MIT, offline). Docling descartado
   (baixa modelos, lento em CPU).
-- [ ] **Camada mapeador** (`fraus/ingest/mapeador.py`): tabela → `Conversa` com
+- [x] **Camada mapeador** — **feita em 14/09/2026** (`fraus/ingest/mapeador.py`, `difflib` no lugar do `rapidfuzz`, atribuição gulosa no lugar da húngara; quem é cliente por recorrência entre conversas ou por quem abre). Desenho: tabela → `Conversa` com
   confiança por papel (`conversa_id`, `autor`, `texto`, `enviada_em`, `canal`).
   Nome de coluna por sinônimos pt/en com `rapidfuzz` + perfil de conteúdo
   (coluna que parseia como data, poucos valores distintos = autor, texto longo
   = mensagem, cardinalidade em blocos = id) + atribuição húngara.
-- [ ] **Data ambígua** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
+- [x] **Data ambígua** — **feita em 14/09/2026** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
   interpretação com menos saltos negativos na ordem das mensagens; empate =
   confirmação obrigatória. Data sem fuso vira **aviso visível**, nunca naive
   silencioso (invariante 6). Sem horário, sem nota (§3.2 do handoff).
-- [ ] **Perfis de mapeamento** salvos no SQLite (assinatura = hash das colunas);
-  a **Totalk vira perfil de fábrica** e os testes atuais servem de regressão.
-- [ ] **Endpoints** `POST /ingestao/previa` (não grava; devolve amostra,
-  mapeamento sugerido, avisos, perfil casado), `POST /ingestao/confirmar`
-  (corpo carrega mapeamento, **nunca** score — invariante 3), `GET/DELETE
-  /perfis`; e a **tela de prévia** onde o analista confirma/corrige colunas.
-  Papel obrigatório com confiança < 0,8 bloqueia confirmação automática.
-- [ ] Fixtures de teste: Totalk, canônico, WhatsApp pt-BR, Discord JSON, CSV
-  `;` em Latin-1. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
+- [x] **Perfis de mapeamento** — **feito em 14/09/2026**: tabela
+  `perfis_mapeamento` (só nomes de coluna e papéis, nunca conteúdo), chave =
+  assinatura das colunas sem ordem/caixa/acento, aplicado sozinho no próximo
+  arquivo e avisado. Gravar e apagar são rota administrativa, como o léxico.
+  **A Totalk NÃO virou perfil, por decisão:** o export dela exige lógica que
+  mapa de colunas não expressa (`De: X Para: Y`, assinatura `*Nome:*` separando
+  bot de atendente, id dentro de URL) — continua adaptador.
+- [x] **Prévia e confirmação** — **feitas em 14/09/2026**. `POST /analisar/previa`
+  (sem modelo, sem gravar: mapeamento sugerido, amostra censurada, avisos,
+  perfil casado); `/analisar/arquivo` aceita `mapeamento` e `ordem_data`
+  confirmados (nunca score — invariante 3); `GET/POST/DELETE
+  /perfis-mapeamento`. Na tela de Analisar, o painel **Conferir colunas**
+  aparece só quando as colunas foram inferidas: um seletor por papel com a
+  força da evidência (não "confiança" — não é probabilidade calibrada), a
+  ordem da data quando ambígua, as primeiras linhas e "lembrar este
+  mapeamento". Verificado na API real com Playwright, inclusive a 390px.
+- [ ] Levar a prévia para a **importação em lote** (hoje ela só serve a tela de
+  Analisar, que examina um atendimento por vez).
+- [ ] MarkItDown para docx/pdf com tabela.
+- [ ] Fixtures de **exports reais** (Discord, Telegram, Zendesk, Blip) — os testes de 14/09 cobrem WhatsApp, JSON aninhado e CSV `;` em cp1252 sintéticos. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
   texto e autor identificáveis.
 
 #### P1

@@ -1022,16 +1022,24 @@ def test_analisar_sem_conversa_valida_explica_o_formato_esperado(cliente_com_sin
     assert "conversa_id" in resposta.json()["detail"]
 
 
-def test_analisar_coluna_ausente_nomeia_a_coluna(cliente_com_sinal):
-    """Coluna faltando e defeito do ARQUIVO -- 400 nomeando, nunca 500 cru."""
+def test_analisar_sem_coluna_opcional_entra_pelo_mapeador(cliente_com_sinal):
+    """Desde 14/09/2026 `canal` e opcional: o mapeador acha os papeis e RELATA."""
     sem_canal = (
         "conversa_id,autor,texto,enviada_em,escalou_para_humano\n"
         "c1,cliente,otimo,2026-08-13T10:00:00+00:00,false\n"
     )
     resposta = cliente_com_sinal.post("/analisar", json={"csv": sem_canal})
 
+    assert resposta.status_code == 200
+    assert "inferidas" in resposta.json()["formato"]
+
+
+def test_analisar_sem_papel_obrigatorio_nomeia_o_que_falta(cliente_com_sinal):
+    """Arquivo sem fala mapeavel e defeito do ARQUIVO -- 400 nomeando, nunca 500 cru."""
+    resposta = cliente_com_sinal.post("/analisar", json={"csv": "id,valor\n1,10\n2,20\n"})
+
     assert resposta.status_code == 400
-    assert "canal" in resposta.json()["detail"]
+    assert "texto" in resposta.json()["detail"]
 
 
 def test_analisar_relata_a_linha_rejeitada_em_vez_de_derrubar_o_arquivo(
