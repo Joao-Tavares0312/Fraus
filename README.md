@@ -766,6 +766,101 @@ Onde o trabalho está. **Entregue** é o que existe no repositório e tem teste 
 verificação por trás; **falta** está detalhado em [Pendências](#pendências), e a
 ordem lá é a ordem de importância.
 
+### Road map vigente — levantamento de 14/09/2026
+
+Revisão do projeto inteiro (testes rodados, API real e webhook exercitados com
+`curl`, front auditado). É esta lista que governa o próximo trabalho; as seções
+[Entregue](#entregue) e [Falta](#falta) abaixo continuam como histórico.
+
+**Verificado em 14/09/2026:** a API real (`motor: real`) e o webhook funcionam
+de ponta a ponta **com a mestra ligada** — cadastro de fonte, chave `frs_`,
+`POST /ingestao` (201), webhook assinado (201), duplicada (200), assinatura
+inválida (401), log de entregas. 205 testes de API/webhook/autenticação/vazão
+verdes. Suíte completa: **860 passed, 1 failed** (a falha é ambiente — `psycopg`
+ausente no venv; `uv sync --extra dev` resolve).
+
+#### P0 — ameaça a banca
+
+- [ ] **Decidir o domínio do tempo no score.** Com 3 h de espera, a latência
+  pesa −85 contra +4,6 do texto (z-score explode fora da distribuição de
+  treino). Opções: teto na latência, escala log (ambas com retreino do fusor)
+  ou declarar como limitação. Detalhe em `docs/handoff.md` §7.
+- [ ] **Ironia ainda sai promotor** quando o relógio não contradiz — limite da
+  cabeça de texto, hoje marcado pela contestação. Declarar ou atacar.
+- [ ] **Retreinar a cabeça de ironia** (`notebooks/04_treino_ironia.ipynb`) e
+  apertar os limiares de `tests/test_ironia_dominio.py`.
+- [ ] **Hospedagem** bloqueada por capacidade A1 da Oracle — decidir upgrade
+  para Pay As You Go.
+
+#### P0 — ingestão genérica: analisar qualquer arquivo sem código por formato
+
+Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
+`transcricao`). O desenho proposto, **sem LLM em runtime** (invariante 1):
+
+- [ ] **Camada leitor** (`fraus/ingest/leitores/`): formato → tabela.
+  `charset-normalizer` (encoding), `CleverCSV` (dialeto, resolve o `;` do Excel
+  pt-BR), `openpyxl` (xlsx), `json` + `json_normalize` (JSON aninhado: Discord,
+  Telegram, Zendesk), parser próprio de WhatsApp `.txt` (**não** usar whatstk:
+  GPL-3.0), `MarkItDown` para docx/pdf (MIT, offline). Docling descartado
+  (baixa modelos, lento em CPU).
+- [ ] **Camada mapeador** (`fraus/ingest/mapeador.py`): tabela → `Conversa` com
+  confiança por papel (`conversa_id`, `autor`, `texto`, `enviada_em`, `canal`).
+  Nome de coluna por sinônimos pt/en com `rapidfuzz` + perfil de conteúdo
+  (coluna que parseia como data, poucos valores distintos = autor, texto longo
+  = mensagem, cardinalidade em blocos = id) + atribuição húngara.
+- [ ] **Data ambígua** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
+  interpretação com menos saltos negativos na ordem das mensagens; empate =
+  confirmação obrigatória. Data sem fuso vira **aviso visível**, nunca naive
+  silencioso (invariante 6). Sem horário, sem nota (§3.2 do handoff).
+- [ ] **Perfis de mapeamento** salvos no SQLite (assinatura = hash das colunas);
+  a **Totalk vira perfil de fábrica** e os testes atuais servem de regressão.
+- [ ] **Endpoints** `POST /ingestao/previa` (não grava; devolve amostra,
+  mapeamento sugerido, avisos, perfil casado), `POST /ingestao/confirmar`
+  (corpo carrega mapeamento, **nunca** score — invariante 3), `GET/DELETE
+  /perfis`; e a **tela de prévia** onde o analista confirma/corrige colunas.
+  Papel obrigatório com confiança < 0,8 bloqueia confirmação automática.
+- [ ] Fixtures de teste: Totalk, canônico, WhatsApp pt-BR, Discord JSON, CSV
+  `;` em Latin-1. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
+  texto e autor identificáveis.
+
+#### P1
+
+- [ ] **Branches:** abrir PR de `diag/pdf-erros-invisiveis` (28 commits: deploy,
+  Docker, docs, encolhimento — bem além do nome); mesclar
+  `pendencias/sinais-invertidos-e-vazao-do-webhook` (dada como feita, **não
+  está na main**); revisar `medicao/dominio-do-tempo` e
+  `deploy/oracle-e-docs-em-repo-separado`.
+- [ ] **Webhook — lacunas de uso:** `PedidoAjusteFonte`
+  (`fraus/api/esquemas.py:24`) não aceita `variavel_segredo`, então fonte com
+  variável errada só se conserta apagando; snippet Python/Node que calcula a
+  assinatura no `ContratoDoWebhook`; documentar que trocar o segredo exige
+  reiniciar a API; transformar o teste de fumaça em
+  `scripts/smoke_integracoes.py`.
+- [ ] **Invariante 2:** `dashboard/components/analisar/Analisador.tsx:564-565`
+  usa `prob_insatisfeito ?? 0` / `prob_neutro ?? 0` — trocar por "sem sinal".
+- [ ] **Documentação desatualizada:** `docs/handoff.md` diz 767 testes e
+  "contrato de 35" no mapa; a tabela [Entregue](#entregue) diz 733.
+- [ ] **Site da documentação:** criar `DEPLOY_KEY_DOCS`, `REPO_DOCS` e
+  `FRAUS_URL_DASHBOARD` no repositório.
+
+#### P1 — visual
+
+- [ ] Piso de 11–12px no lugar dos 20 usos de `text-[9px]`/`text-[10px]`
+  (ilegíveis em projetor).
+- [ ] Tema claro ou modo "apresentação" de alto contraste para a banca.
+- [ ] Anel de foco `focus-visible` onde há `outline-none` sem substituto
+  (`components/ui/tabs.tsx:76`, `components/shell/RevelacaoFraus.tsx:161`).
+- [ ] "NPS estimado" como texto visível, não asterisco (`app/page.tsx:668`).
+- [ ] Testar a 390px o grafo (`components/grafo/desenho.ts`) e
+  `atendimentos/[id]`.
+- [ ] Rodar `npm run contraste` nos textos com `opacity-60/70` do `Analisador`.
+
+#### P2
+
+- [ ] Agregados de léxico por classe e tempo mediano de resposta no servidor.
+- [ ] Decisões: empresa fictícia, pin do `scikit-learn==1.6.1`, remover
+  `content/fraus` da raiz.
+
 ### Entregue
 
 | Frente | Estado | O que existe |

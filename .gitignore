@@ -36,4 +36,9 @@ node_modules/
 # Artefatos da conversao ONNX. Mesma regra de modelos/: peso nao entra no
 # repositorio. E, especificamente, estes NAO foram promovidos -- a medicao de
 # ponta a ponta os recusou (ver docs/encolhimento.md).
-/modelos-onnx/
+#
+# O `*` no fim nao e preguica: comparar variantes exige guardar a anterior ao
+# lado (`modelos-onnx-int8-bak/` e companhia), e o padrao exato deixava essas
+# copias RASTREAVEIS -- 300+ MB de peso a um `git add -A` de distancia, no
+# repositorio que proibe justamente isso.
+/modelos-onnx*/

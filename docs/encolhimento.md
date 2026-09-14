@@ -87,6 +87,93 @@ tela mostra e o que o NPS agrega: trocar o backend não pode trocar o veredito.
 > `modelos-onnx/` (fora do git) para quem quiser reproduzir a medição, e o
 > portão de `scripts/comparar_backends.py` continua vermelho de propósito.
 
+## A variante mista, medida em 11/09/2026
+
+A tabela de caminhos abaixo listava "fp32 na satisfação, int8 no resto" como
+**estimativa**, nunca medida. A hipótese era que o flip vinha de quantizar o
+modelo que *governa* o score, e que poupá-lo resolveria. Foi medida, com o mesmo
+portão e as mesmas 180 conversas:
+
+| | int8 nos três | **mista** |
+|---|---|---|
+| desvio médio de score | 0,83 | **0,356** |
+| desvio máximo | 25,65 | **18,99** |
+| notas diferentes | 16 de 180 | **6 de 180** |
+| categorias diferentes | 3 de 180 | **2 de 180** |
+
+**A hipótese estava metade certa, e metade não basta.** Poupar a satisfação corta
+o dano quase pela metade — e ainda troca o veredito de duas conversas. A mesma
+`sim-0-635276501` do caso original segue atravessando faixa (59,95 → 78,94).
+
+### De quem é a culpa, então
+
+A ironia **saiu do vetor do Fusor** em 04/09/2026 (ver `NOMES_FEATURES`), então
+quantizá-la não pode mover score nenhum. Isso deixa apenas a emoção como
+suspeita, e a medição confirma — satisfação fp32 + emoção fp32 + **ironia int8**:
+
+```
+desvio medio de score :  0.000 pontos
+desvio MAXIMO         :  0.000 pontos
+notas diferentes      : 0 de 180
+CATEGORIAS diferentes : 0 de 180
+ACEITO
+```
+
+Zero exato, nas 180. Duas coisas ficam provadas de uma vez:
+
+1. **ONNX fp32 é troca de executor, não de modelo.** Δp máximo `0,0000` por
+   modelo, desvio `0,000` ponta a ponta. O que a conversão custa é nada.
+2. **A única cabeça quantizável de graça é a ironia**, e exatamente porque ela
+   não pontua. As duas que pontuam não toleram int8.
+
+### E o que isso faz com a máquina de 1 GB
+
+Nada de bom. O `VM.Standard.E2.1.Micro` (o único shape com capacidade em
+sa-saopaulo-1 em 11/09/2026) tem 1 GB de RAM, e o sistema operacional come ~200:
+
+| variante | pesos | veredito | cabe em ~800 MB |
+|---|---|---|---|
+| ONNX fp32 nos três | 1.250 MB | ✅ idêntico | ❌ |
+| **fp32 + fp32 + ironia int8** | **939 MB** | ✅ **desvio 0,000** | ❌ |
+| fp32 satisfação + int8 nas outras | 628 MB | ❌ 2/180 trocam | ⚠️ no limiar |
+| int8 nos três | 318 MB | ❌ 3/180 trocam | ✅ |
+
+A ordem é cruelmente monótona: **tudo que cabe troca veredito, e tudo que
+preserva o veredito não cabe.** Não há ajuste no meio — a emoção precisa ficar em
+fp32, e aí são dois codificadores de 416 MB, que já estouram o orçamento sozinhos.
+
+!!! warning "Medição de RAM pendente, e por que o número preliminar não serve"
+    Medindo o processo com o motor montado, o ONNX consumiu **mais** residente
+    que o torch (pico 1.366 MB contra 1.075 MB): o `onnxruntime` carrega o grafo
+    inteiro de imediato, enquanto o torch mapeia os `safetensors` e só paga as
+    páginas que toca.
+
+    Esse número **não está limpo**: a sonda importava `fraus.motor` e
+    `fraus.fusor` antes de escolher o backend, e são eles que arrastam torch e
+    sklearn — 354 MB de base nos dois casos. Medir o caminho ONNX de verdade
+    exige uma venv **sem** torch, e hoje `torch>=2.3` é dependência
+    **principal** no `pyproject.toml`: a imagem sem torch que o extra `onnx`
+    promete não existe sem mover essa dependência para um extra.
+
+    A conclusão acima não depende disso — 939 MB de peso já passam de 800 —, mas
+    a promessa de "ONNX corta a imagem em 2,6×" continua **não verificada em
+    RAM**, só em disco.
+
+### O que sobra de ganho real
+
+Independente da máquina pequena, a variante aceita **é um ganho para o deploy na
+A1**: desvio `0,000`, e a imagem perde os 497 MB do `torch` em disco (depois de
+mover a dependência). Na sessão de 11/09/2026 o envio do código e dos pesos para
+a VM era de 1,3 GB — cortar isso quase pela metade é menos tempo de deploy e
+menos coisa para dar errado no meio.
+
+E se 1 GB algum dia virar requisito de verdade, o caminho não é quantização: é
+**um codificador com três cabeças**. Os três checkpoints são ajustes finos do
+mesmo BERTimbau, então os 110M de parâmetros estão duplicados três vezes. Um
+encoder compartilhado com três cabeças de classificação daria ~416 MB em precisão
+cheia — cabe em 1 GB sem quantizar nada e sem risco de veredito. O preço é
+retreino, e portanto a invariante 10 de novo; não é ajuste de deploy.
+
 ## O que sobra como caminho
 
 | caminho | tamanho estimado | fidelidade | cabe em 500 MB? |

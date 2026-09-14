@@ -102,8 +102,35 @@ def _probabilidades_onnx(diretorio: Path, textos: list[str]) -> list[list[float]
     return SessaoOnnx(diretorio).prever(textos)
 
 
-def converter(nome: str) -> dict:
-    """Exporta e quantiza UM modelo, medindo o que mudou."""
+def converter(nome: str, precisao: str = "int8") -> dict:
+    """Exporta UM modelo para ONNX, opcionalmente quantizando, medindo o que mudou.
+
+    `precisao` existe por causa da VARIANTE MISTA, e ela merece explicacao
+    porque parece inconsistencia: por que oferecer `fp32`, que nao encolhe peso
+    nenhum?
+
+    Porque o ONNX fp32 JA GANHA a metade do problema sem pagar nada. A imagem
+    de inferencia sao ~1,75 GB, e 497 MB deles sao o `torch` -- que o
+    `onnxruntime` dispensa. Exportar em fp32 troca o executor sem mexer num
+    unico peso: a diferenca de probabilidade fica na ordem do erro de ponto
+    flutuante, e o modelo continua sendo o mesmo modelo no sentido forte.
+
+    E isso e o que viabiliza a mistura. A medicao de 10/09 recusou a int8 nos
+    tres porque UMA conversa atravessou duas faixas e trocou de veredito
+    (59,95 -> 85,61, detrator -> promotor). Quem governa o score e a
+    SATISFACAO; emocao e ironia entram como features ao lado de 30 outras. Se a
+    satisfacao ficar intacta em fp32 e so as outras duas forem quantizadas, a
+    causa do flip sai por construcao -- e sobra a pergunta empirica de quanto
+    desvio as outras duas ainda injetam, que e o que `comparar_backends.py`
+    responde.
+
+    Nao ha `fp16` aqui de proposito. Em CPU o `onnxruntime` tem poucos kernels
+    fp16 nativos: o normal e ele inserir `Cast` e computar em fp32, o que
+    devolve o consumo de MEMORIA ao tamanho original e ainda paga a conversao.
+    fp16 economiza disco e nao economiza RAM, e RAM e o que limita a maquina de
+    1 GB. Implementar o caminho sem medir isso primeiro seria vender ganho que
+    talvez nao exista.
+    """
     from onnxruntime.quantization import QuantType, quantize_dynamic
     from optimum.onnxruntime import ORTModelForSequenceClassification
     from transformers import AutoTokenizer
@@ -138,6 +165,33 @@ def converter(nome: str) -> dict:
 
     fp32 = destino / "model.onnx"
     print(f"  onnx fp32: {_tamanho_mb(fp32):.1f} MB", file=sys.stderr)
+
+    if precisao == "fp32":
+        # Nada a quantizar, e nada a apagar: aqui o `model.onnx` fp32 E o
+        # artefato final. O `model.onnx_data` (pesos externos) tambem fica --
+        # apaga-lo deixaria um grafo sem pesos, que carrega e falha na primeira
+        # inferencia, bem longe daqui.
+        tamanho_final = _tamanho_mb(destino)
+        print(f"  mantido em fp32: {tamanho_final:.1f} MB", file=sys.stderr)
+        convertido = _probabilidades_onnx(destino, SONDAS)
+        maior_diferenca = max(
+            abs(a - b)
+            for linha_a, linha_b in zip(referencia, convertido)
+            for a, b in zip(linha_a, linha_b)
+        )
+        divergentes = [
+            texto
+            for texto, a, b in zip(SONDAS, referencia, convertido)
+            if a.index(max(a)) != b.index(max(b))
+        ]
+        return {
+            "nome": nome,
+            "precisao": precisao,
+            "mb_original": _tamanho_mb(origem),
+            "mb_final": tamanho_final,
+            "maior_diferenca_prob": maior_diferenca,
+            "rotulos_divergentes": divergentes,
+        }
 
     # 3. Quantizacao dinamica int8. QInt8 nos pesos; as ativacoes ganham escala
     #    em tempo de execucao, sem conjunto de calibracao.
@@ -187,6 +241,7 @@ def converter(nome: str) -> dict:
 
     return {
         "nome": nome,
+        "precisao": precisao,
         "mb_original": _tamanho_mb(origem),
         "mb_final": tamanho_final,
         "maior_diferenca_prob": maior_diferenca,
@@ -230,12 +285,18 @@ def main() -> int:
     argumentos = argparse.ArgumentParser(description=__doc__)
     argumentos.add_argument("--so", choices=MODELOS, help="converter apenas um")
     argumentos.add_argument(
+        "--precisao",
+        choices=("int8", "fp32"),
+        default="int8",
+        help="int8 quantiza; fp32 so troca o executor (ver docstring de converter)",
+    )
+    argumentos.add_argument(
         "--latencia", action="store_true", help="medir tempo por lote (mais lento)"
     )
     opcoes = argumentos.parse_args()
 
     alvos = (opcoes.so,) if opcoes.so else MODELOS
-    laudos = [converter(nome) for nome in alvos]
+    laudos = [converter(nome, opcoes.precisao) for nome in alvos]
 
     print("\n" + "=" * 66, file=sys.stderr)
     print(f"{'modelo':12} {'antes':>10} {'depois':>10} {'reducao':>9} {'max Δp':>9}", file=sys.stderr)
