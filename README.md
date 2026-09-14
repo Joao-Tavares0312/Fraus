@@ -475,6 +475,18 @@ curl -X POST 127.0.0.1:8000/integracoes/fontes \
   -d '{"nome":"WhatsApp","canal":"whatsapp","tipo":"webhook","variavel_segredo":"FRAUS_SEGREDO_WHATSAPP"}'
 ```
 
+Errou o nome? **Corrija sem recriar a fonte** — recriar troca o `fonte_id`, e
+com ele a URL que a plataforma já tem configurada. O campo aceita só formato de
+variável de ambiente (`FRAUS_SEGREDO_WHATSAPP`), o que recusa o engano de colar
+o próprio `whsec_...` ali; `null` limpa. Na tela, é o botão "Corrigir o nome da
+variável" no bloco do segredo.
+
+```bash
+curl -X PATCH 127.0.0.1:8000/integracoes/fontes/1 \
+  -H "Authorization: Bearer <mestra>" -H 'content-type: application/json' \
+  -d '{"variavel_segredo":"FRAUS_SEGREDO_WHATSAPP"}'
+```
+
 **2. Gere o segredo** (privilégio da mestra, como as demais rotas de
 credencial):
 
@@ -587,6 +599,19 @@ não há tradutor embutido para o formato de Zendesk, Meta (WhatsApp Business),
 Twilio ou qualquer outra plataforma nomeada. Traduzir o payload da plataforma
 para este contrato, e assinar com o segredo dela, é trabalho de quem integra.
 Não é plug-and-play.
+
+#### Conferindo as integrações contra um servidor de verdade
+
+```bash
+uv run python scripts/smoke_integracoes.py
+```
+
+Sobe a API **real** num banco e num arquivo de chaves temporários (apagados no
+fim), com a autenticação ligada, e percorre fonte → chave → `/ingestao` →
+webhook assinado → reentrega → assinatura inválida → leitura, conferindo cada
+status. Existe porque a suíte usa `TestClient`, e a armadilha 8 do handoff (o
+middleware recusando o webhook antes de olhar a assinatura) só aparece com
+uvicorn de pé e a mestra ligada. Sai com código 1 se algo divergir.
 
 ### 4. Dashboard
 
@@ -784,7 +809,10 @@ ausente no venv; `uv sync --extra dev` resolve).
 - [ ] **Decidir o domínio do tempo no score.** Com 3 h de espera, a latência
   pesa −85 contra +4,6 do texto (z-score explode fora da distribuição de
   treino). Opções: teto na latência, escala log (ambas com retreino do fusor)
-  ou declarar como limitação. Detalhe em `docs/handoff.md` §7.
+  ou declarar como limitação. **Medido** por
+  `scripts/medir_dominio_do_tempo.py`: o relógio empata com o texto em **411 s
+  (6,9 min)** — 4 desvios acima da média do treino — e manda dali em diante,
+  sem teto. Detalhe em `docs/handoff.md` §7.
 - [ ] **Ironia ainda sai promotor** quando o relógio não contradiz — limite da
   cabeça de texto, hoje marcado pela contestação. Declarar ou atacar.
 - [ ] **Retreinar a cabeça de ironia** (`notebooks/04_treino_ironia.ipynb`) e
@@ -836,21 +864,20 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 
 #### P1
 
-- [ ] **Branches:** abrir PR de `diag/pdf-erros-invisiveis` (28 commits: deploy,
-  Docker, docs, encolhimento — bem além do nome); mesclar
-  `pendencias/sinais-invertidos-e-vazao-do-webhook` (dada como feita, **não
-  está na main**); revisar `medicao/dominio-do-tempo` e
-  `deploy/oracle-e-docs-em-repo-separado`.
-- [ ] **Webhook — lacunas de uso:** `PedidoAjusteFonte`
-  (`fraus/api/esquemas.py:24`) não aceita `variavel_segredo`, então fonte com
-  variável errada só se conserta apagando; snippet Python/Node que calcula a
-  assinatura no `ContratoDoWebhook`; documentar que trocar o segredo exige
-  reiniciar a API; transformar o teste de fumaça em
-  `scripts/smoke_integracoes.py`.
-- [ ] **Invariante 2:** `dashboard/components/analisar/Analisador.tsx:564-565`
-  usa `prob_insatisfeito ?? 0` / `prob_neutro ?? 0` — trocar por "sem sinal".
-- [ ] **Documentação desatualizada:** `docs/handoff.md` diz 767 testes e
-  "contrato de 35" no mapa; a tabela [Entregue](#entregue) diz 733.
+- [x] **Branches** — **resolvidas em 14/09/2026**: #40, #41 e #42 mescladas;
+  `pendencias/sinais-invertidos-e-vazao-do-webhook` não tinha nada fora da main;
+  o único commit de `medicao/dominio-do-tempo` (o laudo
+  `scripts/medir_dominio_do_tempo.py`) foi trazido.
+- [x] **Webhook — lacunas de uso** — **feitas em 14/09/2026**: `PATCH
+  /integracoes/fontes/{id}` corrige `variavel_segredo` (e recusa nome que não
+  seja de variável de ambiente), com botão na tela; exemplo em Python que
+  calcula a assinatura no `ContratoDoWebhook`, **executado** por
+  `tests/test_exemplo_de_assinatura.py`; `scripts/smoke_integracoes.py`. O
+  reinício após trocar o segredo já estava documentado (passo 3).
+- [x] **Invariante 2** — **feita em 14/09/2026**: a barra de classes do
+  `Analisador` exige as três probabilidades, sem `?? 0`.
+- [x] **Documentação desatualizada** — **feita em 14/09/2026** (handoff e
+  tabela Entregue com 909/77 testes e contrato de 39).
 - [ ] **Site da documentação:** criar `DEPLOY_KEY_DOCS`, `REPO_DOCS` e
   `FRAUS_URL_DASHBOARD` no repositório.
 
@@ -891,7 +918,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
 | **Léxico curado** | ✅ | o que o analista ensina por cima do SentiLex e do ranking de emoji de 2015: cadastro, edição e revogação por rota e por painel; a curadoria **vence** o léxico base e atravessa até o score. Cada escrita versiona, a conversa grava com qual versão foi pontuada, a Visão geral **nomeia** a régua misturada e `POST /conversas/repontuar` a zera |
-| **Suíte** | ✅ | **733 testes** de Python passando e **69** no front (7 arquivos), build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest); renderização continua coberta por build e contraste |
+| **Suíte** | ✅ | **909 testes** de Python passando e **77** no front (8 arquivos) — contados em 14/09/2026, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest); renderização continua coberta por build e contraste |
 
 ### Falta
 

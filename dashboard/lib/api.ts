@@ -849,7 +849,8 @@ export const criarFonte = (fonte: {
 
 export const ajustarFonte = (
   id: number,
-  mudanca: { nome?: string; ativa?: boolean },
+  /** `variavel_segredo: null` limpa; ausente não mexe. É o NOME, nunca o segredo. */
+  mudanca: { nome?: string; ativa?: boolean; variavel_segredo?: string | null },
 ) =>
   proteger(
     escrever<FonteIntegracao>(`/integracoes/fontes/${id}`, "PATCH", mudanca),

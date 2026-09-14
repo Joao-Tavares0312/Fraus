@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ShieldPlus } from "lucide-react";
+import { useId, useState } from "react";
+import { Pencil, ShieldPlus } from "lucide-react";
 import { gerarSegredo, type FonteIntegracao } from "@/lib/api";
 import { ChaveEmClaro } from "@/components/ChaveEmClaro";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /**
  * O segredo de assinatura do webhook: gerar, copiar, colocar no ambiente.
@@ -18,7 +20,22 @@ import { Button } from "@/components/ui/button";
  * para RECOMPUTAR o HMAC, e por isso ele mora numa variavel de ambiente da
  * maquina, fora do banco.
  */
-export function SegredoDoWebhook({ fonte }: { fonte: FonteIntegracao }) {
+export function SegredoDoWebhook({
+  fonte,
+  ocupada,
+  aoTrocarVariavel,
+}: {
+  fonte: FonteIntegracao;
+  ocupada: boolean;
+  /**
+   * Corrige o NOME da variável sem recriar a fonte — recriar trocaria o id,
+   * e com ele a URL que a plataforma já tem configurada.
+   */
+  aoTrocarVariavel: (variavel: string | null) => Promise<boolean>;
+}) {
+  const identificador = useId();
+  const [editando, setEditando] = useState(false);
+  const [variavelEmEdicao, setVariavelEmEdicao] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [segredo, setSegredo] = useState<string | null>(null);
@@ -83,6 +100,52 @@ export function SegredoDoWebhook({ fonte }: { fonte: FonteIntegracao }) {
           </span>
         ) : null}
       </div>
+
+      {editando ? (
+        <form
+          className="flex flex-col gap-1"
+          onSubmit={async (evento) => {
+            evento.preventDefault();
+            // Fecha só com o aceite: na recusa o nome digitado ainda é preciso.
+            if (await aoTrocarVariavel(variavelEmEdicao.trim() || null)) setEditando(false);
+          }}
+        >
+          <Label htmlFor={`${identificador}-variavel`} className="text-xs font-normal text-muted-foreground">
+            Nome da variável de ambiente — o nome, nunca o segredo
+          </Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              id={`${identificador}-variavel`}
+              className="num h-8 w-64 max-w-full"
+              value={variavelEmEdicao}
+              placeholder="FRAUS_SEGREDO_WHATSAPP"
+              autoFocus
+              onChange={(evento) => setVariavelEmEdicao(evento.target.value)}
+            />
+            <Button type="submit" size="sm" disabled={ocupada}>
+              Salvar
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setEditando(false)} disabled={ocupada}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          className="self-start"
+          onClick={() => {
+            setVariavelEmEdicao(fonte.variavel_segredo ?? "");
+            setEditando(true);
+          }}
+          disabled={ocupada}
+        >
+          <Pencil aria-hidden />
+          {semVariavel ? "Nomear a variável de ambiente" : "Corrigir o nome da variável"}
+        </Button>
+      )}
 
       <ol className="flex flex-col gap-1.5 text-xs leading-relaxed text-muted-foreground">
         <li>

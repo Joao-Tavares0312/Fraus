@@ -676,9 +676,17 @@ class Banco:
         return self._fonte(linha) if linha is not None else None
 
     def atualizar_fonte(
-        self, identificador: int, nome: str | None = None, ativa: bool | None = None
+        self,
+        identificador: int,
+        nome: str | None = None,
+        ativa: bool | None = None,
+        variavel_segredo: str | None = None,
+        trocar_variavel: bool = False,
     ) -> dict | None:
         campos, valores = [], []
+        if trocar_variavel:
+            campos.append("variavel_segredo = ?")
+            valores.append(variavel_segredo)
         if nome is not None:
             campos.append("nome = ?")
             valores.append(nome)

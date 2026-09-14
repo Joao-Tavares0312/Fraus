@@ -28,7 +28,7 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 | | |
 |---|---|
-| Testes | **767 passed, 1 deselected** (Python) · **69** (front) — 08/09/2026 |
+| Testes | **909 passed, 1 deselected** (Python) · **77** (front, 8 arquivos) — 14/09/2026 |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git**; fusor em dia (39 features, acurácia 0,950) |
 | API real | `uv run uvicorn fraus.api.main:app --port 8001` → confira `/saude`, tem de dizer `"motor":"real"` |
 | API dublê | `uv run python scripts/api_demo.py` → :8000. **Só para trabalho de interface sem modelo.** Números sintéticos com cara de predição — invariante 7 |
@@ -106,7 +106,7 @@ você lança o uvicorn não decide mais o motor — mas confira mesmo assim.
 ### Comandos de verificação
 
 ```bash
-uv run pytest -q                 # 767 passed, 1 deselected
+uv run pytest -q                 # 909 passed, 1 deselected
 uv run pytest -m lento           # o de minutos, obrigatório ao mexer no gerador
 cd dashboard && npx tsc --noEmit # tipos
 cd dashboard && npm run contraste # WCAG AA, por cálculo
@@ -204,7 +204,7 @@ lista, ela para de ser lida.
 | arquivo | o que é |
 |---|---|
 | `modelos.py` | modelo canônico: `Conversa`, `Mensagem`. Timestamp **timezone-aware** obrigatório |
-| `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 35 |
+| `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 39 |
 | `resumo.py` | ficha operacional: contagem por autor, latências **separadas** bot/humano, `desfecho` |
 | `indicadores.py` | NPS, CSAT, contenção, série diária |
 | `credencial.py` | chave de fonte (`frs_`): gerar, hash, conferir em tempo constante |
@@ -218,6 +218,9 @@ lista, ela para de ser lida.
 | `ingest/csv_driver.py` | o driver **canônico** |
 | `ingest/totalk.py` | adaptador do export da Totalk |
 | `ingest/transcricao.py` | prosa (`Autor: mensagem`) de docx/pdf |
+| `ingest/leitores.py` | formato → tabela: codificação, delimitador, JSON aninhado, WhatsApp `.txt` — só biblioteca padrão |
+| `ingest/mapeador.py` | tabela de estrutura desconhecida → `Conversa`: papel de cada coluna por nome + conteúdo, ordem da data pela coluna, tudo relatado como aviso |
+| `api/rotas/perfis.py` | `/perfis-mapeamento` — o mapeamento de colunas que o analista confirmou, chaveado pela assinatura das colunas |
 | `ingest/arquivos.py` | decide o formato e traduz erro em mensagem útil |
 | `ingest/gerador_ironia.py` | corpus sintético blindado contra vazamento |
 | `api/main.py` | ~1200 linhas. `criar_app(banco, motor, raiz)` recebe tudo por parâmetro |
@@ -473,6 +476,43 @@ distribuição no corpus, e o corpus não tem latência de três horas.
 
 **MEDIDO em 08/09/2026** com `uv run python scripts/medir_dominio_do_tempo.py`
 (instrumento novo, roda em segundos e não carrega BERTimbau nenhum):
+
+| latência | contrib. tempo | contrib. texto | razão |
+|---:|---:|---:|---:|
+| 60 s | +0,48 | +4,57 | 0,1× |
+| 300 s | −2,97 | +4,57 | 0,7× |
+| **411 s** | **−4,57** | **+4,57** | **1,0× — o empate** |
+| 600 s | −7,29 | +4,57 | 1,6× |
+| 1800 s | −24,54 | +4,57 | 5,4× |
+| 10800 s | −153,96 | +4,57 | 33,7× |
+
+**O relógio empata com o texto em 411 s (6,9 min) e manda a partir dali.** Isso
+é **4,0 desvios** acima da média de `latencia_mediana_s` no treino (67,0 s,
+sigma 85,9 s) — ou seja, o ponto em que o relógio toma a nota está **fora** do
+que o corpus mostrou ao modelo. Cada segundo de espera vale 0,0144 de
+contribuição, **sem teto**.
+
+O laudo bate com a varredura contra a API real: em 600 s o score já tinha caído
+para 93,25, e em 300 s ainda estava em 99,21.
+
+**Três saídas, e a terceira não é obviamente errada:**
+
+1. **Escala log** (`log1p`) nas quatro features de tempo. É a mais defensável
+   tecnicamente: o simulador gera latência **log-normal** de propósito
+   (`docs/treinamento.md`), então a feature é de cauda pesada por construção e
+   o `StandardScaler` — que pressupõe algo próximo de normal — é a ferramenta
+   errada para ela. Custo: retreino, e os nomes `latencia_*_s` passariam a
+   mentir sobre a unidade, então o contrato de 39 chaves mudaria de nome junto.
+2. **Clipar num teto** (algo perto de 600 s). Mais barato de explicar e mantém
+   os nomes. Custo: perde a distinção entre 10 min e 3 h — o que talvez não
+   seja perda, porque acima de certo ponto "muito lento" é só "muito lento".
+   Também exige retreino.
+3. **Aceitar e declarar** como limitação. Custo zero em código, e o preço é
+   defender numa banca um modelo em que o relógio vence o texto a partir de
+   sete minutos — num produto cuja tese é justamente que o texto revela o que o
+   relógio não mostra.
+
+Decisão do dono do projeto — **não tomada**.
 
 | latência | contrib. tempo | contrib. texto | razão |
 |---:|---:|---:|---:|

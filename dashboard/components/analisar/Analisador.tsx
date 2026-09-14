@@ -652,10 +652,15 @@ function SinaisDeLeitura({
       </summary>
 
       <div className="mt-3 flex flex-col gap-3 border-l border-linha pl-3">
-        {mensagem.prob_satisfeito !== null ? (
+        {/* As três ou nenhuma: o servidor as deriva da MESMA previsão. Um
+            `?? 0` aqui desenharia "0% insatisfeito" para uma ausência — a
+            invariante 2 — no dia em que esse contrato mudar. */}
+        {mensagem.prob_insatisfeito !== null &&
+        mensagem.prob_neutro !== null &&
+        mensagem.prob_satisfeito !== null ? (
           <BarraDeClasses
-            insatisfeito={mensagem.prob_insatisfeito ?? 0}
-            neutro={mensagem.prob_neutro ?? 0}
+            insatisfeito={mensagem.prob_insatisfeito}
+            neutro={mensagem.prob_neutro}
             satisfeito={mensagem.prob_satisfeito}
           />
         ) : null}

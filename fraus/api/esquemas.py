@@ -28,6 +28,9 @@ class PedidoFonte(BaseModel):
 class PedidoAjusteFonte(BaseModel):
     nome: str | None = None
     ativa: bool | None = None
+    # Ausente = nao mexe; null = a fonte deixa de nomear variavel. A diferenca
+    # sai de `model_fields_set`, porque os dois chegam como None no atributo.
+    variavel_segredo: str | None = None
 
 
 class PedidoImportacao(BaseModel):
