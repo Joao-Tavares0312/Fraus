@@ -65,6 +65,7 @@ export function PainelDaFonte({
   baseDaApi,
   ocupada,
   aoRenomear,
+  aoTrocarVariavel,
   aoAlternarAtiva,
   aoRemover,
 }: {
@@ -78,6 +79,8 @@ export function PainelDaFonte({
    * quando ele ainda é preciso para corrigir e reenviar.
    */
   aoRenomear: (fonte: FonteIntegracao, nome: string) => Promise<boolean>;
+  /** Devolve se o servidor aceitou; ver `aoRenomear`. */
+  aoTrocarVariavel: (fonte: FonteIntegracao, variavel: string | null) => Promise<boolean>;
   aoAlternarAtiva: (fonte: FonteIntegracao) => void;
   /** Devolve se o servidor aceitou; ver `aoRenomear`. */
   aoRemover: (fonte: FonteIntegracao) => Promise<boolean>;
@@ -309,7 +312,11 @@ export function PainelDaFonte({
             titulo="Segredo de assinatura"
             nota="O que a plataforma usa para assinar cada entrega, e o que a API usa para conferir. Ele mora no ambiente da máquina, não no banco."
           >
-            <SegredoDoWebhook fonte={fonte} />
+            <SegredoDoWebhook
+              fonte={fonte}
+              ocupada={ocupada}
+              aoTrocarVariavel={(variavel) => aoTrocarVariavel(fonte, variavel)}
+            />
           </Bloco>
 
           <Bloco

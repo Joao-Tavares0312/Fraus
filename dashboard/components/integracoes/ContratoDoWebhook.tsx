@@ -49,6 +49,43 @@ function BotaoCopiar({ texto, rotulo }: { texto: string; rotulo: string }) {
 }
 
 /**
+ * Uma entrega assinada DE VERDADE, só com a biblioteca padrão do Python.
+ *
+ * Diferente do `curl`, este exemplo não tem marcador: ele calcula o HMAC. E
+ * ele pode, porque o segredo vem do AMBIENTE de quem chama, nunca de um valor
+ * escrito aqui — colado como está, funciona ou falha pelo segredo, não pelo
+ * exemplo. `tests/test_exemplo_de_assinatura.py` lê este texto, EXECUTA e
+ * confere com `fraus.assinatura`: se os dois divergirem, a suíte quebra.
+ * `{URL}` é trocado pela URL da fonte na tela e no teste.
+ */
+const EXEMPLO_PYTHON = String.raw`
+import base64, hashlib, hmac, json, os, time, urllib.request, uuid
+
+segredo = os.environ["FRAUS_SEGREDO_WEBHOOK"]  # o whsec_... desta fonte
+corpo = json.dumps({
+    "id": "atendimento-123",
+    "mensagens": [
+        {"autor": "cliente", "texto": "meu pedido nao chegou", "enviada_em": "2026-08-14T10:00:00-03:00"},
+        {"autor": "bot", "texto": "vou verificar", "enviada_em": "2026-08-14T10:00:12-03:00"},
+    ],
+}).encode()  # assine exatamente os bytes que vao no corpo
+
+webhook_id = f"msg_{uuid.uuid4().hex}"
+timestamp = str(int(time.time()))
+chave = base64.b64decode(segredo.removeprefix("whsec_"))  # o base64 DECODIFICADO
+digesto = hmac.new(chave, f"{webhook_id}.{timestamp}.".encode() + corpo, hashlib.sha256).digest()
+
+pedido = urllib.request.Request("{URL}", data=corpo, method="POST", headers={
+    "webhook-id": webhook_id,
+    "webhook-timestamp": timestamp,
+    "webhook-signature": "v1," + base64.b64encode(digesto).decode(),
+    "Content-Type": "application/json",
+})
+with urllib.request.urlopen(pedido) as resposta:
+    print(resposta.status, resposta.read().decode())
+`;
+
+/**
  * O CONTRATO que a plataforma precisa cumprir para entregar aqui.
  *
  * Substitui o `<details>` de `ChaveDaFonte.tsx`, que ensinava so o caminho de
@@ -82,6 +119,7 @@ export function ContratoDoWebhook({
     `        {"autor":"bot","texto":"vou verificar","enviada_em":"2026-08-14T10:00:12-03:00"}`,
     `      ]}'`,
   ].join("\n");
+  const exemploPython = EXEMPLO_PYTHON.replace("{URL}", url);
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -162,6 +200,25 @@ export function ContratoDoWebhook({
           categoria são derivados no servidor e ignorados se vierem no corpo.
         </p>
       </div>
+
+      <details className="group flex min-w-0 flex-col gap-1.5">
+        <summary className="cursor-pointer text-xs text-muted-foreground marker:text-muted-foreground">
+          Calcular a assinatura — exemplo em Python, só biblioteca padrão
+        </summary>
+        <div className="mt-2 flex min-w-0 flex-col gap-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              Lê o segredo de{" "}
+              <code className="num text-foreground">FRAUS_SEGREDO_WEBHOOK</code>{" "}
+              no ambiente de quem envia — nunca cole o segredo no código.
+            </p>
+            <BotaoCopiar texto={exemploPython} rotulo="Copiar Python" />
+          </div>
+          <pre className="num min-w-0 overflow-x-auto rounded-sm bg-muted p-3 text-[11px] leading-relaxed text-foreground">
+            {exemploPython}
+          </pre>
+        </div>
+      </details>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         Os três cabeçalhos seguem o{" "}

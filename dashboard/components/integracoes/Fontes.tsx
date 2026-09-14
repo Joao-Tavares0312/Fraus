@@ -158,6 +158,19 @@ export function Fontes({
     return true;
   }
 
+  async function trocarVariavel(fonte: FonteIntegracao, variavel: string | null) {
+    setErro(null);
+    setOcupada(fonte.id);
+    const resposta = await ajustarFonte(fonte.id, { variavel_segredo: variavel });
+    setOcupada(null);
+    if (!resposta.ok) {
+      setErro(resposta.erro);
+      return false;
+    }
+    await recarregar();
+    return true;
+  }
+
   async function remover(fonte: FonteIntegracao) {
     setErro(null);
     setOcupada(fonte.id);
@@ -351,6 +364,7 @@ export function Fontes({
               baseDaApi={baseDaApi}
               ocupada={ocupada === fonteAberta.id}
               aoRenomear={confirmarRenome}
+              aoTrocarVariavel={trocarVariavel}
               aoAlternarAtiva={alternarAtiva}
               aoRemover={remover}
             />

@@ -752,6 +752,43 @@ def test_patch_com_nome_vazio_e_400(cliente):
     assert "nome" in resposta.json()["detail"]
 
 
+def test_patch_corrige_a_variavel_do_segredo_sem_recriar_a_fonte(cliente):
+    """Antes a variavel so nascia no cadastro: nome errado = 503 para sempre."""
+    criada = cliente.post(
+        "/integracoes/fontes",
+        json={**FONTE, "tipo": "webhook", "variavel_segredo": "FRAUS_ERRADA"},
+    ).json()
+    resposta = cliente.patch(
+        f"/integracoes/fontes/{criada['id']}", json={"variavel_segredo": " FRAUS_SEGREDO_CERTO "}
+    )
+    assert resposta.status_code == 200
+    assert resposta.json()["variavel_segredo"] == "FRAUS_SEGREDO_CERTO"
+    assert resposta.json()["id"] == criada["id"]
+
+
+def test_patch_sem_o_campo_nao_mexe_na_variavel_e_null_limpa(cliente):
+    criada = cliente.post(
+        "/integracoes/fontes", json={**FONTE, "variavel_segredo": "FRAUS_X"}
+    ).json()
+    caminho = f"/integracoes/fontes/{criada['id']}"
+    assert cliente.patch(caminho, json={"nome": "Outro"}).json()["variavel_segredo"] == "FRAUS_X"
+    assert cliente.patch(caminho, json={"variavel_segredo": None}).json()["variavel_segredo"] is None
+
+
+def test_nome_que_nao_pode_ser_variavel_de_ambiente_e_400_no_cadastro_e_no_patch(cliente):
+    """Colar o SEGREDO no campo do NOME e o erro que esta recusa pega: whsec_ tem base64."""
+    recusado = cliente.post(
+        "/integracoes/fontes", json={**FONTE, "variavel_segredo": "whsec_abc+/="}
+    )
+    assert recusado.status_code == 400
+    assert "variavel" in recusado.json()["detail"]
+    criada = cliente.post("/integracoes/fontes", json=FONTE).json()
+    resposta = cliente.patch(
+        f"/integracoes/fontes/{criada['id']}", json={"variavel_segredo": "meu segredo"}
+    )
+    assert resposta.status_code == 400
+
+
 def test_patch_e_delete_de_fonte_inexistente_sao_404(cliente):
     assert cliente.patch("/integracoes/fontes/999", json={"ativa": False}).status_code == 404
     assert cliente.delete("/integracoes/fontes/999").status_code == 404

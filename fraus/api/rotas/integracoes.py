@@ -10,6 +10,7 @@ raiz de importacao e o HISTORICO do que ja entrou.
 """
 
 import os
+import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -20,6 +21,26 @@ from fraus.api.esquemas import TIPOS_DE_FONTE, PedidoAjusteFonte, PedidoFonte
 from fraus.api.seguranca import exigir_mestra
 
 router = APIRouter()
+
+# O formato de nome de variavel de ambiente POSIX. Nao e zelo de estilo: o
+# erro que ele pega e colar o SEGREDO (`whsec_...`, base64 com + / =) no campo
+# que pede o NOME -- o valor iria para o banco em claro, exatamente o que o
+# desenho do webhook existe para evitar.
+NOME_DE_VARIAVEL = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+
+
+def _variavel_ou_400(bruto: str | None) -> str | None:
+    variavel = (bruto or "").strip() or None
+    if variavel is not None and not NOME_DE_VARIAVEL.match(variavel):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "nome de variavel de ambiente invalido: use letras, digitos e _ "
+                "(ex.: FRAUS_SEGREDO_WHATSAPP). Este campo leva o NOME da "
+                "variavel, nunca o segredo."
+            ),
+        )
+    return variavel
 
 
 def fonte_publica(fonte: dict) -> dict:
@@ -65,7 +86,7 @@ def criar_fonte(
         nome=nome,
         canal=canal,
         tipo=pedido.tipo,
-        variavel_segredo=(pedido.variavel_segredo or "").strip() or None,
+        variavel_segredo=_variavel_ou_400(pedido.variavel_segredo),
         criada_em=datetime.now(timezone.utc).isoformat(),
     )
     return fonte_publica(fonte)
@@ -84,7 +105,19 @@ def ajustar_fonte(
         nome = pedido.nome.strip()
         if not nome:
             raise HTTPException(status_code=400, detail="nome da fonte vazio")
-    return fonte_publica(ctx.banco.atualizar_fonte(fonte_id, nome=nome, ativa=pedido.ativa))
+    # Corrigir a variavel sem recriar a fonte: antes ela so nascia no cadastro,
+    # e um nome errado deixava o webhook em 503 ate apagar e recriar -- o que
+    # troca o `fonte_id` da URL que a plataforma ja tem configurada.
+    trocar = "variavel_segredo" in pedido.model_fields_set
+    return fonte_publica(
+        ctx.banco.atualizar_fonte(
+            fonte_id,
+            nome=nome,
+            ativa=pedido.ativa,
+            variavel_segredo=_variavel_ou_400(pedido.variavel_segredo) if trocar else None,
+            trocar_variavel=trocar,
+        )
+    )
 
 
 @router.delete("/integracoes/fontes/{fonte_id}", status_code=204)
