@@ -163,7 +163,13 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  // O ramo barra/gaveta le o HOOK, nao o `isMobile` do contexto. A barra da
+  // dashboard mora num <Suspense>, que hidrata DEPOIS de o provider ja ter
+  // passado `true` pelo contexto no celular: lendo o contexto, ela tentava
+  // hidratar como gaveta sobre o HTML de barra fixa. O hook usa o snapshot do
+  // servidor durante a hidratacao DESTE componente. Ver hooks/use-mobile.ts.
+  const { state, openMobile, setOpenMobile } = useSidebar()
+  const isMobile = useIsMobile()
   const refEspecular = useEspecular<HTMLDivElement>()
 
   if (collapsible === "none") {
