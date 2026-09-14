@@ -1070,7 +1070,7 @@ export const analisarArquivo = (csv: string) =>
   proteger(escrever<ResultadoAnalise>("/analisar", "POST", { csv }));
 
 /**
- * Analisa um arquivo binario -- csv, xlsx, docx ou pdf.
+ * Analisa um arquivo -- csv, xlsx, json, txt (WhatsApp ou prosa), docx ou pdf.
  *
  * Vai como multipart e nao como JSON porque planilha e PDF nao sao texto:
  * codificar em base64 para caber num campo de string inflaria o corpo em um

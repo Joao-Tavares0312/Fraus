@@ -95,7 +95,7 @@ def analisar(
 async def analisar_arquivo(
     arquivo: UploadFile = File(...), ctx: Contexto = Depends(obter_contexto)
 ) -> dict:
-    """Mesma analise, aceitando csv, xlsx, docx ou pdf.
+    """Mesma analise, aceitando csv, xlsx, json, txt, docx ou pdf.
 
     Existe separada de `/analisar` porque formato binario nao cabe em JSON:
     planilha e PDF nao sao texto, e obrigar o cliente a codificar em base64

@@ -32,7 +32,7 @@ import { TextoComPesos } from "./TextoComPesos";
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
 const TETO_BYTES = 200_000;
 
-const ACEITOS = ".csv,.xlsx,.xlsm,.docx,.pdf";
+const ACEITOS = ".csv,.tsv,.xlsx,.xlsm,.json,.jsonl,.txt,.docx,.pdf";
 
 export function Analisador() {
   const entrada = useRef<HTMLInputElement>(null);
@@ -90,26 +90,30 @@ export function Analisador() {
       >
         <div className="flex flex-col gap-3 px-5 py-4">
           <div className="text-sm text-muted-foreground">
-            <p>Aceito quatro formatos, e leio cada um pelo que ele consegue dar:</p>
+            <p>Leio planilha, JSON, WhatsApp e transcrição — e descubro as colunas sozinho:</p>
             <ul className="mt-1.5 flex flex-col gap-1 text-xs">
               <li>
-                <strong className="text-foreground">.csv</strong> e{" "}
-                <strong className="text-foreground">.xlsx</strong> — no formato
-                do Fraus (
-                <code className="num">
-                  conversa_id, canal, autor, texto, enviada_em,
-                  escalou_para_humano
-                </code>
-                ) ou o export da Totalk, que reconheço sozinho. Trazem horário,
-                então a conversa recebe nota.
+                <strong className="text-foreground">.csv</strong>,{" "}
+                <strong className="text-foreground">.xlsx</strong> e{" "}
+                <strong className="text-foreground">.json</strong> — qualquer
+                estrutura com uma coluna de fala e uma de quem falou. Reconheço
+                o formato do Fraus e o export da Totalk; nos outros,{" "}
+                <strong>infiro</strong> qual coluna é texto, autor, data e
+                conversa, e o resultado diz o que inferi. Com horário, a
+                conversa recebe nota.
               </li>
               <li>
-                <strong className="text-foreground">.docx</strong> e{" "}
-                <strong className="text-foreground">.pdf</strong> — transcrição
-                em linhas <code className="num">Autor: mensagem</code>, com o
-                autor sendo cliente, bot ou atendente. Sem horário no texto{" "}
-                <strong>não há nota</strong>, só a leitura por mensagem — o
-                porquê aparece no resultado.
+                <strong className="text-foreground">.txt</strong> do{" "}
+                <em>Exportar conversa</em> do WhatsApp — traz horário, recebe
+                nota; quem abre a conversa é lido como cliente.
+              </li>
+              <li>
+                <strong className="text-foreground">.docx</strong>,{" "}
+                <strong className="text-foreground">.pdf</strong> e .txt em
+                prosa — transcrição em linhas{" "}
+                <code className="num">Autor: mensagem</code>. Sem horário no
+                texto <strong>não há nota</strong>, só a leitura por mensagem —
+                o porquê aparece no resultado.
               </li>
             </ul>
           </div>

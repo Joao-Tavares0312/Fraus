@@ -797,18 +797,18 @@ ausente no venv; `uv sync --extra dev` resolve).
 Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 `transcricao`). O desenho proposto, **sem LLM em runtime** (invariante 1):
 
-- [ ] **Camada leitor** (`fraus/ingest/leitores/`): formato → tabela.
+- [x] **Camada leitor** — **feita em 14/09/2026** (`fraus/ingest/leitores.py`), só com biblioteca padrão: codificação utf-8→cp1252→latin-1, delimitador por consistência de largura (vence o `;` do Excel pt-BR com vírgula dentro de aspas), JSON/JSONL aninhado com herança do id do pai, WhatsApp Android/iOS. Pendente: MarkItDown para docx/pdf e CleverCSV/charset-normalizer só se um arquivo real vencer as regras. Desenho original: formato → tabela.
   `charset-normalizer` (encoding), `CleverCSV` (dialeto, resolve o `;` do Excel
   pt-BR), `openpyxl` (xlsx), `json` + `json_normalize` (JSON aninhado: Discord,
   Telegram, Zendesk), parser próprio de WhatsApp `.txt` (**não** usar whatstk:
   GPL-3.0), `MarkItDown` para docx/pdf (MIT, offline). Docling descartado
   (baixa modelos, lento em CPU).
-- [ ] **Camada mapeador** (`fraus/ingest/mapeador.py`): tabela → `Conversa` com
+- [x] **Camada mapeador** — **feita em 14/09/2026** (`fraus/ingest/mapeador.py`, `difflib` no lugar do `rapidfuzz`, atribuição gulosa no lugar da húngara; quem é cliente por recorrência entre conversas ou por quem abre). Desenho: tabela → `Conversa` com
   confiança por papel (`conversa_id`, `autor`, `texto`, `enviada_em`, `canal`).
   Nome de coluna por sinônimos pt/en com `rapidfuzz` + perfil de conteúdo
   (coluna que parseia como data, poucos valores distintos = autor, texto longo
   = mensagem, cardinalidade em blocos = id) + atribuição húngara.
-- [ ] **Data ambígua** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
+- [x] **Data ambígua** — **feita em 14/09/2026** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
   interpretação com menos saltos negativos na ordem das mensagens; empate =
   confirmação obrigatória. Data sem fuso vira **aviso visível**, nunca naive
   silencioso (invariante 6). Sem horário, sem nota (§3.2 do handoff).
@@ -819,8 +819,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
   (corpo carrega mapeamento, **nunca** score — invariante 3), `GET/DELETE
   /perfis`; e a **tela de prévia** onde o analista confirma/corrige colunas.
   Papel obrigatório com confiança < 0,8 bloqueia confirmação automática.
-- [ ] Fixtures de teste: Totalk, canônico, WhatsApp pt-BR, Discord JSON, CSV
-  `;` em Latin-1. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
+- [ ] Fixtures de **exports reais** (Discord, Telegram, Zendesk, Blip) — os testes de 14/09 cobrem WhatsApp, JSON aninhado e CSV `;` em cp1252 sintéticos. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
   texto e autor identificáveis.
 
 #### P1
