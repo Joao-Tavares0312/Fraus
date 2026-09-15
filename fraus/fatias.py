@@ -20,32 +20,11 @@ from statistics import median
 
 from fraus.modelos import Conversa
 from fraus.sinais.emoji import emojis_com_posicao
-from fraus.sinais.palavras import normalizar
 from fraus.sinais.tempo import latencias_da_conversa
-
-# Fala que e so formula de cortesia. "ok, obrigado" chegou a sair alegria 0,98
-# no modelo de emocao (15/09/2026): e o caso em que o texto quase nao diz nada
-# sobre satisfacao, e por isso merece fatia propria.
-FORMULAS_DE_CORTESIA = frozenset(
-    {
-        "ok", "ok obrigado", "ok obrigada", "obrigado", "obrigada", "obg", "vlw",
-        "valeu", "ta bom", "ta bom entao", "certo", "entendi", "beleza", "blz",
-        "tudo bem", "so isso", "so isso mesmo", "so isso mesmo valeu",
-    }
-)
-
-
-def _sem_pontuacao(texto: str) -> str:
-    limpo = "".join(c if c.isalnum() or c.isspace() else " " for c in normalizar(texto))
-    return " ".join(limpo.split())
-
 
 def so_cortesia(conversa: Conversa) -> bool:
     """Toda fala do cliente e formula de cortesia (e ha pelo menos uma)."""
-    falas = conversa.mensagens_cliente
-    return bool(falas) and all(
-        _sem_pontuacao(m.texto) in FORMULAS_DE_CORTESIA for m in falas
-    )
+    return conversa.tem_fala_cliente and not conversa.tem_sinal_cliente
 
 
 def fatias_de(conversa: Conversa) -> dict[str, str]:

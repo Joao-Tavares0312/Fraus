@@ -3,6 +3,8 @@
 A interface tinha duas formas -- cabeca cheia (tem sinal) e cabeca vazada (sem
 sinal). Faltava o caso do meio: uma conversa de uma unica mensagem "ok" saia
 CHEIA, com a mesma confianca visual de uma conversa de 40 turnos.
+(Desde 15/09/2026 "ok" sozinho e formula de cortesia e sai SEM sinal --
+`fraus/cortesia.py` --, entao os exemplos daqui usam fala curta com conteudo.)
 
 O QUE NAO PODE SER USADO AQUI: a probabilidade do modelo. Probabilidade nao
 calibrada nao e confianca, e afirmar que e seria exatamente o tipo de
@@ -33,7 +35,7 @@ def _conversa(*falas_do_cliente: str) -> Conversa:
 
 
 def test_uma_unica_mensagem_do_cliente_e_evidencia_fraca():
-    assert evidencia_fraca(_conversa("ok")) is True
+    assert evidencia_fraca(_conversa("demorou")) is True
 
 
 def test_poucas_palavras_espalhadas_em_varias_mensagens_ainda_e_fraca():
@@ -90,7 +92,7 @@ def test_uma_mensagem_SO_e_fraca_mesmo_sendo_substancial():
 
 def test_os_motivos_sao_nomeados_nao_so_o_booleano():
     """A tela precisa dizer POR QUE a evidencia e fraca -- "fraca" nao aciona ninguem."""
-    assert motivos_de_evidencia_fraca(_conversa("ok")) == [
+    assert motivos_de_evidencia_fraca(_conversa("demorou")) == [
         "uma unica mensagem do cliente",
         "menos de 5 palavras do cliente",
     ]
