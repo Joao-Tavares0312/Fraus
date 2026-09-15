@@ -39,7 +39,8 @@ export function NotaMetodologica({ derivados }: { derivados?: string[] }) {
         </div>
         <div className="text-xs leading-relaxed text-muted-foreground">
           <p>
-            Atendimento sem fala do cliente aparece como{" "}
+            Atendimento em que o cliente não falou, ou só usou fórmulas de
+            cortesia, aparece como{" "}
             <strong className="font-medium text-foreground">sem sinal</strong> e
             nunca como nota 0: ausência de dado não é insatisfação.
           </p>

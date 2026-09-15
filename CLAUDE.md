@@ -45,7 +45,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/modelos.py` | `Conversa` / `Mensagem` — modelo canônico |
 | `fraus/ingest/csv_driver.py` | CSV → conversas, isolando linha malformada |
 | `fraus/ingest/simulador.py` | conversas sintéticas determinísticas (treino do sinal de tempo) |
-| `fraus/sinais/texto.py` | BERTimbau, probabilidade **por mensagem** |
+| `fraus/sinais/texto.py` | BERTimbau, probabilidade **por mensagem** (torch importado só se usado) |
+| `fraus/sinais/onnx.py` | o mesmo checkpoint no ONNX Runtime — `FRAUS_BACKEND=onnx`, ver `docs/encolhimento.md` |
 | `fraus/sinais/emoji.py` | lexicon + posição relativa |
 | `fraus/sinais/tempo.py` | latência, escalação, abandono |
 | `fraus/sinais/emocao.py` | 7 classes de emoção; desprezo derivado da díade raiva+nojo |
@@ -53,6 +54,10 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/sinais/ironia.py` | cabeça binária (IDPT 2021) |
 | `fraus/sinais/estilo.py` | caixa alta, pontuação, alongamento, palavrão, censura |
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex e o ranking de emoji |
+| `fraus/cortesia.py` | "ok, obrigado" sozinho é **sem sinal**, não promotor — `Conversa.tem_sinal_cliente` |
+| `fraus/fatias.py` | avaliação por fatia (parte pura); `scripts/avaliar_por_fatias.py` alimenta `docs/cartao-do-modelo.md` |
+| `fraus/api/repontuacao.py` | repontuar em segundo plano, com progresso e 409 se já rodando |
+| `scripts/retreinar_fusor_local.py` | reproduz o notebook 02 em CPU e só grava o fusor com `--promover` |
 | `fraus/api/rotas/lexico.py` | cadastrar, listar e revogar termo curado |
 | `fraus/assinatura.py` | HMAC do webhook — o segredo mora no ambiente, nunca no banco |
 | `fraus/api/vazao.py` | dois tetos: `/auth/*` por IP em middleware, `/ingestao` por fonte na rota |
@@ -73,10 +78,12 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 ## Comandos
 
 ```bash
-uv sync --extra dev              # `uv sync` puro REMOVE o pytest (grupo dev é opt-in)
+uv sync --extra dev --extra torch   # `uv sync` puro REMOVE o pytest e o torch (os dois são extras)
+uv sync --extra dev --extra onnx    # alternativa sem torch: FRAUS_BACKEND=onnx lê modelos-onnx/
 uv run pytest -q
 uv run python scripts/api_demo.py      # API de demonstração, sem modelo
-uv run uvicorn fraus.api.main:app      # API real — exige modelos/ treinado
+uv run uvicorn fraus.api.main:app      # API real — exige modelos/ treinado (FRAUS_BACKEND=torch, padrão)
+FRAUS_BACKEND=onnx uv run uvicorn fraus.api.main:app   # sem torch — exige modelos-onnx/ e o fusor de modelos/
 cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há package.json na raiz
 
 uv sync --extra docs                   # gerador do site (extra opt-in, como o dev)
@@ -138,7 +145,10 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
     por classe fez o primeiro fusor marcar 99,3% lendo só o relógio, com o
     BERTimbau apagado. Distribuição por rótulo se sobrepõe; feature constante no
     treino nasce com peso zero. Acurácia alta demais é sintoma, não vitória —
-    ver `docs/treinamento.md`.
+    ver `docs/treinamento.md`. Desde 15/09/2026 as quatro features de espera
+    entram no vetor em `log1p` (`FEATURES_EM_LOG`, dentro de `vetorizar`) e o
+    artefato carrega a escala: `Fusor.carregar` recusa `fusor.joblib` treinado
+    em segundos crus, que teria as mesmas 39 features e daria nota errada.
 
 ## Convenções
 

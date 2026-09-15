@@ -651,15 +651,16 @@ dependencies = [
     { name = "python-docx" },
     { name = "python-multipart" },
     { name = "scikit-learn" },
-    { name = "torch" },
     { name = "transformers" },
     { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
 conversao = [
+    { name = "onnx-ir" },
     { name = "onnxruntime" },
     { name = "optimum", extra = ["onnxruntime"] },
+    { name = "torch" },
 ]
 dev = [
     { name = "httpx" },
@@ -673,6 +674,9 @@ docs = [
 onnx = [
     { name = "onnxruntime" },
 ]
+torch = [
+    { name = "torch" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -683,6 +687,7 @@ requires-dist = [
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocs-to-pdf", marker = "extra == 'docs'", specifier = ">=0.9" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0" },
+    { name = "onnx-ir", marker = "extra == 'conversao'", specifier = ">=1.0" },
     { name = "onnxruntime", marker = "extra == 'conversao'", specifier = ">=1.20" },
     { name = "onnxruntime", marker = "extra == 'onnx'", specifier = ">=1.20" },
     { name = "openpyxl", specifier = ">=3.1.5" },
@@ -695,11 +700,12 @@ requires-dist = [
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "scikit-learn", specifier = "==1.6.1" },
-    { name = "torch", specifier = ">=2.3" },
+    { name = "torch", marker = "extra == 'conversao'", specifier = ">=2.3" },
+    { name = "torch", marker = "extra == 'torch'", specifier = ">=2.3" },
     { name = "transformers", specifier = ">=4.44" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
-provides-extras = ["dev", "onnx", "conversao", "docs"]
+provides-extras = ["dev", "docs", "torch", "onnx", "conversao"]
 
 [[package]]
 name = "fsspec"
@@ -1613,6 +1619,23 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b8/8a/da2a97ab46fe6e0cd9beb3ac14603a22f5be492f9ca347faf8233a07bb33/onnx-1.22.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2632406b8f523ef2e2873c363f90b20a3d88c0fbcfac757d3addffccf8f452c2", size = 19110420, upload-time = "2026-06-15T12:49:57.665Z" },
     { url = "https://files.pythonhosted.org/packages/b9/a3/ce984063017518307ebfaa545782fc400e593dc2d7fdf4f23ce4be1ed197/onnx-1.22.0-cp314-cp314t-win_amd64.whl", hash = "sha256:a3a39fc4643867aecb33417fdddb11e308ee79d2d4a584b9d50cc7aec2091b13", size = 17237547, upload-time = "2026-06-15T12:50:00.382Z" },
     { url = "https://files.pythonhosted.org/packages/00/50/257a880384a1dd502d543b0067945074d63cd17d0840e958355bc8197da8/onnx-1.22.0-cp314-cp314t-win_arm64.whl", hash = "sha256:8e268cdc0547e3949799ffd4a44451dc2b9080b57d0824a2db680b6ec65506f0", size = 17231391, upload-time = "2026-06-15T12:50:03.047Z" },
+]
+
+[[package]]
+name = "onnx-ir"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "onnx" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d6/c2/61194cec0dbc5622273c0ebd592d37cc1dca0d7f1a744f02edd45ac905a3/onnx_ir-1.0.0.tar.gz", hash = "sha256:9e261f25fde8da9612ae5cb43b3b374d5ff469c04af0363cad588b2bb000b812", size = 163121, upload-time = "2026-08-11T14:49:46.895Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/cd/6d1637172eb59c7b18ac90ed089d1f599a11fe0e63b4db2d017f3bb38a32/onnx_ir-1.0.0-py3-none-any.whl", hash = "sha256:e578f0d608d3062866b48223616eb2d10a6d6d01f8b8faac596129034f483cc7", size = 185849, upload-time = "2026-08-11T14:49:45.524Z" },
 ]
 
 [[package]]

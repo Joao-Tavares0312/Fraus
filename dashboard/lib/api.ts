@@ -142,6 +142,12 @@ export type Indicadores = {
    * `undefined` ali significa "nao sei", que nao pode virar zero.
    */
   pontuadas_com_lexico_antigo?: number;
+  /**
+   * A mesma contagem somando troca de MODELO (retreino do fusor, regra da
+   * cortesia), desde 15/09/2026. E a que o aviso usa; a de lexico continua
+   * existindo com o sentido de sempre.
+   */
+  pontuadas_com_regua_antiga?: number;
   total_no_banco?: number;
 };
 
@@ -209,6 +215,13 @@ export type ResumoConversa = {
 
   /** `null` na esmagadora maioria dos atendimentos -- ver `Contestacao`. */
   contestacao: Contestacao | null;
+
+  /**
+   * POR QUE nao ha nota, derivado no servidor (`Conversa.motivo_sem_sinal`).
+   * `null` quando ha. "so_cortesia" existe desde 15/09/2026: o cliente falou,
+   * mas so "ok, obrigado" -- e a tela nao pode dizer que ele nao falou.
+   */
+  motivo_sem_sinal: MotivoSemSinal | null;
 
   /**
    * Tem score, e pouca fala do cliente para sustenta-lo -- a CABECA
@@ -1034,9 +1047,14 @@ export type MensagemAnalisada = MensagemAtribuida & {
   palavras: PesoDePalavra[] | null;
 };
 
+/** Os dois motivos para nao haver nota. Ver `fraus/modelos.py`. */
+export type MotivoSemSinal = "sem_fala_do_cliente" | "so_cortesia";
+
 export type ConversaAnalisada = {
   conversa: DetalheConversa;
   score: number | null;
+  /** Ver `motivo_sem_sinal` em `ResumoConversa`. */
+  motivo_sem_sinal: MotivoSemSinal | null;
   nota: number | null;
   categoria: Categoria | null;
   mensagens: MensagemAnalisada[];

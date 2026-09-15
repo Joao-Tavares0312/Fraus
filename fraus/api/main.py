@@ -32,10 +32,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 DESTINO_BANCO,
                                 CAMINHO_MODELO_EMOCAO, CAMINHO_MODELO_IRONIA,
-                                CAMINHO_MODELO_TEXTO, RAIZ_IMPORTACAO)
+                                CAMINHO_MODELO_TEXTO, CAMINHO_ONNX_EMOCAO,
+                                CAMINHO_ONNX_IRONIA, CAMINHO_ONNX_TEXTO,
+                                RAIZ_IMPORTACAO, backend_declarado)
 from fraus.api.contexto import Contexto
 from fraus.api.primeiro_uso import ligar_no_primeiro_uso
-from fraus.api.limites import TETO_CORPO, registrar_middleware_de_corpo  # TETO_CORPO reexportado para os testes
+from fraus.api.repontuacao import Repontuacao
+from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os testes
+                               registrar_cabecalhos_de_seguranca,
+                               registrar_middleware_de_corpo)
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
 from fraus.api.rotas import (acesso, analise, auth, configuracoes, conversas,
                              grafo, indicadores, ingestao, integracoes, lexico, perfis,
@@ -144,6 +149,9 @@ def criar_app(
     # faria a integracao por webhook ser cortada por causa do volume de uma
     # importacao pela outra rota. Mesmo teto, contadores separados.
     app.state.limitador_de_webhook = LimitadorDeVazao(ENTREGAS_POR_JANELA)
+    # Um trabalho de repontuacao por app, pelo mesmo motivo dos limitadores:
+    # nasce e morre com ele, e nao vaza de um teste para o proximo.
+    app.state.repontuacao = Repontuacao()
 
     registrar_middleware_de_acesso(app, ctx)
 
@@ -157,6 +165,9 @@ def criar_app(
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
+    # O ultimo registrado e o mais externo: cobre inclusive o que o CORS, o
+    # acesso e o teto de corpo recusam antes de chegar a rota.
+    registrar_cabecalhos_de_seguranca(app)
 
     app.include_router(saude.router)
     app.include_router(conversas.router)
@@ -214,6 +225,26 @@ def aviso_de_porta_destrancada(
     )
 
 
+def montar_classificadores(backend: str):
+    """As tres cabecas, pelo executor declarado. Cada ausencia propaga alta.
+
+    O `Motor` nao sabe qual e: os dois lados expoem so `prever_mensagens`.
+    """
+    if backend == "onnx":
+        from fraus.sinais.onnx import ClassificadorOnnx
+
+        return (
+            ClassificadorOnnx(CAMINHO_ONNX_TEXTO),
+            ClassificadorOnnx(CAMINHO_ONNX_EMOCAO),
+            ClassificadorOnnx(CAMINHO_ONNX_IRONIA),
+        )
+    return (
+        ClassificadorTexto(CAMINHO_MODELO_TEXTO),
+        ClassificadorEmocao(CAMINHO_MODELO_EMOCAO),
+        ClassificadorIronia(CAMINHO_MODELO_IRONIA),
+    )
+
+
 def criar_app_padrao() -> FastAPI:
     """Monta o app com dependencias reais. Falha alto se modelo/fusor faltarem.
 
@@ -221,7 +252,7 @@ def criar_app_padrao() -> FastAPI:
     vai falhar por modelo ausente, ela precisa falhar sem sujar o disco com um
     `fraus.db` de schema vazio.
     """
-    classificador = ClassificadorTexto(CAMINHO_MODELO_TEXTO)  # propaga ModeloAusenteError
+    classificador, emocao, ironia = montar_classificadores(backend_declarado())
     fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
 
     # Emocao entra no vetor desde a subida do contrato para 35 features
@@ -235,8 +266,6 @@ def criar_app_padrao() -> FastAPI:
     # o fusor, mas alimenta a leitura por mensagem (`prob_ironia` na API), que a
     # tela de atendimento e a de analise mostram. Faltar o modelo tira essa
     # leitura do ar, e o mesmo motivo do invariante 7 vale para ela.
-    emocao = ClassificadorEmocao(CAMINHO_MODELO_EMOCAO)
-    ironia = ClassificadorIronia(CAMINHO_MODELO_IRONIA)
 
     motor = Motor(classificador, fusor, emocao, ironia)
     banco = Banco(DESTINO_BANCO)

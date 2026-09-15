@@ -171,8 +171,12 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   // Só existe quando o servidor de fato respondeu a contagem E ela é maior que
   // zero. Com `/indicadores` fora, nada é afirmado: não saber com qual léxico o
   // banco foi pontuado não é o mesmo que saber que está em dia.
+  // A contagem de REGUA (lexico ou modelo) quando o servidor a tem; a de
+  // lexico so para uma API anterior a 15/09/2026.
   const defasadas = indicadoresDoServidor.ok
-    ? (indicadoresDoServidor.dado.pontuadas_com_lexico_antigo ?? 0)
+    ? (indicadoresDoServidor.dado.pontuadas_com_regua_antiga ??
+        indicadoresDoServidor.dado.pontuadas_com_lexico_antigo ??
+        0)
     : 0;
   const totalNoBanco = indicadoresDoServidor.ok
     ? (indicadoresDoServidor.dado.total_no_banco ?? 0)
@@ -278,7 +282,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
 
           <Painel
             titulo="Piores atendimentos do período"
-            legenda="Menor nota inferida primeiro. Atendimento sem fala do cliente não entra: sem nota não há “pior”."
+            legenda="Menor nota inferida primeiro. Atendimento sem sinal (o cliente não falou ou só usou cortesia) não entra: sem nota não há “pior”."
             semPadding
             acessorio={
               <span className="num text-xs text-muted-foreground">

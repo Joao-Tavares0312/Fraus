@@ -416,7 +416,9 @@ function Analise({
   const semNota = analise.score === null;
   const motivoSemNota = !temTempo
     ? "o arquivo não traz horário"
-    : "sem fala do cliente";
+    : analise.motivo_sem_sinal === "so_cortesia"
+      ? "o cliente só usou fórmulas de cortesia"
+      : "sem fala do cliente";
 
   return (
     <div className="flex flex-col gap-4">
@@ -484,6 +486,7 @@ function Analise({
           contribuicoes={analise.contribuicoes}
           sinaisForaDoScore={analise.sinais_fora_do_score}
           totalDeFeatures={Object.keys(analise.importancias).length}
+          motivoSemSinal={temTempo ? analise.motivo_sem_sinal : null}
         />
       </Painel>
 

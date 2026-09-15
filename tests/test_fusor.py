@@ -377,7 +377,10 @@ def test_sem_curadoria_o_vetor_e_o_de_antes():
 def test_a_distribuicao_de_treino_cobre_as_39_features():
     distribuicao = _fusor_treinado().distribuicao_de_treino()
     assert set(distribuicao) == set(NOMES_FEATURES)
-    assert distribuicao["latencia_mediana_s"]["media"] == pytest.approx(154.0)
+    # No espaco que o scaler viu: log1p(8) e log1p(300), nao 8 e 300 segundos.
+    import math
+    esperado = (math.log1p(8.0) + math.log1p(300.0)) / 2
+    assert distribuicao["latencia_mediana_s"]["media"] == pytest.approx(esperado)
     assert distribuicao["latencia_mediana_s"]["desvio"] > 0
 
 
@@ -392,15 +395,18 @@ def test_o_z_de_uma_conversa_dentro_da_faixa_e_pequeno():
     assert abs(dentro["latencia_mediana_s"]) < 4.0
 
 
-def test_o_z_explode_fora_da_faixa_de_treino():
+def test_tres_horas_ficam_longe_da_media_mas_nao_explodem():
     """Tres horas de espera contra um corpus que nunca passou de minutos.
 
-    E a invariante 10 se manifestando em RUNTIME: a guarda de vazamento olha a
-    distribuicao no corpus, e o corpus nao tem latencia de tres horas.
+    ATE 15/09/2026 este teste afirmava `z > 4` -- e o valor real em segundos
+    crus era da ordem de centenas: a invariante 10 em RUNTIME, o relogio
+    mandando sozinho na nota. Com a espera em log1p (`FEATURES_EM_LOG`) as tres
+    horas continuam ACIMA da media, na direcao certa, sem virar um numero que
+    apaga todas as outras 38 features.
     """
     fusor = _fusor_treinado()
     fora = fusor.z_das_features(_features(latencia_mediana_s=10800.0))
-    assert fora["latencia_mediana_s"] > 4.0
+    assert 1.0 < fora["latencia_mediana_s"] < 10.0
 
 
 def test_feature_constante_no_treino_nao_estoura_o_z():

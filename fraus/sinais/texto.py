@@ -9,9 +9,6 @@ PT-BR (Souza, Nogueira, Lotufo -- arXiv:2201.03382).
 
 from pathlib import Path
 
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
 from fraus.modelos import Conversa
 
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
@@ -22,6 +19,47 @@ class ModeloAusenteError(RuntimeError):
     """Modelo nao encontrado ou ilegivel. Falha alta: sem modelo nao ha predicao."""
 
 
+def carregar_torch(caminho_modelo: Path, rotulo: str):
+    """Tokenizador e modelo do checkpoint, com o torch importado SO AQUI.
+
+    O torch (497 MB) deixou de ser dependencia principal: com
+    `FRAUS_BACKEND=onnx` a API pontua sem ele. Importar no topo do modulo faria
+    `fraus.motor` -- que todo mundo importa -- exigir torch mesmo quando nenhum
+    checkpoint torch vai ser carregado. Faltar o torch quando o backend E torch
+    continua falha alta (invariante 7), com o remedio escrito.
+    """
+    try:
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        import torch  # noqa: F401 - o from_pretrained precisa dele de verdade
+    except ImportError as erro:
+        raise ModeloAusenteError(
+            f"{rotulo}: FRAUS_BACKEND=torch mas o torch nao esta instalado. "
+            "Rode `uv sync --extra torch`, ou use FRAUS_BACKEND=onnx "
+            "(ver docs/encolhimento.md)."
+        ) from erro
+    try:
+        tokenizador = AutoTokenizer.from_pretrained(str(caminho_modelo))
+        modelo = AutoModelForSequenceClassification.from_pretrained(str(caminho_modelo))
+    except Exception as erro:
+        raise ModeloAusenteError(f"{rotulo} em {caminho_modelo} ilegivel: {erro}") from erro
+    modelo.eval()
+    return tokenizador, modelo
+
+
+def prever_torch(tokenizador, modelo, textos: list[str]) -> list[list[float]]:
+    """Softmax por texto, num lote com padding pela mensagem mais longa."""
+    if not textos:
+        return []
+    import torch
+
+    with torch.inference_mode():
+        entradas = tokenizador(
+            textos, truncation=True, max_length=TAMANHO_MAXIMO, padding=True, return_tensors="pt"
+        )
+        logits = modelo(**entradas).logits
+        return torch.softmax(logits, dim=-1).tolist()
+
+
 class ClassificadorTexto:
     def __init__(self, caminho_modelo: Path) -> None:
         if not Path(caminho_modelo).is_dir():
@@ -30,23 +68,11 @@ class ClassificadorTexto:
                 "Rode notebooks/01_treino_bertimbau.ipynb e copie o artefato. "
                 "Ver docs/treinamento.md."
             )
-        try:
-            self._tokenizador = AutoTokenizer.from_pretrained(str(caminho_modelo))
-            self._modelo = AutoModelForSequenceClassification.from_pretrained(str(caminho_modelo))
-        except Exception as erro:
-            raise ModeloAusenteError(f"Modelo em {caminho_modelo} ilegivel: {erro}") from erro
-        self._modelo.eval()
+        self._tokenizador, self._modelo = carregar_torch(caminho_modelo, "Modelo")
 
-    @torch.inference_mode()
     def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
         """Probabilidades [insatisfeito, neutro, satisfeito] para cada texto."""
-        if not textos:
-            return []
-        entradas = self._tokenizador(
-            textos, truncation=True, max_length=TAMANHO_MAXIMO, padding=True, return_tensors="pt"
-        )
-        logits = self._modelo(**entradas).logits
-        return torch.softmax(logits, dim=-1).tolist()
+        return prever_torch(self._tokenizador, self._modelo, textos)
 
 
 def features_texto(conversa: Conversa, classificador) -> dict[str, float]:

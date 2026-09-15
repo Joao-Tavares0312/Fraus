@@ -22,6 +22,7 @@ porque alguem quis reimplementar numpy: o `AutoModelForSequenceClassification`
 tambem devolve logits, e o softmax sempre morou do lado de fora.
 """
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -72,11 +73,17 @@ class SessaoOnnx:
             from transformers import AutoTokenizer
 
             self._tokenizador = AutoTokenizer.from_pretrained(str(diretorio))
-            # Uma thread por padrao NAO e economia: e previsibilidade. A API
-            # atende requisicoes em paralelo, e um runtime que abre um pool por
-            # sessao multiplicaria threads por modelo por requisicao.
+            # Threads por passada. Ja nao precisa ser 1 por previsibilidade: o
+            # `Motor` deixa entrar no modelo uma passada por vez (semaforo
+            # `FRAUS_INFERENCIAS_SIMULTANEAS`), entao a passada que entra pode
+            # usar os nucleos. 0 = o runtime escolhe (nucleos fisicos).
             opcoes = onnxruntime.SessionOptions()
-            opcoes.intra_op_num_threads = 1
+            opcoes.intra_op_num_threads = int(os.environ.get("FRAUS_ONNX_THREADS", "0"))
+            # Sem arena: o alocador de CPU do runtime reserva blocos e nao os
+            # devolve. Medido em 15/09/2026 com o app montado e 30 conversas:
+            # pico 1.445 MB -> 1.347 MB, mesmos scores, sem perder velocidade
+            # (180 conversas em 33 s contra 35 s).
+            opcoes.enable_cpu_mem_arena = False
             opcoes.graph_optimization_level = (
                 onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
             )

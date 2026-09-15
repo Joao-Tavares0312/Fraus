@@ -75,7 +75,10 @@ def desfecho(conversa: Conversa) -> str:
     rotulo faria a tela afirmar o que ninguem mediu. `encerrada` diz o que de
     fato se sabe: a conversa fechou.
     """
-    if not conversa.tem_sinal_cliente:
+    # `tem_fala_cliente`, e nao `tem_sinal_cliente`: desfecho e sobre a
+    # operacao. Cliente que so agradeceu e foi escalado continua escalado --
+    # a cortesia tira a NOTA (fraus/cortesia.py), nao o que aconteceu.
+    if not conversa.tem_fala_cliente:
         return "sem_sinal"
     if conversa.escalou_para_humano:
         return "escalada"

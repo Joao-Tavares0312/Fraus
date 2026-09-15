@@ -434,6 +434,17 @@ docker run --rm fraus-api python -c "import torch; print(torch.__version__, torc
     de tamanho acusaria CUDA onde não há. `torch.version.cuda` é o fato;
     megabyte é palpite.
 
+!!! tip "Alternativa sem torch: `BACKEND=onnx`"
+    ```bash
+    docker build --build-arg BACKEND=onnx -t fraus-api .
+    ```
+    Não instala o torch e lê os grafos de `/modelos-onnx` (gerados por
+    `scripts/encolher_modelos.py`), então monte **também**
+    `-v "$PWD/modelos-onnx:/modelos-onnx:ro"`. O `/modelos` continua necessário
+    por causa do `fusor.joblib` e das métricas. Medido em 15/09/2026: imagem de
+    995 MB, pico de 1.347 MB contra 1.848 MB do torch, e 0 de 180 categorias
+    trocadas. Ver `docs/encolhimento.md`.
+
 Agora as credenciais. **Gere e GUARDE** — a mestra não é recuperável:
 
 ```bash

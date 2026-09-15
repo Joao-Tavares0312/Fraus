@@ -131,7 +131,6 @@ def converter(nome: str, precisao: str = "int8") -> dict:
     1 GB. Implementar o caminho sem medir isso primeiro seria vender ganho que
     talvez nao exista.
     """
-    from onnxruntime.quantization import QuantType, quantize_dynamic
     from optimum.onnxruntime import ORTModelForSequenceClassification
     from transformers import AutoTokenizer
 
@@ -193,6 +192,62 @@ def converter(nome: str, precisao: str = "int8") -> dict:
             "rotulos_divergentes": divergentes,
         }
 
+    if precisao == "int8-pesos":
+        # 3b. SO OS PESOS em int8 (MatMulNBits, blocos de 32, simetrico); a
+        #     ativacao continua fp32. Diferente da dinamica recusada, que
+        #     tambem computa em int8. Medido na emocao em 15/09/2026 com o
+        #     motor inteiro nas 180 conversas: 0 notas e 0 categorias trocadas,
+        #     desvio maximo de score 0,51 ponto, 417 -> 184 MB, pico de RAM da
+        #     API 1.347 -> 1.056 MB -- e ~40% mais lenta. Ver docs/encolhimento.md.
+        import onnx
+        from onnxruntime.quantization.matmul_nbits_quantizer import (
+            DefaultWeightOnlyQuantConfig, MatMulNBitsQuantizer)
+
+        quantizador = MatMulNBitsQuantizer(
+            onnx.load(str(fp32)),
+            algo_config=DefaultWeightOnlyQuantConfig(block_size=32, is_symmetric=True, bits=8),
+        )
+        quantizador.process()
+        pesos = destino / "model_int8_pesos.onnx"
+        quantizador.model.save_model_to_file(str(pesos), use_external_data_format=False)
+        fp32.unlink()
+        dados_externos = destino / "model.onnx_data"
+        if dados_externos.exists():
+            dados_externos.unlink()
+        pesos.rename(destino / "model.onnx")
+    else:
+        _quantizar_dinamico(fp32, destino)
+
+    tamanho_final = _tamanho_mb(destino)
+    print(f"  onnx {precisao}: {tamanho_final:.1f} MB", file=sys.stderr)
+
+    # 4. A pergunta que importa: ele ainda pensa a mesma coisa?
+    convertido = _probabilidades_onnx(destino, SONDAS)
+    maior_diferenca = max(
+        abs(a - b)
+        for linha_a, linha_b in zip(referencia, convertido)
+        for a, b in zip(linha_a, linha_b)
+    )
+    divergentes = [
+        texto
+        for texto, a, b in zip(SONDAS, referencia, convertido)
+        if a.index(max(a)) != b.index(max(b))
+    ]
+
+    return {
+        "nome": nome,
+        "precisao": precisao,
+        "mb_original": _tamanho_mb(origem),
+        "mb_final": tamanho_final,
+        "maior_diferenca_prob": maior_diferenca,
+        "rotulos_divergentes": divergentes,
+    }
+
+
+def _quantizar_dinamico(fp32: Path, destino: Path) -> None:
+    """Quantizacao dinamica int8 -- a medida e recusada para as cabecas que pontuam."""
+    from onnxruntime.quantization import QuantType, quantize_dynamic
+
     # 3. Quantizacao dinamica int8. QInt8 nos pesos; as ativacoes ganham escala
     #    em tempo de execucao, sem conjunto de calibracao.
     int8 = destino / "model_int8.onnx"
@@ -222,31 +277,6 @@ def converter(nome: str, precisao: str = "int8") -> dict:
     if dados_externos.exists():
         dados_externos.unlink()
     int8.rename(destino / "model.onnx")
-
-    tamanho_final = _tamanho_mb(destino)
-    print(f"  onnx int8: {tamanho_final:.1f} MB", file=sys.stderr)
-
-    # 4. A pergunta que importa: ele ainda pensa a mesma coisa?
-    convertido = _probabilidades_onnx(destino, SONDAS)
-    maior_diferenca = max(
-        abs(a - b)
-        for linha_a, linha_b in zip(referencia, convertido)
-        for a, b in zip(linha_a, linha_b)
-    )
-    divergentes = [
-        texto
-        for texto, a, b in zip(SONDAS, referencia, convertido)
-        if a.index(max(a)) != b.index(max(b))
-    ]
-
-    return {
-        "nome": nome,
-        "precisao": precisao,
-        "mb_original": _tamanho_mb(origem),
-        "mb_final": tamanho_final,
-        "maior_diferenca_prob": maior_diferenca,
-        "rotulos_divergentes": divergentes,
-    }
 
 
 def medir_latencia(nome: str, repeticoes: int = 3) -> tuple[float, float]:
@@ -286,9 +316,12 @@ def main() -> int:
     argumentos.add_argument("--so", choices=MODELOS, help="converter apenas um")
     argumentos.add_argument(
         "--precisao",
-        choices=("int8", "fp32"),
+        choices=("int8", "int8-pesos", "fp32"),
         default="int8",
-        help="int8 quantiza; fp32 so troca o executor (ver docstring de converter)",
+        help=(
+            "int8 quantiza pesos e ativacoes; int8-pesos so os pesos (MatMulNBits); "
+            "fp32 so troca o executor (ver docstring de converter)"
+        ),
     )
     argumentos.add_argument(
         "--latencia", action="store_true", help="medir tempo por lote (mais lento)"

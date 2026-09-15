@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { ordenarPorMagnitude } from "@/lib/derivacoes";
-import { formatarNumero } from "@/lib/formato";
+import { EXPLICACAO_SEM_SINAL, formatarNumero } from "@/lib/formato";
+import type { MotivoSemSinal } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BarrasDeFeature } from "./BarrasDeFeature";
 import { EstadoVazio } from "./EstadoVazio";
@@ -32,17 +33,20 @@ export function PainelContribuicoes({
   contribuicoes,
   sinaisForaDoScore,
   totalDeFeatures,
+  motivoSemSinal = null,
 }: {
   contribuicoes: Record<string, number> | null;
   sinaisForaDoScore: string[];
   totalDeFeatures: number;
+  /** Do servidor. Sem ele, o texto generico cobre os dois motivos. */
+  motivoSemSinal?: MotivoSemSinal | null;
 }) {
   if (contribuicoes === null) {
     return (
       <EstadoVazio
         className="m-5"
         titulo="Sem contribuições para este atendimento"
-        explicacao="O cliente não falou, então não há score — e sem score não há o que decompor. As contribuições vêm null do servidor exatamente neste caso; preencher com zeros diria que cada sinal pesou nada, quando na verdade nenhum sinal foi medido."
+        explicacao={`${motivoSemSinal ? EXPLICACAO_SEM_SINAL[motivoSemSinal] : "Não há sinal do cliente neste atendimento."} Sem score não há o que decompor. As contribuições vêm null do servidor exatamente neste caso; preencher com zeros diria que cada sinal pesou nada, quando na verdade nenhum sinal foi medido.`}
       />
     );
   }

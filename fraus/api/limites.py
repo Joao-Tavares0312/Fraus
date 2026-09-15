@@ -12,12 +12,13 @@ Este middleware e o unico lugar do caminho que roda ANTES do corpo ser lido, e
 por isso e o unico que pode recusar sem pagar. Ele olha o `Content-Length`
 declarado e responde 413 antes de qualquer parse.
 
-O que ele NAO resolve, e vale dizer em voz alta em vez de fingir cobertura:
-cliente que omite o `Content-Length` (corpo em `chunked`) passa por aqui sem
-ser medido, porque nao ha o que medir antes de ler. Para esse caso a defesa
-continua sendo o teto da rota -- que agora aborta a leitura no primeiro byte
-excedente em vez de materializar o arquivo inteiro. Duas camadas, cada uma
-cobrindo o furo da outra.
+CORPO SEM `Content-Length` (`chunked`) nao tem o que conferir antes de ler, e
+ate 15/09/2026 passava por aqui sem ser medido: rota que le JSON ou
+`request.body()` (ingestao, webhook) materializava o corpo inteiro antes de
+qualquer teto. Agora o `receive` do ASGI e embrulhado e CONTA os bytes enquanto
+eles chegam -- no primeiro pedaco que estoura o teto a leitura para e a resposta
+e 413. O teto de cada rota continua existindo por dentro, para o que e menor
+que 2 MB e ainda assim grande demais para ela.
 """
 
 from fastapi import FastAPI
@@ -31,12 +32,40 @@ from fastapi.responses import JSONResponse
 TETO_CORPO = 2_000_000
 
 
-def registrar_middleware_de_corpo(app: FastAPI) -> None:
-    """Recusa 413 por `Content-Length` acima do teto, antes de ler o corpo."""
+class _CorpoGrandeDemais(BaseException):
+    """Levantada de dentro do `receive` embrulhado, capturada no middleware.
 
-    @app.middleware("http")
-    async def limitar_corpo(request, call_next):
-        declarado = request.headers.get("content-length")
+    `BaseException`, e nao `Exception`, POR NECESSIDADE: o FastAPI embrulha
+    qualquer `Exception` do parse do corpo num 400 "error parsing the body", e o
+    413 viraria um 400 que culpa o formato por um problema de tamanho.
+    """
+
+
+def _recusa(status: int, detalhe: str) -> JSONResponse:
+    return JSONResponse(status_code=status, content={"detail": detalhe})
+
+
+def _acima_do_teto(tamanho: int) -> JSONResponse:
+    return _recusa(
+        413,
+        f"corpo de {tamanho // 1024} kB, acima do limite de {TETO_CORPO // 1024} kB.",
+    )
+
+
+class _TetoDeCorpo:
+    """Middleware ASGI puro: o `@app.middleware` do Starlette nao alcanca o
+    `receive`, e e no `receive` que um corpo sem tamanho declarado se mede."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        cabecalhos = dict(scope.get("headers") or [])
+        declarado = cabecalhos.get(b"content-length")
         if declarado is not None:
             try:
                 tamanho = int(declarado)
@@ -44,18 +73,78 @@ def registrar_middleware_de_corpo(app: FastAPI) -> None:
                 # Content-Length que nao e numero e requisicao malformada. 400
                 # aqui, e nao um `pass` silencioso: deixar passar seria abrir a
                 # excecao exata que alguem usaria para pular o teto.
-                return JSONResponse(
-                    status_code=400,
-                    content={"detail": "Content-Length invalido"},
-                )
+                await _recusa(400, "Content-Length invalido")(scope, receive, send)
+                return
             if tamanho > TETO_CORPO:
-                return JSONResponse(
-                    status_code=413,
-                    content={
-                        "detail": (
-                            f"corpo de {tamanho // 1024} kB, acima do limite de "
-                            f"{TETO_CORPO // 1024} kB."
-                        )
-                    },
-                )
-        return await call_next(request)
+                await _acima_do_teto(tamanho)(scope, receive, send)
+                return
+
+        recebidos = 0
+        resposta_comecou = False
+
+        async def receive_contado():
+            nonlocal recebidos
+            mensagem = await receive()
+            if mensagem["type"] == "http.request":
+                recebidos += len(mensagem.get("body", b""))
+                if recebidos > TETO_CORPO:
+                    raise _CorpoGrandeDemais()
+            return mensagem
+
+        async def send_marcado(mensagem):
+            nonlocal resposta_comecou
+            if mensagem["type"] == "http.response.start":
+                resposta_comecou = True
+            await send(mensagem)
+
+        try:
+            await self.app(scope, receive_contado, send_marcado)
+        except _CorpoGrandeDemais:
+            if resposta_comecou:  # pragma: no cover - rota que responde antes de ler
+                raise
+            await _acima_do_teto(recebidos)(scope, receive, send)
+
+
+def registrar_middleware_de_corpo(app: FastAPI) -> None:
+    """Recusa 413 por `Content-Length` acima do teto, antes de ler o corpo, e
+    por bytes contados quando o corpo chega sem tamanho declarado."""
+    app.add_middleware(_TetoDeCorpo)
+
+
+# Cabecalhos de TODA resposta. A API devolve fala de cliente, que e dado pessoal:
+# `no-store` impede proxy e navegador de guardarem a transcricao; `nosniff`
+# impede o navegador de reinterpretar JSON como HTML; `no-referrer` nao vaza a
+# URL (com id de conversa) para terceiros. `setdefault`: rota que declare a
+# propria politica de cache continua mandando.
+CABECALHOS_DE_SEGURANCA = (
+    (b"cache-control", b"no-store"),
+    (b"x-content-type-options", b"nosniff"),
+    (b"referrer-policy", b"no-referrer"),
+)
+
+
+class _CabecalhosDeSeguranca:
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_com_cabecalhos(mensagem):
+            if mensagem["type"] == "http.response.start":
+                cabecalhos = list(mensagem.get("headers") or [])
+                presentes = {nome.lower() for nome, _ in cabecalhos}
+                for nome, valor in CABECALHOS_DE_SEGURANCA:
+                    if nome not in presentes:
+                        cabecalhos.append((nome, valor))
+                mensagem = {**mensagem, "headers": cabecalhos}
+            await send(mensagem)
+
+        await self.app(scope, receive, send_com_cabecalhos)
+
+
+def registrar_cabecalhos_de_seguranca(app: FastAPI) -> None:
+    """Registrar POR ULTIMO: o mais externo, para cobrir tambem 401, 413 e CORS."""
+    app.add_middleware(_CabecalhosDeSeguranca)

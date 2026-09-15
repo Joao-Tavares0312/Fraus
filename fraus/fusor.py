@@ -9,9 +9,12 @@ O peso da latencia e APRENDIDO aqui, nunca arbitrado: a relacao com satisfacao
 e nao-linear e moderada por contexto.
 """
 
+import hashlib
+import math
 from pathlib import Path
 
 import joblib
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -194,6 +197,27 @@ class FusorIncompativelError(RuntimeError):
     """
 
 
+# A ESPERA ENTRA NO FUSOR EM log1p (15/09/2026). As quatro features que crescem
+# com o relogio nao tem teto, e o corpus de treino nunca passou de minutos: em
+# segundos crus, 3 h de espera davam z-score de centenas e o relogio mandava
+# sozinho na nota (score 0 com texto 86% satisfeito). `log1p` achata a cauda sem
+# teto -- a espera continua pesando mais quanto maior, so que cada vez mais
+# devagar. Medido contra teto p99 e p99+log1p em `docs/treinamento.md`: o teto
+# so muda o penhasco de lugar, e p99+log1p faz 3 h pesarem o mesmo que 10 min.
+#
+# AS CHAVES CONTINUAM EM SEGUNDOS: `latencia_mediana_s` e segundo no dict, na
+# atribuicao e na tela. So o VETOR que o scaler recebe e comprimido, aqui, que e
+# o caminho unico de treino, pontuacao, contribuicao e deriva -- notebook e API
+# nao tem como aplicar a regra de um lado so.
+ESCALA_DO_TEMPO = "log1p"
+FEATURES_EM_LOG = (
+    "latencia_mediana_s",
+    "latencia_p90_s",
+    "latencia_primeira_resposta_s",
+    "duracao_total_s",
+)
+
+
 def vetorizar(features: dict[str, float]) -> list[float]:
     """Ordem canonica. Feature faltando e KeyError; feature sobrando e ValueError.
 
@@ -212,7 +236,11 @@ def vetorizar(features: dict[str, float]) -> list[float]:
             f"{sorted(excedentes)}. Remova do dict antes de vetorizar, ou "
             "adicione a NOMES_FEATURES se a intencao e que ela entre no vetor."
         )
-    return [float(features[nome]) for nome in NOMES_FEATURES]
+    return [
+        math.log1p(max(0.0, float(features[nome]))) if nome in FEATURES_EM_LOG
+        else float(features[nome])
+        for nome in NOMES_FEATURES
+    ]
 
 
 class Fusor:
@@ -224,6 +252,15 @@ class Fusor:
 
     def treinar(self, exemplos: list[dict[str, float]], rotulos: list[int]) -> None:
         self._pipeline.fit([vetorizar(e) for e in exemplos], rotulos)
+        # A marca viaja DENTRO do artefato (atributo do Pipeline, serializado
+        # pelo joblib): e a unica forma de a carga saber em que escala os pesos
+        # foram aprendidos. Ver `carregar`.
+        self._pipeline.fraus_escala_do_tempo = ESCALA_DO_TEMPO
+
+    @property
+    def escala_do_tempo(self) -> str:
+        """Escala em que as features de espera foram aprendidas ("segundos" = antiga)."""
+        return getattr(self._pipeline, "fraus_escala_do_tempo", "segundos")
 
     def pontuar(self, features: dict[str, float]) -> float:
         """Score 0-100: P(satisfeito) mais P(neutro) pesado por
@@ -330,8 +367,15 @@ class Fusor:
         escala = self._pipeline.named_steps["escala"]
         if not hasattr(escala, "mean_"):
             return {}
+        # `escala` porque media e desvio estao no espaco que o SCALER viu: para
+        # as quatro de espera isso e log1p(segundos), e um "media 3,4" sem a
+        # etiqueta seria lido como 3,4 segundos.
         return {
-            nome: {"media": float(media), "desvio": float(desvio)}
+            nome: {
+                "media": float(media),
+                "desvio": float(desvio),
+                "escala": ESCALA_DO_TEMPO if nome in FEATURES_EM_LOG else "bruta",
+            }
             for nome, media, desvio in zip(NOMES_FEATURES, escala.mean_, escala.scale_)
         }
 
@@ -354,6 +398,23 @@ class Fusor:
             return {}
         padronizado = escala.transform([vetorizar(features)])[0]
         return dict(zip(NOMES_FEATURES, (float(v) for v in padronizado)))
+
+    def assinatura(self) -> str | None:
+        """Impressao digital dos pesos aprendidos -- muda a cada retreino.
+
+        Hash do que DECIDE a nota: media e escala do scaler, coeficientes,
+        interceptos, ordem das classes e a escala do tempo. Existe para o banco
+        saber com qual modelo cada conversa foi pontuada (`Motor.regua`). Fusor
+        nao treinado nao tem assinatura.
+        """
+        escala = self._pipeline.named_steps["escala"]
+        modelo = self._pipeline.named_steps["modelo"]
+        if not hasattr(escala, "mean_") or not hasattr(modelo, "coef_"):
+            return None
+        digest = hashlib.sha256(ESCALA_DO_TEMPO.encode())
+        for matriz in (escala.mean_, escala.scale_, modelo.coef_, modelo.intercept_, modelo.classes_):
+            digest.update(np.ascontiguousarray(matriz, dtype=np.float64).tobytes())
+        return digest.hexdigest()[:16]
 
     def importancias(self) -> dict[str, float]:
         """Peso absoluto medio de cada feature -- alimenta a explicacao na dashboard."""
@@ -389,5 +450,17 @@ class Fusor:
                 f"mas o contrato vigente (NOMES_FEATURES) tem {esperado}. "
                 "Retreine notebooks/02_treino_fusor.ipynb com o contrato "
                 "atual e substitua o artefato. Ver docs/treinamento.md."
+            )
+        # A incompatibilidade que `n_features_in_` NAO pega: 39 features nos dois
+        # lados, pesos aprendidos numa escala e aplicados noutra. Sem esta
+        # recusa o score sai errado com cara de certo (invariante 7).
+        if fusor.escala_do_tempo != ESCALA_DO_TEMPO:
+            raise FusorIncompativelError(
+                f"Fusor em {caminho} aprendeu as features de espera em "
+                f"'{fusor.escala_do_tempo}', mas o runtime as entrega em "
+                f"'{ESCALA_DO_TEMPO}' desde 15/09/2026. Retreine "
+                "notebooks/02_treino_fusor.ipynb (ou "
+                "scripts/retreinar_fusor_local.py --promover) e substitua "
+                "o artefato. Ver docs/treinamento.md."
             )
         return fusor

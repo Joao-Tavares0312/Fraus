@@ -44,13 +44,14 @@ Como rodar:
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fraus.api.caminhos import CAMINHO_FUSOR  # noqa: E402
-from fraus.fusor import NOMES_FEATURES, Fusor  # noqa: E402
+from fraus.fusor import FEATURES_EM_LOG, NOMES_FEATURES, Fusor  # noqa: E402
 
 # As quatro features que crescem com a espera. `qtd_turnos_cliente`,
 # `escalou` e `abandonou` sao da mesma familia e NAO entram: elas nao crescem
@@ -96,7 +97,13 @@ def _conversa_sintetica(latencia_s: float, prob_satisfeito: float,
     exatamente zero. O que sobra no laudo e so o tempo contra o texto, sem
     ruido de nenhuma outra familia -- que e a comparacao que a pergunta pede.
     """
-    features = {nome: media for nome, (media, _) in estatisticas.items()}
+    # A media do scaler das features de espera esta em log1p (15/09/2026); o
+    # dict de features e sempre em SEGUNDOS, e `vetorizar` comprime. Voltar
+    # com expm1 mantem o z-score zero que o metodo exige.
+    features = {
+        nome: math.expm1(media) if nome in FEATURES_EM_LOG else media
+        for nome, (media, _) in estatisticas.items()
+    }
     features[FEATURE_DO_TEXTO] = prob_satisfeito
     for nome in FEATURES_DE_TEMPO:
         features[nome] = float(latencia_s)
@@ -125,14 +132,17 @@ def main() -> int:
     print("=" * 78)
     print("1. ONDE ACABA O CORPUS -- o que o scaler aprendeu das features de tempo")
     print("=" * 78)
-    print(f"{'feature':<32} {'media (s)':>12} {'desvio (s)':>12} {'media+3s':>12}")
+    # Em log1p desde 15/09/2026: a media vira media GEOMETRICA em segundos, e
+    # "+3 desvios" e multiplicativo -- expm1 de (media + 3 desvios) no log.
+    print(f"{'feature':<32} {'centro (s)':>12} {'desvio (log)':>12} {'centro+3d (s)':>14}")
     for nome in FEATURES_DE_TEMPO:
         media, desvio = estatisticas[nome]
-        print(f"{nome:<32} {media:>12.1f} {desvio:>12.1f} {media + 3 * desvio:>12.1f}")
+        print(f"{nome:<32} {math.expm1(media):>12.1f} {desvio:>12.2f} "
+              f"{math.expm1(media + 3 * desvio):>14.1f}")
     print()
-    print("`media+3s` e uma referencia grosseira de onde o corpus rareia. Latencia")
-    print("acima disso e extrapolacao: o modelo nunca viu, e o z-score cresce sem")
-    print("teto porque a feature nao tem teto.")
+    print("`centro+3d` e uma referencia grosseira de onde o corpus rareia. Acima")
+    print("disso e extrapolacao; em log1p o z-score ainda cresce sem teto, mas")
+    print("devagar: dobrar a espera soma ~0,7 no log, nao multiplica o z por dois.")
     print()
 
     print("=" * 78)
@@ -161,39 +171,45 @@ def main() -> int:
     if virada is None:
         print("O texto manda em toda a faixa varrida. Nada a declarar.")
     else:
-        # A contribuicao do tempo e AFIM na latencia -- z = (L - media)/desvio
-        # e linear, e a soma de lineares tambem e --, entao o cruzamento sai
-        # exato por dois pontos, sem depender de quao fina e a grade acima.
-        # Confira contra a tabela: os dois tem de concordar, e se um dia nao
-        # concordarem, alguma feature de tempo deixou de ser linear na espera.
+        # A contribuicao do tempo deixou de ser AFIM na latencia em 15/09/2026
+        # (log1p), entao o cruzamento sai por BISSECAO entre o ultimo ponto da
+        # grade em que o texto mandava e o primeiro em que o tempo manda. Ela e
+        # monotona: log1p cresce sempre, e os pesos de espera sao negativos.
         def tempo_em(latencia: float) -> float:
             f = _conversa_sintetica(latencia, args.prob_satisfeito, estatisticas)
             return _somar(fusor.contribuicoes(f), FEATURES_DE_TEMPO)
 
-        t0, t1 = tempo_em(0.0), tempo_em(1000.0)
-        inclinacao = (t1 - t0) / 1000.0
         texto = linhas[0][2]
-        exata = (-abs(texto) - t0) / inclinacao if inclinacao else float("inf")
+        baixo = max(l for l, *_ in linhas if l < virada)
+        alto = float(virada)
+        for _ in range(60):
+            meio = (baixo + alto) / 2
+            if abs(tempo_em(meio)) > abs(texto):
+                alto = meio
+            else:
+                baixo = meio
+        exata = alto
 
         media, desvio = estatisticas["latencia_mediana_s"]
-        sigmas = (exata - media) / desvio if desvio else float("inf")
+        sigmas = (math.log1p(exata) - media) / desvio if desvio else float("inf")
         print(f"O relogio empata com o texto em {exata:.0f}s ({exata / 60:.1f} min)")
         print(f"e manda a partir dali. Na grade acima isso cai entre "
               f"{[l for l, *_ in linhas if l < exata][-1]}s e {virada}s -- confere.")
         print()
         print(f"{exata:.0f}s e {sigmas:.1f} desvios acima da media de `latencia_mediana_s`")
-        print(f"no treino ({media:.1f}s, sigma {desvio:.1f}s). Ou seja: o ponto em que o")
-        print("relogio toma a nota esta FORA do que o corpus mostrou ao modelo.")
+        print(f"no treino (centro {math.expm1(media):.1f}s, desvio {desvio:.2f} em log1p). Ou seja: o ponto em que o")
+        print("relogio toma a nota esta " + ("FORA do" if sigmas > 3 else "DENTRO do")
+              + " que o corpus mostrou ao modelo (corte de 3 desvios).")
         print()
-        print(f"Cada segundo de espera vale {abs(inclinacao):.4f} de contribuicao, sem teto:")
-        print(f"a 3 horas isso da {abs(tempo_em(10800.0)):.0f}, contra {abs(texto):.1f} do texto inteiro.")
+        print(f"A 3 horas o tempo da {abs(tempo_em(10800.0)):.1f} de contribuicao, "
+              f"contra {abs(texto):.1f} do texto inteiro.")
         print()
         pior = linhas[-1]
         print(f"No pior caso varrido ({pior[0]}s), o tempo pesa {pior[3]:.0f}x o texto.")
     print()
-    print("As tres saidas -- clipar num teto, passar a escala log, ou aceitar e")
-    print("declarar como limitacao -- sao decisao do dono do projeto. As duas")
-    print("primeiras exigem retreino. Este laudo nao escolhe.")
+    print("Decidido em 15/09/2026: a espera entra em log1p, sem teto (ver")
+    print("docs/treinamento.md). O teto p99 foi recusado: fazia 3 h pesarem o")
+    print("mesmo que 10 min. O laudo continua valendo para qualquer retreino.")
     return 0
 
 

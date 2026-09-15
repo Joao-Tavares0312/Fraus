@@ -715,3 +715,63 @@ acoplamento**: a transformação precisa existir no notebook *e* no runtime, ou 
 score sai errado em silêncio. Um `fusor.joblib` treinado sem a compressão contra
 um runtime que comprime continua tendo `n_features_in_ = 39`, então
 `Fusor.carregar` **não pega** essa incompatibilidade.
+
+### As três saídas, medidas em 15/09/2026 — decidido: só `log1p`
+
+O instrumento (hoje `scripts/retreinar_fusor_local.py`; a versão de medição
+está no commit `e719218`) reproduz este notebook localmente (mesmo
+B2W, mesmas sementes, mesmo `montar_features`, extração por ONNX) e **confere a
+reprodução antes de medir**: acurácia 0,9500 nos dois, score diferindo no
+máximo 0,0001 do `fusor.joblib` vigente. Nada foi promovido.
+
+A coluna de espera é a frase canônica (texto 0,858 satisfeito, todo o resto na
+média do treino), com score, nota e categoria:
+
+| variante | acurácia | F1 | categorias ≠ vigente (de 300) | 60 s | 300 s | 600 s | 1800 s | 3 h |
+|---|---|---|---|---|---|---|---|---|
+| vigente | 0,9500 | 0,9501 | — | 99,9 · 10 P | 98,1 · 10 P | 44,5 · 4 D | 0,0 · 0 D | 0,0 · 0 D |
+| só `log1p` | 0,9467 | 0,9469 | 6 | 99,7 · 10 P | 96,6 · 10 P | 90,1 · 9 P | 59,5 · 6 D | 7,0 · 1 D |
+| só teto p99 | 0,9433 | 0,9434 | 1 | 99,9 · 10 P | 96,1 · 10 P | 18,4 · 2 D | 3,2 · 0 D | 3,2 · 0 D |
+| p99 + `log1p` | 0,9467 | 0,9469 | 5 | 99,7 · 10 P | 96,6 · 10 P | 90,7 · 9 P | 87,9 · 9 P | 87,9 · 9 P |
+
+O que a tabela muda na recomendação escrita acima:
+
+- **p99 + `log1p` conserta o relógio mandando sozinho apagando a espera longa.**
+  O teto do treino é ~7 min (`latencia_mediana_s` p99 = 424 s), então três horas
+  pesam o mesmo que dez minutos: a frase canônica, que é **irônica**, sai
+  promotor. Consertar um defeito criando o oposto não é conserto.
+- **Só teto** não resolve nada: o penhasco só muda de lugar (10 min → nota 2).
+- **Só `log1p`** é a única que mantém a espera **monótona e sem penhasco**: 10 min
+  ainda promotor, 30 min detrator 6, 3 h detrator 1 — o texto modula, o relógio
+  pesa cada vez mais devagar, e nenhum dos dois apaga o outro. Custa 0,33 ponto
+  de acurácia no teste sintético.
+- **Ablação da invariante 10:** só as quatro features de tempo acertam 0,513
+  (cru) e 0,527 (p99+log1p), contra 0,333 do acaso. O relógio carrega sinal do
+  rótulo no simulador por construção, e nenhuma das variantes muda isso.
+
+### Promovido em 15/09/2026
+
+As três partes indivisíveis, feitas juntas:
+
+1. **Função única.** `log1p` mora em `fraus.fusor.vetorizar`, sobre
+   `FEATURES_EM_LOG`. As chaves continuam em segundos (atribuição, tela e deriva
+   leem segundos); só o vetor que o scaler recebe é comprimido. Treino,
+   pontuação, contribuição e deriva passam pela mesma função.
+2. **Artefato regerado** por `scripts/retreinar_fusor_local.py --promover`:
+   acurácia 0,9467, F1-macro 0,9469. O anterior ficou em
+   `modelos/fusor.joblib.bak-segundos`. O artefato agora carrega
+   `fraus_escala_do_tempo = "log1p"`, e `Fusor.carregar` **recusa** artefato sem
+   essa marca: é o caso que `n_features_in_` não pega.
+3. **Medição de categoria.** No teste do B2W, 27 notas e 6 de 300 categorias
+   mudam. Nas 180 conversas do simulador, 23 notas e 7 categorias, com a
+   distribuição indo de 60/63/57 para 60/60/60 (detrator/neutro/promotor).
+
+`scripts/medir_dominio_do_tempo.py` contra o artefato novo: o relógio empata com
+o texto em **613 s** (antes 411 s), e com 3 h pesa **2,1×** o texto (antes 20×).
+Uma conversa sincera ("resolveu, muito obrigado") com 30 min de espera saía
+0,30; agora sai 55,3, ainda detrator. Com 3 h, 21,95 em vez de 0,00.
+
+**Quem tem o artefato em outro lugar precisa regerar** (a VM, o Drive): um
+`fusor.joblib` de antes de 15/09 não sobe mais, e isso é o comportamento
+correto da invariante 7.
+

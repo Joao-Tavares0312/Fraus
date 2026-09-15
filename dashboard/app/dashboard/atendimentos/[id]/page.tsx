@@ -15,6 +15,7 @@ import {
   type MarcaAtribuicao,
 } from "@/lib/derivacoes";
 import {
+  EXPLICACAO_SEM_SINAL,
   formatarDataHora,
   formatarSegundos,
   ROTULO_SEM_SINAL,
@@ -137,8 +138,8 @@ export default async function PaginaDoAtendimento(
                   {ROTULO_SEM_SINAL}
                 </p>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  O cliente não falou neste atendimento. Sem fala, não há sinal
-                  de texto nem de emoji — e ausência de dado não é
+                  {EXPLICACAO_SEM_SINAL[conversa.motivo_sem_sinal ?? "sem_fala_do_cliente"]}{" "}
+                  Sem sinal, não há nota — e ausência de dado não é
                   insatisfação.
                 </p>
               </>
@@ -217,6 +218,12 @@ export default async function PaginaDoAtendimento(
                 explicacao={`A transcrição carregou, mas a atribuição por sentença não: ${resultadoAtribuicao.ok ? "" : resultadoAtribuicao.erro}. Sem ela, marcar uma frase como “a que derrubou a nota” seria invenção — então nada é marcado.`}
                 endpoint="GET /conversas/{id}/atribuicao"
               />
+            ) : conversa.motivo_sem_sinal === "so_cortesia" ? (
+              <EstadoVazio
+                className="m-5"
+                titulo="Só cortesia: nenhuma fala explica nota"
+                explicacao={`${EXPLICACAO_SEM_SINAL.so_cortesia} Sem nota, apontar uma delas como “a que puxou a nota” seria inventar a causa de um número que não existe.`}
+              />
             ) : marcas.size === 0 ? (
               <EstadoVazio
                 className="m-5"
@@ -291,6 +298,7 @@ export default async function PaginaDoAtendimento(
                 contribuicoes={atribuicao.contribuicoes}
                 sinaisForaDoScore={atribuicao.sinais_fora_do_score}
                 totalDeFeatures={Object.keys(atribuicao.importancias).length}
+                motivoSemSinal={conversa.motivo_sem_sinal}
               />
             )}
           </Painel>

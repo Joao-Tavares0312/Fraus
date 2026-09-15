@@ -45,6 +45,7 @@ Como rodar:
 
 from __future__ import annotations
 
+import math
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -52,7 +53,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fraus.api.caminhos import CAMINHO_FUSOR  # noqa: E402
-from fraus.fusor import NOMES_FEATURES, Fusor  # noqa: E402
+from fraus.fusor import FEATURES_EM_LOG, NOMES_FEATURES, Fusor  # noqa: E402
 from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_lote  # noqa: E402
 from fraus.modelos import Conversa, Mensagem  # noqa: E402
 from fraus.sinais.emoji import features_emoji  # noqa: E402
@@ -104,8 +105,17 @@ def _correlacao(xs: list[float], ys: list[float]) -> float:
 
 
 def _media_do_treino(fusor: Fusor) -> dict[str, float]:
+    """Media do scaler, de volta ao espaco do dict de features.
+
+    As features de espera estao em log1p no scaler desde 15/09/2026; o dict
+    e em segundos e `vetorizar` comprime. Sem o expm1 a "media" seria
+    comprimida duas vezes e deixaria de ter z-score zero.
+    """
     escala = fusor._pipeline.named_steps["escala"]
-    return {nome: float(m) for nome, m in zip(NOMES_FEATURES, escala.mean_)}
+    return {
+        nome: math.expm1(float(m)) if nome in FEATURES_EM_LOG else float(m)
+        for nome, m in zip(NOMES_FEATURES, escala.mean_)
+    }
 
 
 def main() -> int:

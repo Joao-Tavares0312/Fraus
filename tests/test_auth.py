@@ -6,7 +6,6 @@ nunca por padrao. A mensagem de recusa do login e UNICA: distinguir "e-mail
 nao existe" de "senha errada" contaria a quem tenta quais e-mails tem conta.
 """
 
-import sqlite3
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
@@ -162,7 +161,7 @@ def test_conta_desativada_recusa_com_403(tmp_path):
     )
     cliente = TestClient(app)
     cliente.post("/auth/registrar", json=_cadastro())
-    with sqlite3.connect(tmp_path / "t.db") as conexao:
+    with banco._conectar() as conexao:
         conexao.execute("UPDATE usuarios SET ativo = 0")
     resposta = cliente.post(
         "/auth/entrar", json={"email": "ana@empresa.com", "senha": "senha-longa-o-bastante"}

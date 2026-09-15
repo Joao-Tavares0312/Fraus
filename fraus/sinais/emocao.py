@@ -19,11 +19,9 @@ nao passou por traducao automatica. Ver docs/treinamento.md.
 
 from pathlib import Path
 
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from fraus.modelos import Conversa
-from fraus.sinais.texto import ModeloAusenteError
+from fraus.sinais.texto import ModeloAusenteError, carregar_torch, prever_torch
 
 # A ORDEM E CANONICA e vale no notebook 03, aqui e no fusor. Inverter nao gera
 # erro: faz o sistema atribuir a emocao errada em silencio. Mesma armadilha da
@@ -54,23 +52,11 @@ class ClassificadorEmocao:
                 "Rode notebooks/03_treino_emocao.ipynb e copie o artefato. "
                 "Ver docs/treinamento.md."
             )
-        try:
-            self._tokenizador = AutoTokenizer.from_pretrained(str(caminho_modelo))
-            self._modelo = AutoModelForSequenceClassification.from_pretrained(str(caminho_modelo))
-        except Exception as erro:
-            raise ModeloAusenteError(f"Modelo de emocao em {caminho_modelo} ilegivel: {erro}") from erro
-        self._modelo.eval()
+        self._tokenizador, self._modelo = carregar_torch(caminho_modelo, "Modelo de emocao")
 
-    @torch.inference_mode()
     def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
         """Probabilidades das sete classes, na ordem de NOMES_EMOCOES."""
-        if not textos:
-            return []
-        entradas = self._tokenizador(
-            textos, truncation=True, max_length=TAMANHO_MAXIMO, padding=True, return_tensors="pt"
-        )
-        logits = self._modelo(**entradas).logits
-        return torch.softmax(logits, dim=-1).tolist()
+        return prever_torch(self._tokenizador, self._modelo, textos)
 
 
 def features_emocao(conversa: Conversa, classificador) -> dict[str, float]:

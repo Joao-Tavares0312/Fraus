@@ -12,6 +12,9 @@ terco por nada.
 """
 
 import json
+import threading
+import weakref
+from collections import Counter
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
@@ -331,16 +334,7 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
             ),
         )
 
-    # Referencia de frequencia: a fala de cliente de TODO o banco. O custo
-    # e uma varredura por analise, aceitavel na ordem de grandeza deste
-    # projeto e o ponto a trocar por um indice se deixar de ser.
-    referencia = contar_palavras(
-        [
-            mensagem.texto
-            for conversa, _score in ctx.banco.todas()
-            for mensagem in conversa.mensagens_cliente
-        ]
-    )
+    referencia, total_conversas = _referencia_de_vocabulario(ctx.banco)
 
     faixas = ctx.faixas_vigentes()
     analisadas, mensagens_cliente = cabem_no_orcamento(
@@ -367,9 +361,12 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
                 "assim, use a importacao."
             ),
         )
+    # Lida UMA vez para o lote: toda conversa desta resposta e explicada pelo
+    # mesmo lexico, e e o lexico vigente -- o mesmo que pontuaria a importacao.
+    curadoria = ctx.curadoria_vigente()
     analises = []
     for conversa in analisadas:
-        analise = ctx.motor.analisar_conversa(conversa, referencia)
+        analise = ctx.motor.analisar_conversa(conversa, referencia, curadoria=curadoria)
 
         # SEM HORARIO, SEM NOTA. Latencia e uma das 38 features do
         # fusor, com peso aprendido. Numa transcricao de Word ou PDF sem
@@ -385,6 +382,7 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
             {
                 "conversa": conversa.model_dump(mode="json"),
                 "score": score,
+                "motivo_sem_sinal": conversa.motivo_sem_sinal,
                 "nota": nota_0_10(score) if score is not None else None,
                 "categoria": ctx.categoria_de(score, faixas),
                 "mensagens": analise["mensagens"],
@@ -416,7 +414,7 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
         "teto_mensagens_cliente": TETO_MENSAGENS_CLIENTE_ANALISE,
         "rejeitadas": resultado.rejeitadas[:LIMITE_MOTIVOS],
         "total_rejeitadas": len(resultado.rejeitadas),
-        "referencia_conversas": len(ctx.banco.listar()),
+        "referencia_conversas": total_conversas,
         # Como o arquivo foi entendido, e o que a leitura teve que inferir.
         # A tela mostra isto SEMPRE, nao so quando da errado: analise cuja
         # procedencia nao aparece e numero sem lastro.
@@ -426,3 +424,35 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
         "mapeamento": resultado.mapeamento,
         "perfil": resultado.perfil,
     }
+
+
+# Referencia de frequencia por banco: (assinatura, contagem). Fraca na chave
+# para nao prender um `Banco` de teste vivo depois do fim dele.
+_REFERENCIAS: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+_TRAVA_REFERENCIAS = threading.Lock()
+
+
+def _referencia_de_vocabulario(banco) -> tuple[Counter, int]:
+    """A fala de cliente de TODO o banco, contada -- refeita so se o banco mudou.
+
+    Antes era uma varredura com desserializacao por analise. No SQLite local
+    isso e ler um arquivo; no Supabase e trazer o banco inteiro pela rede a
+    cada clique. A assinatura e conferida A CADA chamada, entao nao ha copia
+    envelhecendo depois de uma importacao: o que se evita e so refazer a conta
+    quando nada mudou.
+    """
+    assinatura = banco.assinatura_conversas()
+    with _TRAVA_REFERENCIAS:
+        guardada = _REFERENCIAS.get(banco)
+    if guardada is not None and guardada[0] == assinatura:
+        return guardada[1], assinatura[0]
+    referencia = contar_palavras(
+        [
+            mensagem.texto
+            for conversa, _score in banco.todas()
+            for mensagem in conversa.mensagens_cliente
+        ]
+    )
+    with _TRAVA_REFERENCIAS:
+        _REFERENCIAS[banco] = (assinatura, referencia)
+    return referencia, assinatura[0]

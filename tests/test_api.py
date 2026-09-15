@@ -35,7 +35,7 @@ def _probabilidades_deterministicas(texto: str) -> list[float]:
 class AtribuicaoDuble:
     """Parte de atribuicao comum aos dubles: probabilidade so na fala do cliente."""
 
-    def atribuir_conversa(self, conversa):
+    def atribuir_conversa(self, conversa, curadoria=None):
         mensagens = []
         for indice, mensagem in enumerate(conversa.mensagens):
             if mensagem.autor == "cliente":
@@ -70,7 +70,7 @@ class AtribuicaoDuble:
         """Peso global com sinal, determinístico -- sem fusor treinado de verdade."""
         return {nome: float((indice % 5) - 2) for indice, nome in enumerate(NOMES_FEATURES)}
 
-    def analisar_conversa(self, conversa, referencia=None) -> dict:
+    def analisar_conversa(self, conversa, referencia=None, curadoria=None) -> dict:
         """Analise avulsa do dublê: peso de palavra deterministico, sem modelo.
 
         O peso e o comprimento da palavra dividido por dez, com sinal positivo
@@ -1380,8 +1380,10 @@ def test_o_resumo_marca_evidencia_fraca_e_diz_por_que(cliente_com_sinal, tmp_pat
     caminho.write_text(
         "conversa_id,canal,autor,texto,enviada_em,escalou_para_humano\n"
         "curta,csv,bot,ola posso ajudar,2026-08-13T10:00:00+00:00,false\n"
-        "curta,csv,cliente,ok,2026-08-13T10:00:08+00:00,false\n"
-        "curta,csv,cliente,valeu,2026-08-13T10:00:15+00:00,false\n",
+        # Nao "ok"/"valeu": desde 15/09/2026 isso e cortesia, logo SEM sinal
+        # (fraus/cortesia.py). Aqui a fala e curta e diz alguma coisa.
+        "curta,csv,cliente,demorou,2026-08-13T10:00:08+00:00,false\n"
+        "curta,csv,cliente,pessimo,2026-08-13T10:00:15+00:00,false\n",
         encoding="utf-8",
     )
     cliente_com_sinal.post("/conversas/importar", json={"caminho": str(caminho)})

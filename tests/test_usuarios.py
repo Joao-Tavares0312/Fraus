@@ -7,12 +7,11 @@ forca bruta), nao o SHA-256 puro do credencial.py -- la o segredo e sorteado,
 aqui e escolhido por gente.
 """
 
-import sqlite3
 
 import pytest
 
 from fraus import usuarios
-from fraus.db import Banco
+from fraus.db import Banco, ErroDeIntegridade
 
 
 def _banco(tmp_path) -> Banco:
@@ -88,7 +87,7 @@ def test_email_duplicado_e_recusado_pelo_banco_mesmo_com_caixa_diferente(tmp_pat
     # jamais criam a segunda conta, e a borda HTTP traduz o erro em 409.
     banco = _banco(tmp_path)
     _criar(banco)
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(ErroDeIntegridade):
         _criar(banco, email="Ana@Empresa.com")
 
 
@@ -96,7 +95,7 @@ def test_papel_fora_do_vocabulario_e_recusado_pelo_banco(tmp_path):
     # `CHECK` no esquema, pelo mesmo motivo do id=1 da chave_mestra: garantia
     # do banco, nao regra que a aplicacao precisa lembrar.
     banco = _banco(tmp_path)
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(ErroDeIntegridade):
         _criar(banco, papel="root")
 
 

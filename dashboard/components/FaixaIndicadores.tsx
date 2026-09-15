@@ -13,6 +13,7 @@ import {
   type LimiaresLatencia,
 } from "@/lib/derivacoes";
 import {
+  DEFINICAO_SEM_SINAL_AGREGADO,
   formatarNps,
   formatarNumero,
   formatarSegundos,
@@ -102,7 +103,7 @@ export function FaixaIndicadores({
 }) {
   const semSinalTexto =
     indicadores.semSinal > 0
-      ? `${indicadores.semSinal} de ${indicadores.total} sem fala do cliente — fora do cálculo, nunca como zero.`
+      ? `${indicadores.semSinal} de ${indicadores.total} sem sinal (${DEFINICAO_SEM_SINAL_AGREGADO}) — fora do cálculo, nunca como zero.`
       : undefined;
 
   return (

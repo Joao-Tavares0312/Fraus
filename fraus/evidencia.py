@@ -52,7 +52,9 @@ def motivos_de_evidencia_fraca(
     Lista vazia = evidencia suficiente.
     """
     mensagens = conversa.mensagens_cliente
-    if not mensagens:
+    # `tem_sinal_cliente`, nao `mensagens`: so cortesia ("ok, obrigado") e
+    # ausencia de sinal desde 15/09/2026, e ausencia nao tem motivo de fraqueza.
+    if not conversa.tem_sinal_cliente:
         return []
 
     motivos = []
@@ -77,6 +79,6 @@ def evidencia_fraca(
     confundi-las na interface perderia a distincao que o produto inteiro
     defende: ausencia nao e um valor baixo.
     """
-    if not conversa.mensagens_cliente:
+    if not conversa.tem_sinal_cliente:
         return None
     return bool(motivos_de_evidencia_fraca(conversa, palavras_minimas))

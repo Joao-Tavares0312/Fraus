@@ -65,6 +65,11 @@ def indicadores(
                 ctx.banco.contar_defasadas(),
             )
         ),
+        # A mesma contagem somando troca de MODELO (retreino do fusor, regra da
+        # cortesia) -- ver `Motor.regua`. Campo NOVO ao lado do antigo, e nao
+        # no lugar dele: `pontuadas_com_lexico_antigo` tem consumidor e mudar o
+        # que ele conta mudaria o sentido do numero em silencio.
+        "pontuadas_com_regua_antiga": ctx.banco.contar_defasadas(ctx.regua_vigente())[0],
     }
 
 

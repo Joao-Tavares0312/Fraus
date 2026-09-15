@@ -402,6 +402,17 @@ class Banco:
                 "instalado. Rode `uv sync` (a dependencia entrou no pyproject)."
             )
 
+    def fechar(self) -> None:
+        """Devolve as conexoes do pool ao servidor. No SQLite nao ha o que fechar.
+
+        O boot nunca precisa: o processo morre com o pool. Quem precisa e quem
+        cria MUITOS `Banco` num processo so -- a suite contra Postgres cria um
+        por teste, e sem fechar estouraria o `max_connections` do servidor.
+        """
+        if self._pool is not None:
+            self._pool.close()
+            self._pool = None
+
     @property
     def dialeto(self) -> str:
         return "postgres" if self._postgres else "sqlite"
@@ -529,6 +540,8 @@ class Banco:
         ("fontes_integracao", "chave_dica", "TEXT"),
         ("fontes_integracao", "chave_criada_em", "TEXT"),
         ("conversas", "lexico_versao", "INTEGER"),
+        # Assinatura do motor que pontuou (`Motor.regua`) -- ver `contar_defasadas`.
+        ("conversas", "regua", "TEXT"),
     )
 
     def migrar(self) -> None:
@@ -560,8 +573,9 @@ class Banco:
         score: float | None,
         categoria: str | None,
         lexico_versao: int | None = None,
+        regua: str | None = None,
     ) -> None:
-        """Grava a conversa e COM QUAL LEXICO ela foi pontuada.
+        """Grava a conversa e COM QUAL LEXICO E QUAL MODELO ela foi pontuada.
 
         `lexico_versao` e opcional e vai ao fim porque todo chamador anterior a
         curadoria continua valendo -- e `None` ali significa exatamente o que
@@ -572,7 +586,7 @@ class Banco:
                 self._upsert(
                     "conversas",
                     ("id", "canal", "iniciada_em", "score", "categoria", "payload",
-                     "lexico_versao"),
+                     "lexico_versao", "regua"),
                     ("id",),
                 ),
                 (
@@ -583,6 +597,7 @@ class Banco:
                     categoria,
                     conversa.model_dump_json(),
                     lexico_versao,
+                    regua,
                 ),
             )
 
@@ -914,6 +929,21 @@ class Banco:
             ).fetchall()
         return [{**dict(l), "motivos": json.loads(l["motivos"])} for l in linhas]
 
+    def assinatura_conversas(self) -> tuple[int, int]:
+        """Quantas conversas e quantos bytes de payload -- sem trazer payload.
+
+        Serve para saber se algo derivado do conjunto (a referencia de
+        vocabulario do `/analisar`) ainda vale, pagando um agregado no servidor
+        em vez de atravessar a rede com o banco inteiro. Nao e hash: uma edicao
+        que troque texto mantendo o tamanho exato passa sem ser vista, e o que
+        envelhece nesse caso e so o `destaque` do vocabulario, nunca uma nota.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(payload)), 0) AS t FROM conversas"
+            ).fetchone()
+        return int(linha["n"]), int(linha["t"])
+
     def todas(self) -> list[tuple[Conversa, float | None]]:
         with self._conectar() as conexao:
             linhas = conexao.execute("SELECT payload, score FROM conversas").fetchall()
@@ -1214,7 +1244,7 @@ class Banco:
                     emojis[linha["termo"]] = float(linha["peso"])
         return Curadoria(palavras=palavras, emojis=emojis, versao=self.lexico_versao())
 
-    def contar_defasadas(self) -> tuple[int, int]:
+    def contar_defasadas(self, regua_vigente: str | None = None) -> tuple[int, int]:
         """(pontuadas com lexico anterior, total). Do banco INTEIRO.
 
         `lexico_versao IS NULL` e linha de banco anterior a este mecanismo, e
@@ -1227,14 +1257,26 @@ class Banco:
         conversa como pontuada com outra regua e a tela abria com um alarme
         falso de 64 de 64. O que distingue defasada de em dia e a versao VIGENTE
         ter andado -- se ela e 0, existe um lexico so, e nada pode estar atras.
+
+        COM `regua_vigente` (15/09/2026), conta tambem quem foi pontuada por OUTRO
+        MODELO -- e aqui `regua IS NULL` CONTA: a coluna nasceu junto com a
+        primeira troca de modelo rastreada (fusor em log1p, cortesia sem sinal),
+        entao toda linha sem regua foi, de fato, pontuada pela anterior. Sem regua
+        vigente (motor duble, que nao tem modelo) so o lexico conta.
         """
         vigente = self.lexico_versao()
+        # A string do SQL e montada so com trechos FIXOS deste metodo; o que vem
+        # de fora (versao, regua) entra sempre por parametro.
+        regra_lexico = "COALESCE(lexico_versao, 0) <> ?"
+        parametros: tuple = (vigente,)
+        if regua_vigente is not None:
+            regra_lexico += " OR regua IS NULL OR regua <> ?"
+            parametros = (vigente, regua_vigente)
         with self._conectar() as conexao:
             linha = conexao.execute(
                 "SELECT COUNT(*) AS total, "
-                "SUM(CASE WHEN COALESCE(lexico_versao, 0) <> ? "
-                "THEN 1 ELSE 0 END) AS defasadas "
+                f"SUM(CASE WHEN {regra_lexico} THEN 1 ELSE 0 END) AS defasadas "
                 "FROM conversas",
-                (vigente,),
+                parametros,
             ).fetchone()
         return int(linha["defasadas"] or 0), int(linha["total"] or 0)

@@ -2,6 +2,22 @@
 
 export const ROTULO_SEM_SINAL = "sem sinal";
 
+/**
+ * POR QUE nao ha nota, por atendimento. O motivo vem do SERVIDOR
+ * (`motivo_sem_sinal`): a regra da cortesia mora em `fraus/cortesia.py` e nao e
+ * repetida aqui (invariante 3). Desde 15/09/2026 existem dois: o cliente nao
+ * falou, ou so disse "ok, obrigado" -- e dizer "nao falou" a quem agradeceu seria
+ * a tela mentindo sobre a transcricao que ela mesma mostra.
+ */
+export const EXPLICACAO_SEM_SINAL: Record<"sem_fala_do_cliente" | "so_cortesia", string> = {
+  sem_fala_do_cliente: "O cliente não falou neste atendimento.",
+  so_cortesia:
+    "O cliente só usou fórmulas de cortesia (“ok, obrigado”, “valeu”), que fecham atendimento bom e ruim — não dizem nada sobre satisfação.",
+};
+
+/** A mesma ausencia, contada no agregado, onde os dois motivos se somam. */
+export const DEFINICAO_SEM_SINAL_AGREGADO = "o cliente não falou ou só usou fórmulas de cortesia";
+
 const NUMERO = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const INTEIRO = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 
