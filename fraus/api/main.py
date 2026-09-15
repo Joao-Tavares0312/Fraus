@@ -37,6 +37,7 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 RAIZ_IMPORTACAO, backend_declarado)
 from fraus.api.contexto import Contexto
 from fraus.api.primeiro_uso import ligar_no_primeiro_uso
+from fraus.api.repontuacao import Repontuacao
 from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os testes
                                registrar_cabecalhos_de_seguranca,
                                registrar_middleware_de_corpo)
@@ -148,6 +149,9 @@ def criar_app(
     # faria a integracao por webhook ser cortada por causa do volume de uma
     # importacao pela outra rota. Mesmo teto, contadores separados.
     app.state.limitador_de_webhook = LimitadorDeVazao(ENTREGAS_POR_JANELA)
+    # Um trabalho de repontuacao por app, pelo mesmo motivo dos limitadores:
+    # nasce e morre com ele, e nao vaza de um teste para o proximo.
+    app.state.repontuacao = Repontuacao()
 
     registrar_middleware_de_acesso(app, ctx)
 

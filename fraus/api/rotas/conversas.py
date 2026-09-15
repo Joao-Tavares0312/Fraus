@@ -13,13 +13,14 @@ contra a propria API.
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from fraus.api.caminhos import resolver_dentro_da_raiz
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoImportacao, PedidoPreviaImportacao
 from fraus.api.rotas.analise import resumo_da_previa
 from fraus.api.periodo import no_recorte, recorte_ou_400
+from fraus.api.repontuacao import RepontuacaoEmAndamento
 from fraus.contestacao import contestacao
 from fraus.indicadores import nota_0_10
 from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
@@ -181,40 +182,35 @@ def importar(
     }
 
 
-@router.post("/conversas/repontuar")
-def repontuar(ctx: Contexto = Depends(obter_contexto)) -> dict:
-    """Repontua o banco inteiro com o lexico vigente.
+@router.post("/conversas/repontuar", status_code=202)
+def repontuar(request: Request, ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """Repontua o banco inteiro com o lexico vigente -- em segundo plano.
 
     O que ela conserta: o `score` e gravado na importacao, entao curar uma
-    palavra nao mexe no que ja existe -- e um banco com conversas pontuadas
-    antes e depois soma duas reguas no mesmo agregado. Esta rota e o unico jeito
-    de zerar essa divergencia sem reimportar.
+    palavra (ou trocar o fusor) nao mexe no que ja existe -- e um banco com
+    conversas pontuadas antes e depois soma duas reguas no mesmo agregado. Esta
+    rota e o unico jeito de zerar essa divergencia sem reimportar.
 
-    UMA leitura de faixa e UMA de curadoria para o lote inteiro, fora do laco:
-    ler por conversa abriria janela para o lote comecar com uma configuracao e
-    terminar com outra -- que e a regua misturada de novo, agora dentro da rota
-    que existe para acabar com ela.
-
-    LIMITACAO DECLARADA: repontuar roda os TRES BERTimbau de novo por conversa.
-    O vetor e de 38 features e o fusor exige as 38 -- nao existe recalcular so
-    as tres lexicas e as cinco de emoji sem o resto. Em dezenas de atendimentos
-    sao segundos; em milhares vira trabalho de fila, e a fila nao existe aqui.
-    A rota e SINCRONA de proposito: uma fila que ninguem observa seria pior que
-    uma espera que se ve.
+    Responde 202 com o `total` e sai; o progresso e `GET` nesta mesma rota. Ver
+    `fraus/api/repontuacao.py` para o porque de nao ser mais sincrona, e para o
+    que acontece se a API reiniciar no meio. 409 se ja houver uma rodando.
     """
-    curadoria = ctx.curadoria_vigente()
-    faixas = ctx.faixas_vigentes()
-    quantas = 0
-    for conversa, _ in ctx.banco.todas():
-        score = ctx.motor.pontuar_conversa(conversa, curadoria)
-        ctx.banco.salvar(
-            conversa,
-            score,
-            ctx.categoria_de(score, faixas),
-            lexico_versao=curadoria.versao,
+    try:
+        return request.app.state.repontuacao.iniciar(ctx)
+    except RepontuacaoEmAndamento:
+        raise HTTPException(
+            status_code=409,
+            detail="ja ha uma repontuacao em andamento; acompanhe por GET /conversas/repontuar",
         )
-        quantas += 1
-    return {"repontuadas": quantas}
+
+
+@router.get("/conversas/repontuar")
+def progresso_da_repontuacao(request: Request) -> dict:
+    """Estado da ultima repontuacao deste processo. 404 se nunca houve uma."""
+    estado = request.app.state.repontuacao.estado()
+    if estado is None:
+        raise HTTPException(status_code=404, detail="nenhuma repontuacao desde que a API subiu")
+    return estado
 
 
 @router.get("/conversas")
