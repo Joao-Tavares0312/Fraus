@@ -402,6 +402,17 @@ class Banco:
                 "instalado. Rode `uv sync` (a dependencia entrou no pyproject)."
             )
 
+    def fechar(self) -> None:
+        """Devolve as conexoes do pool ao servidor. No SQLite nao ha o que fechar.
+
+        O boot nunca precisa: o processo morre com o pool. Quem precisa e quem
+        cria MUITOS `Banco` num processo so -- a suite contra Postgres cria um
+        por teste, e sem fechar estouraria o `max_connections` do servidor.
+        """
+        if self._pool is not None:
+            self._pool.close()
+            self._pool = None
+
     @property
     def dialeto(self) -> str:
         return "postgres" if self._postgres else "sqlite"

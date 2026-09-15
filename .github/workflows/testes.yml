@@ -1,0 +1,52 @@
+# A suite nos DOIS dialetos do banco.
+#
+# POR QUE DOIS. Producao e Supabase (Postgres); o SQLite ficou so como banco dos
+# testes e do uso local, porque a suite nele e de segundos e sem servidor. Mas os
+# dialetos ja divergem no DDL (`REAL`, `NOCASE` x indice em `lower(email)`,
+# collation de data) -- passar so no SQLite nao prova producao. O job `postgres`
+# roda os MESMOS testes com todo `Banco(<arquivo>.db)` redirecionado para um
+# Postgres de servico (ver `tests/conftest.py`).
+#
+# Sem `modelos/`: os pesos nao estao no repositorio, e os testes que precisam
+# deles se marcam como skip.
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dialeto: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: teste
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Instalar dependencias
+        run: uv sync --extra dev --python 3.11
+      - name: pytest (${{ matrix.dialeto }})
+        env:
+          FRAUS_TESTE_POSTGRES_URL: ${{ matrix.dialeto == 'postgres' && 'postgresql://postgres:teste@localhost:5432/postgres' || '' }}
+        run: uv run pytest -q
