@@ -1,4 +1,5 @@
-import { formatarNumero } from "@/lib/formato";
+import { PartituraDaFala } from "@/components/PartituraDaFala";
+import type { ProbabilidadesDeClasse } from "@/lib/partitura";
 
 /**
  * Emocao e ironia de uma fala -- as duas cabecas de LEITURA POR FRASE.
@@ -26,11 +27,19 @@ import { formatarNumero } from "@/lib/formato";
  * conversa inteira.
  */
 export function CabecasDeLeitura({
+  classes = null,
   emocao,
   ironia,
   compacto = false,
   ressalvas = true,
 }: {
+  /**
+   * As três probabilidades de classe DESTA frase, quando a tela as tem. Entram
+   * na mesma pauta de emoção e ironia (`PartituraDaFala`) — a escala comum é o
+   * ponto do desenho. O Simulador não passa: ele mostra a classificação na
+   * barra grande dele, acima.
+   */
+  classes?: ProbabilidadesDeClasse | null;
   emocao: Record<string, number> | null;
   ironia: number | null;
   /** Sem o cabeçalho de contexto — para quem já o escreveu por fora. */
@@ -45,12 +54,7 @@ export function CabecasDeLeitura({
    */
   ressalvas?: boolean;
 }) {
-  if (!emocao && ironia === null) return null;
-
-  // Ordena por probabilidade: a emocao que o modelo viu vem primeiro, e a
-  // cauda de valores baixos nao rouba a leitura.
-  const emocoes = emocao ? Object.entries(emocao).sort((a, b) => b[1] - a[1]) : [];
-  const maior = emocoes[0]?.[1] ?? 1;
+  if (!classes && !emocao && ironia === null) return null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -66,30 +70,7 @@ export function CabecasDeLeitura({
         </p>
       ) : null}
 
-      {emocoes.length > 0 ? (
-        <ul className="flex flex-col gap-1">
-          {emocoes.map(([nome, valor]) => (
-            <li key={nome} className="flex items-center gap-2">
-              <span className="w-20 shrink-0 text-xs text-muted-foreground">
-                {nome}
-              </span>
-              {/* A largura é relativa à MAIOR emoção, não a 100%: as sete
-                  classes somam 1, então a barra em escala absoluta deixaria
-                  tudo abaixo da vencedora invisível. O número ao lado é o
-                  valor real, para a escala relativa não enganar. */}
-              <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-sm bg-muted">
-                <span
-                  className="block h-full bg-medido"
-                  style={{ width: `${maior > 0 ? (valor / maior) * 100 : 0}%` }}
-                />
-              </span>
-              <span className="num w-12 shrink-0 text-right text-xs text-muted-foreground">
-                {formatarNumero(valor * 100)}%
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <PartituraDaFala classes={classes} emocao={emocao} ironia={ironia} />
 
       {/* A ETIQUETA DE EXPOSICAO -- Art. 50(3) do EU AI Act, em vigor desde
           02/08/2026. Classificar sete emocoes torna o Fraus, pela letra do
@@ -126,34 +107,19 @@ export function CabecasDeLeitura({
         </p>
       ) : null}
 
-      {ironia !== null ? (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs text-muted-foreground">ironia</span>
-            <span className="num text-sm text-foreground">
-              {formatarNumero(ironia * 100)}%
-            </span>
-            {/* "cabeca pouco confiavel", nao "pouco confiavel" solto: colado
-                no numero, o adjetivo era lido como se qualificasse a
-                PROBABILIDADE -- "99,9% de ironia, mas pouco provavel", que e o
-                oposto do que a frase diz. O sujeito da desconfianca e a cabeca,
-                que erra 6 em 10 falas sinceras; este numero especifico pode
-                estar certo, e no caso ironico geralmente esta. */}
-            <span className="text-[11px] text-muted-foreground">
-              cabeça pouco confiável
-            </span>
-          </div>
-          {ressalvas ? (
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Esta cabeça acerta o caso de manual — “que atendimento
-              maravilhoso, só esperei 3 horas” — e erra feio no resto:{" "}
-              <strong>6 em 10</strong> falas sinceras de atendimento saem
-              marcadas como irônicas, com 0,999 de confiança. Ela foi treinada
-              num corpus gerado e aprendeu o registro conversacional em vez da
-              pragmática. Leia como indício, nunca como veredito.
-            </p>
-          ) : null}
-        </div>
+      {/* O numero e a marca de "cabeça pouco confiável" moram na pauta (nota
+          tracejada, com o título no rótulo). Aqui fica só a prosa, que vale
+          uma vez por tela. */}
+      {ressalvas && ironia !== null ? (
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          <strong>ironia é cabeça pouco confiável</strong> — por isso a nota
+          tracejada. Ela acerta o caso de manual — “que atendimento
+          maravilhoso, só esperei 3 horas” — e erra feio no resto:{" "}
+          <strong>6 em 10</strong> falas sinceras de atendimento saem marcadas
+          como irônicas, com 0,999 de confiança. Ela foi treinada num corpus
+          gerado e aprendeu o registro conversacional em vez da pragmática.
+          Leia como indício, nunca como veredito.
+        </p>
       ) : null}
     </div>
   );
@@ -217,61 +183,5 @@ export function LeituraDeEstilo({
         </li>
       ))}
     </ul>
-  );
-}
-
-/**
- * As tres probabilidades de satisfacao como barra empilhada.
- *
- * A largura E a probabilidade -- nao ha eixo escondido. Ordem fixa das classes
- * (0 insatisfeito, 1 neutro, 2 satisfeito), a mesma do servidor.
- */
-export function BarraDeClasses({
-  insatisfeito,
-  neutro,
-  satisfeito,
-}: {
-  insatisfeito: number;
-  neutro: number;
-  satisfeito: number;
-}) {
-  const classes = [
-    { rotulo: "Insatisfeito", valor: insatisfeito, cor: "var(--detrator)" },
-    { rotulo: "Neutro", valor: neutro, cor: "var(--neutro)" },
-    { rotulo: "Satisfeito", valor: satisfeito, cor: "var(--promotor)" },
-  ];
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div
-        className="flex h-2 w-full gap-px overflow-hidden rounded-sm bg-muted"
-        role="img"
-        aria-label={classes
-          .map((c) => `${c.rotulo} ${formatarNumero(c.valor * 100)}%`)
-          .join(", ")}
-      >
-        {classes.map((classe) => (
-          <span
-            key={classe.rotulo}
-            style={{ width: `${classe.valor * 100}%`, background: classe.cor }}
-          />
-        ))}
-      </div>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1">
-        {classes.map((classe) => (
-          <li key={classe.rotulo} className="flex items-baseline gap-1.5">
-            <span
-              aria-hidden
-              className="size-2 shrink-0 translate-y-px rounded-full"
-              style={{ background: classe.cor }}
-            />
-            <span className="text-xs text-muted-foreground">{classe.rotulo}</span>
-            <span className="num text-xs text-foreground">
-              {formatarNumero(classe.valor * 100)}%
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
