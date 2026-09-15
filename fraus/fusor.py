@@ -9,10 +9,12 @@ O peso da latencia e APRENDIDO aqui, nunca arbitrado: a relacao com satisfacao
 e nao-linear e moderada por contexto.
 """
 
+import hashlib
 import math
 from pathlib import Path
 
 import joblib
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -396,6 +398,23 @@ class Fusor:
             return {}
         padronizado = escala.transform([vetorizar(features)])[0]
         return dict(zip(NOMES_FEATURES, (float(v) for v in padronizado)))
+
+    def assinatura(self) -> str | None:
+        """Impressao digital dos pesos aprendidos -- muda a cada retreino.
+
+        Hash do que DECIDE a nota: media e escala do scaler, coeficientes,
+        interceptos, ordem das classes e a escala do tempo. Existe para o banco
+        saber com qual modelo cada conversa foi pontuada (`Motor.regua`). Fusor
+        nao treinado nao tem assinatura.
+        """
+        escala = self._pipeline.named_steps["escala"]
+        modelo = self._pipeline.named_steps["modelo"]
+        if not hasattr(escala, "mean_") or not hasattr(modelo, "coef_"):
+            return None
+        digest = hashlib.sha256(ESCALA_DO_TEMPO.encode())
+        for matriz in (escala.mean_, escala.scale_, modelo.coef_, modelo.intercept_, modelo.classes_):
+            digest.update(np.ascontiguousarray(matriz, dtype=np.float64).tobytes())
+        return digest.hexdigest()[:16]
 
     def importancias(self) -> dict[str, float]:
         """Peso absoluto medio de cada feature -- alimenta a explicacao na dashboard."""

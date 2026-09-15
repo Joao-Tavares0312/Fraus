@@ -55,6 +55,7 @@ class Repontuacao:
                 raise RepontuacaoEmAndamento()
             curadoria = ctx.curadoria_vigente()
             faixas = ctx.faixas_vigentes()
+            regua = ctx.regua_vigente()
             # Ordem por id: deterministica nos dois dialetos (sem ORDER BY o
             # Postgres nao promete ordem), e quem retoma sabe onde parou.
             conversas = sorted((c for c, _ in ctx.banco.todas()), key=lambda c: c.id)
@@ -70,13 +71,13 @@ class Repontuacao:
 
         threading.Thread(
             target=self._rodar,
-            args=(ctx, conversas, curadoria, faixas),
+            args=(ctx, conversas, curadoria, faixas, regua),
             name="fraus-repontuacao",
             daemon=True,
         ).start()
         return inicial
 
-    def _rodar(self, ctx, conversas, curadoria, faixas) -> None:
+    def _rodar(self, ctx, conversas, curadoria, faixas, regua) -> None:
         try:
             for conversa in conversas:
                 score = ctx.motor.pontuar_conversa(conversa, curadoria)
@@ -85,6 +86,7 @@ class Repontuacao:
                     score,
                     ctx.categoria_de(score, faixas),
                     lexico_versao=curadoria.versao,
+                    regua=regua,
                 )
                 with self._trava:
                     self._estado["feitas"] += 1

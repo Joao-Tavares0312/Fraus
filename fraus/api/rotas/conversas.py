@@ -148,6 +148,7 @@ def importar(
     # reler abriria janela para a conversa ser pontuada com um lexico e marcada
     # com a versao de outro -- o defeito exato que a versao existe para impedir.
     curadoria = ctx.curadoria_vigente()
+    regua = ctx.regua_vigente()
     for conversa in resultado.conversas:
         score = ctx.motor.pontuar_conversa(conversa, curadoria)
         # A coluna `categoria` e o retrato do instante da importacao; quem
@@ -158,6 +159,7 @@ def importar(
             score,
             ctx.categoria_de(score, faixas),
             lexico_versao=curadoria.versao,
+            regua=regua,
         )
 
     # "Motivo registrado" (spec 9) tem que CHEGAR a alguem: a contagem

@@ -15,10 +15,10 @@ import {
 const ROTA = "/api/fraus/conversas/repontuar";
 
 /**
- * "41 de 62 atendimentos foram pontuados com um lexico anterior."
+ * "41 de 62 atendimentos foram pontuados com um lexico ou modelo anterior."
  *
- * O `score` e gravado na importacao, entao curar uma palavra NAO mexe no que ja
- * existe -- e um banco com conversas pontuadas antes e depois soma duas reguas
+ * O `score` e gravado na importacao, entao curar uma palavra (ou retreinar o
+ * fusor, ou mudar a regra da cortesia) NAO mexe no que ja existe -- e um banco com conversas pontuadas antes e depois soma duas reguas
  * no mesmo agregado. Esconder isso seria apresentar como um numero o que sao
  * dois; nomear a divergencia e o unico caminho honesto.
  *
@@ -119,12 +119,12 @@ export function AvisoLexicoAntigo({
       <AlertTitle>
         <span className="num">{defasadas}</span> de{" "}
         <span className="num">{total}</span> atendimentos foram pontuados com um
-        léxico anterior
+        léxico ou modelo anterior
       </AlertTitle>
       <AlertDescription className="flex flex-col gap-2">
         <span>
           Os números desta tela somam duas réguas. Repontuar recalcula o banco
-          inteiro com o léxico vigente — roda os três classificadores de novo por
+          inteiro com o léxico e o modelo vigentes — roda os três classificadores de novo por
           atendimento, em segundo plano. Enquanto roda, a mistura continua: a
           tela só fica numa régua quando terminar.
         </span>

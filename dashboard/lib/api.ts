@@ -142,6 +142,12 @@ export type Indicadores = {
    * `undefined` ali significa "nao sei", que nao pode virar zero.
    */
   pontuadas_com_lexico_antigo?: number;
+  /**
+   * A mesma contagem somando troca de MODELO (retreino do fusor, regra da
+   * cortesia), desde 15/09/2026. E a que o aviso usa; a de lexico continua
+   * existindo com o sentido de sempre.
+   */
+  pontuadas_com_regua_antiga?: number;
   total_no_banco?: number;
 };
 

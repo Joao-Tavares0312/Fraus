@@ -5,6 +5,7 @@ por acidente de crescimento, e a borda da API nao e lugar de regra de modelo:
 quem chama o Motor e a rota, nao o contrario.
 """
 
+import hashlib
 import os
 import threading
 
@@ -270,6 +271,24 @@ class Motor:
             if conversa.tem_sinal_cliente
         ]
         return resumo_de_deriva(zs, self._fusor.distribuicao_de_treino())
+
+    def regua(self) -> str | None:
+        """Com qual regua este motor pontua: os pesos do fusor MAIS a regra da cortesia.
+
+        A curadoria tem regua propria (`lexico_versao`); esta cobre o resto do
+        que muda nota sem reimportar -- um retreino do fusor, ou a lista de
+        `fraus/cortesia.py` (que tira a nota de uma conversa sem mexer em peso
+        nenhum). O banco grava a regua com cada conversa, e o aviso de regua
+        misturada conta quem ficou para tras.
+        """
+        assinatura = getattr(self._fusor, "assinatura", None)
+        pesos = assinatura() if callable(assinatura) else None
+        if pesos is None:
+            return None
+        from fraus import cortesia
+
+        regra = hashlib.sha256("\n".join(sorted(cortesia.FORMULAS_DE_CORTESIA)).encode())
+        return f"{pesos}-{regra.hexdigest()[:8]}"
 
     def importancias(self) -> dict:
         """Peso global de cada feature -- usado pela ficha do modelo em `/modelo`."""

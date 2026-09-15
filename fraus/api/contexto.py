@@ -84,6 +84,11 @@ class Contexto:
         """
         return self.banco.carregar_curadoria()
 
+    def regua_vigente(self) -> str | None:
+        """Assinatura do motor servindo (`Motor.regua`); `None` para duble."""
+        regua = getattr(self.motor, "regua", None)
+        return regua() if callable(regua) else None
+
     def categoria_de(self, score: float | None, faixas: dict) -> str | None:
         """Categoria DERIVADA NA LEITURA do score gravado e da faixa vigente.
 

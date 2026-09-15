@@ -90,7 +90,10 @@ def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> di
     # janela para a gravacao e a resposta lerem configuracoes diferentes, e as
     # duas precisam contar a mesma historia.
     categoria = ctx.categoria_de(score, ctx.faixas_vigentes())
-    ctx.banco.salvar(conversa, score, categoria, lexico_versao=curadoria.versao)
+    ctx.banco.salvar(
+        conversa, score, categoria,
+        lexico_versao=curadoria.versao, regua=ctx.regua_vigente(),
+    )
     return {
         "id": conversa.id,
         "canal": conversa.canal,
