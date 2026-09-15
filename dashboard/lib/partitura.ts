@@ -21,15 +21,24 @@ export type ProbabilidadesDeClasse = Record<Classe, number>;
  */
 export const LIMIAR_DISPUTA = 0.15;
 
-/** A ordem canonica das sete classes treinadas de emocao (`fraus/sinais/emocao.py`). */
+/**
+ * A ordem das sete emocoes NA PAUTA: as negativas agrupadas, depois surpresa,
+ * alegria, e neutro por ultimo.
+ *
+ * Nao e a ordem do modelo (`fraus/sinais/emocao.py`) -- e uma ordem de LEITURA
+ * que tambem e condicao de legibilidade: cada emocao tem cor propria (tokens
+ * `--emo-*` no globals.css), e a paleta foi validada para daltonismo e visao
+ * normal comparando VIZINHOS nesta sequencia exata. Das 5040 ordens possiveis,
+ * 78 passam; a ordem do modelo nao passa. Mudar isto exige rodar o validador.
+ */
 export const ORDEM_EMOCOES = [
-  "alegria",
-  "surpresa",
-  "neutro",
-  "tristeza",
   "medo",
-  "raiva",
   "nojo",
+  "tristeza",
+  "raiva",
+  "surpresa",
+  "alegria",
+  "neutro",
 ] as const;
 
 /**
@@ -71,19 +80,25 @@ export function disputaDasClasses(classes: ProbabilidadesDeClasse) {
  * + nojo (ver `CabecasDeLeitura`). Ele sai a parte, e ausente e `null` --
  * nunca 0, que leria como "medido e zerado" (invariante 2).
  */
-export function separarEmocoes(emocao: Record<string, number>) {
+export function separarEmocoes(emocao: Record<string, number>, visiveis = EMOCOES_VISIVEIS) {
+  const quantas = visiveis;
   const treinadas = Object.entries(emocao).filter(([nome]) => nome !== "desprezo");
-  const visiveis = [...treinadas].sort((a, b) => b[1] - a[1]).slice(0, EMOCOES_VISIVEIS);
-  const nomesVisiveis = new Set(visiveis.map(([nome]) => nome));
+  const nomesVisiveis = new Set(
+    [...treinadas].sort((a, b) => b[1] - a[1]).slice(0, quantas).map(([nome]) => nome),
+  );
   const posicao = (nome: string) => {
     const indice = (ORDEM_EMOCOES as readonly string[]).indexOf(nome);
     return indice === -1 ? ORDEM_EMOCOES.length : indice;
   };
-  const recolhidas = treinadas
-    .filter(([nome]) => !nomesVisiveis.has(nome))
-    .sort((a, b) => posicao(a[0]) - posicao(b[0]));
+  const porOrdemCanonica = (a: [string, number], b: [string, number]) => posicao(a[0]) - posicao(b[0]);
+  const recolhidas = treinadas.filter(([nome]) => !nomesVisiveis.has(nome)).sort(porOrdemCanonica);
+  // Com TODAS a vista (quantas >= 7) a ordem e a canonica, nao a de valor: o
+  // olho aprende onde fica cada emocao. Com duas, sao as maiores, da maior.
+  const aVista = treinadas.filter(([nome]) => nomesVisiveis.has(nome));
+  const ordenadasAVista =
+    quantas >= ORDEM_EMOCOES.length ? aVista.sort(porOrdemCanonica) : aVista.sort((a, b) => b[1] - a[1]);
   return {
-    visiveis,
+    visiveis: ordenadasAVista,
     recolhidas,
     desprezo: "desprezo" in emocao ? emocao.desprezo : null,
   };

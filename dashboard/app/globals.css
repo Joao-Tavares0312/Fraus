@@ -492,6 +492,22 @@
   --emocao-fraco: color-mix(in oklch, var(--emocao) 18%, transparent);
   --emocao-texto: oklch(0.82 0.19 10);
 
+  /* AS SETE EMOCOES NA PARTITURA DA FALA (15/09/2026). Cor de MARCA, nunca de
+     texto: o numero ao lado continua em foreground/muted. Tons longe das tres
+     classes (22, 90, 190) e do ambar do dito (60), porque a pauta mostra classe
+     e emocao juntas. Validados pelo validador de paleta da skill dataviz sobre
+     o card, na ORDEM da pauta (lib/partitura.ts, ORDEM_EMOCOES) -- a ordem faz
+     parte da validacao: pares vizinhos CVD ΔE 12,5 e visao normal 16,2, e as
+     sete >= 3:1. Trocar a ordem ou um tom sem rodar o validador de novo e
+     desfazer a medicao. Neutro e acromatico de proposito: ausencia de afeto. */
+  --emo-medo: oklch(0.56 0.13 315);
+  --emo-nojo: oklch(0.6 0.13 160);
+  --emo-tristeza: oklch(0.64 0.16 245);
+  --emo-raiva: oklch(0.56 0.13 0);
+  --emo-surpresa: oklch(0.56 0.13 280);
+  --emo-alegria: oklch(0.64 0.16 125);
+  --emo-neutro: oklch(0.62 0 0);
+
   --lexico: oklch(0.79 0.19 140); /* verde: SentiLex-PT02 */
   --lexico-fraco: color-mix(in oklch, var(--lexico) 18%, transparent);
   --lexico-texto: oklch(0.85 0.17 140);

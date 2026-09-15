@@ -32,7 +32,10 @@ export function CabecasDeLeitura({
   ironia,
   compacto = false,
   ressalvas = true,
+  recolher = true,
 }: {
+  /** Ver `PartituraDaFala`: falso numa tela que examina uma frase só. */
+  recolher?: boolean;
   /**
    * As três probabilidades de classe DESTA frase, quando a tela as tem. Entram
    * na mesma pauta de emoção e ironia (`PartituraDaFala`) — a escala comum é o
@@ -70,7 +73,7 @@ export function CabecasDeLeitura({
         </p>
       ) : null}
 
-      <PartituraDaFala classes={classes} emocao={emocao} ironia={ironia} />
+      <PartituraDaFala classes={classes} emocao={emocao} ironia={ironia} recolher={recolher} />
 
       {/* A ETIQUETA DE EXPOSICAO -- Art. 50(3) do EU AI Act, em vigor desde
           02/08/2026. Classificar sete emocoes torna o Fraus, pela letra do

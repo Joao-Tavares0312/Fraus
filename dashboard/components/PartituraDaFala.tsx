@@ -36,6 +36,22 @@ const COR_CLASSE: Record<Classe, string> = {
   satisfeito: "var(--promotor)",
 };
 
+/**
+ * Cor de cada emocao: so a MARCA (haste e nota), nunca o numero. Validada na
+ * ordem de ORDEM_EMOCOES -- ver o comentario dos tokens `--emo-*`. Emocao que a
+ * API trouxer e nao estiver aqui cai no azul do medido, sem inventar tom.
+ */
+const COR_EMOCAO: Record<string, string> = {
+  medo: "var(--emo-medo)",
+  nojo: "var(--emo-nojo)",
+  tristeza: "var(--emo-tristeza)",
+  raiva: "var(--emo-raiva)",
+  surpresa: "var(--emo-surpresa)",
+  alegria: "var(--emo-alegria)",
+  neutro: "var(--emo-neutro)",
+};
+const corDaEmocao = (nome: string) => COR_EMOCAO[nome] ?? "var(--medido)";
+
 type Forma = "cheia" | "vazada" | "tracejada";
 
 /** O trilho 0-1 de uma linha. Decorativo: o valor sai em texto ao lado. */
@@ -148,7 +164,14 @@ export function PartituraDaFala({
   classes,
   emocao,
   ironia,
+  recolher = true,
 }: {
+  /**
+   * Recolher as emoções além das duas maiores. Verdadeiro onde a pauta se
+   * repete por fala (Analisador); falso onde se examina UMA frase (Simulador),
+   * e aí esconder emoção esconderia justamente o que se veio olhar.
+   */
+  recolher?: boolean;
   /** As três probabilidades juntas, ou nenhuma — nunca `?? 0` (invariante 2). */
   classes: ProbabilidadesDeClasse | null;
   emocao: Record<string, number> | null;
@@ -157,8 +180,8 @@ export function PartituraDaFala({
   if (!classes && !emocao && ironia === null) return null;
 
   const disputa = classes ? disputaDasClasses(classes) : null;
-  const emocoes = emocao ? separarEmocoes(emocao) : null;
-  const temRecolhido = emocoes !== null && (emocoes.recolhidas.length > 0 || emocoes.desprezo !== null);
+  const emocoes = emocao ? separarEmocoes(emocao, recolher ? undefined : Infinity) : null;
+  const temRecolhido = recolher && emocoes !== null && (emocoes.recolhidas.length > 0 || emocoes.desprezo !== null);
 
   return (
     <div
@@ -201,10 +224,24 @@ export function PartituraDaFala({
 
       {emocoes && emocoes.visiveis.length > 0 ? (
         <>
-          <Grupo rotulo="emoção" extra={<span className="text-muted-foreground">2 maiores</span>} />
+          <Grupo
+            rotulo="emoção"
+            extra={<span className="text-muted-foreground">{recolher ? "2 maiores" : "7 classes e o desprezo"}</span>}
+          />
           {emocoes.visiveis.map(([nome, valor]) => (
-            <Linha key={nome} nome={nome} valor={valor} forma="cheia" fraco={valor < 0.1} />
+            <Linha key={nome} nome={nome} valor={valor} forma="cheia" cor={corDaEmocao(nome)} fraco={valor < 0.1} />
           ))}
+          {!recolher && emocoes.desprezo !== null ? (
+            <Linha
+              nome="desprezo"
+              valor={emocoes.desprezo}
+              forma="vazada"
+              cor="var(--emo-raiva)"
+              fraco
+              italico
+              titulo="derivado de raiva + nojo; não é classe treinada"
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -242,13 +279,14 @@ export function PartituraDaFala({
           </summary>
           <div className="mt-0.5 grid grid-cols-[9.5ch_minmax(0,1fr)_4.5ch] items-center gap-x-2.5">
             {emocoes.recolhidas.map(([nome, valor]) => (
-              <Linha key={nome} nome={nome} valor={valor} forma="cheia" fraco={valor < 0.1} />
+              <Linha key={nome} nome={nome} valor={valor} forma="cheia" cor={corDaEmocao(nome)} fraco={valor < 0.1} />
             ))}
             {emocoes.desprezo !== null ? (
               <Linha
                 nome="desprezo"
                 valor={emocoes.desprezo}
                 forma="vazada"
+                cor="var(--emo-raiva)"
                 fraco
                 italico
                 titulo="derivado de raiva + nojo; não é classe treinada"

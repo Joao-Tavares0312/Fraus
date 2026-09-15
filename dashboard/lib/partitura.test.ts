@@ -82,3 +82,14 @@ describe("formatarProbabilidade", () => {
     expect(formatarProbabilidade(0.999)).toBe("1,00");
   });
 });
+
+describe("separarEmocoes com todas a vista", () => {
+  it("mostra as sete na ordem canonica e nao recolhe nada", async () => {
+    const { separarEmocoes, ORDEM_EMOCOES } = await import("./partitura");
+    const emocao = { alegria: 0.98, surpresa: 0.001, neutro: 0.01, tristeza: 0.002, medo: 0.001, raiva: 0.003, nojo: 0.001, desprezo: 0.002 };
+    const { visiveis, recolhidas, desprezo } = separarEmocoes(emocao, Infinity);
+    expect(visiveis.map(([nome]) => nome)).toEqual([...ORDEM_EMOCOES]);
+    expect(recolhidas).toEqual([]);
+    expect(desprezo).toBe(0.002);
+  });
+});

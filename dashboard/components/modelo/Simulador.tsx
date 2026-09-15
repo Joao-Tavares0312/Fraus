@@ -267,9 +267,11 @@ function OutrasCabecas({ resultado }: { resultado: Simulacao }) {
   if (!resultado.emocao && resultado.prob_ironia === null) return null;
   return (
     <div className="border-t border-linha pt-3">
+      {/* Uma frase só: as sete emoções à vista, nada recolhido. */}
       <CabecasDeLeitura
         emocao={resultado.emocao}
         ironia={resultado.prob_ironia}
+        recolher={false}
       />
       <LeituraDeEstilo estilo={resultado.estilo} />
     </div>

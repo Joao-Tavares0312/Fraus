@@ -348,6 +348,31 @@ nesta tela, ela carrega **legenda própria** agrupada pelas duas famílias:
 nove matizes sem legenda seriam o grafo afirmando uma distinção que o leitor
 não tem como ler.
 
+#### 3.2.2 Na partitura da fala, cada emoção tem cor — e a ordem faz parte da cor
+
+Pedido do dono do projeto em 15/09/2026. Emoção é leitura **medida**, e a
+pauta mostra classe e emoção juntas, então os tons obedecem a duas exclusões:
+nenhum perto das três classes (`--detrator` 22, `--neutro` 90, `--promotor`
+190), senão "raiva" leria como "insatisfeito"; nenhum perto do âmbar do dito
+(60).
+
+**Nove cores num painel não se separam** — medido, não suposto: com as três
+classes na conta, nenhum conjunto de 4 a 6 tons passou o validador em todos os
+pares. O que torna a paleta legítima são duas coisas juntas:
+
+1. **Cada linha tem o nome escrito.** Cor nunca é a única identificação.
+2. **A validação é por vizinhos, numa ordem fixa.** A ordem da pauta é
+   `medo · nojo · tristeza · raiva · surpresa · alegria · neutro` — negativas
+   agrupadas, neutro por último. Das 5040 ordens, 78 passam com os tons de
+   `--emo-*`; a ordem do modelo não passa. Pares vizinhos: CVD ΔE 12,5, visão
+   normal 16,2, as sete ≥ 3:1 sobre o card.
+
+`--emo-neutro` é acromático pela mesma disciplina do `--no-importacao`:
+ausência de afeto. Desprezo, derivado de raiva + nojo, é a nota **vazada** no
+tom da raiva. A cor vai só na haste e na nota; o número segue em
+`foreground`/`muted-foreground`. Trocar um tom ou a ordem sem rodar o
+validador de novo é desfazer a medição.
+
 ### 3.3 A cor da marca: o dourado do monograma
 
 `--primary` é o **dourado do R da logo**, medido do próprio arquivo: a letra é
