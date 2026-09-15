@@ -210,3 +210,67 @@ def test_pdf_sem_texto_extraivel_explica_que_nao_ha_ocr():
     with pytest.raises(ArquivoIlegivelError) as erro:
         extrair("scan.pdf", buffer.getvalue())
     assert "OCR" in str(erro.value)
+
+
+# ---------------------------------------------------------------------------
+# docx com TABELA: a coluna de horario nao pode virar prosa
+
+
+def _docx_com_tabela(linhas: list[list[str]], antes: str = "") -> bytes:
+    import docx
+
+    documento = docx.Document()
+    if antes:
+        documento.add_paragraph(antes)
+    tabela = documento.add_table(rows=0, cols=len(linhas[0]))
+    for linha in linhas:
+        celulas = tabela.add_row().cells
+        for indice, valor in enumerate(linha):
+            celulas[indice].text = valor
+    buffer = io.BytesIO()
+    documento.save(buffer)
+    return buffer.getvalue()
+
+
+def test_docx_com_tabela_de_horario_recebe_nota():
+    """Transcricao exportada para Word costuma vir em tabela com a hora numa
+    coluna. Lida como prosa, a hora virava parte do texto e a conversa ficava
+    sem nota; lida como tabela, o mapeador acha a coluna de horario."""
+    dados = _docx_com_tabela(
+        [
+            ["Horário", "Quem", "Mensagem"],
+            ["14/05/2026 10:00", "Cliente", "meu pedido nao chegou"],
+            ["14/05/2026 10:04", "Atendente", "vou verificar agora"],
+            ["25/05/2026 10:05", "Cliente", "ok, obrigado"],
+        ],
+        antes="Relatório de atendimento — protocolo 123",
+    )
+    extracao = extrair("atendimento.docx", dados)
+    assert extracao.tem_tempo is True
+    assert "tabela" in extracao.formato
+    assert [m.autor for m in extracao.conversas[0].mensagens] == ["cliente", "humano", "cliente"]
+
+
+def test_docx_com_tabela_que_nao_e_de_conversa_continua_como_prosa():
+    dados = _docx_com_tabela(
+        [["Item", "Valor"], ["frete", "10"], ["total", "90"]],
+        antes=TRANSCRICAO,
+    )
+    extracao = extrair("conversa.docx", dados)
+    assert extracao.formato == "transcrição em docx"
+    assert extracao.tem_tempo is False
+
+
+def test_docx_com_tabela_sem_cabecalho_nao_perde_a_primeira_fala():
+    """Uma linha por fala, sem cabecalho: a primeira linha e DADO. Lida como
+    cabecalho, a primeira fala do cliente sumiria sem aviso nenhum."""
+    dados = _docx_com_tabela(
+        [
+            ["Cliente", "Bom dia, minha cobranca veio duplicada"],
+            ["Bot", "Entendi! Vou verificar seu cadastro."],
+            ["Cliente", "Ok obrigado"],
+        ]
+    )
+    extracao = extrair("conversa.docx", dados)
+    textos = [m.texto for m in extracao.conversas[0].mensagens]
+    assert any("cobranca veio duplicada" in t for t in textos)

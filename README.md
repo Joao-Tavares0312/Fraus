@@ -861,7 +861,11 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
   gravam com perfil confirmado** (409 sem ele) e arquivo sem horário é recusado
   (400). `POST /conversas/importar/previa` e a mesma conferência de colunas na
   tela de Integrações. O corpo da importação segue só com `caminho`.
-- [ ] MarkItDown para docx/pdf com tabela.
+- [x] **docx com tabela** — **feito em 15/09/2026**, sem MarkItDown: o
+  `python-docx` já instalado lê a tabela, que passa pelo mapeador e recebe nota
+  quando tem coluna de horário. Tabela sem cabeçalho (uma linha por fala) segue
+  como prosa, para não perder a primeira fala. **PDF com tabela fica de fora**:
+  exigiria extração de layout pesada, e PDF de atendimento raramente traz hora.
 - [ ] Fixtures de **exports reais** (Discord, Telegram, Zendesk, Blip) — os testes de 14/09 cobrem WhatsApp, JSON aninhado e CSV `;` em cp1252 sintéticos. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
   texto e autor identificáveis.
 
