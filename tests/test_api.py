@@ -399,7 +399,9 @@ def test_atribuicao_sem_fala_do_cliente_tem_contribuicoes_nulas(
 # ---------------------------------------------------------------------------
 
 
-def test_coluna_ausente_no_csv_e_400_nomeando_a_coluna(cliente, tmp_path):
+def test_csv_fora_do_formato_nao_grava_sem_confirmar_as_colunas(cliente, tmp_path):
+    """Desde 15/09/2026 o CSV sem `canal` e LIDO (o mapeador acha os papeis), mas
+    nao GRAVA: coluna inferida so entra no banco com perfil confirmado."""
     caminho = tmp_path / "sem_canal.csv"
     caminho.write_text(
         "conversa_id,autor,texto,enviada_em,escalou_para_humano\n"
@@ -408,8 +410,9 @@ def test_coluna_ausente_no_csv_e_400_nomeando_a_coluna(cliente, tmp_path):
     )
 
     resposta = cliente.post("/conversas/importar", json={"caminho": str(caminho)})
-    assert resposta.status_code == 400
-    assert "canal" in resposta.json()["detail"]
+    assert resposta.status_code == 409
+    assert "confirm" in resposta.json()["detail"]
+    assert cliente.get("/conversas").json() == []
 
 
 def test_linha_suja_e_rejeitada_com_motivo_sem_derrubar_o_lote(cliente, tmp_path):

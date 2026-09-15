@@ -85,7 +85,7 @@ export default async function PaginaIntegracoes() {
             que cada arquivo trouxe. As duas metades da mesma operação, e
             nenhuma delas é integração de rede. */}
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
-          <Painel titulo="Importar um CSV">
+          <Painel titulo="Importar um arquivo">
             {importaveis.ok ? (
               <div className="flex min-w-0 flex-col gap-3">
                 {/* As duas ressalvas desceram do aparato do painel para junto
@@ -103,7 +103,7 @@ export default async function PaginaIntegracoes() {
                   exatamente a string que ele publicou, sem montar caminho a
                   mão — e <strong>não há upload</strong>: subir arquivo abriria
                   uma superfície de escrita numa API sem autenticação. Colocar o
-                  CSV na pasta é trabalho de quem opera a máquina.
+                  arquivo na pasta é trabalho de quem opera a máquina.
                 </p>
                 <Importar
                   raiz={importaveis.dado.raiz}

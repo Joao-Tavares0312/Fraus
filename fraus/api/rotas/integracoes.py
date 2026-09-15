@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from fraus import assinatura, credencial
+from fraus.ingest.arquivos import EXTENSOES
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import TIPOS_DE_FONTE, PedidoAjusteFonte, PedidoFonte
 from fraus.api.seguranca import exigir_mestra
@@ -291,8 +292,12 @@ def arquivos_importaveis(ctx: Contexto = Depends(obter_contexto)) -> dict:
         return {"raiz": raiz_resolvida.name, "arquivos": []}
 
     arquivos = []
-    for caminho in sorted(raiz_resolvida.rglob("*.csv")):
-        if not caminho.is_file():
+    # Toda extensao que a leitura aceita, e nao so .csv: a importacao le pelo
+    # mesmo `extrair` da analise, e um JSON posto na pasta que nao aparecesse
+    # aqui seria um formato suportado invisivel. A lista vem de `EXTENSOES`,
+    # nunca digitada de novo.
+    for caminho in sorted(raiz_resolvida.rglob("*")):
+        if not caminho.is_file() or caminho.suffix.lower() not in EXTENSOES:
             continue
         arquivos.append(
             {

@@ -60,8 +60,15 @@ export function ConferenciaDeColunas({
   aoAjustar,
   aoConfirmar,
   aoCancelar,
+  acao = "analisar",
 }: {
   previa: PreviaLeitura;
+  /**
+   * Na importação, salvar o perfil deixa de ser opcional: é ele que autoriza
+   * a coluna inferida a entrar no banco. A análise não grava, então lá lembrar
+   * é conveniência.
+   */
+  acao?: "analisar" | "importar";
   ocupado: boolean;
   nomeArquivo: string;
   aoAjustar: (mapeamento: MapeamentoConfirmado, ordem: OrdemData | null) => void;
@@ -77,7 +84,9 @@ export function ConferenciaDeColunas({
   const escolhido: MapeamentoConfirmado = Object.fromEntries(
     PAPEIS.map((papel) => [papel, mapa.papeis[papel]?.coluna ?? null]),
   );
-  const [lembrar, setLembrar] = useState(false);
+  const importando = acao === "importar";
+  const [lembrarEscolhido, setLembrar] = useState(false);
+  const lembrar = importando || lembrarEscolhido;
   const [nomePerfil, setNomePerfil] = useState(
     nomeArquivo.replace(/\.[^.]+$/, "").slice(0, 80),
   );
@@ -105,9 +114,17 @@ export function ConferenciaDeColunas({
   return (
     <Painel
       titulo="Conferir colunas"
-      legenda="Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Confira antes de analisar: uma coluna errada não dá erro, dá uma nota errada. Nada foi analisado nem gravado ainda."
+      legenda={
+        importando
+          ? "Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Coluna inferida só entra no banco depois de confirmada: ao importar, o mapeamento vira um perfil, e o próximo arquivo com as mesmas colunas entra direto. Nada foi importado ainda."
+          : "Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Confira antes de analisar: uma coluna errada não dá erro, dá uma nota errada. Nada foi analisado nem gravado ainda."
+      }
     >
-      <div className="flex flex-col gap-4 px-5 py-4">
+      {/* `@container`: o painel mora em telas de larguras diferentes — a
+          largura inteira em Analisar, meia coluna de 26rem em Integrações.
+          A grade responde à largura DELE, não à da janela; com `sm:` ela
+          abria duas colunas dentro dos 26rem e o rótulo quebrava letra a letra. */}
+      <div className="@container flex flex-col gap-4 px-5 py-4">
         {previa.perfil ? (
           <p className="text-sm text-muted-foreground">
             Apliquei o perfil salvo{" "}
@@ -116,19 +133,21 @@ export function ConferenciaDeColunas({
           </p>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 @xl:grid-cols-2">
           {PAPEIS.map((papel) => {
             const atribuido = mapa.papeis[papel];
             const valor = escolhido[papel] ?? NENHUMA;
             const obrigatorio = papel === "texto" || papel === "autor";
             return (
               <div key={papel} className="flex flex-col gap-1">
-                <Label htmlFor={`${id}-${papel}`} className="text-sm">
-                  {ROTULO_PAPEL[papel]}
-                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                <div className="flex flex-wrap items-baseline gap-x-1.5">
+                  <Label htmlFor={`${id}-${papel}`} className="text-sm">
+                    {ROTULO_PAPEL[papel]}
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
                     {EXPLICACAO_PAPEL[papel]}
                   </span>
-                </Label>
+                </div>
                 <Select
                   value={valor}
                   onValueChange={(novo) =>
@@ -288,16 +307,23 @@ export function ConferenciaDeColunas({
         ) : null}
 
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="size-4 accent-primary"
-              checked={lembrar}
-              onChange={(evento) => setLembrar(evento.target.checked)}
-              disabled={ocupado}
-            />
-            Lembrar este mapeamento para arquivos com as mesmas colunas
-          </label>
+          {importando ? (
+            <p className="text-sm">
+              O mapeamento será salvo como perfil — é o que autoriza estas
+              colunas a entrarem no banco.
+            </p>
+          ) : (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={lembrar}
+                onChange={(evento) => setLembrar(evento.target.checked)}
+                disabled={ocupado}
+              />
+              Lembrar este mapeamento para arquivos com as mesmas colunas
+            </label>
+          )}
           {lembrar ? (
             <div className="flex flex-col gap-1 sm:max-w-sm">
               <Label htmlFor={`${id}-perfil`} className="text-xs font-normal text-muted-foreground">
@@ -324,13 +350,19 @@ export function ConferenciaDeColunas({
                 lembrar && nomePerfil.trim() ? nomePerfil.trim() : null,
               )
             }
-            disabled={ocupado || faltaObrigatorio}
+            disabled={ocupado || faltaObrigatorio || (importando && !nomePerfil.trim())}
           >
             <Check aria-hidden />
-            {ocupado ? "Analisando…" : "Analisar com estas colunas"}
+            {importando
+              ? ocupado
+                ? "Importando…"
+                : "Salvar perfil e importar"
+              : ocupado
+                ? "Analisando…"
+                : "Analisar com estas colunas"}
           </Button>
           <Button type="button" variant="outline" onClick={aoCancelar} disabled={ocupado}>
-            Escolher outro arquivo
+            {importando ? "Cancelar" : "Escolher outro arquivo"}
           </Button>
         </div>
         {faltaObrigatorio ? (
