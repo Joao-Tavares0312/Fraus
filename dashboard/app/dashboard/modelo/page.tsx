@@ -154,7 +154,8 @@ export default async function PaginaModelo() {
                 <span className="num text-foreground">
                   {modelo.classes.join(" · ")}
                 </span>
-                . Atendimento sem fala do cliente não cai em faixa nenhuma:
+                . Atendimento sem fala do cliente, ou só com fórmulas de
+                cortesia, não cai em faixa nenhuma:
                 fica como <strong className="text-foreground">sem sinal</strong>
                 , que não é uma quarta categoria e não pertence à escala.
               </p>

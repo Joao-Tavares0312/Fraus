@@ -382,6 +382,7 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
             {
                 "conversa": conversa.model_dump(mode="json"),
                 "score": score,
+                "motivo_sem_sinal": conversa.motivo_sem_sinal,
                 "nota": nota_0_10(score) if score is not None else None,
                 "categoria": ctx.categoria_de(score, faixas),
                 "mensagens": analise["mensagens"],

@@ -67,3 +67,30 @@ def test_so_cortesia_e_ausencia_e_nao_evidencia_fraca():
     conversa = _conversa("ok, obrigado")
     assert evidencia_fraca(conversa) is None
     assert motivos_de_evidencia_fraca(conversa) == []
+
+
+def test_o_motivo_sem_sinal_distingue_silencio_de_cortesia():
+    assert _conversa("ok, obrigado").motivo_sem_sinal == "so_cortesia"
+    assert _conversa("o boleto nao chegou").motivo_sem_sinal is None
+    so_bot = Conversa(id="b", canal="csv", iniciada_em=T,
+                      mensagens=[Mensagem(autor="bot", texto="ola", enviada_em=T)])
+    assert so_bot.motivo_sem_sinal == "sem_fala_do_cliente"
+
+
+def test_a_api_entrega_o_motivo_na_lista(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from fraus.api.main import criar_app
+    from fraus.db import Banco
+
+    class MotorFalso:
+        def pontuar_conversa(self, conversa, curadoria=None):
+            return None if not conversa.tem_sinal_cliente else 50.0
+
+    banco = Banco(tmp_path / "t.db")
+    banco.migrar()
+    banco.salvar(_conversa("valeu"), None, None)
+    cliente = TestClient(criar_app(banco=banco, motor=MotorFalso(), raiz_importacao=tmp_path))
+    linha = cliente.get("/conversas").json()[0]
+    assert linha["score"] is None
+    assert linha["motivo_sem_sinal"] == "so_cortesia"

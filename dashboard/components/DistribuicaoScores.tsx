@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import type { BarraDistribuicao } from "@/lib/derivacoes";
-import { ROTULO_CATEGORIA } from "@/lib/formato";
+import { DEFINICAO_SEM_SINAL_AGREGADO, ROTULO_CATEGORIA } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
 
@@ -63,7 +63,7 @@ export function DistribuicaoScores({
           <EstadoVazio
             className="m-3"
             titulo="Nenhum atendimento pontuado"
-            explicacao="Todos os atendimentos do período estão sem fala do cliente, então não há nota inferida para distribuir."
+            explicacao={`Todos os atendimentos do período estão sem sinal — ${DEFINICAO_SEM_SINAL_AGREGADO} —, então não há nota inferida para distribuir.`}
           />
         ) : (
           <div className="h-[228px]">
@@ -148,7 +148,7 @@ export function DistribuicaoScores({
           <CabecaVazada />
         </p>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Atendimentos sem fala do cliente. Não têm nota e não entram como zero:
+          Atendimentos sem sinal: {DEFINICAO_SEM_SINAL_AGREGADO}. Não têm nota e não entram como zero:
           ausência de dado não é insatisfação, e cinza não pertence à escala de
           satisfação de propósito.
         </p>

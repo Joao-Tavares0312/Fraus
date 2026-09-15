@@ -211,6 +211,13 @@ export type ResumoConversa = {
   contestacao: Contestacao | null;
 
   /**
+   * POR QUE nao ha nota, derivado no servidor (`Conversa.motivo_sem_sinal`).
+   * `null` quando ha. "so_cortesia" existe desde 15/09/2026: o cliente falou,
+   * mas so "ok, obrigado" -- e a tela nao pode dizer que ele nao falou.
+   */
+  motivo_sem_sinal: MotivoSemSinal | null;
+
+  /**
    * Tem score, e pouca fala do cliente para sustenta-lo -- a CABECA
    * TRACEJADA. `null` quando nao ha fala nenhuma: ai o estado e "sem sinal",
    * que tem forma propria (a cabeca vazada), e confundir os dois perderia a
@@ -1034,9 +1041,14 @@ export type MensagemAnalisada = MensagemAtribuida & {
   palavras: PesoDePalavra[] | null;
 };
 
+/** Os dois motivos para nao haver nota. Ver `fraus/modelos.py`. */
+export type MotivoSemSinal = "sem_fala_do_cliente" | "so_cortesia";
+
 export type ConversaAnalisada = {
   conversa: DetalheConversa;
   score: number | null;
+  /** Ver `motivo_sem_sinal` em `ResumoConversa`. */
+  motivo_sem_sinal: MotivoSemSinal | null;
   nota: number | null;
   categoria: Categoria | null;
   mensagens: MensagemAnalisada[];

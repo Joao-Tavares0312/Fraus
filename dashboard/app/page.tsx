@@ -141,7 +141,7 @@ const HONESTIDADES = [
     n: "02",
     titulo: "Ausência de dado não é insatisfação",
     texto:
-      "Conversa em que o cliente não falou aparece como “sem sinal” — nunca como zero, em célula, gráfico ou média. Não medir e medir zero são respostas diferentes.",
+      "Conversa em que o cliente não falou — ou só disse “ok, obrigado” — aparece como “sem sinal”, nunca como zero, em célula, gráfico ou média. Não medir e medir zero são respostas diferentes.",
   },
   {
     n: "03",

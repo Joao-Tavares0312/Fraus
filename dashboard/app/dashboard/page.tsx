@@ -278,7 +278,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
 
           <Painel
             titulo="Piores atendimentos do período"
-            legenda="Menor nota inferida primeiro. Atendimento sem fala do cliente não entra: sem nota não há “pior”."
+            legenda="Menor nota inferida primeiro. Atendimento sem sinal (o cliente não falou ou só usou cortesia) não entra: sem nota não há “pior”."
             semPadding
             acessorio={
               <span className="num text-xs text-muted-foreground">

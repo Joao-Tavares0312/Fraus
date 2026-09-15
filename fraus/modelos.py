@@ -66,3 +66,17 @@ class Conversa(BaseModel):
         atendimento bom e ruim. Ver `fraus/cortesia.py`.
         """
         return any(not e_so_cortesia(m.texto) for m in self.mensagens_cliente)
+
+    @property
+    def motivo_sem_sinal(self) -> Literal["sem_fala_do_cliente", "so_cortesia"] | None:
+        """POR QUE nao ha nota -- `None` quando ha sinal.
+
+        Existe para a tela nao dizer "o cliente nao falou" a quem escreveu "ok,
+        obrigado", e para ela nao precisar reimplementar a regra da cortesia em
+        TypeScript (invariante 3: regra derivada mora no servidor).
+        """
+        if not self.tem_fala_cliente:
+            return "sem_fala_do_cliente"
+        if not self.tem_sinal_cliente:
+            return "so_cortesia"
+        return None

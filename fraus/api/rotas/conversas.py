@@ -260,6 +260,7 @@ def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
         "nota": nota_0_10(score) if score is not None else None,
         **ficha,
         "contestacao": contestacao(score, ficha["latencia_mediana_s"]),
+        "motivo_sem_sinal": conversa.motivo_sem_sinal,
     }
 
 

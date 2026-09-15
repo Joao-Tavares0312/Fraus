@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { ResumoConversa } from "@/lib/api";
-import { formatarDataHora } from "@/lib/formato";
+import { DEFINICAO_SEM_SINAL_AGREGADO, formatarDataHora } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
 
@@ -30,7 +30,7 @@ export function PioresAtendimentos({
         titulo="Nenhum atendimento pontuado no período"
         explicacao={
           semSinal > 0
-            ? `Os ${semSinal} atendimento(s) do período estão sem fala do cliente. Sem nota, não há "pior" a apontar — e chamar de pior quem não falou seria inventar o veredito.`
+            ? `Os ${semSinal} atendimento(s) do período estão sem sinal — ${DEFINICAO_SEM_SINAL_AGREGADO}. Sem nota, não há "pior" a apontar — e chamar de pior quem não disse nada avaliável seria inventar o veredito.`
             : "Nenhum atendimento sobrou no recorte de período atual."
         }
       />
