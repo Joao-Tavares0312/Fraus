@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -131,10 +130,13 @@ def main() -> int:
     print("\n## 2. Conversa só de cortesia (sem rótulo verdadeiro)\n")
     print("| fala | score | nota | categoria |\n|---|---|---|---|")
     for conversa in _conversas_de_cortesia():
+        fala = conversa.mensagens_cliente[0].texto
+        # A MESMA porta do Motor: sem sinal nao passa pelo fusor (invariante 2).
+        if not conversa.tem_sinal_cliente:
+            print(f"| {fala} | — | — | sem sinal |")
+            continue
         score = fusor.pontuar(montar_features(conversa, texto, emocao))
-        nota = nota_0_10(score)
-        print(f"| {conversa.mensagens_cliente[0].texto} | {score:.1f} | {nota} | "
-              f"{categoria_nps(score, FAIXAS_NPS)} |")
+        print(f"| {fala} | {score:.1f} | {nota_0_10(score)} | {categoria_nps(score, FAIXAS_NPS)} |")
 
     print("\n## 3. Contra-exemplos da ironia\n")
     sinceras = [p[IRONICO] for p in ironia.prever_mensagens(SINCERAS_COM_MARCADOR)]
@@ -148,9 +150,6 @@ def main() -> int:
                                  ("irônica", IRONIAS_SEM_MARCADOR, ironicas)):
         for fala, p in zip(falas, probs):
             print(f"| {rotulo} | {fala} | {p:.3f} |")
-    print("\nDistribuição de categorias nas fatias de cortesia:",
-          dict(Counter(categoria_nps(fusor.pontuar(montar_features(c, texto, emocao)), FAIXAS_NPS)
-                       for c in _conversas_de_cortesia())))
     return 0
 
 

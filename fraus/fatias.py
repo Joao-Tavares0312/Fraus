@@ -22,14 +22,11 @@ from fraus.modelos import Conversa
 from fraus.sinais.emoji import emojis_com_posicao
 from fraus.sinais.tempo import latencias_da_conversa
 
-def so_cortesia(conversa: Conversa) -> bool:
-    """Toda fala do cliente e formula de cortesia (e ha pelo menos uma)."""
-    return conversa.tem_fala_cliente and not conversa.tem_sinal_cliente
-
-
 def fatias_de(conversa: Conversa) -> dict[str, str]:
-    """Eixo -> valor da fatia. Sem fala do cliente, a conversa nao entra em
-    avaliacao nenhuma (invariante 2): quem chama filtra antes."""
+    """Eixo -> valor da fatia. Sem sinal, a conversa nao entra em avaliacao
+    nenhuma (invariante 2): quem chama filtra antes. Por isso nao ha eixo "so
+    cortesia" -- desde 15/09/2026 essa conversa e sem sinal (fraus/cortesia.py)
+    e nunca chega a ter nota para ser avaliada."""
     n = len(conversa.mensagens_cliente)
     latencias = latencias_da_conversa(conversa)
     mediana = median(latencias) if latencias else None
@@ -42,7 +39,6 @@ def fatias_de(conversa: Conversa) -> dict[str, str]:
             else ">180 s"
         ),
         "emoji": "com" if any(_tem_emoji(m.texto) for m in conversa.mensagens_cliente) else "sem",
-        "so cortesia": "sim" if so_cortesia(conversa) else "nao",
         "escalou para humano": "sim" if conversa.escalou_para_humano else "nao",
     }
 

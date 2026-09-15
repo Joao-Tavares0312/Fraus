@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fraus.fatias import fatias_de, metricas_por_fatia, so_cortesia
+from fraus.fatias import fatias_de, metricas_por_fatia
 from fraus.modelos import Conversa, Mensagem
 
 T = datetime(2026, 8, 13, 10, tzinfo=timezone.utc)
@@ -14,18 +14,12 @@ def _conversa(*falas, espera=10, escalou=False):
     return Conversa(id="c", canal="csv", iniciada_em=T, mensagens=mensagens, escalou_para_humano=escalou)
 
 
-def test_cortesia_ignora_caixa_acento_e_pontuacao():
-    assert so_cortesia(_conversa("Ok, obrigado!", "VALEU"))
-    assert not so_cortesia(_conversa("ok, obrigado", "mas nao resolveu"))
-
-
 def test_fatias_de_uma_conversa():
     fatias = fatias_de(_conversa("pessimo 😡", espera=300, escalou=True))
     assert fatias == {
         "falas do cliente": "1",
         "latencia mediana": ">180 s",
         "emoji": "com",
-        "so cortesia": "nao",
         "escalou para humano": "sim",
     }
 

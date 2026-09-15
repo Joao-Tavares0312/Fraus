@@ -31,7 +31,7 @@ problemático. Toda exibição carrega a etiqueta de estimativa: o NPS é
 | satisfação | BERTimbau, 3 classes por mensagem | B2W-Reviews01 (resenha de produto, não atendimento) | acurácia 0,783 · F1-macro 0,782 | domínio: resenha ≠ conversa de suporte |
 | emoção | BERTimbau, 7 classes (+ desprezo derivado de raiva+nojo) | `go_emotions_ptbr` (tradução automática) | F1-macro 0,584; **0,281 no XED-pt** (sem tradução) | a queda no XED-pt é a medida honesta |
 | ironia | BERTimbau binário | corpus **gerado** (`fraus.ingest.gerador_ironia`) | acurácia 1,0 | otimista por construção — ver abaixo; **não entra na nota** |
-| fusor | `LogisticRegression` sobre 39 features | conversas sintéticas: texto do B2W + estrutura e tempo do simulador | acurácia e F1-macro 0,950 (holdout do notebook 02) | o tempo é sintético; ver [Treinamento](treinamento.md) |
+| fusor | `LogisticRegression` sobre 39 features (espera em `log1p`) | conversas sintéticas: texto do B2W + estrutura e tempo do simulador | acurácia 0,947 · F1-macro 0,947 (holdout do notebook 02) | o tempo é sintético; ver [Treinamento](treinamento.md) |
 
 Os três BERTimbau rodam em CPU, por torch ou por ONNX Runtime
 (`FRAUS_BACKEND`), com **0 de 180 categorias trocadas** entre os dois
@@ -44,27 +44,27 @@ executores. Ver [Encolher os modelos](encolhimento.md).
 atendimento real**: o projeto não tem corpus PT-BR de atendimento rotulado com
 timestamps, e nenhum corpus público tem.
 
-Acurácia geral: **0,940**.
+Acurácia geral: **0,940** (598 conversas com sinal; 2 eram só cortesia).
 
 | eixo | fatia | n | acurácia | F1-macro |
 |---|---|---|---|---|
-| falas do cliente | 1 | 31 | **0,774** | **0,751** |
-| falas do cliente | 2–3 | 425 | 0,934 | 0,934 |
+| falas do cliente | 1 | 30 | **0,733** | **0,735** |
+| falas do cliente | 2–3 | 424 | 0,936 | 0,936 |
 | falas do cliente | 4+ | 144 | 0,993 | 0,992 |
-| emoji | com | 525 | 0,956 | 0,957 |
-| emoji | sem | 75 | **0,827** | **0,792** |
-| escalou para humano | não | 455 | 0,945 | 0,945 |
-| escalou para humano | sim | 145 | 0,924 | 0,901 |
-| latência mediana | < 30 s | 236 | 0,936 | 0,920 |
-| latência mediana | 30–180 s | 308 | 0,942 | 0,934 |
+| emoji | com | 524 | 0,952 | 0,953 |
+| emoji | sem | 74 | **0,851** | **0,836** |
+| escalou para humano | não | 454 | 0,947 | 0,948 |
+| escalou para humano | sim | 144 | 0,917 | 0,887 |
+| latência mediana | < 30 s | 236 | 0,936 | 0,918 |
+| latência mediana | 30–180 s | 306 | 0,941 | 0,934 |
 | latência mediana | > 180 s | 56 | 0,946 | 0,823 |
 
 O que a tabela diz, e o que ela **não** pode dizer:
 
-1. **Conversa de uma fala só é a fatia mais fraca** (0,774). É esperado — há
+1. **Conversa de uma fala só é a fatia mais fraca** (0,733). É esperado — há
    menos texto para agregar —, e é o caso comum de "cliente respondeu uma vez e
    sumiu". A nota dessas conversas merece menos confiança do que a das longas.
-2. **Sem emoji, o acerto cai 13 pontos.** Suspeita declarada: o simulador sorteia
+2. **Sem emoji, o acerto cai 10 pontos.** Suspeita declarada: o simulador sorteia
    o emoji **por rótulo** (`EMOJIS_POR_ROTULO`), então parte do acerto "com
    emoji" pode ser o modelo lendo uma pista que o gerador plantou — a mesma
    família de defeito da invariante 10. Em atendimento real, onde emoji é mais
@@ -74,28 +74,28 @@ O que a tabela diz, e o que ela **não** pode dizer:
    compatível com o problema já medido do relógio dominando a nota
    (`scripts/medir_dominio_do_tempo.py`).
 
-## Conversa só de cortesia
+## Conversa só de cortesia — sem sinal desde 15/09/2026
 
 "ok, obrigado" fecha atendimento bom **e** ruim, então não tem rótulo verdadeiro.
-O que se mostra é a categoria que o Fraus dá, com o bot respondendo em 10 s:
+Medido antes da regra, com o bot respondendo em 10 s, o Fraus dava:
 
-| fala | score | nota | categoria |
+| fala | score (antes) | categoria (antes) | hoje |
 |---|---|---|---|
-| ok, obrigado | 76,2 | 8 | neutro |
-| ta bom | 75,7 | 8 | neutro |
-| ok | 79,0 | 8 | neutro |
-| certo, entendi | 75,3 | 8 | neutro |
-| valeu | 93,2 | 9 | **promotor** |
-| obrigada | 92,9 | 9 | **promotor** |
+| ok, obrigado | 76,2 | neutro | sem sinal |
+| ta bom | 75,7 | neutro | sem sinal |
+| ok | 79,0 | neutro | sem sinal |
+| certo, entendi | 75,3 | neutro | sem sinal |
+| valeu | 93,2 | **promotor** | sem sinal |
+| obrigada | 92,9 | **promotor** | sem sinal |
 
-Uma palavra de agradecimento, sozinha, basta para **promotor**. Não é erro de
-código: o texto de gratidão é lido como satisfação, e a emoção lê "ok, obrigado"
-como alegria 0,98. É limitação do corpus (o GoEmotions separa `gratitude` de
-`joy`, e o mapeamento para as 6 de Ekman os juntou). Cortesia pura deveria ser
-**sem sinal**, não promotor — pendência C2 da pesquisa de 15/09/2026.
-
-No lote do simulador essa fatia tem só 2 conversas, então ela **não aparece**
-na tabela de acerto: a lacuna é do gerador, que quase não produz esse caso.
+Uma palavra de agradecimento, sozinha, bastava para **promotor**: o texto de
+gratidão era lido como satisfação, e a emoção lia "ok, obrigado" como alegria
+0,98 — o mapeamento do GoEmotions para as 6 de Ekman juntou `gratitude` com
+`joy`. **Decisão:** conversa em que *toda* fala do cliente é fórmula de
+cortesia é **sem sinal** (`score: None`, invariante 2), e não sinal fraco. A
+lista é fechada e conservadora (`fraus/cortesia.py`): só casa a fala inteira, e
+"valeu, resolveu na hora" continua pontuada. O conserto de verdade é retreinar a
+emoção separando gratidão de alegria.
 
 ## A cabeça de ironia — taxa de erro publicada
 
