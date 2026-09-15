@@ -37,6 +37,18 @@ class PedidoImportacao(BaseModel):
     caminho: str  # unico campo aceito: veredito nunca vem do cliente
 
 
+class PedidoPreviaImportacao(BaseModel):
+    """A previa NAO grava, entao pode receber o ajuste de colunas em teste.
+
+    A importacao em si continua aceitando so `caminho`: o mapeamento que vale
+    para gravar e o do perfil salvo, nunca um que chegue no corpo.
+    """
+
+    caminho: str
+    mapeamento: dict[str, str | None] | None = None
+    ordem_data: str | None = None
+
+
 class PedidoCadastro(BaseModel):
     nome: str = Field(min_length=1)
     # Validacao minima e honesta: um @ com algo dos dois lados. EmailStr do
