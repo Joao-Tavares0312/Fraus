@@ -959,7 +959,7 @@ export const listarArquivosImportaveis = () =>
 export type ResultadoImportacao = {
   importadas: number;
   rejeitadas: number;
-  motivos: { linha: number; motivo: string }[];
+  motivos: { numero_linha: number; motivo: string }[];
 };
 
 /**
@@ -968,6 +968,25 @@ export type ResultadoImportacao = {
  * O servidor recusa qualquer caminho que escape da raiz; a interface nunca
  * monta caminho a mao nem oferece campo livre para isso.
  */
+/**
+ * Como o arquivo da pasta SERIA importado, sem gravar. `exige_confirmacao`
+ * diz que a importação vai recusar (409) até as colunas virarem perfil.
+ * O ajuste de colunas vale só aqui: a importação lê o perfil salvo, nunca
+ * um mapeamento enviado no corpo.
+ */
+export const previaImportacao = (caminho: string, opcoes: OpcoesDeLeitura = {}) =>
+  proteger(
+    escrever<PreviaLeitura & { exige_confirmacao: boolean }>(
+      "/conversas/importar/previa",
+      "POST",
+      {
+        caminho,
+        mapeamento: opcoes.mapeamento ?? null,
+        ordem_data: opcoes.ordemData ?? null,
+      },
+    ),
+  );
+
 export const importarArquivo = (caminho: string) =>
   proteger(
     escrever<ResultadoImportacao>("/conversas/importar", "POST", { caminho }),

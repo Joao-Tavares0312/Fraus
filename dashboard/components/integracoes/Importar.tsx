@@ -6,15 +6,28 @@ import { Download, FileUp, RefreshCw } from "lucide-react";
 import {
   importarArquivo,
   listarArquivosImportaveis,
+  previaImportacao,
+  salvarPerfilMapeamento,
   type ArquivoImportavel,
+  type MapeamentoConfirmado,
+  type OrdemData,
+  type PreviaLeitura,
   type ResultadoImportacao,
 } from "@/lib/api";
+import { ConferenciaDeColunas } from "@/components/analisar/ConferenciaDeColunas";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { EstadoVazio } from "@/components/EstadoVazio";
 
 /**
- * Importar um CSV pela interface.
+ * Importar um arquivo da pasta pela interface — qualquer formato que a
+ * leitura aceite.
+ *
+ * DESDE 15/09/2026 O BOTÃO PEDE A PRÉVIA ANTES. Formato reconhecido, ou com
+ * perfil salvo, importa direto como sempre. Colunas INFERIDAS abrem a mesma
+ * conferência da tela de Analisar (`ConferenciaDeColunas`, uma cópia só), e
+ * aqui confirmar é obrigatório: a API recusa com 409 coluna inferida sem
+ * perfil, porque o que a importação grava entra no NPS de todo mundo.
  *
  * Ate aqui a tela de Integracoes registrava de onde a conversa ENTRARIA e
  * mostrava o que ja tinha entrado, mas nao deixava trazer nada: o unico
@@ -45,6 +58,10 @@ export function Importar({
   const [resultado, setResultado] = useState<
     (ResultadoImportacao & { arquivo: string }) | null
   >(null);
+  /** Arquivo com colunas inferidas aguardando conferência. */
+  const [conferindo, setConferindo] = useState<
+    { caminho: string; previa: PreviaLeitura } | null
+  >(null);
 
   async function recarregar() {
     setOcupado("lista");
@@ -59,6 +76,60 @@ export function Importar({
     setOcupado(caminho);
     setErro(null);
     setResultado(null);
+    setConferindo(null);
+    const previa = await previaImportacao(caminho);
+    if (!previa.ok) {
+      setOcupado(null);
+      setErro(previa.erro);
+      return;
+    }
+    if (previa.dado.exige_confirmacao) {
+      setOcupado(null);
+      setConferindo({ caminho, previa: previa.dado });
+      return;
+    }
+    await gravar(caminho);
+  }
+
+  async function ajustar(mapeamento: MapeamentoConfirmado, ordemData: OrdemData | null) {
+    if (!conferindo) return;
+    setOcupado(conferindo.caminho);
+    const previa = await previaImportacao(conferindo.caminho, { mapeamento, ordemData });
+    setOcupado(null);
+    if (previa.ok) {
+      setErro(null);
+      setConferindo({ caminho: conferindo.caminho, previa: previa.dado });
+    } else {
+      setErro(previa.erro);
+    }
+  }
+
+  async function confirmar(
+    mapeamento: MapeamentoConfirmado,
+    ordemData: OrdemData | null,
+    salvarComo: string | null,
+  ) {
+    if (!conferindo?.previa.mapeamento || !salvarComo) return;
+    setOcupado(conferindo.caminho);
+    setErro(null);
+    const salvo = await salvarPerfilMapeamento({
+      nome: salvarComo,
+      colunas: conferindo.previa.mapeamento.colunas,
+      papeis: mapeamento,
+      ordem_data: ordemData,
+    });
+    if (!salvo.ok) {
+      setOcupado(null);
+      setErro(`O perfil não foi salvo, e sem ele a importação é recusada: ${salvo.erro}`);
+      return;
+    }
+    const caminho = conferindo.caminho;
+    setConferindo(null);
+    await gravar(caminho);
+  }
+
+  async function gravar(caminho: string) {
+    setOcupado(caminho);
     const resposta = await importarArquivo(caminho);
     setOcupado(null);
     if (!resposta.ok) {
@@ -79,7 +150,8 @@ export function Importar({
           <code className="num rounded-sm bg-muted px-1 py-0.5 text-foreground">
             {raiz}/
           </code>
-          . Coloque o CSV nessa pasta para ele aparecer aqui.
+          . Coloque o arquivo nessa pasta para ele aparecer aqui — CSV, planilha,
+          JSON ou export do WhatsApp.
         </p>
         <Button
           type="button"
@@ -122,10 +194,22 @@ export function Importar({
         </Alert>
       ) : null}
 
+      {conferindo ? (
+        <ConferenciaDeColunas
+          acao="importar"
+          previa={conferindo.previa}
+          ocupado={ocupado !== null}
+          nomeArquivo={conferindo.caminho.split("/").pop() ?? conferindo.caminho}
+          aoAjustar={ajustar}
+          aoConfirmar={confirmar}
+          aoCancelar={() => setConferindo(null)}
+        />
+      ) : null}
+
       {arquivos.length === 0 ? (
         <EstadoVazio
-          titulo="Nenhum CSV na pasta de importação"
-          explicacao={`A raiz de importação (${raiz}/) não tem nenhum arquivo .csv. Ela é a única pasta de onde o servidor aceita ler — caminho que escape dela é recusado com 400.`}
+          titulo="Nenhum arquivo na pasta de importação"
+          explicacao={`A raiz de importação (${raiz}/) não tem nenhum arquivo que a leitura aceite (.csv, .xlsx, .json, .txt, .docx, .pdf). Ela é a única pasta de onde o servidor aceita ler — caminho que escape dela é recusado com 400.`}
           endpoint="GET /integracoes/arquivos"
         />
       ) : (

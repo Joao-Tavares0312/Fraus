@@ -155,6 +155,15 @@ async def previa(
     extracao = await run_in_threadpool(
         extrair_ou_400, arquivo.filename or "arquivo", dados, opcoes
     )
+    return resumo_da_previa(extracao)
+
+
+def resumo_da_previa(extracao) -> dict:
+    """O que uma previa devolve -- a da analise e a da importacao, iguais.
+
+    Duas copias deste dicionario divergiriam na primeira chave nova, e a tela
+    de conferencia de colunas e UMA, usada pelas duas.
+    """
     return {
         "formato": extracao.formato,
         "tem_tempo": extracao.tem_tempo,

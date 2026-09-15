@@ -856,8 +856,11 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
   força da evidência (não "confiança" — não é probabilidade calibrada), a
   ordem da data quando ambígua, as primeiras linhas e "lembrar este
   mapeamento". Verificado na API real com Playwright, inclusive a 390px.
-- [ ] Levar a prévia para a **importação em lote** (hoje ela só serve a tela de
-  Analisar, que examina um atendimento por vez).
+- [x] **Prévia na importação em lote** — **feita em 15/09/2026**. A importação
+  lê qualquer formato pelo mesmo `extrair` da análise; colunas inferidas **só
+  gravam com perfil confirmado** (409 sem ele) e arquivo sem horário é recusado
+  (400). `POST /conversas/importar/previa` e a mesma conferência de colunas na
+  tela de Integrações. O corpo da importação segue só com `caminho`.
 - [x] **docx com tabela** — **feito em 15/09/2026**, sem MarkItDown: o
   `python-docx` já instalado lê a tabela, que passa pelo mapeador e recebe nota
   quando tem coluna de horário. Tabela sem cabeçalho (uma linha por fala) segue
@@ -907,7 +910,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 
 #### P2
 
-- [ ] Agregados de léxico por classe e tempo mediano de resposta no servidor.
+- [x] ~~Agregados de léxico por classe e tempo mediano~~ — já existiam (`/lexico`, `/indicadores`, com recorte `de`/`ate`); o item estava desatualizado.
 - [ ] Decisões: empresa fictícia, pin do `scikit-learn==1.6.1`, remover
   `content/fraus` da raiz.
 

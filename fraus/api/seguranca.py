@@ -223,7 +223,7 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
     """
     if caminho.startswith("/integracoes") or caminho == "/modelo" or caminho.startswith("/modelo/"):
         return True
-    if caminho in ("/conversas/importar", "/conversas/repontuar"):
+    if caminho in ("/conversas/importar", "/conversas/importar/previa", "/conversas/repontuar"):
         return True
     if caminho == "/configuracoes" and metodo != "GET":
         return True
