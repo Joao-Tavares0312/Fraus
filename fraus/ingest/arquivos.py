@@ -222,6 +222,41 @@ def _texto_do_docx(dados: bytes) -> str:
     return "\n".join(partes)
 
 
+# Uma tabela so e candidata a conversa com cabecalho e pelo menos duas falas.
+LINHAS_MINIMAS_TABELA_DOCX = 3
+
+
+def _tabela_do_docx(dados: bytes) -> list[list[str]] | None:
+    """A maior tabela do documento, se ela tiver cara de tabela -- ou None.
+
+    Transcricao exportada para Word costuma vir em TABELA com a hora numa
+    coluna. `_texto_do_docx` junta as celulas em "a: b" para a leitura em
+    prosa, e ali a hora vira parte do texto: a conversa ficava sem nota
+    mesmo tendo horario. Devolver a tabela deixa o mapeador achar a coluna.
+
+    Celula mesclada o python-docx repete por coluna; linha inteiramente vazia
+    sai. Quem decide se a tabela e de CONVERSA e o mapeador, nao esta funcao.
+    """
+    import docx
+
+    try:
+        documento = docx.Document(io.BytesIO(dados))
+    except Exception:
+        return None
+    melhor: list[list[str]] | None = None
+    for tabela in documento.tables:
+        linhas = [
+            [celula.text.strip() for celula in linha.cells]
+            for linha in tabela.rows
+        ]
+        linhas = [linha for linha in linhas if any(linha)]
+        if len(linhas) < LINHAS_MINIMAS_TABELA_DOCX or len(linhas[0]) < 2:
+            continue
+        if melhor is None or len(linhas) > len(melhor):
+            melhor = linhas
+    return melhor
+
+
 def _texto_do_pdf(dados: bytes) -> str:
     try:
         from pypdf import PdfReader
@@ -441,6 +476,23 @@ def extrair(nome: str, dados: bytes, opcoes: OpcoesDeLeitura | None = None) -> E
         return _de_tabela(_linhas_da_planilha(dados), "planilha", opcoes)
 
     if formato == "docx":
-        return _de_prosa(_texto_do_docx(dados), nome, "docx")
+        texto = _texto_do_docx(dados)  # guarda de bomba zip vem aqui, antes
+        tabela = _tabela_do_docx(dados)
+        # Primeira linha com "Cliente"/"Bot"/"Atendente" numa celula e FALA, nao
+        # cabecalho: a tabela de uma linha por fala sem titulo de coluna. Pelo
+        # mapeador ela perderia a primeira fala calada; como prosa, nao perde.
+        if tabela is not None and any(mapeador.papel_do_valor(c) for c in tabela[0]):
+            tabela = None
+        if tabela is not None:
+            try:
+                extracao = _mapeada(tabela[0], tabela[1:], "docx", opcoes)
+            except ArquivoIlegivelError:
+                # A tabela nao e de conversa (itens, valores, assinatura):
+                # o documento segue como transcricao, como sempre foi.
+                pass
+            else:
+                extracao.formato = "tabela em docx com colunas inferidas"
+                return extracao
+        return _de_prosa(texto, nome, "docx")
 
     return _de_prosa(_texto_do_pdf(dados), nome, "pdf")

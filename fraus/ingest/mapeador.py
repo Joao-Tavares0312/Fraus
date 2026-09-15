@@ -265,7 +265,7 @@ def _nota_nome(coluna: str, papel: str) -> float:
     return melhor
 
 
-def _papel_do_valor(valor: str) -> Autor | None:
+def papel_do_valor(valor: str) -> Autor | None:
     limpo = _normalizar(valor)
     for papel, formas in PAPEL_DO_AUTOR.items():
         for forma in formas:
@@ -300,7 +300,7 @@ def _perfil(valores: list[str]) -> _Perfil:
         distintos=len(contagem),
         frac_letras=sum(c.isalpha() for c in caracteres) / max(len(caracteres), 1),
         em_blocos=len(contagem) < len(cheios) and corridas == len(contagem),
-        frac_papel_reconhecido=sum(_papel_do_valor(v) is not None for v in cheios) / len(cheios),
+        frac_papel_reconhecido=sum(papel_do_valor(v) is not None for v in cheios) / len(cheios),
     )
 
 
@@ -417,7 +417,7 @@ def _decidir_autores(
     papeis: dict[str, Autor] = {}
     desconhecidos: list[str] = []
     for valor in dict.fromkeys(v for v in valores if v.strip()):
-        papel = _papel_do_valor(valor)
+        papel = papel_do_valor(valor)
         if papel:
             papeis[valor] = papel
         else:
