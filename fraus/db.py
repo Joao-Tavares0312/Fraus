@@ -914,6 +914,21 @@ class Banco:
             ).fetchall()
         return [{**dict(l), "motivos": json.loads(l["motivos"])} for l in linhas]
 
+    def assinatura_conversas(self) -> tuple[int, int]:
+        """Quantas conversas e quantos bytes de payload -- sem trazer payload.
+
+        Serve para saber se algo derivado do conjunto (a referencia de
+        vocabulario do `/analisar`) ainda vale, pagando um agregado no servidor
+        em vez de atravessar a rede com o banco inteiro. Nao e hash: uma edicao
+        que troque texto mantendo o tamanho exato passa sem ser vista, e o que
+        envelhece nesse caso e so o `destaque` do vocabulario, nunca uma nota.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(payload)), 0) AS t FROM conversas"
+            ).fetchone()
+        return int(linha["n"]), int(linha["t"])
+
     def todas(self) -> list[tuple[Conversa, float | None]]:
         with self._conectar() as conexao:
             linhas = conexao.execute("SELECT payload, score FROM conversas").fetchall()
