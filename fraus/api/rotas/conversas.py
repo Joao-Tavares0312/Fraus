@@ -302,7 +302,9 @@ def atribuir(
     if achado is None:
         raise HTTPException(status_code=404, detail="conversa nao encontrada")
     conversa, score, _categoria_gravada = achado
-    atribuicao = ctx.motor.atribuir_conversa(conversa)
+    atribuicao = ctx.motor.atribuir_conversa(
+        conversa, curadoria=ctx.curadoria_vigente()
+    )
     return {
         "conversa_id": conversa.id,
         "score": score,

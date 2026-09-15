@@ -35,7 +35,7 @@ def _probabilidades_deterministicas(texto: str) -> list[float]:
 class AtribuicaoDuble:
     """Parte de atribuicao comum aos dubles: probabilidade so na fala do cliente."""
 
-    def atribuir_conversa(self, conversa):
+    def atribuir_conversa(self, conversa, curadoria=None):
         mensagens = []
         for indice, mensagem in enumerate(conversa.mensagens):
             if mensagem.autor == "cliente":
@@ -70,7 +70,7 @@ class AtribuicaoDuble:
         """Peso global com sinal, determinístico -- sem fusor treinado de verdade."""
         return {nome: float((indice % 5) - 2) for indice, nome in enumerate(NOMES_FEATURES)}
 
-    def analisar_conversa(self, conversa, referencia=None) -> dict:
+    def analisar_conversa(self, conversa, referencia=None, curadoria=None) -> dict:
         """Analise avulsa do dublê: peso de palavra deterministico, sem modelo.
 
         O peso e o comprimento da palavra dividido por dez, com sinal positivo

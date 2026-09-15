@@ -60,7 +60,7 @@ class MotorEspiao(MotorFalso):
     def __init__(self) -> None:
         self.thread_da_analise: int | None = None
 
-    def analisar_conversa(self, conversa, referencia=None) -> dict:
+    def analisar_conversa(self, conversa, referencia=None, curadoria=None) -> dict:
         self.thread_da_analise = threading.get_ident()
         return super().analisar_conversa(conversa, referencia)
 

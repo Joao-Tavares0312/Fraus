@@ -367,9 +367,12 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
                 "assim, use a importacao."
             ),
         )
+    # Lida UMA vez para o lote: toda conversa desta resposta e explicada pelo
+    # mesmo lexico, e e o lexico vigente -- o mesmo que pontuaria a importacao.
+    curadoria = ctx.curadoria_vigente()
     analises = []
     for conversa in analisadas:
-        analise = ctx.motor.analisar_conversa(conversa, referencia)
+        analise = ctx.motor.analisar_conversa(conversa, referencia, curadoria=curadoria)
 
         # SEM HORARIO, SEM NOTA. Latencia e uma das 38 features do
         # fusor, com peso aprendido. Numa transcricao de Word ou PDF sem
