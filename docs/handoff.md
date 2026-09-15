@@ -237,7 +237,11 @@ Telas: `/` (visão geral), `/atendimentos`, `/analisar`, `/modelo`,
 concentra formatação (`formatarEsperaOuTraco` é quem transforma `null` em `—`).
 
 `components/CabecasDeLeitura.tsx` é **compartilhado** entre o simulador e a
-análise. Não faça uma segunda cópia: duas cópias de um painel que explica um
+análise. Desde 15/09/2026 ele desenha a **partitura da fala**
+(`components/PartituraDaFala.tsx`, lógica em `lib/partitura.ts`): classe,
+emoção e ironia no mesmo eixo 0–1, forma da nota dizendo a origem (cheia,
+vazada, tracejada) e o colchete de disputa abaixo de 0,15 de margem —
+número de interface, sem calibração. Não faça uma segunda cópia: duas cópias de um painel que explica um
 modelo envelhecem separadas, e a que envelhece é sempre a que ninguém olha.
 
 ---

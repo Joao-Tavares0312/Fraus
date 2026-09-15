@@ -14,7 +14,6 @@ import {
   type ResultadoAnalise,
 } from "@/lib/api";
 import {
-  BarraDeClasses,
   CabecasDeLeitura,
   LeituraDeEstilo,
 } from "@/components/CabecasDeLeitura";
@@ -33,6 +32,7 @@ import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { TextoComPesos } from "./TextoComPesos";
+import { formatarProbabilidade } from "@/lib/partitura";
 import { ConferenciaDeColunas } from "./ConferenciaDeColunas";
 
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
@@ -639,12 +639,12 @@ function SinaisDeLeitura({
         {emocaoTop ? (
           <span>
             emoção {emocaoTop[0]}{" "}
-            <span className="num">{emocaoTop[1].toFixed(2)}</span>
+            <span className="num">{formatarProbabilidade(emocaoTop[1])}</span>
           </span>
         ) : null}
         {mensagem.prob_ironia !== null ? (
           <span>
-            ironia <span className="num">{mensagem.prob_ironia.toFixed(2)}</span>{" "}
+            ironia <span className="num">{formatarProbabilidade(mensagem.prob_ironia)}</span>{" "}
             <span>(pouco confiável)</span>
           </span>
         ) : null}
@@ -655,19 +655,22 @@ function SinaisDeLeitura({
         {/* As três ou nenhuma: o servidor as deriva da MESMA previsão. Um
             `?? 0` aqui desenharia "0% insatisfeito" para uma ausência — a
             invariante 2 — no dia em que esse contrato mudar. */}
-        {mensagem.prob_insatisfeito !== null &&
-        mensagem.prob_neutro !== null &&
-        mensagem.prob_satisfeito !== null ? (
-          <BarraDeClasses
-            insatisfeito={mensagem.prob_insatisfeito}
-            neutro={mensagem.prob_neutro}
-            satisfeito={mensagem.prob_satisfeito}
-          />
-        ) : null}
+
         {/* Sem a prosa: ela vale UMA vez, na legenda do painel. Repetida em
             cada uma das dezenas de falas, viraria ruído e pararia de ser lida
             -- o oposto do que uma ressalva existe para fazer. */}
         <CabecasDeLeitura
+          classes={
+            mensagem.prob_insatisfeito !== null &&
+            mensagem.prob_neutro !== null &&
+            mensagem.prob_satisfeito !== null
+              ? {
+                  insatisfeito: mensagem.prob_insatisfeito,
+                  neutro: mensagem.prob_neutro,
+                  satisfeito: mensagem.prob_satisfeito,
+                }
+              : null
+          }
           emocao={mensagem.emocao}
           ironia={mensagem.prob_ironia}
           compacto
