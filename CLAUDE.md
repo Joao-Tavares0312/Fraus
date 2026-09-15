@@ -141,7 +141,10 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
     por classe fez o primeiro fusor marcar 99,3% lendo só o relógio, com o
     BERTimbau apagado. Distribuição por rótulo se sobrepõe; feature constante no
     treino nasce com peso zero. Acurácia alta demais é sintoma, não vitória —
-    ver `docs/treinamento.md`.
+    ver `docs/treinamento.md`. Desde 15/09/2026 as quatro features de espera
+    entram no vetor em `log1p` (`FEATURES_EM_LOG`, dentro de `vetorizar`) e o
+    artefato carrega a escala: `Fusor.carregar` recusa `fusor.joblib` treinado
+    em segundos crus, que teria as mesmas 39 features e daria nota errada.
 
 ## Convenções
 
