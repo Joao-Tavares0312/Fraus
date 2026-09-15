@@ -715,3 +715,39 @@ acoplamento**: a transformação precisa existir no notebook *e* no runtime, ou 
 score sai errado em silêncio. Um `fusor.joblib` treinado sem a compressão contra
 um runtime que comprime continua tendo `n_features_in_ = 39`, então
 `Fusor.carregar` **não pega** essa incompatibilidade.
+
+### As três saídas, medidas em 15/09/2026 — ainda sem decisão
+
+`scripts/medir_compressao_do_tempo.py` reproduz este notebook localmente (mesmo
+B2W, mesmas sementes, mesmo `montar_features`, extração por ONNX) e **confere a
+reprodução antes de medir**: acurácia 0,9500 nos dois, score diferindo no
+máximo 0,0001 do `fusor.joblib` vigente. Nada foi promovido.
+
+A coluna de espera é a frase canônica (texto 0,858 satisfeito, todo o resto na
+média do treino), com score, nota e categoria:
+
+| variante | acurácia | F1 | categorias ≠ vigente (de 300) | 60 s | 300 s | 600 s | 1800 s | 3 h |
+|---|---|---|---|---|---|---|---|---|
+| vigente | 0,9500 | 0,9501 | — | 99,9 · 10 P | 98,1 · 10 P | 44,5 · 4 D | 0,0 · 0 D | 0,0 · 0 D |
+| só `log1p` | 0,9467 | 0,9469 | 6 | 99,7 · 10 P | 96,6 · 10 P | 90,1 · 9 P | 59,5 · 6 D | 7,0 · 1 D |
+| só teto p99 | 0,9433 | 0,9434 | 1 | 99,9 · 10 P | 96,1 · 10 P | 18,4 · 2 D | 3,2 · 0 D | 3,2 · 0 D |
+| p99 + `log1p` | 0,9467 | 0,9469 | 5 | 99,7 · 10 P | 96,6 · 10 P | 90,7 · 9 P | 87,9 · 9 P | 87,9 · 9 P |
+
+O que a tabela muda na recomendação escrita acima:
+
+- **p99 + `log1p` conserta o relógio mandando sozinho apagando a espera longa.**
+  O teto do treino é ~7 min (`latencia_mediana_s` p99 = 424 s), então três horas
+  pesam o mesmo que dez minutos: a frase canônica, que é **irônica**, sai
+  promotor. Consertar um defeito criando o oposto não é conserto.
+- **Só teto** não resolve nada: o penhasco só muda de lugar (10 min → nota 2).
+- **Só `log1p`** é a única que mantém a espera **monótona e sem penhasco**: 10 min
+  ainda promotor, 30 min detrator 6, 3 h detrator 1 — o texto modula, o relógio
+  pesa cada vez mais devagar, e nenhum dos dois apaga o outro. Custa 0,33 ponto
+  de acurácia no teste sintético.
+- **Ablação da invariante 10:** só as quatro features de tempo acertam 0,513
+  (cru) e 0,527 (p99+log1p), contra 0,333 do acaso. O relógio carrega sinal do
+  rótulo no simulador por construção, e nenhuma das variantes muda isso.
+
+Promover qualquer uma continua exigindo as três partes indivisíveis acima
+(função única em `fraus/fusor.py`, artefato regerado, medição de categoria).
+
