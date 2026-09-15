@@ -40,6 +40,31 @@ CAMINHO_MODELO_TEXTO = artefato("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau
 CAMINHO_MODELO_EMOCAO = artefato("FRAUS_CAMINHO_MODELO_EMOCAO", "modelos/bertimbau-emocao")
 CAMINHO_MODELO_IRONIA = artefato("FRAUS_CAMINHO_MODELO_IRONIA", "modelos/bertimbau-ironia")
 CAMINHO_FUSOR = artefato("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib")
+
+# QUEM EXECUTA os tres BERTimbau: "torch" (os checkpoints de `modelos/`) ou
+# "onnx" (os grafos de `modelos-onnx/`, sem torch instalado). Nao ha deteccao
+# nem fallback: um backend escolhido pela PRESENCA de arquivo e o defeito que
+# `artefato` ja documenta, e cair do onnx para o torch em silencio seria servir
+# um executor que ninguem declarou (invariante 7). Valor desconhecido e erro no
+# boot, em `backend_declarado`.
+#
+# A variante aceita em docs/encolhimento.md: satisfacao e emocao em fp32 (as
+# duas pontuam e nao toleram int8) e ironia em int8 (nao pontua) -- 0 de 180
+# categorias trocadas, e ~1,5x mais rapida que o torch na mesma CPU.
+BACKENDS = ("torch", "onnx")
+CAMINHO_ONNX_TEXTO = artefato("FRAUS_CAMINHO_ONNX_TEXTO", "modelos-onnx/bertimbau-satisfacao")
+CAMINHO_ONNX_EMOCAO = artefato("FRAUS_CAMINHO_ONNX_EMOCAO", "modelos-onnx/bertimbau-emocao")
+CAMINHO_ONNX_IRONIA = artefato("FRAUS_CAMINHO_ONNX_IRONIA", "modelos-onnx/bertimbau-ironia")
+
+
+def backend_declarado() -> str:
+    """`FRAUS_BACKEND`, padrao "torch". Lido no boot, recusado se desconhecido."""
+    valor = (os.environ.get("FRAUS_BACKEND") or "torch").strip().lower()
+    if valor not in BACKENDS:
+        raise ValueError(
+            f"FRAUS_BACKEND={valor!r} nao existe. Use um de {BACKENDS}."
+        )
+    return valor
 # O BANCO nao entra na regra acima: ele nao e artefato de treino, e sim estado
 # de quem opera. `fraus.db` relativo ao cwd continua sendo o comportamento de
 # sempre, e `FRAUS_DATABASE_URL` e o caminho de deploy de verdade.

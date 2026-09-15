@@ -18,11 +18,9 @@ diferente da ironia em comentario de politica.
 
 from pathlib import Path
 
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from fraus.modelos import Conversa
-from fraus.sinais.texto import ModeloAusenteError
+from fraus.sinais.texto import ModeloAusenteError, carregar_torch, prever_torch
 
 # Ordem canonica das duas classes, valida no notebook 04 e aqui.
 NAO_IRONICO, IRONICO = 0, 1
@@ -38,25 +36,11 @@ class ClassificadorIronia:
                 "Rode notebooks/04_treino_ironia.ipynb e copie o artefato. "
                 "Ver docs/treinamento.md."
             )
-        try:
-            self._tokenizador = AutoTokenizer.from_pretrained(str(caminho_modelo))
-            self._modelo = AutoModelForSequenceClassification.from_pretrained(str(caminho_modelo))
-        except Exception as erro:
-            raise ModeloAusenteError(
-                f"Modelo de ironia em {caminho_modelo} ilegivel: {erro}"
-            ) from erro
-        self._modelo.eval()
+        self._tokenizador, self._modelo = carregar_torch(caminho_modelo, "Modelo de ironia")
 
-    @torch.inference_mode()
     def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
         """Probabilidades [nao_ironico, ironico] para cada texto."""
-        if not textos:
-            return []
-        entradas = self._tokenizador(
-            textos, truncation=True, max_length=TAMANHO_MAXIMO, padding=True, return_tensors="pt"
-        )
-        logits = self._modelo(**entradas).logits
-        return torch.softmax(logits, dim=-1).tolist()
+        return prever_torch(self._tokenizador, self._modelo, textos)
 
 
 def features_ironia(conversa: Conversa, classificador) -> dict[str, float]:
