@@ -102,6 +102,7 @@ nav:
   - Conformidade (AI Act): conformidade.md
   - Encolher os modelos: encolhimento.md
   - Limitações conhecidas: limitacoes.md
+  - Cartão do modelo: cartao-do-modelo.md
   - Referência de código:
       - Indicadores: referencia/indicadores.md
       - Modelo canônico: referencia/modelos.md
