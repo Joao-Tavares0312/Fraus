@@ -70,8 +70,9 @@ O que a tabela diz, e o que ela **não** pode dizer:
    família de defeito da invariante 10. Em atendimento real, onde emoji é mais
    raro, **espere o número da linha "sem"**, não o da "com".
 3. **A fatia de latência é parcialmente circular** pelo mesmo motivo: o
-   simulador sorteia a latência por rótulo. O F1 menor acima de 180 s é
-   compatível com o problema já medido do relógio dominando a nota
+   simulador sorteia a latência por rótulo. O F1 menor acima de 180 s é a
+   fatia a acompanhar: mesmo com a espera em `log1p` desde 15/09/2026, o relógio
+   ainda empata com o texto por volta de 10 min
    (`scripts/medir_dominio_do_tempo.py`).
 
 ## Conversa só de cortesia — sem sinal desde 15/09/2026
@@ -120,7 +121,7 @@ completa, fala a fala, sai do script.
   distribuições da literatura, não de atendimento observado.
 - **Texto fora de domínio.** Satisfação aprendeu com resenha de produto; emoção,
   com Reddit traduzido por máquina.
-- **Acurácia alta é sintoma, não vitória** (invariante 10). Os 0,95 e 0,94 acima
+- **Acurácia alta é sintoma, não vitória** (invariante 10). Os 0,947 e 0,940 acima
   são de domínio sintético e devem ser lidos como teto, nunca como expectativa.
 
 Ver também [Limitações conhecidas](limitacoes.md).
