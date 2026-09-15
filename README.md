@@ -858,7 +858,11 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
   mapeamento". Verificado na API real com Playwright, inclusive a 390px.
 - [ ] Levar a prévia para a **importação em lote** (hoje ela só serve a tela de
   Analisar, que examina um atendimento por vez).
-- [ ] MarkItDown para docx/pdf com tabela.
+- [x] **docx com tabela** — **feito em 15/09/2026**, sem MarkItDown: o
+  `python-docx` já instalado lê a tabela, que passa pelo mapeador e recebe nota
+  quando tem coluna de horário. Tabela sem cabeçalho (uma linha por fala) segue
+  como prosa, para não perder a primeira fala. **PDF com tabela fica de fora**:
+  exigiria extração de layout pesada, e PDF de atendimento raramente traz hora.
 - [ ] Fixtures de **exports reais** (Discord, Telegram, Zendesk, Blip) — os testes de 14/09 cobrem WhatsApp, JSON aninhado e CSV `;` em cp1252 sintéticos. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
   texto e autor identificáveis.
 
