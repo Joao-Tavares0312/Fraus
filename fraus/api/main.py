@@ -37,7 +37,9 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 RAIZ_IMPORTACAO, backend_declarado)
 from fraus.api.contexto import Contexto
 from fraus.api.primeiro_uso import ligar_no_primeiro_uso
-from fraus.api.limites import TETO_CORPO, registrar_middleware_de_corpo  # TETO_CORPO reexportado para os testes
+from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os testes
+                               registrar_cabecalhos_de_seguranca,
+                               registrar_middleware_de_corpo)
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
 from fraus.api.rotas import (acesso, analise, auth, configuracoes, conversas,
                              grafo, indicadores, ingestao, integracoes, lexico, perfis,
@@ -159,6 +161,9 @@ def criar_app(
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
     )
+    # O ultimo registrado e o mais externo: cobre inclusive o que o CORS, o
+    # acesso e o teto de corpo recusam antes de chegar a rota.
+    registrar_cabecalhos_de_seguranca(app)
 
     app.include_router(saude.router)
     app.include_router(conversas.router)

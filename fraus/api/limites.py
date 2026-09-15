@@ -109,3 +109,42 @@ def registrar_middleware_de_corpo(app: FastAPI) -> None:
     """Recusa 413 por `Content-Length` acima do teto, antes de ler o corpo, e
     por bytes contados quando o corpo chega sem tamanho declarado."""
     app.add_middleware(_TetoDeCorpo)
+
+
+# Cabecalhos de TODA resposta. A API devolve fala de cliente, que e dado pessoal:
+# `no-store` impede proxy e navegador de guardarem a transcricao; `nosniff`
+# impede o navegador de reinterpretar JSON como HTML; `no-referrer` nao vaza a
+# URL (com id de conversa) para terceiros. `setdefault`: rota que declare a
+# propria politica de cache continua mandando.
+CABECALHOS_DE_SEGURANCA = (
+    (b"cache-control", b"no-store"),
+    (b"x-content-type-options", b"nosniff"),
+    (b"referrer-policy", b"no-referrer"),
+)
+
+
+class _CabecalhosDeSeguranca:
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_com_cabecalhos(mensagem):
+            if mensagem["type"] == "http.response.start":
+                cabecalhos = list(mensagem.get("headers") or [])
+                presentes = {nome.lower() for nome, _ in cabecalhos}
+                for nome, valor in CABECALHOS_DE_SEGURANCA:
+                    if nome not in presentes:
+                        cabecalhos.append((nome, valor))
+                mensagem = {**mensagem, "headers": cabecalhos}
+            await send(mensagem)
+
+        await self.app(scope, receive, send_com_cabecalhos)
+
+
+def registrar_cabecalhos_de_seguranca(app: FastAPI) -> None:
+    """Registrar POR ULTIMO: o mais externo, para cobrir tambem 401, 413 e CORS."""
+    app.add_middleware(_CabecalhosDeSeguranca)
