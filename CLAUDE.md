@@ -54,6 +54,10 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/sinais/ironia.py` | cabeça binária (IDPT 2021) |
 | `fraus/sinais/estilo.py` | caixa alta, pontuação, alongamento, palavrão, censura |
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex e o ranking de emoji |
+| `fraus/cortesia.py` | "ok, obrigado" sozinho é **sem sinal**, não promotor — `Conversa.tem_sinal_cliente` |
+| `fraus/fatias.py` | avaliação por fatia (parte pura); `scripts/avaliar_por_fatias.py` alimenta `docs/cartao-do-modelo.md` |
+| `fraus/api/repontuacao.py` | repontuar em segundo plano, com progresso e 409 se já rodando |
+| `scripts/retreinar_fusor_local.py` | reproduz o notebook 02 em CPU e só grava o fusor com `--promover` |
 | `fraus/api/rotas/lexico.py` | cadastrar, listar e revogar termo curado |
 | `fraus/assinatura.py` | HMAC do webhook — o segredo mora no ambiente, nunca no banco |
 | `fraus/api/vazao.py` | dois tetos: `/auth/*` por IP em middleware, `/ingestao` por fonte na rota |

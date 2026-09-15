@@ -26,6 +26,25 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 ## 2. Estado atual — 08/09/2026
 
+> **Atualização de 15/09/2026 (branch `feat/leva-1-api`, uma PR só).** Leia antes
+> do resto desta seção, porque três coisas mudaram o que o sistema faz:
+>
+> 1. **A espera entra no fusor em `log1p`** (`FEATURES_EM_LOG` em `vetorizar`) e
+>    o `fusor.joblib` foi **regerado** (acurácia 0,9467). O artefato carrega a
+>    escala; `Fusor.carregar` **recusa** um de antes. Toda cópia do artefato
+>    (VM, Drive) precisa ser regerada com `scripts/retreinar_fusor_local.py
+>    --promover` ou pelo notebook 02. O P0 do tempo (§7) está resolvido.
+> 2. **Conversa só de cortesia é sem sinal** (`fraus/cortesia.py`): "valeu"
+>    sozinho saía promotor. O servidor manda `motivo_sem_sinal`.
+> 3. **O banco existente está na régua anterior.** `/indicadores` ganhou
+>    `pontuadas_com_regua_antiga` (léxico **ou** modelo), e o aviso da visão
+>    geral oferece repontuar — agora **em segundo plano**, com progresso.
+>
+> E também: `FRAUS_BACKEND=onnx` (sem torch, 1,5× mais rápido, 0 categorias
+> trocadas; torch virou extra), CI rodando a suíte em SQLite **e** Postgres,
+> teto de corpo para `chunked`, cabeçalhos `no-store`/`nosniff`, e o
+> [cartão do modelo](cartao-do-modelo.md) com avaliação por fatias.
+
 | | |
 |---|---|
 | Testes | **909 passed, 1 deselected** (Python) · **77** (front, 8 arquivos) — 14/09/2026 |
@@ -203,7 +222,11 @@ lista, ela para de ser lida.
 
 | arquivo | o que é |
 |---|---|
-| `modelos.py` | modelo canônico: `Conversa`, `Mensagem`. Timestamp **timezone-aware** obrigatório |
+| `modelos.py` | modelo canônico: `Conversa`, `Mensagem`. Timestamp **timezone-aware** obrigatório. `tem_fala_cliente` (operação) ≠ `tem_sinal_cliente` (nota) |
+| `cortesia.py` | fórmulas de cortesia: conversa só com elas é **sem sinal** (15/09/2026) |
+| `fatias.py` | avaliação por fatia, parte pura — `scripts/avaliar_por_fatias.py` roda os modelos |
+| `sinais/onnx.py` | o mesmo checkpoint no ONNX Runtime (`FRAUS_BACKEND=onnx`) |
+| `api/repontuacao.py` | repontuar em segundo plano, um trabalho por processo, progresso em `GET /conversas/repontuar` |
 | `fusor.py` | `LogisticRegression` + `StandardScaler`. `NOMES_FEATURES` é o contrato de 39 |
 | `resumo.py` | ficha operacional: contagem por autor, latências **separadas** bot/humano, `desfecho` |
 | `indicadores.py` | NPS, CSAT, contenção, série diária |
@@ -455,7 +478,13 @@ não há contradição a marcar, acima o modelo já acerta sozinho. **O "99,93" 
 circulava aqui era o caso rápido** — com três horas dentro do log a conversa
 pontua 0,00, e faltava esse qualificador em todo lugar.
 
-### P0 — O tempo domina o score fora da distribuição de treino
+### Feita (15/09/2026) — O tempo domina o score fora da distribuição de treino
+
+**Resolvido com `log1p` sem teto** — as três saídas foram medidas contra o fusor
+reproduzido e o teto p99 foi recusado (fazia 3 h pesarem o mesmo que 10 min);
+tabela e números em `docs/treinamento.md`. O relógio agora empata com o texto em
+613 s e com 3 h pesa 2,1× o texto (antes 20×). O texto abaixo é o registro do
+achado.
 
 **Achado de 08/09/2026, e é maior que o trabalho que o encontrou.** Atribuição
 de uma conversa com 3 h de espera e uma única fala do cliente que a cabeça de
