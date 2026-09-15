@@ -48,6 +48,9 @@ IRONIA_DE_MANUAL = "Que atendimento maravilhoso, so esperei 3 horas."
 def classificador():
     if not CAMINHO_MODELO.is_dir():
         pytest.skip(f"modelo de ironia ausente em {CAMINHO_MODELO} (pesos fora do git)")
+    # O torch virou extra (`uv sync --extra torch`): peso no disco sem o
+    # executor e o mesmo caso de peso ausente para este teste.
+    pytest.importorskip("torch", reason="torch nao instalado (extra `torch`)")
     from fraus.sinais.ironia import ClassificadorIronia
 
     return ClassificadorIronia(CAMINHO_MODELO)

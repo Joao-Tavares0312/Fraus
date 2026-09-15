@@ -79,6 +79,11 @@ class SessaoOnnx:
             # usar os nucleos. 0 = o runtime escolhe (nucleos fisicos).
             opcoes = onnxruntime.SessionOptions()
             opcoes.intra_op_num_threads = int(os.environ.get("FRAUS_ONNX_THREADS", "0"))
+            # Sem arena: o alocador de CPU do runtime reserva blocos e nao os
+            # devolve. Medido em 15/09/2026 com o app montado e 30 conversas:
+            # pico 1.445 MB -> 1.347 MB, mesmos scores, sem perder velocidade
+            # (180 conversas em 33 s contra 35 s).
+            opcoes.enable_cpu_mem_arena = False
             opcoes.graph_optimization_level = (
                 onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
             )

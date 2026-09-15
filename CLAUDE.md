@@ -45,7 +45,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/modelos.py` | `Conversa` / `Mensagem` — modelo canônico |
 | `fraus/ingest/csv_driver.py` | CSV → conversas, isolando linha malformada |
 | `fraus/ingest/simulador.py` | conversas sintéticas determinísticas (treino do sinal de tempo) |
-| `fraus/sinais/texto.py` | BERTimbau, probabilidade **por mensagem** |
+| `fraus/sinais/texto.py` | BERTimbau, probabilidade **por mensagem** (torch importado só se usado) |
+| `fraus/sinais/onnx.py` | o mesmo checkpoint no ONNX Runtime — `FRAUS_BACKEND=onnx`, ver `docs/encolhimento.md` |
 | `fraus/sinais/emoji.py` | lexicon + posição relativa |
 | `fraus/sinais/tempo.py` | latência, escalação, abandono |
 | `fraus/sinais/emocao.py` | 7 classes de emoção; desprezo derivado da díade raiva+nojo |
@@ -73,10 +74,12 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 ## Comandos
 
 ```bash
-uv sync --extra dev              # `uv sync` puro REMOVE o pytest (grupo dev é opt-in)
+uv sync --extra dev --extra torch   # `uv sync` puro REMOVE o pytest e o torch (os dois são extras)
+uv sync --extra dev --extra onnx    # alternativa sem torch: FRAUS_BACKEND=onnx lê modelos-onnx/
 uv run pytest -q
 uv run python scripts/api_demo.py      # API de demonstração, sem modelo
-uv run uvicorn fraus.api.main:app      # API real — exige modelos/ treinado
+uv run uvicorn fraus.api.main:app      # API real — exige modelos/ treinado (FRAUS_BACKEND=torch, padrão)
+FRAUS_BACKEND=onnx uv run uvicorn fraus.api.main:app   # sem torch — exige modelos-onnx/ e o fusor de modelos/
 cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há package.json na raiz
 
 uv sync --extra docs                   # gerador do site (extra opt-in, como o dev)

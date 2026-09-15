@@ -16,6 +16,14 @@
 
 FROM python:3.12-slim
 
+# QUEM EXECUTA OS MODELOS. `torch` (padrao) monta a imagem com o torch de CPU e
+# le os checkpoints de /modelos. `onnx` NAO instala torch, le os grafos de
+# /modelos-onnx (gerados por scripts/encolher_modelos.py) e mede menos RAM de
+# pico -- 1.347 MB contra 1.848 MB em 15/09/2026, ver docs/encolhimento.md:
+#
+#   docker build --build-arg BACKEND=onnx -t fraus-api .
+ARG BACKEND=torch
+
 # libgomp: o torch de CPU precisa dele em runtime e a imagem slim nao traz.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
@@ -70,7 +78,9 @@ WORKDIR /app
 # fica em cache e uma mudanca de codigo nao a reinstala.
 COPY pyproject.toml README.md ./
 RUN set -eux; \
-    if [ "$(uname -m)" = "aarch64" ]; then \
+    if [ "$BACKEND" != "torch" ]; then \
+        echo "BACKEND=$BACKEND: sem torch"; \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
         pip install --no-cache-dir "torch==2.10.*"; \
     else \
         pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu; \
@@ -93,9 +103,18 @@ COPY fraus/ ./fraus/
 # O `scikit-learn==1.6.1` continua PINADO, no pyproject: e a versao que gerou o
 # `fusor.joblib`, e outra desserializa com aviso de que o resultado PODE ser
 # invalido -- score silenciosamente errado e o pior defeito possivel aqui.
-RUN pip install --no-cache-dir .
+RUN set -eux; \
+    if [ "$BACKEND" = "onnx" ]; then \
+        pip install --no-cache-dir .[onnx]; \
+    else \
+        pip install --no-cache-dir .; \
+    fi
 
-ENV FRAUS_CAMINHO_MODELO_TEXTO=/modelos/bertimbau-satisfacao \
+ENV FRAUS_BACKEND=${BACKEND} \
+    FRAUS_CAMINHO_ONNX_TEXTO=/modelos-onnx/bertimbau-satisfacao \
+    FRAUS_CAMINHO_ONNX_EMOCAO=/modelos-onnx/bertimbau-emocao \
+    FRAUS_CAMINHO_ONNX_IRONIA=/modelos-onnx/bertimbau-ironia \
+    FRAUS_CAMINHO_MODELO_TEXTO=/modelos/bertimbau-satisfacao \
     FRAUS_CAMINHO_MODELO_EMOCAO=/modelos/bertimbau-emocao \
     FRAUS_CAMINHO_MODELO_IRONIA=/modelos/bertimbau-ironia \
     FRAUS_CAMINHO_FUSOR=/modelos/fusor.joblib \

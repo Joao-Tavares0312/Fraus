@@ -174,6 +174,66 @@ encoder compartilhado com três cabeças de classificação daria ~416 MB em pre
 cheia — cabe em 1 GB sem quantizar nada e sem risco de veredito. O preço é
 retreino, e portanto a invariante 10 de novo; não é ajuste de deploy.
 
+## O backend ONNX em produção, medido em 15/09/2026
+
+A variante aceita acima (satisfação e emoção fp32, ironia int8) virou um
+executor de verdade: `FRAUS_BACKEND=onnx`. O padrão continua `torch`, e não há
+detecção nem fallback — backend desconhecido ou grafo ausente derruba o boot
+(invariante 7). O `torch` saiu das dependências principais para o extra
+`torch`, e o import dele ficou preguiçoso: `fraus.motor` não o arrasta mais
+(há teste para isso).
+
+Isso destravou a **medição de RAM que estava pendente**, agora numa venv sem
+torch instalado (`uv sync --extra dev --extra onnx`), com o app montado por
+`criar_app_padrao` e 30 conversas atribuídas:
+
+| executor | pico de RSS | 180 conversas (`atribuir`) | categorias trocadas |
+|---|---|---|---|
+| torch | 1.848 MB | 53,7 s | referência |
+| ONNX, 1 thread (config antiga) | — | 45,2 s | 0 |
+| ONNX, todos os núcleos | 1.445 MB | 35,0 s | 0 |
+| **ONNX, todos os núcleos, sem arena** | **1.347 MB** | **33,2 s** | **0** |
+
+Desvio máximo de score contra o torch: `6,5e-5`. A venv sem torch ocupa 430 MB
+contra 5,0 GB, e a imagem Docker `--build-arg BACKEND=onnx` mede **995 MB**,
+já com o motor real respondendo `/analisar`.
+
+Duas coisas contrariam a intuição e foram medidas, não supostas:
+
+1. **A fusão offline `-O2` do otimizador de transformers saiu mais lenta**
+   (41,2 s contra 35,0 s), embora tenha fundido tudo (12 `Attention`, 24
+   `SkipLayerNormalization`, 12 `BiasGelu`, GELU exata). A sessão já roda com
+   `ORT_ENABLE_ALL`, que funde na carga; o grafo pré-fundido só perde otimizações
+   que o runtime faria por conta própria. **Recusada.**
+2. **`intra_op_num_threads = 1` era o gargalo.** Fazia sentido quando várias
+   requisições podiam entrar no modelo juntas. Agora o `Motor` deixa uma passada
+   por vez (`FRAUS_INFERENCIAS_SIMULTANEAS`), e a passada usa os núcleos
+   (`FRAUS_ONNX_THREADS`, padrão 0 = o runtime escolhe).
+
+### Emoção com int8 só nos pesos — aceita pelo portão, não promovida por padrão
+
+A int8 recusada acima é **dinâmica**: quantiza pesos *e* computa as ativações
+em int8. A variante `--precisao int8-pesos` (`MatMulNBits`, 8 bits, blocos de
+32, simétrica) guarda os pesos em int8 e mantém a ativação em fp32. Aplicada só
+à emoção, com satisfação fp32 e ironia int8, nas mesmas 180 conversas:
+
+| | ONNX aceito (emoção fp32) | **emoção int8-pesos** |
+|---|---|---|
+| peso da emoção | 417 MB | **184 MB** |
+| pico de RSS da API | 1.347 MB | **1.056 MB** |
+| 180 conversas (`atribuir`) | 33,2 s | 49,6 s |
+| desvio máximo de score | 0,0001 | **0,51 ponto** |
+| notas / categorias trocadas | 0 / 0 | **0 / 0** |
+
+Ela passa no portão (zero categorias) e no do script (Δp 0,0148 < 0,02). Mas,
+ao contrário do fp32, **não é o mesmo número**: meio ponto de score é margem
+que uma conversa encostada na fronteira 6/7 ou 8/9 pode atravessar num corpus
+maior que as 180. Por isso ela fica disponível e documentada, **não** como o
+padrão de `modelos-onnx/`. E 1.056 MB **ainda não cabe** numa máquina de 1 GB,
+então ela não resolve o caso que justificaria o risco.
+
+A conclusão sobre o encoder compartilhado abaixo não mudou.
+
 ## O que sobra como caminho
 
 | caminho | tamanho estimado | fidelidade | cabe em 500 MB? |
