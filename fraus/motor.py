@@ -5,6 +5,9 @@ por acidente de crescimento, e a borda da API nao e lugar de regra de modelo:
 quem chama o Motor e a rota, nao o contrario.
 """
 
+import os
+import threading
+
 from fraus.deriva import resumo_de_deriva
 from fraus.fusor import Fusor, montar_features
 from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
@@ -15,6 +18,49 @@ from fraus.sinais.ironia import IRONICO, ClassificadorIronia
 from fraus.sinais.palavras import pesos_das_palavras, vocabulario
 from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
                                 ClassificadorTexto)
+
+
+class _Guardado:
+    """Classificador atras de um semaforo compartilhado pelas tres cabecas.
+
+    O FastAPI atende rota sincrona num threadpool de ate 40 threads, e cada
+    passada do torch ja usa todos os nucleos por dentro. Quatro requisicoes
+    rodando BERTimbau juntas nao terminam quatro vezes mais rapido: disputam os
+    mesmos nucleos e TODAS ficam lentas. Com o teto, a fila fica do lado de
+    fora do modelo e a latencia de cada passada volta a ser previsivel.
+    """
+
+    def __init__(self, classificador, semaforo: threading.Semaphore) -> None:
+        self._classificador = classificador
+        self._semaforo = semaforo
+
+    def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
+        with self._semaforo:
+            return self._classificador.prever_mensagens(textos)
+
+
+class _Memoria:
+    """Previsoes de UMA pergunta ao Motor, para nao classificar a mesma fala 2x.
+
+    A chave e a LISTA inteira de textos, e nao cada texto: o BERTimbau roda em
+    lote com padding pela mensagem mais longa, e a mesma frase em lotes
+    diferentes pode sair com diferenca de arredondamento. Reaproveitar so o
+    lote identico garante numero identico ao de antes -- o que muda e so
+    quantas vezes a conta e feita.
+
+    Vive o tempo de uma chamada e morre com ela: nunca e atributo do Motor,
+    pelo mesmo motivo que a curadoria nao e.
+    """
+
+    def __init__(self, classificador) -> None:
+        self._classificador = classificador
+        self._lotes: dict[tuple[str, ...], list[list[float]]] = {}
+
+    def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
+        chave = tuple(textos)
+        if chave not in self._lotes:
+            self._lotes[chave] = self._classificador.prever_mensagens(textos)
+        return self._lotes[chave]
 
 
 class Motor:
@@ -42,12 +88,17 @@ class Motor:
         emocao: ClassificadorEmocao,
         ironia: ClassificadorIronia,
     ) -> None:
-        self._classificador = classificador
+        # Quantas passadas de modelo ao mesmo tempo, somando as tres cabecas.
+        # 1 e o certo para CPU: o torch ja paraleliza cada passada por dentro.
+        semaforo = threading.Semaphore(
+            int(os.environ.get("FRAUS_INFERENCIAS_SIMULTANEAS", "1"))
+        )
+        self._classificador = _Guardado(classificador, semaforo)
         self._fusor = fusor
-        self._emocao = emocao
-        self._ironia = ironia
+        self._emocao = _Guardado(emocao, semaforo)
+        self._ironia = _Guardado(ironia, semaforo)
 
-    def _emocao_de(self, textos: list[str]) -> list[dict] | None:
+    def _emocao_de(self, textos: list[str], classificador=None) -> list[dict] | None:
         """Sete probabilidades mais o desprezo da diade, por texto.
 
         `None` quando nao ha texto de cliente para classificar (`not textos`) --
@@ -56,7 +107,7 @@ class Motor:
         """
         if not textos:
             return None
-        previsoes = self._emocao.prever_mensagens(textos)
+        previsoes = (classificador or self._emocao).prever_mensagens(textos)
         return [
             {
                 **{nome: float(p[i]) for i, nome in enumerate(NOMES_EMOCOES)},
@@ -96,6 +147,9 @@ class Motor:
         )
 
     def atribuir_conversa(self, conversa, curadoria=None) -> dict:
+        return self._atribuir(conversa, curadoria)[0]
+
+    def _atribuir(self, conversa, curadoria=None) -> tuple[dict, dict | None]:
         """Quebra a nota por mensagem: quem falou o que, e com que probabilidade.
 
         SO a fala do cliente recebe probabilidade -- bot e humano vem com os
@@ -123,13 +177,15 @@ class Motor:
         textos_do_cliente = [
             conversa.mensagens[indice].texto for indice in indices_do_cliente
         ]
-        probabilidades = self._classificador.prever_mensagens(textos_do_cliente)
+        texto = _Memoria(self._classificador)
+        emocao = _Memoria(self._emocao)
+        probabilidades = texto.prever_mensagens(textos_do_cliente)
         por_indice = dict(zip(indices_do_cliente, probabilidades))
 
         # Mesma regra das probabilidades de satisfacao: so a fala do CLIENTE.
         # As tres cabecas foram fine-tunadas em texto de cliente, e rodar
         # qualquer uma na fala do bot devolveria numero sem lastro.
-        emocoes = self._emocao_de(textos_do_cliente)
+        emocoes = self._emocao_de(textos_do_cliente, emocao)
         ironias = self._ironia_de(textos_do_cliente)
         emocao_por_indice = dict(zip(indices_do_cliente, emocoes or []))
         ironia_por_indice = dict(zip(indices_do_cliente, ironias or []))
@@ -159,14 +215,14 @@ class Motor:
                 }
             )
 
-        contribuicoes = None
+        contribuicoes = features = None
         if conversa.tem_sinal_cliente:
             # A MESMA curadoria que pontua: se a atribuicao usasse outro lexico
             # que o score, a tela explicaria a nota com evidencia que nao a
             # produziu -- pior que nao explicar.
-            features = montar_features(
-                conversa, self._classificador, self._emocao, curadoria
-            )
+            # `texto`/`emocao` ja tem o lote da fala do cliente: montar o vetor
+            # nao roda os modelos de novo.
+            features = montar_features(conversa, texto, emocao, curadoria)
             contribuicoes = self._fusor.contribuicoes(features)
 
         return {
@@ -187,7 +243,7 @@ class Motor:
             # sumir com o campo trocaria "nao ha nenhum" por "campo ausente",
             # que e outra coisa.
             "sinais_fora_do_score": ["prob_ironia"],
-        }
+        }, features
 
     def deriva_da_amostra(self, conversas, curadoria=None) -> dict | None:
         """Quais features desta amostra sairam da faixa de treino do fusor.
@@ -236,7 +292,7 @@ class Motor:
         palavra do roteiro do bot "empurra a nota" produziria um numero
         bonito e sem lastro.
         """
-        atribuicao = self.atribuir_conversa(conversa, curadoria)
+        atribuicao, features = self._atribuir(conversa, curadoria)
         for mensagem in atribuicao["mensagens"]:
             mensagem["palavras"] = (
                 pesos_das_palavras(mensagem["texto"], self._classificador)
@@ -244,7 +300,10 @@ class Motor:
                 else None
             )
 
-        score = self.pontuar_conversa(conversa, curadoria)
+        # O vetor da atribuicao e o mesmo que `pontuar_conversa` montaria:
+        # mesma conversa, mesma curadoria, mesmo lote. Repontuar era a terceira
+        # passada dos modelos pelo mesmo texto.
+        score = self._fusor.pontuar(features) if features is not None else None
         return {
             **atribuicao,
             "score": score,
