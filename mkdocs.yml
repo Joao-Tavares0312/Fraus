@@ -66,7 +66,15 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      # Ativa ```mermaid``` como diagrama renderizado, nao bloco de texto.
+      # O Material troca a classe pelo elemento <pre class="mermaid"> e o
+      # tema JA EMBUTE o mermaid.js -- nao precisa de extra_javascript nem
+      # de plugin Python novo, entao `uv sync --extra docs` nao muda.
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
 
