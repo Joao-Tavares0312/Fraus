@@ -10,7 +10,7 @@
  */
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap " +
+  "botao-vitrine-base relative isolate overflow-hidden inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap " +
   "transition-all duration-150 ease-fluid outline-none select-none " +
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 " +
   "focus-visible:ring-offset-background active:translate-y-px " +
@@ -19,19 +19,19 @@ const BASE =
 /** CTA principal: dourado cheio, 48px de altura. */
 export const botaoVitrine =
   BASE +
-  " h-12 rounded-[10px] bg-primary px-6 text-base text-primary-foreground hover:bg-primary/85";
+  " botao-vitrine-primario h-12 rounded-[10px] bg-primary px-6 text-base text-primary-foreground";
 
 /** Ação secundária ao lado do CTA: contorno, mesma estatura. */
 export const botaoVitrineContorno =
   BASE +
-  " h-12 rounded-[10px] border border-border bg-transparent px-6 text-base text-foreground hover:border-primary/50 hover:text-primary";
+  " botao-vitrine-contorno h-12 rounded-[10px] border border-border bg-transparent px-6 text-base text-foreground";
 
 /** A versão do header fixo: mesma família, um degrau menor. */
 export const botaoVitrineMiudo =
   BASE +
-  " h-9 rounded-[8px] bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/85";
+  " botao-vitrine-primario h-9 rounded-[8px] bg-primary px-4 text-sm text-primary-foreground";
 
 /** Link discreto do header (ex.: criar conta). */
 export const botaoVitrineFantasma =
   BASE +
-  " h-9 rounded-[8px] px-3 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground";
+  " botao-vitrine-fantasma h-9 rounded-[8px] px-3 text-sm text-muted-foreground";

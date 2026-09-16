@@ -1088,6 +1088,93 @@
     text-transform: uppercase;
   }
 
+  .orbita-fraus::before,
+  .orbita-fraus::after {
+    content: "";
+    position: absolute;
+    inset: 12%;
+    border-radius: 999px;
+    border-top: 1px solid var(--medido);
+    border-bottom: 1px solid transparent;
+    transform: rotate(-18deg) scaleY(0.46);
+    opacity: 0.46;
+  }
+
+  .orbita-fraus::after {
+    inset: 25%;
+    border-top-color: var(--dito);
+    transform: rotate(24deg) scaleY(0.52);
+    opacity: 0.34;
+  }
+
+  .orbita-fraus__eixo {
+    transform: scaleY(0.46) rotate(-18deg);
+  }
+
+  .orbita-fraus-cena {
+    animation: orbita-deriva 9s ease-in-out infinite;
+  }
+
+  @keyframes orbita-deriva {
+    0%, 100% { transform: translate3d(0, -4px, 0) rotate(-0.35deg); }
+    50% { transform: translate3d(0, 7px, 0) rotate(0.45deg); }
+  }
+
+  .botao-vitrine-base::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 22%, oklch(1 0 0 / 34%) 48%, transparent 74%);
+    transform: translateX(-140%);
+    transition: transform 520ms var(--ease-fluid);
+  }
+
+  .botao-vitrine-base:hover::before { transform: translateX(140%); }
+  .botao-vitrine-base:hover svg { transform: translateX(3px); }
+  .botao-vitrine-base svg { transition: transform 180ms var(--ease-fluid); }
+  .botao-vitrine-primario { box-shadow: 0 0 0 1px oklch(1 0 0 / 10%), 0 0 28px color-mix(in oklch, var(--primary) 22%, transparent); }
+  .botao-vitrine-primario:hover { filter: brightness(1.08); box-shadow: 0 0 0 1px oklch(1 0 0 / 18%), 0 0 42px color-mix(in oklch, var(--primary) 34%, transparent); }
+  .botao-vitrine-contorno:hover { border-color: color-mix(in oklch, var(--primary) 55%, transparent); color: var(--primary); }
+  .botao-vitrine-fantasma:hover { background: color-mix(in oklch, var(--accent) 50%, transparent); color: var(--foreground); }
+
+  .lp-sinal {
+    position: relative;
+    overflow: hidden;
+    transition: background-color 220ms var(--ease-fluid), transform 220ms var(--ease-fluid), border-color 220ms var(--ease-fluid);
+  }
+  .lp-sinal::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    height: 1px;
+    background: var(--medido);
+    transition: width 360ms var(--ease-fluid);
+  }
+  .lp-sinal:hover { background: color-mix(in oklch, var(--accent) 30%, transparent); transform: translateY(-5px); border-color: var(--linha); }
+  .lp-sinal:hover::after { width: 100%; }
+  .lp-sinal__icone { display: inline-flex; transition: transform 260ms var(--ease-fluid), filter 260ms var(--ease-fluid); }
+  .lp-sinal:hover .lp-sinal__icone { transform: scale(1.18) rotate(-6deg); filter: drop-shadow(0 0 8px currentColor); }
+  .lp-sinal--nucleo::after { background: var(--primary-foreground); }
+  .lp-sinal--nucleo:hover { filter: brightness(1.06); }
+
+  .lp-amostra { transition: transform 260ms var(--ease-fluid); }
+  .lp-amostra:hover { transform: translateY(-6px); }
+  .lp-amostra__moldura { transition: border-color 260ms var(--ease-fluid), filter 260ms var(--ease-fluid); }
+  .lp-amostra:hover .lp-amostra__moldura { border-color: var(--linha); filter: drop-shadow(0 0 24px color-mix(in oklch, var(--medido) 18%, transparent)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orbita-fraus-cena { animation: none; }
+    .botao-vitrine-base::before { display: none; }
+    .lp-sinal:hover, .lp-amostra:hover { transform: none; }
+  }
+
+  .lp-fecho {
+    background: radial-gradient(circle at 50% 110%, color-mix(in oklch, var(--primary) 16%, transparent), transparent 48%);
+  }
+
   /* --- A CONSTELAÇÃO DO FUSOR -------------------------------------------
      Ver `components/lp/Constelacao.tsx` para o argumento inteiro. Aqui mora
      só o desenho da entrada.

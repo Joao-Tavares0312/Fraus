@@ -63,7 +63,8 @@ export function temaValido(valor: unknown): Tema {
 export const SCRIPT_ANTI_PISCADA = `
 (function(){try{
 var t=localStorage.getItem(${JSON.stringify(CHAVE_TEMA)});
-if(t&&t!==${JSON.stringify(TEMA_PADRAO)}){document.documentElement.classList.add("tema-"+t)}
+var opera=location.pathname.indexOf("/dashboard")===0;
+if(opera&&t&&t!==${JSON.stringify(TEMA_PADRAO)}){document.documentElement.classList.add("tema-"+t)}
 }catch(e){}})();
 `.trim();
 
