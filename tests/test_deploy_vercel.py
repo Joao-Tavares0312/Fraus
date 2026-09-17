@@ -1,4 +1,5 @@
 import hashlib
+import json
 import zipfile
 from pathlib import Path
 
@@ -25,6 +26,15 @@ def test_vercel_declara_large_function_e_inclui_modelos():
     fonte = (RAIZ / "vercel.json").read_text(encoding="utf-8")
     for trecho in ("api/index.py", "maxDuration", "300", '"includeFiles": "**"'):
         assert trecho in fonte
+
+
+def test_dashboard_tem_configuracao_vercel_independente():
+    configuracao = json.loads(
+        (RAIZ / "dashboard" / "vercel.json").read_text(encoding="utf-8")
+    )
+
+    assert configuracao["framework"] == "nextjs"
+    assert configuracao["buildCommand"] == "npm run build"
 
 
 def test_requirements_instala_runtime_onnx_sem_torch():
