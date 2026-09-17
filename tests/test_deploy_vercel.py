@@ -22,7 +22,7 @@ def test_entrypoint_vercel_expoe_fastapi_real():
 
 def test_vercel_declara_large_function_e_inclui_modelos():
     fonte = (RAIZ / "vercel.json").read_text(encoding="utf-8")
-    for trecho in ("api/index.py", "maxDuration", "300", "modelos-onnx", "modelos/fusor.joblib"):
+    for trecho in ("api/index.py", "maxDuration", "300", '"includeFiles": "**"'):
         assert trecho in fonte
 
 

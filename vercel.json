@@ -4,7 +4,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 300,
-      "includeFiles": "{fraus/**,modelos-onnx/**,modelos/fusor.joblib}"
+      "includeFiles": "**"
     }
   }
 }
