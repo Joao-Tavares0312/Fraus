@@ -320,6 +320,21 @@ cor estão fechadas e documentadas.
 
 O `README.md` tem a lista canônica e foi atualizado hoje. Resumo:
 
+### Feita — API real hospedada sem VM — 17/09/2026
+
+Dashboard e API agora são projetos Vercel independentes. A função FastAPI usa
+ONNX Runtime, recebe os modelos de um bucket privado do Oracle Object Storage
+durante o build e persiste no Supabase pelo transaction pooler. Produção foi
+verificada direto e pelo proxy da dashboard com `motor=real`, além de uma
+inferência autenticada.
+
+O caminho remove quatro pendências antigas: capacidade Ampere A1, VPS paga,
+túnel ligado na máquina local e SQLite efêmero. A sequência de falhas e
+correções — tamanho, `.vercelignore`, dependência ONNX, inicialização tardia,
+porta 6543 do pooler e isolamento do monorepo — está registrada em
+[`docs/deploy-vercel.md`](deploy-vercel.md). Cold start e cotas gratuitas são
+limites operacionais, não pendências de implementação.
+
 ### P0 — Retreinar a ironia — DÍVIDA ASSUMIDA, não mais pré-requisito
 
 A cabeça reporta acurácia `1.0` e erra **6 em 10** falas sinceras de

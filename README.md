@@ -160,8 +160,8 @@ POST   /conversas/repontuar    repontua o banco inteiro com o léxico vigente
 
 ## Stack
 
-Python 3.11 · transformers + torch (CPU) · scikit-learn · FastAPI · SQLite ·
-Next.js + Recharts
+Python 3.11 · transformers + torch/ONNX Runtime (CPU) · scikit-learn · FastAPI ·
+SQLite/Postgres (Supabase) · Next.js + Recharts
 
 Sem base vetorial: a tarefa é classificação, e para classificação o fine-tuning
 vence RAG em acurácia e latência[^3].
@@ -171,6 +171,8 @@ vence RAG em acurácia e latência[^3].
 - [Spec de design](docs/superpowers/specs/2026-08-13-dolos-design.md) — decisões e referências
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
 - [Treinamento](docs/treinamento.md) — os notebooks do Colab, os corpora de cada sinal, os artefatos que eles produzem e o registro do vazamento que matou o primeiro fusor
+- [Deploy gratuito](docs/deploy-vercel.md) — dashboard e API na Vercel, modelos no Oracle Object Storage e estado no Supabase
+- [Limitações conhecidas](docs/limitacoes.md) — limites científicos e operacionais que permanecem
 
 ## Como rodar
 
@@ -699,19 +701,51 @@ A subida **não abre janela de terminal**. O `stdout` da API vai para
 `dashboard/.fraus-api.log`, que é onde olhar quando ela falha — o motivo mais
 comum é modelo ausente em `modelos/`, que derruba o boot por design.
 
-### 6. Publicando a dashboard com a API na sua máquina (túnel)
+### 6. Produção: dashboard e API separadas
+
+Desde **17/09/2026**, o Fraus roda integralmente em produção sem depender da
+máquina de desenvolvimento:
+
+```text
+dashboard Next.js (Vercel: fraus)
+        │ proxy server-side + FRAUS_CHAVE_ACESSO
+        ▼
+API FastAPI/ONNX (Vercel: fraus-api, Large Function)
+        ├── estado persistente → Supabase Postgres (transaction pooler :6543)
+        └── modelos no build  → Oracle Object Storage (bucket privado + PAR)
+```
+
+Os dois projetos Vercel usam o mesmo repositório, mas têm configurações
+independentes: [`dashboard/vercel.json`](dashboard/vercel.json) impede o build
+do front de herdar o comando da API; [`vercel.json`](vercel.json) prepara a
+função Python. Durante o build, `scripts/preparar_modelos_vercel.py` baixa um
+ZIP privado, confere o SHA-256, recusa *path traversal*, valida os três grafos
+ONNX, tokenizadores e fusor, e só então permite o deploy.
+
+O runtime usa satisfação e emoção em ONNX fp32 e ironia quantizada em int8. O
+pacote final da função tem cerca de **1,46 GB**, aceito pelo recurso Large
+Functions. Os modelos são carregados preguiçosamente: importar a função não
+consome o tempo de inicialização com três BERTimbau. O primeiro `/saude` medido
+em produção levou **10,8 s**; uma inferência logo depois levou **0,8 s**.
+
+Endereços verificados em 17/09/2026:
+
+- dashboard: <https://fraus-one.vercel.app>;
+- API: <https://fraus-api.vercel.app>;
+- saúde via API e via proxy: `{"status":"ok","motor":"real"}`.
+
+O passo a passo, as variáveis e o diagnóstico das falhas encontradas estão em
+[Deploy gratuito na Vercel](docs/deploy-vercel.md).
+
+#### Alternativa temporária: API na sua máquina por túnel
 
 Para **demonstrar** a dashboard publicada (Vercel) falando com a API de verdade,
 sem hospedar a API em lugar nenhum: um túnel dá um endereço `https` público
 temporário para o `uvicorn` que roda no seu computador.
 
-**Por que não hospedar a API junto da dashboard:** a Vercel é serverless, e só o
-`torch` ocupa 497 MB instalado contra o teto de 250 MB de uma função — os três
-BERTimbau somam mais 1,25 GB, e cada requisição roda inferência em CPU. O
-Hugging Face Spaces resolveria o tamanho, mas Docker Space exige assinatura PRO
-(`402 Payment Required` no plano gratuito); o tier gratuito do Render dá 512 MB
-de RAM, e os três modelos carregados não cabem. Hospedar de verdade pede um
-container com ~2 GB de RAM e disco — ver [docs/hospedagem.md](docs/hospedagem.md).
+O túnel continua útil para desenvolvimento e contingência. Ele não é mais o
+caminho de produção: a combinação ONNX + Large Functions + artefatos baixados
+no build removeu o limite que impedia empacotar os modelos na função.
 
 Enquanto a API vive na sua máquina, o túnel é o caminho de dois minutos.
 
@@ -791,7 +825,7 @@ Onde o trabalho está. **Entregue** é o que existe no repositório e tem teste 
 verificação por trás; **falta** está detalhado em [Pendências](#pendências), e a
 ordem lá é a ordem de importância.
 
-### Road map vigente — levantamento de 14/09/2026
+### Road map vigente — atualizado em 17/09/2026
 
 Revisão do projeto inteiro (testes rodados, API real e webhook exercitados com
 `curl`, front auditado). É esta lista que governa o próximo trabalho; as seções
@@ -817,8 +851,10 @@ ausente no venv; `uv sync --extra dev` resolve).
   cabeça de texto, hoje marcado pela contestação. Declarar ou atacar.
 - [ ] **Retreinar a cabeça de ironia** (`notebooks/04_treino_ironia.ipynb`) e
   apertar os limiares de `tests/test_ironia_dominio.py`.
-- [ ] **Hospedagem** bloqueada por capacidade A1 da Oracle — decidir upgrade
-  para Pay As You Go.
+- [x] **Hospedagem sem VM e sem custo fixo** — concluída em 17/09/2026. Front e
+  API são projetos Vercel separados; modelos vêm do Oracle Object Storage e o
+  estado persiste no Supabase. Não depende mais de conseguir uma Ampere A1 nem
+  de manter a máquina local ligada. Ver [deploy](docs/deploy-vercel.md).
 
 #### P0 — ingestão genérica: analisar qualquer arquivo sem código por formato
 
@@ -933,6 +969,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
 | **Léxico curado** | ✅ | o que o analista ensina por cima do SentiLex e do ranking de emoji de 2015: cadastro, edição e revogação por rota e por painel; a curadoria **vence** o léxico base e atravessa até o score. Cada escrita versiona, a conversa grava com qual versão foi pontuada, a Visão geral **nomeia** a régua misturada e `POST /conversas/repontuar` a zera |
+| **Hospedagem da aplicação real** | ✅ | dashboard e API em projetos Vercel separados; função Python de 1,46 GB com ONNX; modelos validados e baixados do Oracle Object Storage no build; Supabase pelo transaction pooler; saúde, inferência autenticada e proxy verificados em produção em 17/09/2026 |
 | **Suíte** | ✅ | **909 testes** de Python passando e **77** no front (8 arquivos) — contados em 14/09/2026, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest); renderização continua coberta por build e contraste |
 
 ### Falta
@@ -995,8 +1032,8 @@ Em ordem, com o detalhe em [Pendências](#pendências):
 4. **Decisões em aberto** — tema claro para projetor de banca, pin do
    `scikit-learn` no `pyproject.toml`, e remover `content/fraus` da raiz.
 
-Fora de escopo por decisão, não por falta de tempo: **deploy e k8s** (o destino
-é a máquina local e a banca) e **login de usuário** na dashboard — o cookie da
+Fora de escopo por decisão, não por falta de tempo: **k8s** (o deploy atual é
+serverless e não justifica um orquestrador) e **login de usuário** na dashboard — o cookie da
 autenticação é meio caminho, e dizer o contrário seria o mesmo tipo de mentira
 que o projeto existe para não cometer.
 
@@ -1164,6 +1201,22 @@ que o projeto existe para não cometer.
 
 O que falta, em ordem de importância. Cada item diz o que existe hoje e o que
 o desbloqueia.
+
+### ~~Hospedar a API sem depender da máquina local~~ — RESOLVIDO em 17/09/2026
+
+A limitação original era dupla: os checkpoints com PyTorch ultrapassavam o
+tamanho padrão de função, e a Oracle não oferecia capacidade Ampere A1 na
+região. A solução não foi reduzir a qualidade do classificador nem pagar uma
+VPS: os três executores passaram para ONNX, os artefatos saíram do Git e são
+baixados de um bucket privado no build, e a API ganhou um projeto Vercel
+próprio com Large Functions.
+
+O Supabase substitui o SQLite efêmero usando o transaction pooler na porta
+`6543`. A dashboard continua na Vercel, mas fala com a API somente pelo proxy
+server-side. Isto retira do roadmap as pendências **“conseguir VM Oracle”**,
+**“manter API/túnel local ligado”**, **“escolher VPS paga”** e **“encontrar host
+gratuito com RAM para PyTorch”**. Permanecem limites operacionais de cold start
+e cota gratuita, documentados em [Limitações conhecidas](#limitações-conhecidas).
 
 ### 1. Retreinar a cabeça de ironia — vazamento de corpus MEDIDO, DÍVIDA ASSUMIDA
 

@@ -23,6 +23,7 @@ justamente ele que o sistema precisa enxergar.
 | saber como os modelos foram treinados | [Treinamento](treinamento.md) |
 | entender a interface | [Design](design.md) |
 | saber o que o sistema **não** sabe | [Limitações](limitacoes.md) |
+| entender como a aplicação real foi hospedada | [Deploy gratuito](deploy-vercel.md) |
 
 ## Sem LLM em runtime
 
