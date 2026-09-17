@@ -258,3 +258,36 @@ uv sync --extra conversao
 uv run python scripts/encolher_modelos.py            # converte e afere
 uv run python scripts/comparar_backends.py --n 180   # o portão que recusou
 ```
+
+## Variante experimental: um encoder, três cabeças
+
+O runtime agora aceita `FRAUS_BACKEND=onnx-multitarefa`, mas ele **não é o
+padrão** e nenhum artefato foi promovido. Diferente da quantização, compartilhar
+o encoder exige treino: os três checkpoints atuais aprenderam representações
+diferentes durante o fine-tuning.
+
+O caminho implementado usa destilação. Os modelos atuais são os professores e
+um BERTimbau único aprende simultaneamente as distribuições de satisfação,
+emoção e ironia. A saída ONNX possui três tensores nomeados e o `Motor` executa
+o encoder uma vez por lote — não três vezes com pesos apenas compartilhados.
+
+```bash
+uv sync --extra treino --extra onnx
+uv run python scripts/treinar_multitarefa.py corpus.csv --epocas 3
+uv run python scripts/comparar_backends.py --multitarefa --n 180
+```
+
+O corpus aceita CSV/JSONL com campo `texto` ou TXT com uma frase por linha. Use
+um corpus público representativo; não exporte conversas de clientes sem base
+legal e anonimização. O candidato é gravado separadamente e só deve virar
+`modelos-onnx/bertimbau-multitarefa` depois de cumprir, em conjunto:
+
+- zero troca de categoria nas 180 conversas de regressão;
+- métricas por cabeça não inferiores às publicadas nos cartões dos modelos;
+- pico de RSS abaixo de 800 MB no container completo;
+- inspeção das fatias críticas antes da troca da régua.
+
+O tamanho esperado do grafo fp32 é aproximadamente o de um BERTimbau (cerca de
+416 MB) mais três camadas lineares pequenas. O número de RAM continua sendo uma
+hipótese até o artefato treinado ser medido; o código não o apresenta como ganho
+concluído.

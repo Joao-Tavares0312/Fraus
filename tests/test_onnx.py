@@ -9,7 +9,12 @@ silencio.
 import numpy as np
 import pytest
 
-from fraus.sinais.onnx import ModeloOnnxAusenteError, SessaoOnnx, _softmax
+from fraus.sinais.onnx import (
+    ModeloOnnxAusenteError,
+    SessaoMultitarefaOnnx,
+    SessaoOnnx,
+    _softmax,
+)
 
 
 def test_grafo_ausente_falha_alto_e_diz_o_que_fazer(tmp_path):
@@ -45,3 +50,29 @@ def test_o_softmax_preserva_a_ORDEM_das_classes():
 def test_o_softmax_soma_um_por_linha():
     saida = _softmax(np.array([[1.0, 2.0, 3.0], [0.0, 0.0, 0.0]], dtype=np.float32))
     assert saida.sum(axis=-1) == pytest.approx([1.0, 1.0])
+
+
+def test_multitarefa_exige_as_tres_saidas_nomeadas():
+    sessao = SessaoMultitarefaOnnx.__new__(SessaoMultitarefaOnnx)
+    sessao._tokenizador = lambda *args, **kwargs: {
+        "input_ids": np.array([[1, 2]]),
+        "attention_mask": np.array([[1, 1]]),
+    }
+    sessao._entradas = {"input_ids", "attention_mask"}
+
+    class RuntimeFalso:
+        def run(self, nomes, entradas):
+            assert nomes == ["satisfacao_logits", "emocao_logits", "ironia_logits"]
+            return [
+                np.array([[1.0, 2.0, 3.0]]),
+                np.array([[7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0]]),
+                np.array([[4.0, 1.0]]),
+            ]
+
+    sessao._sessao = RuntimeFalso()
+    resultado = sessao.prever_cabecas(["teste"])
+
+    assert set(resultado) == {"satisfacao", "emocao", "ironia"}
+    assert len(resultado["satisfacao"][0]) == 3
+    assert len(resultado["emocao"][0]) == 7
+    assert len(resultado["ironia"][0]) == 2

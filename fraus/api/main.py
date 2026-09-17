@@ -33,7 +33,8 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 DESTINO_BANCO,
                                 CAMINHO_MODELO_EMOCAO, CAMINHO_MODELO_IRONIA,
                                 CAMINHO_MODELO_TEXTO, CAMINHO_ONNX_EMOCAO,
-                                CAMINHO_ONNX_IRONIA, CAMINHO_ONNX_TEXTO,
+                                CAMINHO_ONNX_IRONIA, CAMINHO_ONNX_MULTITAREFA,
+                                CAMINHO_ONNX_TEXTO,
                                 RAIZ_IMPORTACAO, backend_declarado)
 from fraus.api.contexto import Contexto
 from fraus.api.primeiro_uso import ligar_no_primeiro_uso
@@ -238,6 +239,10 @@ def montar_classificadores(backend: str):
             ClassificadorOnnx(CAMINHO_ONNX_EMOCAO),
             ClassificadorOnnx(CAMINHO_ONNX_IRONIA),
         )
+    if backend == "onnx-multitarefa":
+        from fraus.sinais.onnx import classificadores_multitarefa
+
+        return classificadores_multitarefa(CAMINHO_ONNX_MULTITAREFA)
     return (
         ClassificadorTexto(CAMINHO_MODELO_TEXTO),
         ClassificadorEmocao(CAMINHO_MODELO_EMOCAO),

@@ -58,6 +58,71 @@ def test_atribuir_roda_cada_cabeca_uma_vez():
     assert len(ironia.lotes) == 1
 
 
+def test_atribuir_multitarefa_roda_o_encoder_uma_vez():
+    class MultitarefaFalsa:
+        def __init__(self):
+            self.lotes = []
+
+        def prever_cabecas(self, textos):
+            self.lotes.append(list(textos))
+            return {
+                "satisfacao": [[0.2, 0.3, 0.5] for _ in textos],
+                "emocao": [[1 / 7] * 7 for _ in textos],
+                "ironia": [[0.8, 0.2] for _ in textos],
+            }
+
+    class Cabeca:
+        def __init__(self, multitarefa, nome):
+            self.multitarefa = multitarefa
+            self.nome = nome
+
+        def prever_mensagens(self, textos):
+            raise AssertionError("o Motor deve usar a passagem multitarefa")
+
+    multitarefa = MultitarefaFalsa()
+    motor = Motor(
+        Cabeca(multitarefa, "satisfacao"),
+        FusorFalso(),
+        Cabeca(multitarefa, "emocao"),
+        Cabeca(multitarefa, "ironia"),
+    )
+
+    resultado = motor.atribuir_conversa(_conversa())
+
+    assert multitarefa.lotes == [["demorou demais", "ok obrigado"]]
+    assert resultado["mensagens"][0]["prob_satisfeito"] == 0.5
+    assert resultado["mensagens"][0]["prob_ironia"] == 0.2
+
+
+def test_simulador_multitarefa_roda_o_encoder_uma_vez():
+    class MultitarefaFalsa:
+        def __init__(self):
+            self.chamadas = 0
+
+        def prever_cabecas(self, textos):
+            self.chamadas += 1
+            return {
+                "satisfacao": [[0.2, 0.3, 0.5]],
+                "emocao": [[1 / 7] * 7],
+                "ironia": [[0.8, 0.2]],
+            }
+
+    class Cabeca:
+        def __init__(self, multitarefa):
+            self.multitarefa = multitarefa
+
+        def prever_mensagens(self, textos):
+            raise AssertionError("nao deve executar uma cabeca isolada")
+
+    multitarefa = MultitarefaFalsa()
+    cabeca = Cabeca(multitarefa)
+    resultado = Motor(cabeca, FusorFalso(), cabeca, cabeca).simular_texto("teste")
+
+    assert multitarefa.chamadas == 1
+    assert resultado["prob_satisfeito"] == 0.5
+    assert resultado["prob_ironia"] == 0.2
+
+
 def test_analisar_nao_repontua_a_conversa():
     motor, texto, emocao, _ = _motor()
     resultado = motor.analisar_conversa(_conversa())

@@ -40,6 +40,18 @@ class _Guardado:
             return self._classificador.prever_mensagens(textos)
 
 
+class _GuardadoMultitarefa:
+    """Serializa a unica passagem que produz as tres cabecas."""
+
+    def __init__(self, classificador, semaforo: threading.Semaphore) -> None:
+        self._classificador = classificador
+        self._semaforo = semaforo
+
+    def prever_cabecas(self, textos: list[str]) -> dict:
+        with self._semaforo:
+            return self._classificador.prever_cabecas(textos)
+
+
 class _Memoria:
     """Previsoes de UMA pergunta ao Motor, para nao classificar a mesma fala 2x.
 
@@ -62,6 +74,16 @@ class _Memoria:
         if chave not in self._lotes:
             self._lotes[chave] = self._classificador.prever_mensagens(textos)
         return self._lotes[chave]
+
+
+class _Precalculado:
+    """Resultado de uma passagem multitarefa com interface de classificador."""
+
+    def __init__(self, resultado: list[list[float]]) -> None:
+        self._resultado = resultado
+
+    def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
+        return self._resultado
 
 
 class Motor:
@@ -94,10 +116,22 @@ class Motor:
         semaforo = threading.Semaphore(
             int(os.environ.get("FRAUS_INFERENCIAS_SIMULTANEAS", "1"))
         )
+        candidatos = [
+            getattr(c, "multitarefa", None)
+            for c in (classificador, emocao, ironia)
+        ]
+        self._multitarefa = (
+            _GuardadoMultitarefa(candidatos[0], semaforo)
+            if candidatos[0] is not None and all(c is candidatos[0] for c in candidatos)
+            else None
+        )
         self._classificador = _Guardado(classificador, semaforo)
         self._fusor = fusor
         self._emocao = _Guardado(emocao, semaforo)
         self._ironia = _Guardado(ironia, semaforo)
+
+    def _prever_todas(self, textos: list[str]) -> dict | None:
+        return self._multitarefa.prever_cabecas(textos) if self._multitarefa else None
 
     def _emocao_de(self, textos: list[str], classificador=None) -> list[dict] | None:
         """Sete probabilidades mais o desprezo da diade, por texto.
@@ -143,9 +177,11 @@ class Motor:
         """
         if not conversa.tem_sinal_cliente:
             return None  # ausencia de dado nao e insatisfacao
-        return self._fusor.pontuar(
-            montar_features(conversa, self._classificador, self._emocao, curadoria)
-        )
+        textos = [m.texto for m in conversa.mensagens if m.autor == "cliente"]
+        todas = self._prever_todas(textos)
+        texto = _Precalculado(todas["satisfacao"]) if todas else self._classificador
+        emocao = _Precalculado(todas["emocao"]) if todas else self._emocao
+        return self._fusor.pontuar(montar_features(conversa, texto, emocao, curadoria))
 
     def atribuir_conversa(self, conversa, curadoria=None) -> dict:
         return self._atribuir(conversa, curadoria)[0]
@@ -178,8 +214,11 @@ class Motor:
         textos_do_cliente = [
             conversa.mensagens[indice].texto for indice in indices_do_cliente
         ]
-        texto = _Memoria(self._classificador)
-        emocao = _Memoria(self._emocao)
+        todas = self._prever_todas(textos_do_cliente)
+        texto = _Memoria(
+            _Precalculado(todas["satisfacao"]) if todas else self._classificador
+        )
+        emocao = _Memoria(_Precalculado(todas["emocao"]) if todas else self._emocao)
         probabilidades = texto.prever_mensagens(textos_do_cliente)
         por_indice = dict(zip(indices_do_cliente, probabilidades))
 
@@ -187,7 +226,11 @@ class Motor:
         # As tres cabecas foram fine-tunadas em texto de cliente, e rodar
         # qualquer uma na fala do bot devolveria numero sem lastro.
         emocoes = self._emocao_de(textos_do_cliente, emocao)
-        ironias = self._ironia_de(textos_do_cliente)
+        ironias = (
+            [float(p[IRONICO]) for p in todas["ironia"]]
+            if todas
+            else self._ironia_de(textos_do_cliente)
+        )
         emocao_por_indice = dict(zip(indices_do_cliente, emocoes or []))
         ironia_por_indice = dict(zip(indices_do_cliente, ironias or []))
 
@@ -338,13 +381,24 @@ class Motor:
         e estilo -- que so existem agregadas na conversa) -- o classificador
         e o fusor continuam sem vazar para a rota.
         """
-        probabilidades = self._classificador.prever_mensagens([texto])[0]
+        todas = self._prever_todas([texto])
+        probabilidades = (
+            todas["satisfacao"][0]
+            if todas
+            else self._classificador.prever_mensagens([texto])[0]
+        )
         emojis = [
             {"emoji": emoji, "score": score_do_emoji(emoji), "posicao_relativa": posicao}
             for emoji, posicao in emojis_com_posicao(texto)
         ]
-        emocoes = self._emocao_de([texto])
-        ironias = self._ironia_de([texto])
+        emocoes = self._emocao_de(
+            [texto], _Precalculado(todas["emocao"]) if todas else None
+        )
+        ironias = (
+            [float(todas["ironia"][0][IRONICO])]
+            if todas
+            else self._ironia_de([texto])
+        )
         return {
             "prob_insatisfeito": float(probabilidades[INSATISFEITO]),
             "prob_neutro": float(probabilidades[NEUTRO]),

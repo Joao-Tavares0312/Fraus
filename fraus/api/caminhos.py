@@ -51,10 +51,13 @@ CAMINHO_FUSOR = artefato("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib")
 # A variante aceita em docs/encolhimento.md: satisfacao e emocao em fp32 (as
 # duas pontuam e nao toleram int8) e ironia em int8 (nao pontua) -- 0 de 180
 # categorias trocadas, e ~1,5x mais rapida que o torch na mesma CPU.
-BACKENDS = ("torch", "onnx")
+BACKENDS = ("torch", "onnx", "onnx-multitarefa")
 CAMINHO_ONNX_TEXTO = artefato("FRAUS_CAMINHO_ONNX_TEXTO", "modelos-onnx/bertimbau-satisfacao")
 CAMINHO_ONNX_EMOCAO = artefato("FRAUS_CAMINHO_ONNX_EMOCAO", "modelos-onnx/bertimbau-emocao")
 CAMINHO_ONNX_IRONIA = artefato("FRAUS_CAMINHO_ONNX_IRONIA", "modelos-onnx/bertimbau-ironia")
+CAMINHO_ONNX_MULTITAREFA = artefato(
+    "FRAUS_CAMINHO_ONNX_MULTITAREFA", "modelos-onnx/bertimbau-multitarefa"
+)
 
 
 def backend_declarado() -> str:

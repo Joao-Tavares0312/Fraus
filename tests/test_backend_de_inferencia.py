@@ -20,6 +20,11 @@ def test_backend_desconhecido_derruba_o_boot(monkeypatch):
         caminhos.backend_declarado()
 
 
+def test_multitarefa_e_backend_declaravel(monkeypatch):
+    monkeypatch.setenv("FRAUS_BACKEND", "onnx-multitarefa")
+    assert caminhos.backend_declarado() == "onnx-multitarefa"
+
+
 def test_onnx_sem_grafo_falha_alto_e_nao_cai_para_o_torch(monkeypatch, tmp_path):
     import fraus.api.main as main
 

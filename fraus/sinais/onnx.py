@@ -123,6 +123,74 @@ class SessaoOnnx:
         return _softmax(np.asarray(logits, dtype=np.float32)).tolist()
 
 
+class SessaoMultitarefaOnnx(SessaoOnnx):
+    """Um unico encoder BERTimbau com tres cabecas de classificacao.
+
+    Os nomes das saidas fazem parte do artefato: depender da ordem retornada
+    pelo exportador permitiria trocar emocao por satisfacao sem erro visivel.
+    """
+
+    SAIDAS = {
+        "satisfacao": "satisfacao_logits",
+        "emocao": "emocao_logits",
+        "ironia": "ironia_logits",
+    }
+
+    def __init__(self, diretorio: Path) -> None:
+        super().__init__(diretorio)
+        encontradas = {saida.name for saida in self._sessao.get_outputs()}
+        ausentes = set(self.SAIDAS.values()) - encontradas
+        if ausentes:
+            raise ModeloOnnxAusenteError(
+                "grafo multitarefa sem as saidas obrigatorias: "
+                + ", ".join(sorted(ausentes))
+            )
+
+    def prever_cabecas(self, textos: list[str]) -> dict[str, list[list[float]]]:
+        if not textos:
+            return {nome: [] for nome in self.SAIDAS}
+        codificado = self._tokenizador(
+            textos,
+            truncation=True,
+            max_length=TAMANHO_MAXIMO,
+            padding=True,
+            return_tensors="np",
+        )
+        entradas = {
+            nome: valor.astype(np.int64)
+            for nome, valor in codificado.items()
+            if nome in self._entradas
+        }
+        nomes = list(self.SAIDAS.values())
+        logits = self._sessao.run(nomes, entradas)
+        return {
+            cabeca: _softmax(np.asarray(saida, dtype=np.float32)).tolist()
+            for cabeca, saida in zip(self.SAIDAS, logits)
+        }
+
+
+class ClassificadorCabecaOnnx:
+    """Vista de uma cabeca; as tres vistas apontam para a mesma sessao."""
+
+    def __init__(self, multitarefa: SessaoMultitarefaOnnx, nome: str) -> None:
+        if nome not in multitarefa.SAIDAS:
+            raise ValueError(f"cabeca multitarefa desconhecida: {nome}")
+        self.multitarefa = multitarefa
+        self.nome = nome
+
+    def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
+        return self.multitarefa.prever_cabecas(textos)[self.nome]
+
+
+def classificadores_multitarefa(caminho_modelo):
+    """Tres interfaces legadas sobre UMA sessao e UM conjunto de pesos."""
+    sessao = SessaoMultitarefaOnnx(caminho_modelo)
+    return tuple(
+        ClassificadorCabecaOnnx(sessao, nome)
+        for nome in ("satisfacao", "emocao", "ironia")
+    )
+
+
 class ClassificadorOnnx:
     """Adaptador: um `SessaoOnnx` com a MESMA interface dos tres do torch.
 
