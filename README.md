@@ -856,6 +856,27 @@ ausente no venv; `uv sync --extra dev` resolve).
   estado persiste no Supabase. Não depende mais de conseguir uma Ampere A1 nem
   de manter a máquina local ligada. Ver [deploy](docs/deploy-vercel.md).
 
+#### P0 — desempenho pós-deploy
+
+A hospedagem resolveu disponibilidade, não latência. Medição de 17/09/2026:
+landing quente em 0,26–0,59 s, API quente em 0,17–0,66 s, mas cold start da API
+em **10,8 s**. A landing transfere cerca de **799 KB de JavaScript** em 12
+chunks, além de 71 KB de HTML. Diagnóstico completo em
+[Pendências pós-deploy](docs/notas/2026-09-17-pendencias-pos-deploy.md).
+
+- [ ] **Separar plano de controle e motor.** `/saude`, autenticação e CRUD não
+  podem carregar três BERTimbau. O motor deve inicializar apenas em rotas de
+  inferência, com estado explícito de prontidão.
+- [ ] **Tornar a landing independente da API.** Hoje ela consulta sessão e
+  disponibilidade de login antes de renderizar, perde cache de CDN e pode
+  pagar o cold start inteiro apenas para escolher o texto do CTA.
+- [ ] **Reduzir o JavaScript da landing.** Adiar partículas/WebGL e Motion,
+  definir orçamento de bundle e medir dispositivo móvel antes de preservar
+  animação puramente decorativa.
+- [ ] **Instrumentar latência.** Registrar cold/warm start, tempo de modelo,
+  banco e proxy; coletar Web Vitals. Sem decomposição, “site lento” volta a ser
+  impressão em vez de regressão verificável.
+
 #### P0 — ingestão genérica: analisar qualquer arquivo sem código por formato
 
 Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
