@@ -10,7 +10,7 @@ __pycache__
 .env.*
 .fraus-*.txt
 *.db
-modelos*
+/modelos*/
 dados_brutos
 dashboard
 docs

@@ -32,6 +32,12 @@ def test_requirements_instala_runtime_onnx_sem_torch():
     assert ".[torch]" not in requisitos
 
 
+def test_ignore_da_vercel_nao_remove_o_modulo_de_dominio():
+    linhas = (RAIZ / ".vercelignore").read_text(encoding="utf-8").splitlines()
+    assert "modelos*" not in linhas
+    assert "/modelos*/" in linhas
+
+
 def test_extracao_recusa_escape_do_zip(tmp_path):
     pacote = tmp_path / "pesos.zip"
     with zipfile.ZipFile(pacote, "w") as zipado:
