@@ -16,7 +16,8 @@ RAIZ = Path(__file__).resolve().parents[1]
 
 def test_entrypoint_vercel_expoe_fastapi_real():
     fonte = (RAIZ / "api" / "index.py").read_text(encoding="utf-8")
-    assert "from fraus.api.main import app" in fonte
+    assert "from fraus.api.main import criar_app_padrao" in fonte
+    assert "class AplicacaoPreguicosa" in fonte
     assert "api_demo" not in fonte
 
 
