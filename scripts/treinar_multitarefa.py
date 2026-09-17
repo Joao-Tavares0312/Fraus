@@ -18,6 +18,7 @@ import csv
 import json
 import random
 import sys
+import time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -48,6 +49,12 @@ def main() -> int:
     parser.add_argument("--taxa", type=float, default=2e-5)
     parser.add_argument("--semente", type=int, default=42)
     parser.add_argument("--validacao", type=float, default=0.15)
+    parser.add_argument(
+        "--medir-passos",
+        type=int,
+        default=0,
+        help="executa somente N passos, estima a duracao e nao exporta artefato",
+    )
     parser.add_argument(
         "--destino",
         type=Path,
@@ -106,6 +113,8 @@ def main() -> int:
     aluno = Multitarefa().to(dispositivo)
     otimizador = torch.optim.AdamW(aluno.parameters(), lr=opcoes.taxa)
     carregador = DataLoader(Textos(treino), batch_size=opcoes.lote, shuffle=True, collate_fn=juntar)
+    inicio_treino = time.perf_counter()
+    passos_executados = 0
     for epoca in range(opcoes.epocas):
         aluno.train()
         perda_total = 0.0
@@ -119,7 +128,17 @@ def main() -> int:
             otimizador.zero_grad(set_to_none=True)
             perda.backward()
             otimizador.step()
-            perda_total += float(perda)
+            perda_total += float(perda.detach())
+            passos_executados += 1
+            if opcoes.medir_passos and passos_executados >= opcoes.medir_passos:
+                segundos_por_passo = (time.perf_counter() - inicio_treino) / passos_executados
+                passos_totais = len(carregador) * opcoes.epocas
+                print(
+                    f"benchmark: {segundos_por_passo:.2f} s/passo; "
+                    f"treino estimado em {segundos_por_passo * passos_totais / 3600:.2f} h "
+                    f"para {passos_totais} passos"
+                )
+                return 0
         print(f"epoca {epoca + 1}/{opcoes.epocas}: perda={perda_total / len(carregador):.5f}")
 
     aluno.eval()
