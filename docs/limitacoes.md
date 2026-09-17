@@ -4,6 +4,23 @@ Esta página existe porque um sistema que estima satisfação **precisa** declar
 onde erra. Nada aqui é segredo, e nada aqui está escondido na tela: cada item
 tem contrapartida visível na interface.
 
+## Limitações operacionais do deploy gratuito
+
+A hospedagem da API deixou de ser pendência em 17/09/2026, mas “publicada” não
+significa “sem limites”. A função ONNX tem cerca de 1,46 GB e usa Large
+Functions na Vercel. Depois de esfriar, o primeiro `/saude` observado levou
+10,8 s; requisições seguintes foram rápidas, mas não há garantia de latência.
+
+Vercel Hobby, Supabase Free e Oracle Object Storage gratuito oferecem cotas,
+não SLA. Ao ultrapassá-las, a aplicação pode ser limitada ou pausada. O estado
+fica no Supabase; o Oracle participa do build, não da inferência. Uma restauração
+do projeto pode alterar a URI do pooler, e o transaction pooler precisa usar a
+porta indicada no painel (6543 no deploy atual).
+
+Essas limitações são operacionais. Elas não alteram as limitações científicas
+abaixo e não autorizam apresentar a estimativa como NPS declarado. Detalhes em
+[Deploy gratuito na Vercel](deploy-vercel.md).
+
 ---
 
 ## O NPS é inferido, não perguntado
