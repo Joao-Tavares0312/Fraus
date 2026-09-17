@@ -34,9 +34,10 @@ function OrbitaFraus() {
     <div className="sistema-fraus__orbita sistema-fraus__orbita--externa"><i /></div>
     <div className="sistema-fraus__orbita sistema-fraus__orbita--media"><i /></div>
     <div className="sistema-fraus__orbita sistema-fraus__orbita--interna"><i /></div>
-    <div className="sistema-fraus__nucleo absolute left-1/2 top-1/2 size-[22%] -translate-x-1/2 -translate-y-1/2 rounded-full">
-      <span className="absolute inset-0 rounded-full" />
-      <b className="num absolute inset-0 grid place-items-center text-xl font-medium text-medido-texto sm:text-2xl">39</b>
+    <div className="sistema-fraus__nucleo absolute left-1/2 top-1/2 size-[26%] -translate-x-1/2 -translate-y-1/2 rounded-full">
+      <span className="sistema-fraus__superficie absolute inset-0 overflow-hidden rounded-full"><i /></span>
+      <span className="sistema-fraus__atmosfera absolute rounded-full" />
+      <b className="num absolute inset-0 z-10 grid place-items-center text-xl font-medium text-foreground sm:text-2xl">39</b>
     </div>
     <div className="absolute left-[48%] top-[2%] font-mono text-[.6875rem] uppercase tracking-[.2em] text-muted-foreground">frs / sistema 07</div>
     <div className="absolute bottom-[7%] right-0 text-right font-mono text-[.6875rem] uppercase leading-5 tracking-[.16em] text-muted-foreground">telemetria ativa<br />sete sinais · um score</div>
