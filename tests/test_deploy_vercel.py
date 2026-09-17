@@ -30,6 +30,10 @@ def test_requirements_instala_runtime_onnx_sem_torch():
     requisitos = (RAIZ / "requirements.txt").read_text(encoding="utf-8")
     assert ".[onnx]" in requisitos
     assert ".[torch]" not in requisitos
+    projeto = (RAIZ / "pyproject.toml").read_text(encoding="utf-8")
+    dependencias_principais = projeto.split("[project.optional-dependencies]", 1)[0]
+    assert '"onnxruntime>=1.20"' in dependencias_principais
+    assert '"torch>=2.3"' not in dependencias_principais
 
 
 def test_ignore_da_vercel_nao_remove_o_modulo_de_dominio():
