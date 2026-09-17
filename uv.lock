@@ -677,6 +677,10 @@ onnx = [
 torch = [
     { name = "torch" },
 ]
+treino = [
+    { name = "onnx" },
+    { name = "torch" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -687,6 +691,7 @@ requires-dist = [
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocs-to-pdf", marker = "extra == 'docs'", specifier = ">=0.9" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0" },
+    { name = "onnx", marker = "extra == 'treino'", specifier = ">=1.17" },
     { name = "onnx-ir", marker = "extra == 'conversao'", specifier = ">=1.0" },
     { name = "onnxruntime", marker = "extra == 'conversao'", specifier = ">=1.20" },
     { name = "onnxruntime", marker = "extra == 'onnx'", specifier = ">=1.20" },
@@ -702,10 +707,11 @@ requires-dist = [
     { name = "scikit-learn", specifier = "==1.6.1" },
     { name = "torch", marker = "extra == 'conversao'", specifier = ">=2.3" },
     { name = "torch", marker = "extra == 'torch'", specifier = ">=2.3" },
+    { name = "torch", marker = "extra == 'treino'", specifier = ">=2.3" },
     { name = "transformers", specifier = ">=4.44" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
-provides-extras = ["dev", "docs", "torch", "onnx", "conversao"]
+provides-extras = ["dev", "docs", "torch", "onnx", "conversao", "treino"]
 
 [[package]]
 name = "fsspec"

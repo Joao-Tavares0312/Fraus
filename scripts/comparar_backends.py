@@ -32,7 +32,7 @@ from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_lote
 from fraus.motor import Motor
 from fraus.sinais.emocao import ClassificadorEmocao
 from fraus.sinais.ironia import ClassificadorIronia
-from fraus.sinais.onnx import ClassificadorOnnx
+from fraus.sinais.onnx import ClassificadorOnnx, classificadores_multitarefa
 from fraus.sinais.texto import ClassificadorTexto
 
 
@@ -62,9 +62,26 @@ def _motor_onnx() -> Motor:
     )
 
 
+def _motor_multitarefa() -> Motor:
+    texto, emocao, ironia = classificadores_multitarefa(
+        RAIZ / "modelos-onnx" / "bertimbau-multitarefa-candidato"
+    )
+    return Motor(
+        texto,
+        Fusor.carregar(RAIZ / "modelos" / "fusor.joblib"),
+        emocao,
+        ironia,
+    )
+
+
 def main() -> int:
     argumentos = argparse.ArgumentParser(description=__doc__)
     argumentos.add_argument("--n", type=int, default=60, help="conversas a comparar")
+    argumentos.add_argument(
+        "--multitarefa",
+        action="store_true",
+        help="comparar com modelos-onnx/bertimbau-multitarefa-candidato",
+    )
     opcoes = argumentos.parse_args()
 
     # O simulador e DETERMINISTICO, entao esta comparacao e reproduzivel por
@@ -73,7 +90,9 @@ def main() -> int:
     conversas = [c for c, _ in gerar_lote(FRASES_POR_ROTULO, opcoes.n, semente=20260910)]
     print(f"comparando {len(conversas)} conversas...", file=sys.stderr)
 
-    torch_, onnx_ = _motor_torch(), _motor_onnx()
+    torch_, onnx_ = _motor_torch(), (
+        _motor_multitarefa() if opcoes.multitarefa else _motor_onnx()
+    )
 
     diferencas, mudou_nota, mudou_categoria = [], [], []
     for conversa in conversas:

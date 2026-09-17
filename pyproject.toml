@@ -63,6 +63,10 @@ onnx = ["onnxruntime>=1.20"]
 # maquina de quem converte, e nao tem nada que fazer num container de producao.
 conversao = ["optimum[onnxruntime]>=1.24", "onnxruntime>=1.20", "torch>=2.3", "onnx-ir>=1.0"]
 
+# Treino da variante multitarefa. Fica fora da imagem de producao: pandas e
+# datasets so existem para preparar corpus e nenhuma requisicao HTTP os usa.
+treino = ["torch>=2.3", "onnx>=1.17"]
+
 
 [build-system]
 requires = ["hatchling"]
