@@ -7,7 +7,7 @@ const LEITURAS = [
 
 export function PartituraExemplo() {
   return (
-    <figure className="lp-leitor w-full max-w-xl overflow-hidden border border-linha bg-card/70">
+    <figure className="lp-leitor w-full max-w-2xl overflow-hidden border border-linha bg-card/70">
       <div className="flex items-center justify-between border-b border-compasso px-5 py-3.5">
         <div className="flex items-center gap-3">
           <span
@@ -88,16 +88,16 @@ export function PartituraExemplo() {
             ))}
           </dl>
           <div className="mt-auto pt-7">
-            <div className="flex items-end justify-between gap-4">
-              <div>
+            <div className="flex items-end justify-between gap-5">
+              <div className="shrink-0 whitespace-nowrap">
                 <span className="num text-5xl font-medium leading-none text-medido-texto">
                   28
                 </span>
-                <span className="ml-2 font-mono text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
+                <span className="ml-2 inline-block font-mono text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
                   / 100
                 </span>
               </div>
-              <span className="text-right font-mono text-[0.6875rem] uppercase tracking-[.15em] text-medido-texto">
+              <span className="min-w-0 text-right font-mono text-[0.6875rem] uppercase leading-relaxed tracking-[.12em] text-medido-texto">
                 detrator · estimado
               </span>
             </div>
