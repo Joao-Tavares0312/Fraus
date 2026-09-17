@@ -99,7 +99,9 @@ def test_a_vitrine_anuncia_o_numero_real_de_features():
     """
     fonte = CAMINHO_VITRINE.read_text(encoding="utf-8")
 
-    anunciado = re.search(r"\{\s*numero:\s*(\d+),\s*rotulo:\s*\"features no fusor\"", fonte)
+    anunciado = re.search(
+        r'\[\s*"(\d+)"\s*,\s*"features no fusor"\s*\]', fonte
+    )
     assert anunciado, (
         "nao encontrei o contador de features em dashboard/app/page.tsx. Se o "
         "formato mudou, atualize esta busca -- nao apague a guarda."
