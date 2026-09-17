@@ -5,7 +5,6 @@ import { CampoDeParticulas } from "@/components/lp/CampoDeParticulas";
 import { Revelar } from "@/components/lp/Revelar";
 import { botaoVitrine } from "@/components/lp/botoes";
 import { MarcaFraus } from "@/components/shell/MarcaFraus";
-import { loginDisponivel, usuarioDaSessao } from "@/lib/sessao";
 
 const C = "mx-auto w-full max-w-[88rem] px-5 sm:px-8 lg:px-12";
 const FATOS = [["07", "famílias de sinal"], ["39", "features no fusor"], ["03", "BERTimbau fine-tunados"], ["00", "LLMs em runtime"]] as const;
@@ -44,13 +43,15 @@ function OrbitaFraus() {
   </div>;
 }
 
-export default async function PaginaInicial() {
-  const usuario = await usuarioDaSessao();
-  const temLogin = await loginDisponivel();
-  const acao = usuario ? { href: "/dashboard", rotulo: "Ir para a dashboard" } : temLogin ? { href: "/entrar", rotulo: "Entrar" } : { href: "/dashboard", rotulo: "Abrir a dashboard" };
+export default function PaginaInicial() {
+  // A vitrine e publica e estatica: consultar sessao ou `/auth/estado` aqui
+  // acordava a API de 1,46 GB antes de pintar a primeira dobra. `/entrar`
+  // continua sendo o porteiro correto: redireciona quem ja tem sessao e
+  // explica quando o login nao esta configurado.
+  const acao = { href: "/entrar", rotulo: "Entrar" } as const;
   return <div className="overflow-x-clip">
     <header className="absolute inset-x-0 top-0 z-50">
-      <div className={`${C} flex h-20 items-center justify-between`}><Link href="/" className="group flex items-center gap-3" aria-label="Fraus — início"><MarcaFraus tamanho={28} /><strong className="text-sm font-medium tracking-[.08em]">FRAUS</strong><span className="hidden items-center gap-2 font-mono text-[.6875rem] uppercase tracking-[.16em] text-muted-foreground lg:flex"><i className="size-1 rounded-full bg-primary" />sistema operacional</span></Link><nav aria-label="Navegação principal" className="flex items-center gap-5 lg:gap-8"><a href="#metodo" className="nav-link hidden md:block">Sistema</a><a href="#honestidade" className="nav-link hidden md:block">Método</a>{!usuario && temLogin && <Link href="/cadastrar" className="nav-link hidden sm:block">Cadastro</Link>}<Link href={acao.href} className="nav-acao">{usuario ? "Dashboard" : "Acessar"}<ArrowRight className="size-3.5" /></Link></nav></div>
+      <div className={`${C} flex h-20 items-center justify-between`}><Link href="/" className="group flex items-center gap-3" aria-label="Fraus — início"><MarcaFraus tamanho={28} /><strong className="text-sm font-medium tracking-[.08em]">FRAUS</strong><span className="hidden items-center gap-2 font-mono text-[.6875rem] uppercase tracking-[.16em] text-muted-foreground lg:flex"><i className="size-1 rounded-full bg-primary" />sistema operacional</span></Link><nav aria-label="Navegação principal" className="flex items-center gap-5 lg:gap-8"><a href="#metodo" className="nav-link hidden md:block">Sistema</a><a href="#honestidade" className="nav-link hidden md:block">Método</a><Link href="/cadastrar" className="nav-link hidden sm:block">Cadastro</Link><Link href={acao.href} className="nav-acao">Acessar<ArrowRight className="size-3.5" /></Link></nav></div>
     </header>
     <main>
       <section className="hero-espacial relative isolate min-h-svh overflow-hidden border-b border-linha"><CampoDeParticulas /><div className="hero-espacial__horizonte absolute inset-x-0 bottom-0 -z-10 h-1/2" /><div className={`${C} grid min-h-svh items-center gap-4 pb-14 pt-28 lg:grid-cols-[1.02fr_.98fr]`}>
