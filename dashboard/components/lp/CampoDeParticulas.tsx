@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import Particles from "@/components/Particles";
 import { assinarTema, lerTema, temaDoServidor, type Tema } from "@/lib/tema";
 
@@ -83,6 +84,7 @@ function movimentoDoServidor(): boolean {
  */
 export function CampoDeParticulas() {
   const tema = useSyncExternalStore(assinarTema, lerTema, temaDoServidor);
+  const pathname = usePathname();
   const menosMovimento = useSyncExternalStore(
     assinarMovimento,
     lerMovimento,
@@ -106,7 +108,7 @@ export function CampoDeParticulas() {
       }}
     >
       <Particles
-        particleColors={PALETA[tema]}
+        particleColors={PALETA[pathname === "/" ? "espacial" : tema]}
         // Contido de proposito. O componente aceita muito mais, e muito mais
         // vira nevoeiro: o hero tem TEXTO por cima, e densidade alta apaga a
         // frase que a secao inteira existe para entregar.
