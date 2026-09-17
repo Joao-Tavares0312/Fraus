@@ -147,6 +147,7 @@ def main() -> int:
         dynamic_axes={nome: {0: "lote", 1: "sequencia"} for nome in ("input_ids", "attention_mask", "token_type_ids")}
         | {nome: {0: "lote"} for nome in ("satisfacao_logits", "emocao_logits", "ironia_logits")},
         opset_version=17,
+        dynamo=False,
     )
     (opcoes.destino / "metricas_destilacao.json").write_text(
         json.dumps({"textos_treino": len(treino), "textos_validacao": total,
