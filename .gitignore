@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+.pytest-tmp/
 modelos/
 dados_brutos/
 *.db
@@ -42,3 +43,4 @@ node_modules/
 # copias RASTREAVEIS -- 300+ MB de peso a um `git add -A` de distancia, no
 # repositorio que proibe justamente isso.
 /modelos-onnx*/
+/modelos-vercel*.zip
