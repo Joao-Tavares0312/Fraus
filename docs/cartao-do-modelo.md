@@ -16,10 +16,11 @@ problemático. Toda exibição carrega a etiqueta de estimativa: o NPS é
 
 **Proibido:**
 
-- **Pontuar atendente.** A família `emocao_*` faz do Fraus um sistema de
-  reconhecimento de emoção pela letra do EU AI Act, e reconhecimento de emoção
-  no local de trabalho é proibido desde fev/2025. "Score por atendente" é
-  violação, não feature. Ver [Conformidade](conformidade.md).
+- **Pontuar atendente.** "Score por atendente" é expansão de finalidade de alto
+  impacto e permanece proibida por política do produto. O Fraus infere emoção
+  de texto, não de dados biométricos; por isso a documentação não afirma mais
+  enquadramento automático na definição do EU AI Act. Ver
+  [Conformidade](conformidade.md).
 - **Decidir sobre o cliente individualmente** (crédito, prioridade, cobrança).
   A nota de uma conversa é evidência para um humano olhar, não veredito.
 - **Apresentar a nota como NPS declarado.**

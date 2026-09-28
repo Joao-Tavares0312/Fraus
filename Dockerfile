@@ -104,7 +104,7 @@ COPY fraus/ ./fraus/
 # `fusor.joblib`, e outra desserializa com aviso de que o resultado PODE ser
 # invalido -- score silenciosamente errado e o pior defeito possivel aqui.
 RUN set -eux; \
-    if [ "$BACKEND" = "onnx" ]; then \
+    if [ "$BACKEND" != "torch" ]; then \
         pip install --no-cache-dir .[onnx]; \
     else \
         pip install --no-cache-dir .; \
@@ -114,6 +114,7 @@ ENV FRAUS_BACKEND=${BACKEND} \
     FRAUS_CAMINHO_ONNX_TEXTO=/modelos-onnx/bertimbau-satisfacao \
     FRAUS_CAMINHO_ONNX_EMOCAO=/modelos-onnx/bertimbau-emocao \
     FRAUS_CAMINHO_ONNX_IRONIA=/modelos-onnx/bertimbau-ironia \
+    FRAUS_CAMINHO_ONNX_MULTITAREFA=/modelos-onnx/bertimbau-multitarefa \
     FRAUS_CAMINHO_MODELO_TEXTO=/modelos/bertimbau-satisfacao \
     FRAUS_CAMINHO_MODELO_EMOCAO=/modelos/bertimbau-emocao \
     FRAUS_CAMINHO_MODELO_IRONIA=/modelos/bertimbau-ironia \
@@ -144,4 +145,7 @@ ENV FRAUS_BACKEND=${BACKEND} \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "fraus.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Cloud Run injeta PORT (8080 por padrao); a VM e o desenvolvimento local nao.
+# O fallback preserva o contrato antigo, enquanto o shell existe apenas para
+# expandir a variavel antes de substituir o processo pelo uvicorn.
+CMD ["sh", "-c", "exec uvicorn fraus.api.main:app --host 0.0.0.0 --port \"${PORT:-8000}\""]

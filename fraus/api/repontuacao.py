@@ -11,18 +11,14 @@ e UM trabalho por vez, com `total`, `feitas`, `estado` e `erro` lidos por
 `GET /conversas/repontuar`, e a tela mostra a barra. Espera que se ve, sem
 prender a conexao.
 
-LIMITES DECLARADOS:
-
-- O estado mora na MEMORIA do processo. Reiniciar a API no meio perde o
-  progresso, nao o que ja foi gravado: cada conversa e salva com a
-  `lexico_versao` com que foi pontuada, e o aviso de regua misturada volta a
-  contar as que faltaram. Repontuar de novo termina o servico.
-- Um processo, um trabalho. Com varios workers do uvicorn cada um teria o seu
-  -- e o projeto recomenda um worker so (cada um carregaria os tres modelos).
+O estado e o lock moram no BANCO. Isso impede duas replicas de iniciarem o
+mesmo trabalho e faz o progresso continuar visivel quando o GET cai em outro
+processo. Uma execucao sem heartbeat por 15 minutos e considerada abandonada e
+pode ser retomada; as linhas ja atualizadas continuam marcadas com a regua nova.
 """
 
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 
 class RepontuacaoEmAndamento(RuntimeError):
@@ -34,11 +30,17 @@ def _agora() -> str:
 
 
 class Repontuacao:
+    NOME_TRABALHO = "repontuacao"
+
     def __init__(self) -> None:
         self._trava = threading.Lock()
         self._estado: dict | None = None
 
-    def estado(self) -> dict | None:
+    def estado(self, banco=None) -> dict | None:
+        if banco is not None:
+            persistido = banco.estado_do_trabalho(self.NOME_TRABALHO)
+            if persistido is not None:
+                return persistido
         with self._trava:
             return dict(self._estado) if self._estado is not None else None
 
@@ -51,20 +53,29 @@ class Repontuacao:
         existe para acabar com ela.
         """
         with self._trava:
-            if self._estado is not None and self._estado["estado"] == "rodando":
-                raise RepontuacaoEmAndamento()
             curadoria = ctx.curadoria_vigente()
             faixas = ctx.faixas_vigentes()
             regua = ctx.regua_vigente()
             # Ordem por id: deterministica nos dois dialetos (sem ORDER BY o
             # Postgres nao promete ordem), e quem retoma sabe onde parou.
             conversas = sorted((c for c, _ in ctx.banco.todas()), key=lambda c: c.id)
+            iniciado_em = _agora()
+            expirado_antes_de = (
+                datetime.now(timezone.utc) - timedelta(minutes=15)
+            ).isoformat()
+            if not ctx.banco.reservar_trabalho(
+                self.NOME_TRABALHO,
+                len(conversas),
+                iniciado_em,
+                expirado_antes_de,
+            ):
+                raise RepontuacaoEmAndamento()
             self._estado = {
                 "estado": "rodando",
                 "total": len(conversas),
                 "feitas": 0,
                 "erro": None,
-                "iniciado_em": _agora(),
+                "iniciado_em": iniciado_em,
                 "concluido_em": None,
             }
             inicial = dict(self._estado)
@@ -79,7 +90,7 @@ class Repontuacao:
 
     def _rodar(self, ctx, conversas, curadoria, faixas, regua) -> None:
         try:
-            for conversa in conversas:
+            for feitas, conversa in enumerate(conversas, start=1):
                 score = ctx.motor.pontuar_conversa(conversa, curadoria)
                 ctx.banco.salvar(
                     conversa,
@@ -90,8 +101,14 @@ class Repontuacao:
                 )
                 with self._trava:
                     self._estado["feitas"] += 1
+                ctx.banco.atualizar_trabalho(
+                    self.NOME_TRABALHO, feitas=feitas, agora=_agora()
+                )
             final, erro = "concluido", None
         except Exception as falha:  # noqa: BLE001 - o estado precisa registrar QUALQUER queda
             final, erro = "falhou", f"{type(falha).__name__}: {falha}"
         with self._trava:
             self._estado.update(estado=final, erro=erro, concluido_em=_agora())
+        ctx.banco.atualizar_trabalho(
+            self.NOME_TRABALHO, estado=final, erro=erro, agora=_agora()
+        )

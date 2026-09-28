@@ -54,6 +54,9 @@ const DESCRICAO =
   "Painel de satisfação inferida a partir do texto, dos emojis e do tempo de resposta dos atendimentos.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  ),
   title: "Fraus — satisfação em atendimentos por chatbot",
   description: DESCRICAO,
   // `openGraph` existe para quando o link for compartilhado na apresentacao ou

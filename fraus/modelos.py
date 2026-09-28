@@ -34,6 +34,10 @@ class Conversa(BaseModel):
     iniciada_em: datetime
     encerrada_em: datetime | None = None
     escalou_para_humano: bool = False
+    # Rotulo declarado pelo proprio cliente na fonte (ex.: Resolveu/nao
+    # resolveu do Tars). Nunca move o score: serve para validar a inferencia.
+    feedback_declarado: Literal[-1, 1] | None = None
+    comentario_feedback: str | None = None
     mensagens: list[Mensagem] = Field(min_length=1)
 
     @field_validator("iniciada_em")

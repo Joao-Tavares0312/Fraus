@@ -86,6 +86,41 @@ ORIGENS_PADRAO = (
     "http://127.0.0.1:3001",
 )
 
+TAMANHO_MINIMO_SEGREDO_JWT = 32
+
+
+def validar_configuracao_de_producao(
+    ambiente: str | None,
+    chave_mestra: str | None,
+    jwt_segredo: str | None,
+    codigo_convite: str | None,
+) -> None:
+    """Falha fechado quando o operador declara que este e um deploy publico.
+
+    O modo local continua sem configuracao obrigatoria. Em producao, aviso de
+    console nao e controle de acesso: a ausencia de qualquer uma das tres
+    travas interrompe o boot com uma mensagem acionavel.
+    """
+    if jwt_segredo and len(jwt_segredo.encode("utf-8")) < TAMANHO_MINIMO_SEGREDO_JWT:
+        raise RuntimeError(
+            "FRAUS_JWT_SEGREDO precisa ter ao menos 32 bytes; gere um segredo aleatorio"
+        )
+    if (ambiente or "").strip().lower() not in {"producao", "production", "prod"}:
+        return
+    ausentes = [
+        nome
+        for nome, valor in (
+            ("FRAUS_CHAVE_MESTRA", chave_mestra),
+            ("FRAUS_JWT_SEGREDO", jwt_segredo),
+            ("FRAUS_CODIGO_CONVITE", codigo_convite),
+        )
+        if not valor
+    ]
+    if ausentes:
+        raise RuntimeError(
+            "configuracao de producao incompleta: defina " + ", ".join(ausentes)
+        )
+
 
 def origens_liberadas() -> list[str]:
     bruto = os.environ.get("FRAUS_ORIGENS")
@@ -257,6 +292,13 @@ def criar_app_padrao() -> FastAPI:
     vai falhar por modelo ausente, ela precisa falhar sem sujar o disco com um
     `fraus.db` de schema vazio.
     """
+    chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
+    jwt_segredo = os.environ.get("FRAUS_JWT_SEGREDO") or None
+    codigo_convite = os.environ.get("FRAUS_CODIGO_CONVITE") or None
+    validar_configuracao_de_producao(
+        os.environ.get("FRAUS_AMBIENTE"), chave_mestra, jwt_segredo, codigo_convite
+    )
+
     classificador, emocao, ironia = montar_classificadores(backend_declarado())
     fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
 
@@ -275,8 +317,6 @@ def criar_app_padrao() -> FastAPI:
     motor = Motor(classificador, fusor, emocao, ironia)
     banco = Banco(DESTINO_BANCO)
     banco.migrar()
-
-    chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
 
     # PRIMEIRA subida: gera mestra e chave de acesso e as grava em disco, para
     # a instalacao nascer fechada sem ninguem precisar clicar em nada. Nao roda
@@ -300,14 +340,12 @@ def criar_app_padrao() -> FastAPI:
             f"defina FRAUS_CHAVE_MESTRA."
         )
 
-    codigo_convite = os.environ.get("FRAUS_CODIGO_CONVITE") or None
-
     # Depois de `ligar_no_primeiro_uso`, de proposito: a mestra que ele acabou
     # de gravar tranca a API tanto quanto a do ambiente, e o aviso tem de
     # enxergar as duas.
     destrancada = aviso_de_porta_destrancada(
         mestra_ligada=chave_mestra is not None or banco.hash_da_chave_mestra() is not None,
-        jwt_segredo=os.environ.get("FRAUS_JWT_SEGREDO") or None,
+        jwt_segredo=jwt_segredo,
         codigo_convite=codigo_convite,
     )
     if destrancada is not None:
@@ -320,7 +358,7 @@ def criar_app_padrao() -> FastAPI:
         # Autenticacao de usuario (spec 2026-08-31): segredos do ambiente,
         # nunca do banco. Sem FRAUS_JWT_SEGREDO o login responde 503 dizendo o
         # que falta; sem FRAUS_CODIGO_DEV nenhum cadastro nasce dev.
-        jwt_segredo=os.environ.get("FRAUS_JWT_SEGREDO") or None,
+        jwt_segredo=jwt_segredo,
         codigo_dev=os.environ.get("FRAUS_CODIGO_DEV") or None,
         # Sem esta variavel o cadastro segue ABERTO -- o comportamento de
         # sempre, certo para quem roda em casa. Definir e a decisao de quem

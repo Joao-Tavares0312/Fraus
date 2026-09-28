@@ -1117,19 +1117,40 @@
     background: linear-gradient(to top, color-mix(in oklch, var(--background) 82%, transparent), transparent);
     mask-image: linear-gradient(to top, black, transparent);
   }
-  .sistema-fraus-cena { perspective: 900px; animation: sistema-deriva 8s ease-in-out infinite; }
-  .sistema-fraus { transform: rotateX(5deg); }
+  .sistema-fraus-cena { perspective: 1100px; }
+  .sistema-fraus {
+    --orbita-rx: 0deg;
+    --orbita-ry: 0deg;
+    --orbita-x: 0px;
+    --orbita-y: 0px;
+    transform: translate3d(var(--orbita-x), var(--orbita-y), 0) rotateX(calc(5deg + var(--orbita-rx))) rotateY(var(--orbita-ry));
+    transform-style: preserve-3d;
+    transition: transform 480ms var(--ease-fluid);
+  }
+  .sistema-fraus__lente {
+    background: radial-gradient(circle at 54% 48%, color-mix(in oklch, var(--medido) 5%, transparent), transparent 52%);
+    box-shadow: 0 0 110px oklch(0 0 0 / 22%);
+    animation: lente-respira 7s ease-in-out infinite;
+  }
   .sistema-fraus__reticula {
     opacity: 0.34;
     background-image: radial-gradient(circle, transparent 62%, var(--compasso) 62.2%, transparent 62.8%), linear-gradient(var(--compasso) 1px, transparent 1px), linear-gradient(90deg, var(--compasso) 1px, transparent 1px);
     background-size: 100% 100%, 42px 42px, 42px 42px;
     mask-image: radial-gradient(circle, black 12%, transparent 70%);
   }
+  .sistema-fraus__eixo {
+    opacity: .32;
+    background:
+      linear-gradient(90deg, transparent calc(50% - .5px), var(--compasso) 50%, transparent calc(50% + .5px)),
+      linear-gradient(transparent calc(50% - .5px), var(--compasso) 50%, transparent calc(50% + .5px));
+    mask-image: radial-gradient(circle, black, transparent 70%);
+    animation: eixo-gira 42s linear infinite;
+  }
   .sistema-fraus__orbita {
     position: absolute;
     left: 50%;
     top: 50%;
-    border: 1px solid var(--compasso);
+    border: 0;
     border-radius: 999px;
     transform-style: preserve-3d;
   }
@@ -1176,10 +1197,35 @@
   .sistema-fraus__superficie::after { inset: 12% -55%; opacity: .48; filter: blur(5px); background: repeating-radial-gradient(ellipse at center, transparent 0 13px, oklch(0.86 0.08 235 / 18%) 15px 18px, transparent 21px 31px); animation-duration: 27s; animation-direction: reverse; }
   .sistema-fraus__superficie i { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, transparent 45%, oklch(0 0 0 / 62%) 80%), radial-gradient(circle at 38% 34%, transparent 20%, oklch(0 0 0 / 28%) 78%); }
   .sistema-fraus__atmosfera { inset: -7%; border: 1px solid color-mix(in oklch, var(--medido) 42%, transparent); box-shadow: inset 8px 0 12px color-mix(in oklch, var(--medido) 20%, transparent), 0 0 18px color-mix(in oklch, var(--medido) 16%, transparent); }
-  @keyframes sistema-deriva { 0%,100% { transform: translate3d(0,-5px,0) rotate(-.25deg); } 50% { transform: translate3d(0,8px,0) rotate(.35deg); } }
+  .sistema-fraus__scanner {
+    border: 1px solid transparent;
+    background: conic-gradient(from 0deg, transparent 0 78%, color-mix(in oklch, var(--medido) 42%, transparent) 91%, transparent 100%);
+    mask: radial-gradient(circle, transparent 57%, black 58% 60%, transparent 61%);
+    animation: scanner-gira 5.4s linear infinite;
+  }
+  .sistema-fraus__mira {
+    border: 1px solid color-mix(in oklch, var(--medido) 18%, transparent);
+    box-shadow: 0 0 32px color-mix(in oklch, var(--medido) 7%, transparent);
+    animation: mira-foco 4.8s ease-in-out infinite;
+  }
+  .sistema-fraus__mira::before,
+  .sistema-fraus__mira::after {
+    content: "";
+    position: absolute;
+    background: color-mix(in oklch, var(--medido) 38%, transparent);
+  }
+  .sistema-fraus__mira::before { left: 50%; top: -8%; width: 1px; height: 116%; }
+  .sistema-fraus__mira::after { left: -8%; top: 50%; width: 116%; height: 1px; }
+  .sistema-fraus__leitura { display: grid; gap: .2rem; padding-left: .7rem; border-left: 1px solid color-mix(in oklch, var(--medido) 42%, transparent); animation: leitura-pisca 3.6s steps(1) infinite; }
+  .sistema-fraus__leitura b { font-size: 1.25rem; font-weight: 500; letter-spacing: -.03em; }
   @keyframes corpo-orbital { from { offset-distance: 0%; } to { offset-distance: 100%; } }
   @keyframes textura-planeta { to { transform: translateX(22%); } }
   @keyframes nucleo-pulso { 0% { transform: scale(.82); opacity: 0; } 28% { opacity: .6; } 100% { transform: scale(1.28); opacity: 0; } }
+  @keyframes scanner-gira { to { transform: rotate(1turn); } }
+  @keyframes eixo-gira { to { transform: rotate(1turn); } }
+  @keyframes lente-respira { 0%, 100% { opacity: .62; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.015); } }
+  @keyframes mira-foco { 0%, 100% { opacity: .32; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: .7; transform: translate(-50%, -50%) scale(1.04); } }
+  @keyframes leitura-pisca { 0%, 94% { opacity: .72; } 95%, 97% { opacity: .28; } 98%, 100% { opacity: .72; } }
 
   .botao-vitrine-base::before {
     content: "";
@@ -1254,6 +1300,11 @@
 
   @media (prefers-reduced-motion: reduce) {
     .sistema-fraus-cena,
+    .sistema-fraus__lente,
+    .sistema-fraus__eixo,
+    .sistema-fraus__scanner,
+    .sistema-fraus__mira,
+    .sistema-fraus__leitura,
     .sistema-fraus__orbita i,
     .sistema-fraus__superficie::before,
     .sistema-fraus__superficie::after,

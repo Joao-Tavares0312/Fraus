@@ -9,6 +9,8 @@ dados_brutos/
 node_modules/
 .next/
 .superpowers/
+.claude/
+.test-temp-vercel-new/
 
 # Credenciais geradas na primeira subida da API. Unica copia em claro delas.
 .fraus-chaves.txt

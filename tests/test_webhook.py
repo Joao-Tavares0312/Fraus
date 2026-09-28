@@ -69,9 +69,10 @@ def test_assinatura_valida_e_aceita_e_grava_a_conversa(cliente, fonte):  # noqa:
     resposta = _enviar(cliente, fonte["id"])
     assert resposta.status_code == 201
     corpo = resposta.json()
-    assert corpo["id"] == "atendimento-1"
+    assert corpo["id"] == f"fonte:{fonte['id']}:atendimento-1"
+    assert corpo["id_externo"] == "atendimento-1"
     assert corpo["fonte"] == "Zendesk"
-    assert [c["id"] for c in cliente.get("/conversas").json()] == ["atendimento-1"]
+    assert [c["id"] for c in cliente.get("/conversas").json()] == [f"fonte:{fonte['id']}:atendimento-1"]
 
 
 def test_o_canal_e_o_da_fonte_nunca_o_do_corpo(cliente, fonte):  # noqa: F811
@@ -297,7 +298,7 @@ def test_entrega_aceita_aponta_a_conversa_que_gerou(cliente, fonte):  # noqa: F8
     _enviar(cliente, fonte["id"])
     (entrega,) = _entregas(cliente, fonte["id"])
     assert entrega["veredito"] == "aceita"
-    assert entrega["conversa_id"] == "atendimento-1"
+    assert entrega["conversa_id"] == f"fonte:{fonte['id']}:atendimento-1"
 
 
 def test_o_corpo_da_requisicao_nao_aparece_em_entrega_nenhuma(cliente, fonte):  # noqa: F811
@@ -367,7 +368,7 @@ def test_recusa_por_assinatura_nao_impede_a_entrega_legitima_depois(cliente, fon
 
     legitima = _enviar(cliente, fonte["id"], webhook_id="msg_1")
     assert legitima.status_code == 201
-    assert [c["id"] for c in cliente.get("/conversas").json()] == ["atendimento-1"]
+    assert [c["id"] for c in cliente.get("/conversas").json()] == [f"fonte:{fonte['id']}:atendimento-1"]
 
 
 def test_503_por_variavel_ausente_nao_impede_a_retentativa_depois(
@@ -385,7 +386,7 @@ def test_503_por_variavel_ausente_nao_impede_a_retentativa_depois(
     monkeypatch.setenv(VARIAVEL, SEGREDO)
     retentativa = _enviar(cliente, fonte["id"], webhook_id="msg_2")
     assert retentativa.status_code == 201
-    assert [c["id"] for c in cliente.get("/conversas").json()] == ["atendimento-1"]
+    assert [c["id"] for c in cliente.get("/conversas").json()] == [f"fonte:{fonte['id']}:atendimento-1"]
 
 
 def test_reentrega_de_entrega_aceita_continua_200_duplicada(cliente, fonte):  # noqa: F811

@@ -1,5 +1,10 @@
 # Hospedar o Fraus
 
+> **Caminho atual sem Oracle:** o deploy automatizado em Cloud Run, com ONNX,
+> Cloud Storage e Supabase, está em [API no Google Cloud Run](cloud-run.md).
+> Ele escala a zero e é a alternativa adotada quando a Ampere A1 gratuita não
+> tem capacidade na região de origem.
+
 O Fraus são **duas peças com necessidades opostas**, e é por isso que elas não
 moram no mesmo lugar:
 
@@ -462,7 +467,7 @@ FRAUS_ORIGENS=https://sua-dashboard.vercel.app
 
 # OPCIONAL: Postgres do Supabase no lugar do SQLite. Com ele, o banco
 # sobrevive a recriar o container -- e `fraus/db.py` ja aceita os dois.
-# FRAUS_BANCO_URL=postgresql://...
+# FRAUS_DATABASE_URL=postgresql://...
 ```
 
 !!! danger "A porta destrancada"
