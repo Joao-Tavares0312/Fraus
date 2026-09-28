@@ -62,7 +62,12 @@ function chaveDoArquivo(): string | undefined {
     process.env.FRAUS_CAMINHO_CHAVES ??
     resolve(process.cwd(), "..", ".fraus-chaves.txt");
   try {
-    const conteudo = readFileSync(caminho, "utf8");
+    // O caminho e configuravel porque API e dashboard podem ser iniciadas de
+    // diretorios diferentes no clone local. Ele nao e uma dependencia do
+    // bundle: em producao este degrau ja foi encerrado acima e a credencial
+    // vem do ambiente. Sem a anotacao, o rastreador do Next inclui o projeto
+    // inteiro na funcao server-side ao tentar antecipar todo caminho possivel.
+    const conteudo = readFileSync(/* turbopackIgnore: true */ caminho, "utf8");
     return /^chave_acesso=(.+)$/m.exec(conteudo)?.[1]?.trim() || undefined;
   } catch {
     // Não existe (API nunca subiu, ou instalação anterior a este arquivo).

@@ -666,7 +666,8 @@ para subir, pronto para copiar, mais um botão de **tentar de novo**.
 **Modo local.** Rodando `npm run dev`, o aviso já vem com um botão **Iniciar
 API** — sem precisar de nenhuma variável: ele sobe o `uvicorn` como processo
 filho do servidor Next, mostra "subindo…" e recarrega a tela sozinho quando
-`GET /saude` responde (30 a 60 s, o tempo de carregar os três BERTimbau).
+`GET /saude` responde. Essa rota não carrega os três BERTimbau;
+`GET /saude/prontidao` distingue `frio`, `carregando`, `pronto` e `erro`.
 
 ```bash
 cd dashboard && npm run dev
@@ -725,9 +726,10 @@ ONNX, tokenizadores e fusor, e só então permite o deploy.
 
 O runtime usa satisfação e emoção em ONNX fp32 e ironia quantizada em int8. O
 pacote final da função tem cerca de **1,46 GB**, aceito pelo recurso Large
-Functions. Os modelos são carregados preguiçosamente: importar a função não
-consome o tempo de inicialização com três BERTimbau. O primeiro `/saude` medido
-em produção levou **10,8 s**; uma inferência logo depois levou **0,8 s**.
+Functions. Os modelos são carregados preguiçosamente: importar a função e
+consultar `/saude` não abrem as sessões ONNX. Antes dessa separação, o primeiro
+`/saude` medido em produção levou **10,8 s**; uma inferência logo depois levou
+**0,8 s**.
 
 Endereços verificados em 17/09/2026:
 
@@ -865,9 +867,9 @@ em **10,8 s**. A landing transfere cerca de **799 KB de JavaScript** em 12
 chunks, além de 71 KB de HTML. Diagnóstico completo em
 [Pendências pós-deploy](docs/notas/2026-09-17-pendencias-pos-deploy.md).
 
-- [ ] **Separar plano de controle e motor.** `/saude`, autenticação e CRUD não
-  podem carregar três BERTimbau. O motor deve inicializar apenas em rotas de
-  inferência, com estado explícito de prontidão.
+- [x] **Separar plano de controle e motor.** `/saude`, autenticação e CRUD não
+  carregam os três BERTimbau. Um provedor thread-safe inicializa o motor apenas
+  quando usado, e `/saude/prontidao` expõe seu estado sem aquecê-lo.
 - [ ] **Tornar a landing independente da API.** Hoje ela consulta sessão e
   disponibilidade de login antes de renderizar, perde cache de CDN e pode
   pagar o cold start inteiro apenas para escolher o texto do CTA.
@@ -986,7 +988,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 | **Ligar a autenticação sem terminal** | ✅ | botão em Configurações, para instalação antiga ou reaberta; a mestra sobrevive a reiniciar |
 | **Gerenciar chaves sem terminal** | ✅ | painel que emite, lista e revoga chaves de acesso, pedindo a mestra; e `scripts/resetar_mestra.py` para quando ela se perde |
 | **Dashboard sem terminal** | ✅ | **Iniciar API** (sem abrir janela de console) e **Desligar**, este último só para a API que a própria dashboard subiu — travas em [§5](#5-quando-a-api-não-está-no-ar) |
-| **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial e **declarando qual motor serve** (`{"status":"ok","motor":"real"\|"duble"}`); a barra lateral escreve "motor dublê — números sintéticos" em vez de "API no ar" quando o que responde é o dublê; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
+| **Diagnóstico honesto** | ✅ | régua de estado quando a API não responde; `/saude` fora da credencial declara qual motor serve e seu estado; `/saude/prontidao` separa readiness de liveness sem iniciar a carga; a barra lateral escreve "motor dublê — números sintéticos" em vez de "API no ar" quando o que responde é o dublê; estado vazio nunca afirma "não há atendimento" quando a causa é conexão |
 | **Agregação no servidor (fim do N+1)** | ✅ | `/serie-temporal`, `/lexico`, `/indicadores` (com tempo mediano) e o recorte `de`/`ate` em `/conversas`; **nenhuma tela baixa transcrição** no caminho feliz |
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
@@ -1447,8 +1449,8 @@ permite a rota morar fora do arquivo que constrói o app.
 
 ### Servidor de demonstração da interface
 
-O `app` real carrega o BERTimbau do disco e **falha alto** se `modelos/` não
-existir — por design. O `scripts/api_demo.py` existe para desenvolver a interface
+O `app` real carrega o BERTimbau no primeiro uso do motor e **falha alto** se
+`modelos/` não existir — por design. O `scripts/api_demo.py` existe para desenvolver a interface
 sem esse custo: ele semeia um banco temporário com conversas do simulador,
 incluindo atendimentos **sem fala do cliente** para exercitar o estado "sem
 sinal".

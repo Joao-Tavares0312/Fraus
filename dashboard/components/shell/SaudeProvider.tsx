@@ -8,6 +8,10 @@ import {
   useState,
 } from "react";
 import { obterSaude } from "@/lib/api";
+import {
+  classificarSaude,
+  type EstadoDeSaude,
+} from "@/lib/estado-saude";
 
 /**
  * `duble` é um estado à parte, e não um "no-ar" com etiqueta: a API respondeu,
@@ -16,7 +20,7 @@ import { obterSaude } from "@/lib/api";
  * tipo de lembrete não sobrevive — foi assim que a tela anunciou "API no ar"
  * por um dia inteiro sobre números inventados.
  */
-export type EstadoDeSaude = "verificando" | "no-ar" | "duble" | "fora-do-ar";
+export type { EstadoDeSaude } from "@/lib/estado-saude";
 
 const INTERVALO_MS = 20_000;
 
@@ -42,18 +46,9 @@ const SaudeContexto = createContext<Contexto | null>(null);
 export function SaudeProvider({ children }: { children: React.ReactNode }) {
   const [estado, setEstado] = useState<EstadoDeSaude>("verificando");
 
-  // `no-ar` exige o motor DECLARADO como real. Campo ausente (API antiga) ou
-  // qualquer outro valor cai em `duble`: errar para este lado custa uma
-  // etiqueta a mais na tela, errar para o outro apresenta invenção como
-  // medição. É a mesma precedência que a rota `/saude` aplica no servidor.
-  const classificar = (resultado: Awaited<ReturnType<typeof obterSaude>>) => {
-    if (!resultado.ok) return "fora-do-ar" as const;
-    return resultado.dado?.motor === "real" ? ("no-ar" as const) : ("duble" as const);
-  };
-
   const reconsultar = useCallback(async () => {
     const resultado = await obterSaude();
-    setEstado(classificar(resultado));
+    setEstado(classificarSaude(resultado));
     return resultado.ok;
   }, []);
 
@@ -63,7 +58,7 @@ export function SaudeProvider({ children }: { children: React.ReactNode }) {
     const verificar = async () => {
       const resultado = await obterSaude();
       if (!vivo) return;
-      setEstado(classificar(resultado));
+      setEstado(classificarSaude(resultado));
     };
 
     verificar();
