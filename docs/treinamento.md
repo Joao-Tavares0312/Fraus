@@ -606,6 +606,28 @@ O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM
 | `kaggle` | baixa da conta Kaggle; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
 | `upload` | seletor de arquivos do navegador, para corpus que chegou por e-mail |
 
+### Candidato Laya
+
+O Laya multilíngue pode substituir apenas a cabeça de ironia, sem alterar
+satisfação, emoção ou o fusor. Ele é opt-in porque baixa aproximadamente 647 MB
+de pesos e exige torch:
+
+```bash
+uv sync --extra laya
+FRAUS_IRONIA_BACKEND=laya uv run uvicorn fraus.api.main:app
+```
+
+O checkpoint fica preso à revisão declarada em `FRAUS_LAYA_REVISAO`. Antes de
+promovê-lo, execute a mesma régua de transferência de domínio:
+
+```bash
+uv run python scripts/validar_candidato_ironia.py --backend laya
+```
+
+A aba **Modelo → Ironia · Laya** chama somente essa cabeça e não persiste nem
+altera notas. O tipo de pergunta usado é `choice` com chaves neutras, não
+`noul`, por causa do viés de rótulo documentado pelos próprios autores.
+
 ### Alternativas ao IDPT — levantamento de 14/08/2026
 
 Registrado para ninguem repetir a busca. O que **nao serve**, e por que:

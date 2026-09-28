@@ -56,6 +56,10 @@ docs = [
 # onnx nunca importa. Os notebooks de treino e a conversao continuam exigindo.
 torch = ["torch>=2.3"]
 
+# Candidato experimental para a cabeça de ironia. Fica opt-in porque inclui
+# torch e baixa o checkpoint multilíngue (~647 MB) apenas quando declarado.
+laya = ["laya==0.3.21"]
+
 # RUNTIME do backend ONNX -- so o `onnxruntime`, que basta para PONTUAR.
 # Ele nao traz torch: a inferencia acontece no grafo exportado, e o tokenizador
 # do `transformers` funciona sem torch instalado. E o que permite uma imagem de

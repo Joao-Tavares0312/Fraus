@@ -52,6 +52,7 @@ CAMINHO_FUSOR = artefato("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib")
 # duas pontuam e nao toleram int8) e ironia em int8 (nao pontua) -- 0 de 180
 # categorias trocadas, e ~1,5x mais rapida que o torch na mesma CPU.
 BACKENDS = ("torch", "onnx", "onnx-multitarefa")
+BACKENDS_IRONIA = ("padrao", "laya")
 CAMINHO_ONNX_TEXTO = artefato("FRAUS_CAMINHO_ONNX_TEXTO", "modelos-onnx/bertimbau-satisfacao")
 CAMINHO_ONNX_EMOCAO = artefato("FRAUS_CAMINHO_ONNX_EMOCAO", "modelos-onnx/bertimbau-emocao")
 CAMINHO_ONNX_IRONIA = artefato("FRAUS_CAMINHO_ONNX_IRONIA", "modelos-onnx/bertimbau-ironia")
@@ -66,6 +67,16 @@ def backend_declarado() -> str:
     if valor not in BACKENDS:
         raise ValueError(
             f"FRAUS_BACKEND={valor!r} nao existe. Use um de {BACKENDS}."
+        )
+    return valor
+
+
+def backend_ironia_declarado() -> str:
+    """Executor da cabeça de ironia, independente das outras duas cabeças."""
+    valor = (os.environ.get("FRAUS_IRONIA_BACKEND") or "padrao").strip().lower()
+    if valor not in BACKENDS_IRONIA:
+        raise ValueError(
+            f"FRAUS_IRONIA_BACKEND={valor!r} não existe. Use um de {BACKENDS_IRONIA}."
         )
     return valor
 # O BANCO nao entra na regra acima: ele nao e artefato de treino, e sim estado

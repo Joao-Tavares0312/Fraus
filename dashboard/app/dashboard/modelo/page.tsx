@@ -25,6 +25,8 @@ import { LexicoCurado } from "@/components/modelo/LexicoCurado";
 import { MetricasTreino } from "@/components/modelo/MetricasTreino";
 import { PesosFeatures } from "@/components/modelo/PesosFeatures";
 import { Simulador } from "@/components/modelo/Simulador";
+import { SimuladorIroniaLaya } from "@/components/modelo/SimuladorIroniaLaya";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +76,13 @@ export default async function PaginaModelo() {
           O ramo de erro/vazio logo acima continua com flex-1 -- o EstadoVazio
           depende dele para se centralizar na coluna. */}
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
+        <Tabs defaultValue="fraus" className="min-w-0 gap-4">
+          <TabsList aria-label="Visões do modelo" variant="line">
+            <TabsTrigger value="fraus">Modelo completo</TabsTrigger>
+            <TabsTrigger value="laya">Ironia · Laya</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="fraus" className="flex min-w-0 flex-col gap-4">
         <EstadoDoModelo modelo={modelo} />
 
         <Painel
@@ -174,6 +183,19 @@ export default async function PaginaModelo() {
         {/* Depois do lexicon de emoji de propósito: primeiro o que o projeto
             trouxe pronto, depois o que esta instalação acrescentou por cima. */}
         <LexicoCurado />
+          </TabsContent>
+
+          <TabsContent value="laya" className="flex min-w-0 flex-col gap-4">
+            <Painel
+              titulo="Classificador de ironia · Laya"
+              legenda="Teste isolado do checkpoint multilíngue convaiinnovations/laya. Esta leitura não executa satisfação, emoção, emojis ou fusor e não altera a nota dos atendimentos."
+              semPadding
+              rodape="As probabilidades são sinais experimentais. A promoção para uso corrente depende do gate de domínio e de calibração em dados portugueses separados do treino."
+            >
+              <SimuladorIroniaLaya />
+            </Painel>
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );
