@@ -34,6 +34,9 @@ if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
 from fraus.api.caminhos import CAMINHO_FUSOR, backend_declarado  # noqa: E402
+from fraus.avaliacao_ironia import (IRONIAS_SEM_MARCADOR,  # noqa: E402
+                                    SINCERAS_COM_MARCADOR,
+                                    avaliar_probabilidades)
 from fraus.api.main import montar_classificadores  # noqa: E402
 from fraus.fatias import fatias_de, metricas_por_fatia  # noqa: E402
 from fraus.fusor import Fusor, montar_features  # noqa: E402
@@ -45,36 +48,6 @@ from fraus.sinais.ironia import IRONICO  # noqa: E402
 # Diferente das sementes de `medir_faixas` (20260820) e de `comparar_backends`
 # (20260910): um laudo que reusa o lote de outro nao e medida independente.
 SEMENTE = 20260915
-
-# Sinceras, mas com o marcador que o gerador de ironia usava como atalho
-# ("nossa", "realmente", "ne", "que ..."). Uma cabeca que aprendeu ironia de
-# verdade deixa estas abaixo de 0,5.
-SINCERAS_COM_MARCADOR = [
-    "nossa, resolveu rapidinho, obrigado",
-    "realmente o atendimento foi muito bom",
-    "que atendimento bom, parabens pra equipe",
-    "nossa, finalmente consegui emitir o boleto, valeu",
-    "foi rapido ne, gostei",
-    "realmente precisava disso, muito obrigada",
-    "que alivio, o pedido chegou certinho",
-    "nossa que eficiencia, ja caiu o estorno",
-    "ne, bem melhor que da ultima vez, obrigado",
-    "realmente, agora funcionou",
-]
-
-# Ironicas sem marcador lexico nenhum: o elogio e desmentido pela situacao.
-IRONIAS_SEM_MARCADOR = [
-    "excelente, terceira vez que explico a mesma coisa",
-    "otimo servico, so levou duas semanas pra responder",
-    "adorei ficar uma hora ouvindo musica de espera",
-    "parabens, conseguiram perder meu pedido de novo",
-    "maravilha, o protocolo nao existe no sistema",
-    "show, cobraram duas vezes",
-    "perfeito, cancelaram sem avisar",
-    "incrivel como ninguem sabe responder nada",
-    "amei o robo que nao entende portugues",
-    "muito eficiente, fecharam o chamado sem resolver",
-]
 
 CORTESIAS = ["ok, obrigado", "valeu", "ta bom", "ok", "obrigada", "certo, entendi"]
 
@@ -141,8 +114,9 @@ def main() -> int:
     print("\n## 3. Contra-exemplos da ironia\n")
     sinceras = [p[IRONICO] for p in ironia.prever_mensagens(SINCERAS_COM_MARCADOR)]
     ironicas = [p[IRONICO] for p in ironia.prever_mensagens(IRONIAS_SEM_MARCADOR)]
-    falso_positivo = sum(p > 0.5 for p in sinceras) / len(sinceras)
-    falso_negativo = sum(p <= 0.5 for p in ironicas) / len(ironicas)
+    regua = avaliar_probabilidades(sinceras, ironicas)
+    falso_positivo = regua.taxa_falso_positivo
+    falso_negativo = regua.taxa_falso_negativo
     print(f"sincera com marcador marcada como irônica: {falso_positivo:.0%} ({len(sinceras)} falas)")
     print(f"irônica sem marcador que passou como sincera: {falso_negativo:.0%} ({len(ironicas)} falas)\n")
     print("| tipo | fala | P(irônico) |\n|---|---|---|")
