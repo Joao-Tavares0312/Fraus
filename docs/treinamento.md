@@ -586,15 +586,22 @@ Classificacao binaria: 0 nao-ironico, 1 ironico.
 
 **Corpus:** IDPT 2021, a tarefa de *Irony Detection in Portuguese* do IberLEF — 15,2k tweets e 18,4k noticias anotados.
 
-### O corpus NAO tem download aberto
+### Fontes publicas do treino e teste oficial fechado
 
-Diferente dos outros notebooks, o 04 **nao baixa o corpus sozinho**: o IDPT 2021 nao esta publicado para download livre — nao ha copia no GitHub nem no Hugging Face, e a pagina da tarefa nao expoe link direto. E preciso **solicitar aos organizadores** em <https://sites.google.com/inf.ufpel.edu.br/idpt2021/>.
+O **teste oficial**, anotado para a competicao, continua protegido e deve ser
+solicitado aos organizadores em <https://sites.google.com/inf.ufpel.edu.br/idpt2021/>.
+Ele nunca entra no treino. As fontes publicas usadas para formar o treino do
+IDPT, porem, estao abertas: os tweets em
+<https://github.com/fabio-ricardo/deteccao-ironia> e as noticias em
+<https://github.com/schuberty/PLNCrawler>. O notebook baixa essas fontes no
+runtime por commits imutaveis e valida cada Git blob antes de usar.
 
 O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM` da celula 3. Todas alimentam a mesma pasta e a mesma deteccao de esquema, entao trocar de fonte nao muda o resto do notebook:
 
 | `ORIGEM` | Quando usar |
 |---|---|
-| `sintetico` (**padrao**) | gera o corpus com `fraus.ingest.gerador_ironia` — nao depende de liberacao de ninguem |
+| `idpt_publico` (**padrao**) | baixa as fontes publicas originais, remove hashtags que vazam o rotulo, duplicatas e conflitos |
+| `sintetico` | gera o corpus com `fraus.ingest.gerador_ironia` — fica como ablacao, nao como fonte principal |
 | `drive` | os arquivos ja estao em `DIR_CORPUS` — foi assim que o IDPT entrou, se liberado |
 | `kaggle` | baixa da conta Kaggle; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
 | `upload` | seletor de arquivos do navegador, para corpus que chegou por e-mail |
