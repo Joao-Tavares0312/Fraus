@@ -649,6 +649,28 @@ Como o notebook **nunca viu os arquivos**, a celula de carga tem esquema **confi
 
 **Se o corpus nao for liberado a tempo**, a saida honesta e declarar a ironia como trabalho futuro no relatorio. Trocar por um corpus de sarcasmo em ingles traduzido repetiria, com outro nome, o vazamento de procedencia que ja custou o primeiro fusor.
 
+### Portao de promocao do artefato
+
+A acuracia/F1 do holdout sintetico **nao autoriza** substituir o modelo em
+producao. Depois do notebook 04, copie primeiro o checkpoint para uma pasta de
+candidato e rode:
+
+```bash
+uv run python scripts/validar_candidato_ironia.py /caminho/do/candidato \
+  --saida-json metricas_regua_ironia.json
+```
+
+O comando exige no maximo 30% de falso positivo nas dez falas sinceras com
+marcador e 30% de falso negativo nas dez ironias sem marcador. Ele devolve
+codigo 1 se qualquer fatia falhar, para que o artefato nao seja promovido por
+uma unica media boa. As falas e o calculo canonicos moram em
+`fraus/avaliacao_ironia.py`; o laudo por fatias usa a mesma fonte.
+
+Essa e uma **regua autoral de regressao**, deliberadamente desenhada contra os
+atalhos ja encontrados. Nao e corpus independente, nao estima acuracia em
+atendimento real e nao torna honesto reativar a ironia no fusor. Um corpus
+humano PT-BR separado do treino continua sendo o bloqueio cientifico.
+
 A metrica de selecao do melhor checkpoint e o **F1 da classe ironica isolada**, nao a macro nem a acuracia: e essa classe que o sinal consome, e corpus de ironia costuma ser desequilibrado o bastante para um modelo que responde "nao e ironia" sempre marcar boa acuracia. O treino tambem usa pesos de classe, pelo mesmo motivo.
 
 **Por que uma cabeca separada** e nao mais uma classe do sinal de texto: ironia nao e um sentimento, e uma relacao entre o que o texto DIZ e o que ele SIGNIFICA. "Que atendimento maravilhoso, so esperei 3 horas" e lexicamente positivo e pragmaticamente negativo ao mesmo tempo. Como quarta classe de satisfacao, o modelo seria obrigado a escolher uma das duas leituras — e a informacao de que ha conflito, que e justamente o sinal de ironia, se perderia.
