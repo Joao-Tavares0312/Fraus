@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { Play, RotateCcw } from "lucide-react";
-import { simularIroniaLaya, type SimulacaoIroniaLaya } from "@/lib/api";
+import { simularIroniaLaya, type ConfiguracaoIroniaLaya, type SimulacaoIroniaLaya } from "@/lib/api";
 import { formatarNumero } from "@/lib/formato";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,11 +16,26 @@ const PARTIDAS = [
   "perfeito, cancelaram meu pedido sem avisar",
 ];
 
+const BASE = {
+  contexto: "",
+  instrucao: "A fala do cliente é irônica? Considere incongruência entre o sentido literal e a situação descrita.",
+  criterio_ironico: "há ironia ou incongruência entre elogio literal e situação negativa",
+  criterio_literal: "a fala é literal e não irônica",
+};
+const PERFIS = {
+  conservador: { limiar: 0.75, confianca_minima: 0.7 },
+  equilibrado: { limiar: 0.5, confianca_minima: 0.6 },
+  sensivel: { limiar: 0.3, confianca_minima: 0.0 },
+} as const;
+type Perfil = keyof typeof PERFIS | "customizado";
+
 export function SimuladorIroniaLaya() {
   const [texto, setTexto] = useState(PARTIDAS[0]);
   const [resultado, setResultado] = useState<SimulacaoIroniaLaya | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [rodando, setRodando] = useState(false);
+  const [perfil, setPerfil] = useState<Perfil>("equilibrado");
+  const [configuracao, setConfiguracao] = useState<ConfiguracaoIroniaLaya>({ ...BASE, ...PERFIS.equilibrado });
   const idCampo = useId();
 
   const simular = async () => {
@@ -32,7 +47,7 @@ export function SimuladorIroniaLaya() {
     }
     setRodando(true);
     setErro(null);
-    const resposta = await simularIroniaLaya(limpo);
+    const resposta = await simularIroniaLaya(limpo, configuracao);
     setRodando(false);
     if (resposta.ok) setResultado(resposta.dado);
     else {
@@ -74,6 +89,65 @@ export function SimuladorIroniaLaya() {
           </span>
         </div>
       </div>
+
+      <div className="grid gap-4 border-y border-linha py-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs text-muted-foreground">Perfil de decisão</Label>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(PERFIS) as Array<keyof typeof PERFIS>).map((nome) => (
+              <Button key={nome} type="button" size="xs" variant={perfil === nome ? "default" : "outline"}
+                onClick={() => {
+                  setPerfil(nome);
+                  setConfiguracao((atual) => ({ ...atual, ...PERFIS[nome] }));
+                  setResultado(null);
+                }}>
+                {nome}
+              </Button>
+            ))}
+          </div>
+          <label className="mt-2 text-xs text-muted-foreground">
+            Limiar de ironia <b className="num text-foreground">{formatarNumero(configuracao.limiar * 100)}%</b>
+            <input className="mt-2 block w-full accent-primary" type="range" min="0" max="1" step="0.05"
+              value={configuracao.limiar} onChange={(evento) => {
+                setPerfil("customizado");
+                setConfiguracao((atual) => ({ ...atual, limiar: Number(evento.target.value) }));
+              }} />
+          </label>
+          <label className="text-xs text-muted-foreground">
+            Confiança mínima <b className="num text-foreground">{formatarNumero(configuracao.confianca_minima * 100)}%</b>
+            <input className="mt-2 block w-full accent-primary" type="range" min="0" max="1" step="0.05"
+              value={configuracao.confianca_minima} onChange={(evento) => {
+                setPerfil("customizado");
+                setConfiguracao((atual) => ({ ...atual, confianca_minima: Number(evento.target.value) }));
+              }} />
+          </label>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${idCampo}-contexto`} className="text-xs text-muted-foreground">Contexto anterior da conversa · opcional</Label>
+          <Textarea id={`${idCampo}-contexto`} value={configuracao.contexto}
+            onChange={(evento) => setConfiguracao((atual) => ({ ...atual, contexto: evento.target.value }))}
+            rows={5} maxLength={6000} placeholder="Cliente já tentou resolver três vezes; o pedido foi cancelado sem aviso…"
+            className="resize-y font-normal" />
+        </div>
+      </div>
+
+      <details className="rounded-lg border border-border px-4 py-3">
+        <summary className="cursor-pointer text-sm font-medium">Instrução e critérios avançados</summary>
+        <div className="mt-4 grid gap-3">
+          {([ ["instrucao", "Instrução"], ["criterio_ironico", "Critério para irônico"], ["criterio_literal", "Critério para literal"] ] as const).map(([chave, rotulo]) => (
+            <label key={chave} className="text-xs text-muted-foreground">{rotulo}
+              <Textarea value={configuracao[chave]}
+                onChange={(evento) => setConfiguracao((atual) => ({ ...atual, [chave]: evento.target.value }))}
+                rows={2} maxLength={600} className="mt-1 resize-y font-normal text-foreground" />
+            </label>
+          ))}
+          <Button type="button" size="xs" variant="outline" className="w-fit" onClick={() => {
+            setPerfil("equilibrado");
+            setConfiguracao({ ...BASE, ...PERFIS.equilibrado });
+            setResultado(null);
+          }}>Restaurar configuração padrão</Button>
+        </div>
+      </details>
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground">Começar de:</span>
@@ -121,8 +195,8 @@ function Resultado({ resultado }: { resultado: SimulacaoIroniaLaya }) {
     <div className="flex flex-col gap-3 border-t border-linha pt-4">
       <p className="flex flex-wrap items-baseline gap-2 text-sm">
         <span className="text-muted-foreground">Classe mais provável:</span>
-        <strong className={resultado.classe === "ironico" ? "text-detrator-texto" : "text-promotor-texto"}>
-          {resultado.classe === "ironico" ? "Irônico" : "Não irônico"}
+        <strong className={resultado.classe === "ironico" ? "text-detrator-texto" : resultado.classe === "nao-ironico" ? "text-promotor-texto" : "text-neutro-texto"}>
+          {resultado.classe === "ironico" ? "Irônico" : resultado.classe === "nao-ironico" ? "Não irônico" : "Inconclusivo"}
         </strong>
       </p>
       <div
@@ -142,6 +216,12 @@ function Resultado({ resultado }: { resultado: SimulacaoIroniaLaya }) {
         <div><dt className="text-muted-foreground">Checkpoint</dt><dd className="num mt-1">{resultado.checkpoint}</dd></div>
         <div><dt className="text-muted-foreground">Revisão</dt><dd className="num mt-1 truncate" title={resultado.revisao}>{resultado.revisao.slice(0, 12)}</dd></div>
       </dl>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Limiar <span className="num">{formatarNumero(resultado.limiar * 100)}%</span>
+        {" · "}confiança observada <span className="num">{formatarNumero(resultado.confianca * 100)}%</span>
+        {" · "}mínima <span className="num">{formatarNumero(resultado.confianca_minima * 100)}%</span>
+        {resultado.contexto_usado ? " · contexto incluído" : " · sem contexto"}
+      </p>
       <p className="text-xs leading-relaxed text-muted-foreground">
         Leitura experimental: não altera a nota, o NPS ou dados persistidos.
       </p>

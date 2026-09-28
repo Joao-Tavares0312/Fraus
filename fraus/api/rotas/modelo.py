@@ -17,7 +17,7 @@ from fraus.api.caminhos import (CAMINHO_METRICAS, CAMINHO_METRICAS_EMOCAO,
                                 CAMINHO_METRICAS_IRONIA,
                                 backend_ironia_declarado, metricas_de)
 from fraus.api.contexto import Contexto, obter_contexto
-from fraus.api.esquemas import PedidoSimulacao
+from fraus.api.esquemas import PedidoSimulacao, PedidoSimulacaoIroniaLaya
 from fraus.sinais.emoji import linhas_lexicon, score_do_emoji
 from fraus.sinais.emocao import NOMES_EMOCOES
 
@@ -162,7 +162,7 @@ def ficha_ironia_laya() -> dict:
 
 
 @router.post("/modelo/ironia-laya/simular")
-def simular_ironia_laya(pedido: PedidoSimulacao) -> dict:
+def simular_ironia_laya(pedido: PedidoSimulacaoIroniaLaya) -> dict:
     """Roda somente o Laya; não carrega satisfação, emoção nem fusor."""
     texto = pedido.texto.strip()
     if not texto:
@@ -175,12 +175,28 @@ def simular_ironia_laya(pedido: PedidoSimulacao) -> dict:
     from fraus.sinais.ironia_laya import (
         obter_classificador_ironia_laya, revisao_laya_declarada)
 
-    nao_ironico, ironico = obter_classificador_ironia_laya().prever_mensagens([texto])[0]
+    ironico = obter_classificador_ironia_laya().prever_configurado(
+        texto,
+        contexto=pedido.contexto,
+        instrucao=pedido.instrucao,
+        criterio_ironico=pedido.criterio_ironico,
+        criterio_literal=pedido.criterio_literal,
+    )
+    nao_ironico = 1.0 - ironico
+    confianca = max(ironico, nao_ironico)
+    if confianca < pedido.confianca_minima:
+        classe = "inconclusivo"
+    else:
+        classe = "ironico" if ironico >= pedido.limiar else "nao-ironico"
     return {
         "texto": texto,
-        "classe": "ironico" if ironico > nao_ironico else "nao-ironico",
+        "classe": classe,
         "prob_nao_ironico": nao_ironico,
         "prob_ironia": ironico,
+        "confianca": confianca,
+        "limiar": pedido.limiar,
+        "confianca_minima": pedido.confianca_minima,
+        "contexto_usado": bool(pedido.contexto.strip()),
         "modelo": "convaiinnovations/laya",
         "checkpoint": "multilingual",
         "revisao": revisao_laya_declarada(),

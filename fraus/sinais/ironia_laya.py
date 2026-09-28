@@ -30,6 +30,10 @@ PERGUNTA_IRONIA = {
     }
 }
 
+INSTRUCAO_PADRAO = PERGUNTA_IRONIA["ironia"]["instructions"]
+CRITERIO_IRONICO_PADRAO = PERGUNTA_IRONIA["ironia"]["criteria"]["A"]
+CRITERIO_LITERAL_PADRAO = PERGUNTA_IRONIA["ironia"]["criteria"]["B"]
+
 
 class DependenciaLayaAusenteError(RuntimeError):
     pass
@@ -96,6 +100,31 @@ class ClassificadorIroniaLaya:
             raise RespostaLayaInvalidaError("Laya devolveu quantidade inesperada de respostas")
         probabilidades = [self._probabilidade_ironia(resultado) for resultado in resultados]
         return [[1.0 - probabilidade, probabilidade] for probabilidade in probabilidades]
+
+    def prever_configurado(
+        self,
+        texto: str,
+        *,
+        contexto: str = "",
+        instrucao: str = INSTRUCAO_PADRAO,
+        criterio_ironico: str = CRITERIO_IRONICO_PADRAO,
+        criterio_literal: str = CRITERIO_LITERAL_PADRAO,
+    ) -> float:
+        """Avalia uma fala com esquema editável, sem mudar o perfil global."""
+        estado: str | dict[str, str] = texto
+        if contexto.strip():
+            estado = {"contexto_anterior": contexto.strip(), "fala_do_cliente": texto}
+        perguntas = {
+            "ironia": {
+                "type": "choice",
+                "instructions": instrucao,
+                "criteria": {"A": criterio_ironico, "B": criterio_literal},
+            }
+        }
+        resultado = self._router.predict(
+            estado, perguntas, model=self._modelo, lang="pt"
+        )
+        return self._probabilidade_ironia(resultado)
 
 
 @lru_cache(maxsize=1)
