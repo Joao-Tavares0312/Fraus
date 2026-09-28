@@ -86,6 +86,38 @@ def baixar(url: str, destino: Path, token: str | None = None) -> None:
         shutil.copyfileobj(resposta, arquivo, length=1024 * 1024)
 
 
+def instalar_extraido(extraido: Path, raiz: Path) -> None:
+    """Promove bundle completo e restaura o anterior se qualquer move falhar."""
+    nomes = ("modelos-onnx", "modelos")
+    backups: dict[str, Path] = {}
+    instalados: list[Path] = []
+    try:
+        for nome in nomes:
+            destino = raiz / nome
+            if destino.exists():
+                backup = raiz / f".{nome}.anterior"
+                if backup.exists():
+                    shutil.rmtree(backup)
+                shutil.move(str(destino), backup)
+                backups[nome] = backup
+        for nome in nomes:
+            destino = raiz / nome
+            shutil.move(str(extraido / nome), destino)
+            instalados.append(destino)
+        conferir_modelos(raiz)
+    except Exception:
+        for destino in reversed(instalados):
+            if destino.exists():
+                shutil.rmtree(destino)
+        for nome, backup in backups.items():
+            shutil.move(str(backup), raiz / nome)
+        raise
+    else:
+        for backup in backups.values():
+            if backup.exists():
+                shutil.rmtree(backup)
+
+
 def preparar() -> None:
     try:
         conferir_modelos(RAIZ)
@@ -110,11 +142,7 @@ def preparar() -> None:
         extrair_zip_seguro(pacote, extraido)
         conferir_modelos(extraido)
 
-        for nome in ("modelos-onnx", "modelos"):
-            destino = RAIZ / nome
-            if destino.exists():
-                shutil.rmtree(destino)
-            shutil.move(str(extraido / nome), destino)
+        instalar_extraido(extraido, RAIZ)
     conferir_modelos(RAIZ)
     print("modelos ONNX baixados, conferidos e prontos para o bundle")
 

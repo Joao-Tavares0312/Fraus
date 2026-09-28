@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:lp": "node scripts/validar-lp-playwright.mjs",
     "contraste": "node scripts/contraste.mjs",
     "pisos": "node scripts/pisos.mjs"
   },

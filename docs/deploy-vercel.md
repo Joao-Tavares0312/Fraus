@@ -106,6 +106,9 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 | `FRAUS_MODELOS_SHA256` | identidade imutável do artefato |
 | `FRAUS_BACKEND=onnx` | escolhe ONNX Runtime sem fallback silencioso |
 | `FRAUS_DATABASE_URL` | transaction pooler do Supabase (`:6543`) |
+| `FRAUS_POSTGRES_MIN_CONEXOES=0` | não reserva conexão por instância fria |
+| `FRAUS_POSTGRES_MAX_CONEXOES=2` | teto por instância serverless (1–20) |
+| `FRAUS_POSTGRES_TIMEOUT_S=10` | espera máxima por uma conexão do pool |
 | `FRAUS_CHAVE_MESTRA` | administração da API |
 | `FRAUS_CHAVE_ACESSO` | acesso usado pela dashboard |
 | `FRAUS_JWT_SEGREDO` | assinatura das sessões |
@@ -121,6 +124,55 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 
 Nenhum valor secreto deve entrar no repositório. Alterar variável na Vercel
 exige novo deploy para entrar no processo.
+
+## Deploy reproduzível e smoke
+
+O workflow manual `.github/workflows/api-deploy.yml` usa ambiente protegido
+`production-api`, trava concorrência de promoções e fixa a versão do CLI da
+Vercel. Configure nele os secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+`VERCEL_PROJECT_ID`, `FRAUS_API_PUBLIC_URL` e `FRAUS_CHAVE_ACESSO`. O job:
+
+1. instala pelo `uv.lock` com `--frozen` e testa os contratos operacionais;
+2. produz o build de produção antes de publicar;
+3. publica o mesmo diretório prebuilt;
+4. executa uma vez `scripts/smoke_deploy.py` contra `/saude`.
+
+O smoke tem repetição limitada para propagação do deploy e termina. Ele não é
+agendado e não deve virar ping contínuo para esconder cold start. URL e token
+entram apenas por secrets e nunca são incluídos na saída do script.
+
+## Artefatos e rollback
+
+`scripts/gerenciar_artefatos.py` concentra o ciclo sem registrar URL privada:
+
+```bash
+uv run python scripts/gerenciar_artefatos.py empacotar --versao 2026-09-28 --saida dist/modelos-2026-09-28.zip
+uv run python scripts/gerenciar_artefatos.py validar dist/modelos-2026-09-28.zip --sha256 SHA_ESPERADO
+# FRAUS_ARTEFATO_PUBLICAR_URL e FRAUS_ARTEFATO_TOKEN vêm do ambiente
+uv run python scripts/gerenciar_artefatos.py publicar dist/modelos-2026-09-28.zip --sha256 SHA_ESPERADO
+```
+
+O empacotamento é determinístico, cria manifesto e arquivo `.sha256`, recusa
+sobrescrever pacote existente e valida a topologia antes da publicação. Para
+rollback, mantenha pelo menos o ZIP, a URL de leitura e o checksum anteriores;
+rode `rollback` para validar a cópia retida, restaure `FRAUS_MODELOS_URL` e
+`FRAUS_MODELOS_SHA256` aos valores daquela versão e faça novo deploy. O comando
+não sobrescreve o objeto imutável. O instalador do build também restaura o
+bundle local anterior se uma promoção for interrompida pela metade.
+
+## Medir latência e região
+
+Use `scripts/medir_latencia_deploy.py` separadamente para cada perna acessível
+(dashboard/proxy e API direta). Ele mede DNS, conexão+TLS, TTFB e transferência,
+preserva `Server-Timing` e os cabeçalhos de região conhecidos. O relatório usa
+um hash do alvo em vez do hostname:
+
+```bash
+FRAUS_MEDIR_URL=https://... uv run python scripts/medir_latencia_deploy.py --amostras 5
+```
+
+Compare medianas com a mesma origem de rede antes de alterar região. A parcela
+API→Postgres aparece em `Server-Timing` como `espera_pool` e `consulta_db`.
 
 ## Verificação realizada
 

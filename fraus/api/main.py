@@ -37,6 +37,7 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 RAIZ_IMPORTACAO, backend_declarado)
 from fraus.api.contexto import Contexto
 from fraus.api.motor_preguicoso import ProvedorDeMotor
+from fraus.api.observabilidade import registrar_observabilidade
 from fraus.api.primeiro_uso import ligar_no_primeiro_uso
 from fraus.api.repontuacao import Repontuacao
 from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os testes
@@ -204,6 +205,8 @@ def criar_app(
     # O ultimo registrado e o mais externo: cobre inclusive o que o CORS, o
     # acesso e o teto de corpo recusam antes de chegar a rota.
     registrar_cabecalhos_de_seguranca(app)
+    # Mais externo que seguranca/acesso: mede inclusive recusas antes da rota.
+    registrar_observabilidade(app)
 
     app.include_router(saude.router)
     app.include_router(conversas.router)

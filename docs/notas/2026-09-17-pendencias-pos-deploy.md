@@ -51,12 +51,14 @@ cold start percebido pelo primeiro usuário.
    operacional;
 5. medir carga e inferência com `Server-Timing` ou log estruturado.
 
-Os itens 1–4 foram implementados. O provedor em
+Os cinco itens foram implementados. O provedor em
 `fraus/api/motor_preguicoso.py` serializa a primeira carga, memoriza sucesso ou
 erro e nunca troca falha por dublê. `GET /saude` permanece liveness e informa
 `estado_motor`; `GET /saude/prontidao` devolve 503 enquanto o estado não for
 `pronto`, sem iniciar a carga como efeito colateral. A instrumentação detalhada
-do item 5 permanece separada.
+do item 5 expõe `carga_modelo`, `inferencia`, `consulta_db`, `espera_pool` e o
+tempo total por `Server-Timing`, além de emitir logs JSON sem payload, token ou
+SQL.
 
 ### Critério de aceite
 
@@ -66,7 +68,7 @@ do item 5 permanece separada.
 - concorrência na primeira inferência monta uma única instância do motor;
 - falha de artefato continua alta e visível, sem cair para dublê.
 
-## P0 — tirar a API do caminho crítico da landing
+## P0 — tirar a API do caminho crítico da landing — concluído
 
 ### Evidência
 
@@ -89,7 +91,10 @@ ou “Abrir”. Com cookie, há ainda `/auth/eu` antes de `/auth/estado`.
 - indisponibilidade da API não altera TTFB nem conteúdo principal da LP;
 - nenhum segredo ou estado autenticado entra no HTML público.
 
-## P0 — orçamento de JavaScript e animação da landing
+A landing agora é estática e o CTA público não consulta a API. A autenticação
+real continua nas rotas protegidas.
+
+## P0 — orçamento de JavaScript e animação da landing — concluído em 28/09/2026
 
 ### Evidência
 
@@ -107,7 +112,14 @@ travamento de main thread ou GPU em celular básico.
 - estabelecer orçamento inicial: medir antes e definir teto baseado no corte
   alcançável, em vez de escolher número decorativo.
 
-## P1 — reduzir viagens da visão geral
+A cena 3D ficou restrita a perfis capazes; telas menores que 768 px,
+`prefers-reduced-motion`, `save-data` e hardware limitado recebem a mesma
+narrativa em uma cena leve. Partículas e 3D são carregados sob demanda. A
+validação Playwright cobre quatro perfis e aplica orçamento de bytes e CLS. No
+perfil móvel medido, a transferência caiu de 2.660.841 B para 702.921 B
+(-73,6%).
+
+## P1 — reduzir viagens da visão geral — decisão encerrada em 28/09/2026
 
 A visão geral pede conversas, indicadores, configurações, série e léxico em
 paralelo. Quente, o maior tempo observado foi 0,66 s; ainda assim são cinco
@@ -117,27 +129,39 @@ Avaliar uma rota BFF `/dashboard/resumo` ou cache curto para configurações e
 agregados. A consolidação só entra se a instrumentação mostrar ganho; preservar
 falha parcial pode valer mais que economizar chamadas.
 
-## P1 — conexões Postgres em escala serverless
+Não foi criada uma rota agregadora especulativa: ela repetiria as mesmas
+consultas no servidor, eliminaria a recuperação parcial da tela e criaria um
+novo contrato sem evidência de ganho. A instrumentação entregue permite voltar
+a essa decisão se medições reais apontarem contenção no pool ou overhead de
+rede dominante.
+
+## P1 — conexões Postgres em escala serverless — concluído em 28/09/2026
 
 Cada instância cria `ConnectionPool(min_size=1, max_size=5)`. Em serverless, o
 teto efetivo é `instâncias × 5`, não cinco. Uma rajada pode multiplicar
 conexões até atingir a cota do Supabase.
 
-Pendência: medir concorrência, considerar `min_size=0`, reduzir o máximo por
-instância e registrar espera/aquisição do pool. Não trocar o transaction pooler
-por conexão direta.
+O padrão agora é `min_size=0`, `max_size=2`, configurável e validado por
+ambiente. A criação é serializada por processo e aquisições registram contagem,
+falha, espera total/última/máxima; `espera_pool` também entra no
+`Server-Timing`. O transaction pooler continua obrigatório.
 
-## P1 — região como experimento, não palpite
+## P1 — região como experimento, não palpite — instrumento entregue em 28/09/2026
 
 A função foi empacotada em `iad1`; o banco restaurado está em Ohio. Usuários no
 Brasil pagam o salto até os EUA, mas mover apenas a API para São Paulo pode
 piorar API → banco e Next → API.
 
-Pendência: medir as três pernas (navegador → Next, Next → API, API → Supabase)
-antes de escolher região. A decisão correta pode ser manter todo o plano de
-dados no mesmo lado, não aproximar uma peça isolada.
+O instrumento para medir as três pernas (navegador → Next, Next → API, API →
+Supabase) foi entregue. A escolha de região não é dívida de código: depende de
+uma execução controlada contra os ambientes e da localização real dos usuários.
+A decisão correta pode ser manter todo o plano de dados no mesmo lado, não
+aproximar uma peça isolada.
 
-## P1 — CI/CD da API
+`scripts/medir_latencia_deploy.py` decompõe DNS, conexão+TLS, TTFB e
+transferência e preserva região e `Server-Timing`, sem publicar o hostname.
+
+## P1 — CI/CD da API — concluído em 28/09/2026
 
 O projeto `fraus-api` foi publicado manualmente. Confirmar e documentar a
 integração Git; se ela não existir, mudanças em `main` podem atualizar a
@@ -146,7 +170,11 @@ dashboard sem atualizar a API.
 Critério de aceite: preview e produção reproduzíveis a partir de commit, com
 checksum do modelo registrado e smoke test de `/saude` após o deploy.
 
-## P1 — observabilidade e regressão
+O workflow manual e protegido `api-deploy.yml` valida, constrói com CLI fixo,
+publica o prebuilt e roda smoke finito. Secrets precisam ser configurados no
+ambiente `production-api`; criar o workflow não executa deploy.
+
+## P1 — observabilidade e regressão — concluído em 28/09/2026
 
 Adicionar:
 
@@ -158,11 +186,24 @@ Adicionar:
 - alarme de falha de API, Supabase pausado e expiração/revogação da URL do
   artefato.
 
-## P2 — ciclo de vida do artefato
+Logs estruturados e `Server-Timing` cobrem aplicação, banco, pool e modelo. A
+landing mede FCP, LCP e CLS em perfis desktop, móvel, movimento reduzido e
+economia de dados. O smoke test é finito e roda após publicação; não mantém a
+função aquecida. Alarmes e notificações dependem do provedor/conta de produção
+e devem ser configurados no ambiente `production-api`, pois o repositório não
+possui autoridade nem destinatários para criá-los sozinho.
+
+## P2 — ciclo de vida do artefato — concluído em 28/09/2026
 
 Uma atualização de modelo exige ZIP, upload, SHA-256 e duas variáveis. Criar
 script único que publique objeto imutável, valide conteúdo, atualize ambiente e
 retenha a versão anterior para rollback. Nunca imprimir a URL pré-autenticada.
+
+`scripts/gerenciar_artefatos.py` empacota deterministicamente, emite manifesto
+e checksum, valida antes do PUT e confere uma versão retida para rollback sem
+imprimir URL/token. A atualização dos secrets de URL/checksum permanece uma decisão
+explícita do operador, evitando que uma ferramenta local ganhe autoridade sobre
+o ambiente de produção inteiro.
 
 ## O que não fazer ainda
 
