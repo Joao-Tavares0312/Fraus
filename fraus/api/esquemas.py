@@ -75,6 +75,16 @@ class PedidoSimulacao(EntradaEstrita):
     texto: str  # unico campo aceito: probabilidade e derivada no servidor
 
 
+class PedidoSimulacaoIroniaLaya(EntradaEstrita):
+    texto: str = Field(max_length=2000)
+    contexto: str = Field(default="", max_length=6000)
+    instrucao: str = Field(min_length=1, max_length=600)
+    criterio_ironico: str = Field(min_length=1, max_length=600)
+    criterio_literal: str = Field(min_length=1, max_length=600)
+    limiar: float = Field(default=0.5, ge=0.0, le=1.0)
+    confianca_minima: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
 class PedidoAnalise(EntradaEstrita):
     csv: str  # conteudo do arquivo; veredito continua sendo derivado aqui
     nome: str | None = None  # so para escolher o leitor pela extensao

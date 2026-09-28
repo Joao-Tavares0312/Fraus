@@ -441,13 +441,26 @@ export type Simulacao = {
 
 export type SimulacaoIroniaLaya = {
   texto: string;
-  classe: "nao-ironico" | "ironico";
+  classe: "nao-ironico" | "ironico" | "inconclusivo";
   prob_nao_ironico: number;
   prob_ironia: number;
+  confianca: number;
+  limiar: number;
+  confianca_minima: number;
+  contexto_usado: boolean;
   modelo: string;
   checkpoint: string;
   revisao: string;
   pontua: false;
+};
+
+export type ConfiguracaoIroniaLaya = {
+  contexto: string;
+  instrucao: string;
+  criterio_ironico: string;
+  criterio_literal: string;
+  limiar: number;
+  confianca_minima: number;
 };
 
 /**
@@ -829,21 +842,27 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
 
 export async function simularIroniaLaya(
   texto: string,
+  configuracao: ConfiguracaoIroniaLaya,
 ): Promise<Resultado<SimulacaoIroniaLaya>> {
   return proteger(
     (async () => {
       const resposta = await fetch(urlDaApi("/modelo/ironia-laya/simular"), {
         method: "POST",
         headers: await cabecalhosDaApi({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ texto }),
+        body: JSON.stringify({ texto, ...configuracao }),
         cache: "no-store",
       });
       if (!resposta.ok) {
         const corpo = (await resposta.json().catch(() => null)) as
-          | { detail?: string }
+          | { detail?: unknown }
           | null;
+        const detalhe = corpo?.detail;
         throw new Error(
-          corpo?.detail ?? `/modelo/ironia-laya/simular respondeu ${resposta.status}`,
+          typeof detalhe === "string"
+            ? detalhe
+            : detalhe
+              ? JSON.stringify(detalhe)
+              : `/modelo/ironia-laya/simular respondeu ${resposta.status}`,
         );
       }
       return (await resposta.json()) as SimulacaoIroniaLaya;

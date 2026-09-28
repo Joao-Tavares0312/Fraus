@@ -24,6 +24,13 @@ class RouterFalso:
             for p in self.probabilidades
         ]
 
+    def predict(self, estado, perguntas, **opcoes):
+        self.estado = estado
+        self.perguntas = perguntas
+        self.opcoes = opcoes
+        p = self.probabilidades[0]
+        return {"answers": {"ironia": {"probabilities": {"A": p, "B": 1 - p}}}}
+
 
 def test_adapta_probabilidade_para_contrato_binario_e_forca_portugues():
     router = RouterFalso([0.8, 0.15])
@@ -43,6 +50,25 @@ def test_lista_vazia_nao_chama_modelo():
     router = RouterFalso([])
     assert ClassificadorIroniaLaya(router=router).prever_mensagens([]) == []
     assert router.requisicoes is None
+
+
+def test_previsao_configurada_envia_contexto_e_criterios():
+    router = RouterFalso([0.73])
+    classificador = ClassificadorIroniaLaya(router=router)
+    probabilidade = classificador.prever_configurado(
+        "excelente, caiu de novo",
+        contexto="o sistema falhou três vezes",
+        instrucao="Decida se existe ironia.",
+        criterio_ironico="sentido literal contradiz os fatos",
+        criterio_literal="sentido literal concorda com os fatos",
+    )
+    assert probabilidade == 0.73
+    assert router.estado == {
+        "contexto_anterior": "o sistema falhou três vezes",
+        "fala_do_cliente": "excelente, caiu de novo",
+    }
+    assert router.perguntas["ironia"]["criteria"]["A"] == "sentido literal contradiz os fatos"
+    assert router.opcoes == {"model": "multilingual", "lang": "pt"}
 
 
 @pytest.mark.parametrize("resultado", [
