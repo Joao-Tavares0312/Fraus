@@ -13,6 +13,7 @@ pior do que a closure que ele veio substituir.
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from fastapi import Request
 
@@ -21,14 +22,15 @@ from fraus.configuracao import carregar as carregar_configuracao
 from fraus.configuracao import faixas_de
 from fraus.db import Banco
 from fraus.indicadores import categoria_nps
-from fraus.motor import Motor
 from fraus.sinais.curadoria import Curadoria
 
 
 @dataclass(frozen=True)
 class Contexto:
     banco: Banco
-    motor: Motor
+    # Em producao pode ser um ProvedorDeMotor; os testes e a demo continuam
+    # injetando seus motores diretamente.
+    motor: Any
     raiz: Path
     chave_mestra: str | None
     # Autenticacao de USUARIO (spec 2026-08-31): o segredo que assina o JWT de

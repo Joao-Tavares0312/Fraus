@@ -1277,7 +1277,13 @@ export const obterSerieTemporal = (de?: string | null, ate?: string | null) => {
  * trata como possivelmente dublê, nunca como real confirmado.
  */
 export const obterSaude = () =>
-  proteger(buscar<{ status: string; motor?: "real" | "duble" }>("/saude"));
+  proteger(
+    buscar<{
+      status: string;
+      motor?: "real" | "duble";
+      estado_motor?: "frio" | "carregando" | "pronto" | "erro";
+    }>("/saude"),
+  );
 
 const LOTE_DETALHES = 8;
 

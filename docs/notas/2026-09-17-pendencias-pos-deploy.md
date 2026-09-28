@@ -28,7 +28,7 @@ Os endpoints da visão geral rodam em paralelo, portanto seus tempos não devem
 ser simplesmente somados. Autenticação no layout ocorre antes da página e cria
 uma etapa sequencial.
 
-## P0 — retirar o modelo do caminho das rotas leves
+## P0 — retirar o modelo do caminho das rotas leves — concluído em 28/09/2026
 
 ### Evidência
 
@@ -40,7 +40,7 @@ do Postgres pagam a mesma carga de uma inferência.
 O carregamento preguiçoso atual resolveu o timeout de **importação**, mas não o
 cold start percebido pelo primeiro usuário.
 
-### Mudança proposta
+### Mudança implementada
 
 1. montar FastAPI, banco, autenticação e rotas leves sem o `Motor`;
 2. encapsular o motor num provedor thread-safe com estados `frio`, `carregando`,
@@ -50,6 +50,13 @@ cold start percebido pelo primeiro usuário.
 4. separar liveness de readiness sem anunciar `motor=real` antes de ele estar
    operacional;
 5. medir carga e inferência com `Server-Timing` ou log estruturado.
+
+Os itens 1–4 foram implementados. O provedor em
+`fraus/api/motor_preguicoso.py` serializa a primeira carga, memoriza sucesso ou
+erro e nunca troca falha por dublê. `GET /saude` permanece liveness e informa
+`estado_motor`; `GET /saude/prontidao` devolve 503 enquanto o estado não for
+`pronto`, sem iniciar a carga como efeito colateral. A instrumentação detalhada
+do item 5 permanece separada.
 
 ### Critério de aceite
 

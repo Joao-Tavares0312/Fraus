@@ -8,7 +8,7 @@ so as duas primeiras eram verificaveis daqui.
 from fastapi import APIRouter, Depends, HTTPException
 
 from fraus.api.contexto import Contexto, obter_contexto
-from fraus.motor import Motor
+from fraus.api.motor_preguicoso import estado_do_motor, motor_e_real
 
 router = APIRouter()
 
@@ -44,8 +44,28 @@ def saude(ctx: Contexto = Depends(obter_contexto)) -> dict:
     """
     return {
         "status": "ok",
-        "motor": "real" if isinstance(ctx.motor, Motor) else "duble",
+        "motor": "real" if motor_e_real(ctx.motor) else "duble",
+        "estado_motor": estado_do_motor(ctx.motor),
     }
+
+
+@router.get("/saude/prontidao")
+def prontidao(ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """Readiness sem aquecer o motor como efeito colateral.
+
+    ``/saude`` e liveness: responde enquanto o processo e as rotas leves estao
+    vivos. Este endpoint e a afirmacao mais forte de que a inferencia pode ser
+    atendida agora. Orquestradores podem distingui-los sem fazer uma predicao.
+    """
+    estado = estado_do_motor(ctx.motor)
+    corpo = {
+        "status": "pronto" if estado == "pronto" else "indisponivel",
+        "motor": "real" if motor_e_real(ctx.motor) else "duble",
+        "estado_motor": estado,
+    }
+    if estado != "pronto":
+        raise HTTPException(503, corpo)
+    return corpo
 
 
 @router.get("/saude/deriva")
@@ -78,7 +98,7 @@ def deriva(n: int = AMOSTRA_PADRAO, ctx: Contexto = Depends(obter_contexto)) -> 
             f"n precisa estar entre 1 e {TETO_DA_AMOSTRA}: cada conversa da "
             "amostra custa uma passagem completa de modelo em CPU.",
         )
-    if not isinstance(ctx.motor, Motor):
+    if not motor_e_real(ctx.motor):
         raise HTTPException(
             503,
             "diagnostico de deriva exige o motor real: o dublê nao tem "

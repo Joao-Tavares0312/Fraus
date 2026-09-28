@@ -21,6 +21,21 @@ const APARENCIA: Record<
     cor: "bg-success",
     detalhe: "GET /saude respondeu ok, com o motor real",
   },
+  frio: {
+    rotulo: "motor em espera",
+    cor: "bg-warning",
+    detalhe: "a API está pronta; o motor será carregado na primeira análise",
+  },
+  aquecendo: {
+    rotulo: "motor aquecendo…",
+    cor: "bg-warning motion-safe:animate-pulse",
+    detalhe: "GET /saude respondeu, mas o motor real ainda não está pronto",
+  },
+  "erro-motor": {
+    rotulo: "motor indisponível",
+    cor: "bg-destructive",
+    detalhe: "GET /saude respondeu, mas a carga do motor falhou",
+  },
   // A API respondeu, mas quem pontua é o dublê: TODO número da tela é
   // sintético, inclusive os pesos por feature. Cor de aviso e não de sucesso,
   // porque isto não é um estado saudável — é uma tela que não pode ser lida
@@ -64,7 +79,12 @@ export function EstadoSaude() {
   // estados em que desligar faz sentido, e o dublê é justamente o que alguém
   // mais vai querer derrubar para subir a API real no lugar. Com ela fora, a
   // pergunta seria uma chamada por poll sem resposta útil.
-  const respondendo = estado === "no-ar" || estado === "duble";
+  const respondendo =
+    estado === "no-ar" ||
+    estado === "frio" ||
+    estado === "aquecendo" ||
+    estado === "erro-motor" ||
+    estado === "duble";
 
   useEffect(() => {
     // Sem `setNossa(false)` neste ramo: apagar o estado aqui seria escrever

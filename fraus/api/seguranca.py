@@ -30,7 +30,7 @@ from fraus.db import Banco
 # - `/ingestao` tem credencial de FONTE -- uma credencial por rota.
 # - `/acesso/estado` precisa responder a quem ainda nao tem credencial nenhuma:
 #   e a resposta que diz a tela se ha o que apresentar.
-# - `/saude` porque ela e o DIAGNOSTICO, e diagnostico atras de credencial
+# - `/saude` e `/saude/prontidao` porque sao DIAGNOSTICO, e diagnostico atras de credencial
 #   mente. Com ela fechada, a dashboard sem chave recebia 401 no health check e
 #   anunciava "API fora do ar" com a API perfeitamente no ar -- mandando quem
 #   opera procurar servidor derrubado quando o que faltava era uma chave. Ela
@@ -50,6 +50,7 @@ ISENTAS = (
     "/ingestao",
     "/acesso/estado",
     "/saude",
+    "/saude/prontidao",
     "/auth/estado",
     "/auth/registrar",
     "/auth/entrar",

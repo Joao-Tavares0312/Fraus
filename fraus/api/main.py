@@ -10,11 +10,10 @@ Score e categoria SAO SEMPRE derivados no servidor: campos vindos do corpo da
 requisicao que se parecam com veredito sao ignorados por construcao.
 
 O objeto `app` de nivel de modulo (consumido por `uvicorn fraus.api.main:app`)
-e construido com dependencias REAIS -- Banco em disco e Motor com
-ClassificadorTexto/Fusor carregados do disco -- e deve falhar alto no import
-se o modelo ou o fusor nao existirem (ModeloAusenteError e equivalente do
-fusor propagam sem fallback: servir predicao sem modelo carregado e pior do
-que estar fora do ar).
+e construido com dependencias REAIS. Banco e rotas nascem de imediato; o
+Motor abre seus artefatos na primeira operacao que o exige. Modelo ou fusor
+ausente continua falhando alto, sem fallback: servir predicao sem modelo
+carregado e pior do que estar fora do ar.
 
 `app` e resolvido de forma preguicosa via `__getattr__` de modulo (PEP 562):
 so e construido quando algo de fato acessa o atributo `app` (como o uvicorn
@@ -37,6 +36,7 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 CAMINHO_ONNX_TEXTO,
                                 RAIZ_IMPORTACAO, backend_declarado)
 from fraus.api.contexto import Contexto
+from fraus.api.motor_preguicoso import ProvedorDeMotor
 from fraus.api.primeiro_uso import ligar_no_primeiro_uso
 from fraus.api.repontuacao import Repontuacao
 from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os testes
@@ -285,12 +285,18 @@ def montar_classificadores(backend: str):
     )
 
 
-def criar_app_padrao() -> FastAPI:
-    """Monta o app com dependencias reais. Falha alto se modelo/fusor faltarem.
+def construir_motor_padrao() -> Motor:
+    """Carrega todos os artefatos reais; qualquer falha continua explicita."""
+    classificador, emocao, ironia = montar_classificadores(backend_declarado())
+    fusor = Fusor.carregar(CAMINHO_FUSOR)
+    return Motor(classificador, fusor, emocao, ironia)
 
-    Carrega classificador e fusor ANTES de tocar no banco: se a inicializacao
-    vai falhar por modelo ausente, ela precisa falhar sem sujar o disco com um
-    `fraus.db` de schema vazio.
+
+def criar_app_padrao() -> FastAPI:
+    """Monta rotas e banco agora; carrega o motor quando uma rota o exigir.
+
+    Saude e autenticacao nao pagam a abertura das sessoes ONNX. A primeira
+    operacao de modelo carrega tudo uma vez, e falhas seguem subindo sem duble.
     """
     chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
     jwt_segredo = os.environ.get("FRAUS_JWT_SEGREDO") or None
@@ -298,9 +304,6 @@ def criar_app_padrao() -> FastAPI:
     validar_configuracao_de_producao(
         os.environ.get("FRAUS_AMBIENTE"), chave_mestra, jwt_segredo, codigo_convite
     )
-
-    classificador, emocao, ironia = montar_classificadores(backend_declarado())
-    fusor = Fusor.carregar(CAMINHO_FUSOR)  # propaga FileNotFoundError se o .joblib faltar
 
     # Emocao entra no vetor desde a subida do contrato para 35 features
     # (21/08/2026), e e tao obrigatoria quanto o classificador de texto:
@@ -314,7 +317,7 @@ def criar_app_padrao() -> FastAPI:
     # tela de atendimento e a de analise mostram. Faltar o modelo tira essa
     # leitura do ar, e o mesmo motivo do invariante 7 vale para ela.
 
-    motor = Motor(classificador, fusor, emocao, ironia)
+    motor = ProvedorDeMotor(construir_motor_padrao)
     banco = Banco(DESTINO_BANCO)
     banco.migrar()
 
