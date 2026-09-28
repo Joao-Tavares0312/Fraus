@@ -25,6 +25,19 @@ def test_multitarefa_e_backend_declaravel(monkeypatch):
     assert caminhos.backend_declarado() == "onnx-multitarefa"
 
 
+def test_backend_de_ironia_padrao_e_laya(monkeypatch):
+    monkeypatch.delenv("FRAUS_IRONIA_BACKEND", raising=False)
+    assert caminhos.backend_ironia_declarado() == "padrao"
+    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya")
+    assert caminhos.backend_ironia_declarado() == "laya"
+
+
+def test_backend_de_ironia_desconhecido_falha_alto(monkeypatch):
+    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "magico")
+    with pytest.raises(ValueError, match="FRAUS_IRONIA_BACKEND"):
+        caminhos.backend_ironia_declarado()
+
+
 def test_onnx_sem_grafo_falha_alto_e_nao_cai_para_o_torch(monkeypatch, tmp_path):
     import fraus.api.main as main
 
