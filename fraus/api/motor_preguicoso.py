@@ -10,6 +10,7 @@ from collections.abc import Callable
 from threading import Condition
 from typing import Literal
 
+from fraus.api.observabilidade import medir
 from fraus.motor import Motor
 
 EstadoDoMotor = Literal["frio", "carregando", "pronto", "erro"]
@@ -45,7 +46,7 @@ class ProvedorDeMotor:
             self._estado = "carregando"
 
         try:
-            motor = self._construir()
+            motor = medir("carga_modelo", self._construir)
         except Exception as erro:
             with self._condicao:
                 self._erro = erro
@@ -61,7 +62,21 @@ class ProvedorDeMotor:
 
     def __getattr__(self, nome: str):
         """Mantem o contrato existente das rotas sem esconder a carga."""
-        return getattr(self.carregar(), nome)
+        atributo = getattr(self.carregar(), nome)
+        if not callable(atributo) or nome not in {
+            "pontuar_conversa",
+            "atribuir_conversa",
+            "analisar_conversa",
+            "simular_texto",
+            "deriva_da_amostra",
+            "eixo_global",
+        }:
+            return atributo
+
+        def cronometrado(*args, **kwargs):
+            return medir("inferencia", lambda: atributo(*args, **kwargs))
+
+        return cronometrado
 
 
 def motor_e_real(motor: object) -> bool:

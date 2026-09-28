@@ -1,9 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { lazy, Suspense, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import Particles from "@/components/Particles";
 import { assinarTema, lerTema, temaDoServidor, type Tema } from "@/lib/tema";
+import { permiteParticulas } from "@/lib/capacidade-visual";
+
+const Particles = lazy(() => import("@/components/Particles"));
 
 /**
  * O CAMPO DE PARTICULAS DO HERO — o unico WebGL do produto, e so aqui.
@@ -91,7 +93,19 @@ export function CampoDeParticulas() {
     movimentoDoServidor,
   );
 
-  if (menosMovimento) return null;
+  const navegador = typeof navigator === "undefined" ? undefined : navigator as Navigator & {
+    connection?: { saveData?: boolean };
+    deviceMemory?: number;
+  };
+  const permitir = typeof window !== "undefined" && permiteParticulas({
+    largura: window.innerWidth,
+    movimentoReduzido: menosMovimento,
+    economizarDados: navegador?.connection?.saveData === true,
+    memoriaGb: navegador?.deviceMemory,
+    nucleos: navegador?.hardwareConcurrency,
+  });
+
+  if (!permitir) return null;
 
   return (
     <div
@@ -107,7 +121,7 @@ export function CampoDeParticulas() {
           "radial-gradient(115% 85% at 50% 35%, black 30%, transparent 88%)",
       }}
     >
-      <Particles
+      <Suspense fallback={null}><Particles
         particleColors={PALETA[pathname === "/" ? "espacial" : tema]}
         // Contido de proposito. O componente aceita muito mais, e muito mais
         // vira nevoeiro: o hero tem TEXTO por cima, e densidade alta apaga a
@@ -152,7 +166,7 @@ export function CampoDeParticulas() {
             ? Math.min(window.devicePixelRatio || 1, 2)
             : 1
         }
-      />
+      /></Suspense>
     </div>
   );
 }

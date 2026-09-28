@@ -20,8 +20,10 @@ Latencia NAO e persistida -- e derivada dos timestamps na leitura.
 import json
 import os
 import sqlite3
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 
 from fraus.modelos import Conversa
 from fraus.sinais.curadoria import Curadoria
@@ -318,13 +320,16 @@ class _ConexaoSqlite:
         self._conexao = conexao
 
     def execute(self, sql: str, parametros=()):
-        return self._conexao.execute(sql, parametros)
+        from fraus.api.observabilidade import medir
+        return medir("consulta_db", lambda: self._conexao.execute(sql, parametros))
 
     def executemany(self, sql: str, sequencia):
-        return self._conexao.executemany(sql, sequencia)
+        from fraus.api.observabilidade import medir
+        return medir("consulta_db", lambda: self._conexao.executemany(sql, sequencia))
 
     def executescript(self, sql: str):
-        return self._conexao.executescript(sql)
+        from fraus.api.observabilidade import medir
+        return medir("consulta_db", lambda: self._conexao.executescript(sql))
 
     def __enter__(self) -> "_ConexaoSqlite":
         return self
@@ -358,16 +363,23 @@ class _ConexaoPostgres:
         self._conexao = conexao
 
     def execute(self, sql: str, parametros=()):
-        return self._conexao.execute(_traduzir(sql), parametros)
+        from fraus.api.observabilidade import medir
+        return medir("consulta_db", lambda: self._conexao.execute(_traduzir(sql), parametros))
 
     def executemany(self, sql: str, sequencia):
-        cursor = self._conexao.cursor()
-        cursor.executemany(_traduzir(sql), list(sequencia))
-        return cursor
+        from fraus.api.observabilidade import medir
+
+        def executar():
+            cursor = self._conexao.cursor()
+            cursor.executemany(_traduzir(sql), list(sequencia))
+            return cursor
+
+        return medir("consulta_db", executar)
 
     def executescript(self, sql: str) -> None:
         """DDL de varios comandos. O psycopg aceita direto, sem parametro."""
-        self._conexao.execute(sql)
+        from fraus.api.observabilidade import medir
+        medir("consulta_db", lambda: self._conexao.execute(sql))
 
     def __enter__(self) -> "_ConexaoPostgres":
         return self
@@ -401,6 +413,30 @@ except ImportError:  # pragma: no cover
     psycopg = None
 
 
+def _inteiro_do_ambiente(nome: str, *, padrao: int, minimo: int, maximo: int) -> int:
+    bruto = os.environ.get(nome, str(padrao))
+    try:
+        valor = int(bruto)
+    except ValueError as erro:
+        raise RuntimeError(f"{nome} precisa ser um inteiro") from erro
+    if not minimo <= valor <= maximo:
+        raise RuntimeError(f"{nome} precisa estar entre {minimo} e {maximo}")
+    return valor
+
+
+def _numero_do_ambiente(
+    nome: str, *, padrao: float, minimo: float, maximo: float
+) -> float:
+    bruto = os.environ.get(nome, str(padrao))
+    try:
+        valor = float(bruto)
+    except ValueError as erro:
+        raise RuntimeError(f"{nome} precisa ser um numero") from erro
+    if not minimo <= valor <= maximo:
+        raise RuntimeError(f"{nome} precisa estar entre {minimo} e {maximo}")
+    return valor
+
+
 class Banco:
     """Aceita um caminho de arquivo (SQLite) ou uma URL `postgresql://`."""
 
@@ -410,6 +446,15 @@ class Banco:
         self._url = texto if self._postgres else None
         self._caminho = None if self._postgres else Path(destino)
         self._pool = None
+        self._trava_pool = threading.Lock()
+        self._trava_metricas_pool = threading.Lock()
+        self._metricas_pool = {
+            "aquisicoes": 0,
+            "falhas": 0,
+            "espera_total_ms": 0.0,
+            "espera_ultima_ms": None,
+            "espera_maxima_ms": 0.0,
+        }
         if self._postgres and psycopg is None:
             raise RuntimeError(
                 "FRAUS_DATABASE_URL aponta para Postgres mas o psycopg nao esta "
@@ -423,9 +468,10 @@ class Banco:
         cria MUITOS `Banco` num processo so -- a suite contra Postgres cria um
         por teste, e sem fechar estouraria o `max_connections` do servidor.
         """
-        if self._pool is not None:
-            self._pool.close()
-            self._pool = None
+        with self._trava_pool:
+            if self._pool is not None:
+                self._pool.close()
+                self._pool = None
 
     @property
     def dialeto(self) -> str:
@@ -439,41 +485,63 @@ class Banco:
         depende de poder falhar por modelo ausente ANTES de tocar no banco.
         """
         if self._pool is None:
-            from psycopg.rows import dict_row
-            from psycopg_pool import ConnectionPool
+            with self._trava_pool:
+                if self._pool is not None:
+                    return self._pool
+                minimo = _inteiro_do_ambiente(
+                    "FRAUS_POSTGRES_MIN_CONEXOES", padrao=0, minimo=0, maximo=20
+                )
+                maximo = _inteiro_do_ambiente(
+                    "FRAUS_POSTGRES_MAX_CONEXOES", padrao=2, minimo=1, maximo=20
+                )
+                if minimo > maximo:
+                    raise RuntimeError(
+                        "FRAUS_POSTGRES_MIN_CONEXOES nao pode superar "
+                        "FRAUS_POSTGRES_MAX_CONEXOES"
+                    )
+                timeout = _numero_do_ambiente(
+                    "FRAUS_POSTGRES_TIMEOUT_S", padrao=10.0, minimo=0.1, maximo=60.0
+                )
+                from psycopg.rows import dict_row
+                from psycopg_pool import ConnectionPool
 
-            self._pool = ConnectionPool(
-                self._url,
-                min_size=1,
-                # O teto e do POOLER do Supabase, nao nosso: o plano gratuito da
-                # poucas conexoes, e estourar derruba a API inteira com "too
-                # many clients" em vez de so ficar lento.
-                max_size=int(os.environ.get("FRAUS_POSTGRES_MAX_CONEXOES", "5")),
-                # `prepare_threshold=None` desliga o prepared statement do
-                # psycopg. O pooler do Supabase em modo TRANSACTION (porta 6543)
-                # entrega uma sessao diferente a cada transacao, e um statement
-                # preparado na sessao anterior nao existe na seguinte -- o erro
-                # aparece so depois de algumas chamadas, o que e pior que
-                # aparecer sempre.
-                kwargs={
-                    "row_factory": dict_row,
-                    "prepare_threshold": None,
-                    # `search_path` na CONEXAO, e nao tabela por tabela nas ~40
-                    # consultas abaixo: prefixar cada uma daria o mesmo
-                    # resultado hoje e falharia na primeira consulta nova que
-                    # alguem escrevesse sem lembrar do prefixo -- caindo em
-                    # `public`, onde o PostgREST serve. Aqui, esquecer nao e
-                    # uma opcao disponivel.
-                    "options": f"-c search_path={SCHEMA_POSTGRES}",
-                },
-                open=True,
-            )
+                self._pool = ConnectionPool(
+                    self._url,
+                    # Zero e o padrao serverless: uma instancia fria nao reserva
+                    # conexao no pooler antes de existir trabalho para ela.
+                    min_size=minimo,
+                    # O teto e POR instancia. Com varias funcoes concorrentes,
+                    # um maximo alto multiplica e esgota a cota do Supabase.
+                    max_size=maximo,
+                    timeout=timeout,
+                    # `prepare_threshold=None` desliga prepared statements no
+                    # transaction pooler, que troca a sessao entre transacoes.
+                    kwargs={
+                        "row_factory": dict_row,
+                        "prepare_threshold": None,
+                        "options": f"-c search_path={SCHEMA_POSTGRES}",
+                    },
+                    open=True,
+                )
         return self._pool
 
     def _conectar(self):
         if self._postgres:
+            inicio = perf_counter()
             contexto = self._obter_pool().connection()
-            conexao = _ConexaoPostgres(contexto.__enter__())
+            try:
+                conexao_bruta = contexto.__enter__()
+            except Exception:
+                espera_ms = (perf_counter() - inicio) * 1000
+                self._registrar_aquisicao(espera_ms, falhou=True)
+                from fraus.api.observabilidade import somar_tempo
+                somar_tempo("espera_pool", espera_ms)
+                raise
+            espera_ms = (perf_counter() - inicio) * 1000
+            self._registrar_aquisicao(espera_ms, falhou=False)
+            from fraus.api.observabilidade import somar_tempo
+            somar_tempo("espera_pool", espera_ms)
+            conexao = _ConexaoPostgres(conexao_bruta)
             conexao._contexto = contexto
             return conexao
         conexao = sqlite3.connect(self._caminho)
@@ -486,6 +554,23 @@ class Banco:
         # mais consegue consultar.
         conexao.execute("PRAGMA foreign_keys = ON")
         return _ConexaoSqlite(conexao)
+
+    def _registrar_aquisicao(self, espera_ms: float, *, falhou: bool) -> None:
+        with self._trava_metricas_pool:
+            if falhou:
+                self._metricas_pool["falhas"] += 1
+                return
+            self._metricas_pool["aquisicoes"] += 1
+            self._metricas_pool["espera_total_ms"] += espera_ms
+            self._metricas_pool["espera_ultima_ms"] = espera_ms
+            self._metricas_pool["espera_maxima_ms"] = max(
+                self._metricas_pool["espera_maxima_ms"], espera_ms
+            )
+
+    def metricas_do_pool(self) -> dict:
+        """Retrato sem credenciais da espera para adquirir conexoes Postgres."""
+        with self._trava_metricas_pool:
+            return {"dialeto": self.dialeto, **self._metricas_pool}
 
     def _ordem(self, coluna: str) -> str:
         """Ordenacao de coluna TEXT com data ISO, IGUAL nos dois dialetos.
