@@ -439,6 +439,17 @@ export type Simulacao = {
   } | null;
 };
 
+export type SimulacaoIroniaLaya = {
+  texto: string;
+  classe: "nao-ironico" | "ironico";
+  prob_nao_ironico: number;
+  prob_ironia: number;
+  modelo: string;
+  checkpoint: string;
+  revisao: string;
+  pontua: false;
+};
+
 /**
  * Configuracao vigente e a de FABRICA, como `GET /configuracoes` devolve.
  *
@@ -812,6 +823,30 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
         );
       }
       return (await resposta.json()) as Simulacao;
+    })(),
+  );
+}
+
+export async function simularIroniaLaya(
+  texto: string,
+): Promise<Resultado<SimulacaoIroniaLaya>> {
+  return proteger(
+    (async () => {
+      const resposta = await fetch(urlDaApi("/modelo/ironia-laya/simular"), {
+        method: "POST",
+        headers: await cabecalhosDaApi({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ texto }),
+        cache: "no-store",
+      });
+      if (!resposta.ok) {
+        const corpo = (await resposta.json().catch(() => null)) as
+          | { detail?: string }
+          | null;
+        throw new Error(
+          corpo?.detail ?? `/modelo/ironia-laya/simular respondeu ${resposta.status}`,
+        );
+      }
+      return (await resposta.json()) as SimulacaoIroniaLaya;
     })(),
   );
 }

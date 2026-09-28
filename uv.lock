@@ -672,6 +672,9 @@ docs = [
     { name = "mkdocs-to-pdf" },
     { name = "mkdocstrings", extra = ["python"] },
 ]
+laya = [
+    { name = "laya" },
+]
 onnx = [
     { name = "onnxruntime" },
 ]
@@ -689,6 +692,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "joblib", specifier = ">=1.4" },
+    { name = "laya", marker = "extra == 'laya'", specifier = "==0.3.21" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocs-to-pdf", marker = "extra == 'docs'", specifier = ">=0.9" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0" },
@@ -713,7 +717,7 @@ requires-dist = [
     { name = "transformers", specifier = ">=4.44" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
-provides-extras = ["dev", "docs", "torch", "onnx", "conversao", "treino"]
+provides-extras = ["dev", "docs", "torch", "laya", "onnx", "conversao", "treino"]
 
 [[package]]
 name = "fsspec"
@@ -875,6 +879,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/41/f2/d34e8b3a08a9cc79a50b2208a93dce981fe615b64d5a4d4abee421d898df/joblib-1.5.3.tar.gz", hash = "sha256:8561a3269e6801106863fd0d6d84bb737be9e7631e33aaed3fb9ce5953688da3", size = 331603, upload-time = "2025-12-15T08:41:46.427Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/91/984aca2ec129e2757d1e4e3c81c3fcda9d0f85b74670a094cc443d9ee949/joblib-1.5.3-py3-none-any.whl", hash = "sha256:5fc3c5039fc5ca8c0276333a188bbd59d6b7ab37fe6632daa76bc7f9ec18e713", size = 309071, upload-time = "2025-12-15T08:41:44.973Z" },
+]
+
+[[package]]
+name = "laya"
+version = "0.3.21"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "huggingface-hub" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "safetensors" },
+    { name = "torch" },
+    { name = "transformers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/53/6e/62c03b37ffa117ee49ed26984fd6db41c893979ef7620c46b5e8739f693a/laya-0.3.21.tar.gz", hash = "sha256:a3ddc55d12ffde42966076aef0981800ad00bfb60d015c06de47ebd2ba03f416", size = 555779, upload-time = "2026-09-27T19:41:36.368Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/6b/b48b4af2ceed6bc6885b2b40706a14f3e189ec5f7dd29ad406556a4a20ce/laya-0.3.21-py3-none-any.whl", hash = "sha256:6d6e73b2729d561643e79719c212b1159332fd25345f050efa5734d22e89ace3", size = 214549, upload-time = "2026-09-27T19:41:34.663Z" },
 ]
 
 [[package]]

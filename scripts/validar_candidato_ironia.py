@@ -25,13 +25,22 @@ from fraus.sinais.ironia import ClassificadorIronia  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("candidato", type=Path)
+    parser.add_argument("candidato", type=Path, nargs="?")
+    parser.add_argument("--backend", choices=("bertimbau", "laya"), default="bertimbau")
     parser.add_argument("--max-falso-positivo", type=float, default=0.30)
     parser.add_argument("--max-falso-negativo", type=float, default=0.30)
     parser.add_argument("--saida-json", type=Path)
     opcoes = parser.parse_args()
 
-    resultado = avaliar_classificador(ClassificadorIronia(opcoes.candidato))
+    if opcoes.backend == "laya":
+        from fraus.sinais.ironia_laya import obter_classificador_ironia_laya
+
+        classificador = obter_classificador_ironia_laya()
+    else:
+        if opcoes.candidato is None:
+            parser.error("candidato é obrigatório para --backend bertimbau")
+        classificador = ClassificadorIronia(opcoes.candidato)
+    resultado = avaliar_classificador(classificador)
     relatorio = resultado.como_dict() | {
         "limites_promocao": {
             "taxa_falso_positivo": opcoes.max_falso_positivo,
@@ -50,7 +59,7 @@ def main() -> int:
     )
     if not apto:
         print(
-            "REPROVADO: nao substitua modelos/bertimbau-ironia com este artefato.",
+            "REPROVADO: não promova este classificador de ironia.",
             file=sys.stderr,
         )
         return 1

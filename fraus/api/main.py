@@ -34,7 +34,8 @@ from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 CAMINHO_MODELO_TEXTO, CAMINHO_ONNX_EMOCAO,
                                 CAMINHO_ONNX_IRONIA, CAMINHO_ONNX_MULTITAREFA,
                                 CAMINHO_ONNX_TEXTO,
-                                RAIZ_IMPORTACAO, backend_declarado)
+                                RAIZ_IMPORTACAO, backend_declarado,
+                                backend_ironia_declarado)
 from fraus.api.contexto import Contexto
 from fraus.api.motor_preguicoso import ProvedorDeMotor
 from fraus.api.observabilidade import registrar_observabilidade
@@ -272,20 +273,26 @@ def montar_classificadores(backend: str):
     if backend == "onnx":
         from fraus.sinais.onnx import ClassificadorOnnx
 
-        return (
+        classificadores = (
             ClassificadorOnnx(CAMINHO_ONNX_TEXTO),
             ClassificadorOnnx(CAMINHO_ONNX_EMOCAO),
             ClassificadorOnnx(CAMINHO_ONNX_IRONIA),
         )
-    if backend == "onnx-multitarefa":
+    elif backend == "onnx-multitarefa":
         from fraus.sinais.onnx import classificadores_multitarefa
 
-        return classificadores_multitarefa(CAMINHO_ONNX_MULTITAREFA)
-    return (
-        ClassificadorTexto(CAMINHO_MODELO_TEXTO),
-        ClassificadorEmocao(CAMINHO_MODELO_EMOCAO),
-        ClassificadorIronia(CAMINHO_MODELO_IRONIA),
-    )
+        classificadores = classificadores_multitarefa(CAMINHO_ONNX_MULTITAREFA)
+    else:
+        classificadores = (
+            ClassificadorTexto(CAMINHO_MODELO_TEXTO),
+            ClassificadorEmocao(CAMINHO_MODELO_EMOCAO),
+            ClassificadorIronia(CAMINHO_MODELO_IRONIA),
+        )
+    if backend_ironia_declarado() == "laya":
+        from fraus.sinais.ironia_laya import obter_classificador_ironia_laya
+
+        return (*classificadores[:2], obter_classificador_ironia_laya())
+    return classificadores
 
 
 def construir_motor_padrao() -> Motor:

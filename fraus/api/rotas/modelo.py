@@ -14,7 +14,8 @@ Analisar ARQUIVO e outro dominio: `rotas/analise.py`.
 from fastapi import APIRouter, Depends, HTTPException
 
 from fraus.api.caminhos import (CAMINHO_METRICAS, CAMINHO_METRICAS_EMOCAO,
-                                CAMINHO_METRICAS_IRONIA, metricas_de)
+                                CAMINHO_METRICAS_IRONIA,
+                                backend_ironia_declarado, metricas_de)
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoSimulacao
 from fraus.sinais.emoji import linhas_lexicon, score_do_emoji
@@ -142,4 +143,46 @@ def simular(
         "emocao": resultado.get("emocao"),
         "prob_ironia": resultado.get("prob_ironia"),
         "estilo": resultado.get("estilo"),
+    }
+
+
+@router.get("/modelo/ironia-laya")
+def ficha_ironia_laya() -> dict:
+    """Contrato da aba experimental; não carrega nem baixa o checkpoint."""
+    from fraus.sinais.ironia_laya import revisao_laya_declarada
+
+    return {
+        "modelo": "convaiinnovations/laya",
+        "checkpoint": "multilingual",
+        "revisao": revisao_laya_declarada(),
+        "classes": ["nao-ironico", "ironico"],
+        "backend_ativo": backend_ironia_declarado() == "laya",
+        "pontua": False,
+    }
+
+
+@router.post("/modelo/ironia-laya/simular")
+def simular_ironia_laya(pedido: PedidoSimulacao) -> dict:
+    """Roda somente o Laya; não carrega satisfação, emoção nem fusor."""
+    texto = pedido.texto.strip()
+    if not texto:
+        raise HTTPException(status_code=400, detail="texto vazio")
+    if len(texto) > TETO_TEXTO_SIMULACAO:
+        raise HTTPException(
+            status_code=400,
+            detail=f"texto acima do limite de {TETO_TEXTO_SIMULACAO} caracteres",
+        )
+    from fraus.sinais.ironia_laya import (
+        obter_classificador_ironia_laya, revisao_laya_declarada)
+
+    nao_ironico, ironico = obter_classificador_ironia_laya().prever_mensagens([texto])[0]
+    return {
+        "texto": texto,
+        "classe": "ironico" if ironico > nao_ironico else "nao-ironico",
+        "prob_nao_ironico": nao_ironico,
+        "prob_ironia": ironico,
+        "modelo": "convaiinnovations/laya",
+        "checkpoint": "multilingual",
+        "revisao": revisao_laya_declarada(),
+        "pontua": False,
     }
