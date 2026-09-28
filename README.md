@@ -173,6 +173,7 @@ vence RAG em acurácia e latência[^3].
 - [Treinamento](docs/treinamento.md) — os notebooks do Colab, os corpora de cada sinal, os artefatos que eles produzem e o registro do vazamento que matou o primeiro fusor
 - [Deploy gratuito](docs/deploy-vercel.md) — dashboard e API na Vercel, modelos no Oracle Object Storage e estado no Supabase
 - [Limitações conhecidas](docs/limitacoes.md) — limites científicos e operacionais que permanecem
+- [Integração com o Tars](docs/integracao-tars.md) — sincronização idempotente entre os projetos, sem banco compartilhado
 
 ## Como rodar
 

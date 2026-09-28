@@ -172,7 +172,47 @@ def test_ingestao_com_chave_valida_grava_e_pontua(cliente):
     assert resposta.json()["score"] == 90.0
 
     listagem = cliente.get("/conversas").json()
-    assert [c["id"] for c in listagem] == ["externa-1"]
+    assert resposta.json()["id_externo"] == "externa-1"
+    assert [c["id"] for c in listagem] == [f"fonte:{fonte_id}:externa-1"]
+
+
+def test_ids_iguais_de_fontes_diferentes_nao_se_sobrescrevem(cliente):
+    primeira = _fonte(cliente, nome="Tars A", canal="telegram")
+    segunda = _fonte(cliente, nome="Tars B", canal="webchat")
+    for fonte_id in (primeira, segunda):
+        chave = _com_chave(cliente, fonte_id)
+        resposta = cliente.post(
+            "/ingestao",
+            json={"id": "chat-1", "mensagens": MENSAGENS},
+            headers={"Authorization": f"Bearer {chave}"},
+        )
+        assert resposta.status_code == 201
+
+    assert {c["id"] for c in cliente.get("/conversas").json()} == {
+        f"fonte:{primeira}:chat-1",
+        f"fonte:{segunda}:chat-1",
+    }
+
+
+def test_feedback_declarado_e_guardado_sem_escolher_o_score(cliente):
+    fonte_id = _fonte(cliente)
+    chave = _com_chave(cliente, fonte_id)
+    resposta = cliente.post(
+        "/ingestao",
+        json={
+            "id": "com-feedback",
+            "mensagens": MENSAGENS,
+            "feedback_declarado": -1,
+            "comentario_feedback": "nao resolveu meu pedido",
+        },
+        headers={"Authorization": f"Bearer {chave}"},
+    )
+    assert resposta.json()["score"] == 90.0
+    detalhe = cliente.get(f"/conversas/fonte:{fonte_id}:com-feedback").json()
+    assert detalhe["feedback_declarado"] == -1
+    indicadores = cliente.get("/indicadores").json()
+    assert indicadores["feedback_declarado_total"] == 1
+    assert indicadores["concordancia_com_feedback"] == 0.0
 
 
 def test_o_canal_vem_da_fonte_e_nao_do_corpo(cliente):
@@ -301,6 +341,6 @@ def test_mensagens_fora_de_ordem_sao_ordenadas_pelo_horario(cliente):
         json={"id": "c1", "mensagens": [MENSAGENS[1], MENSAGENS[0]]},
         headers={"Authorization": f"Bearer {chave}"},
     )
-    detalhe = cliente.get("/conversas/c1").json()
+    detalhe = cliente.get(f"/conversas/fonte:{fonte_id}:c1").json()
     assert [m["autor"] for m in detalhe["mensagens"]] == ["cliente", "bot"]
     assert detalhe["latencia_primeira_resposta_s"] == 12.0

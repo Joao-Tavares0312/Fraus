@@ -17,6 +17,17 @@ from fraus.modelos import Conversa
 from fraus.seguranca.pii import censurar_pii
 
 
+def id_canonico_da_fonte(fonte_id: int, id_externo: str) -> str:
+    """Namespaceia o identificador que pertence ao sistema de origem.
+
+    IDs de atendimento so sao unicos DENTRO de uma fonte. Persistir o valor
+    cru como chave global permitia que duas integracoes com ``ticket-1`` se
+    sobrescrevessem silenciosamente. O formato e legivel e deterministico:
+    reenviar o mesmo atendimento pela mesma fonte continua idempotente.
+    """
+    return f"fonte:{fonte_id}:{id_externo}"
+
+
 def resumo_validacao(erro: ValidationError) -> str:
     """Mensagem de erro SEM o valor de entrada -- so o caminho e o tipo.
 
@@ -72,11 +83,24 @@ def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> di
     ]
     try:
         conversa = Conversa(
-            id=pedido.id,
+            # Chamadas de rede sempre trazem uma fonte persistida e recebem
+            # namespace. Helpers internos/testes podem montar uma fonte
+            # efemera sem id; nesse caso preservamos o identificador canonico.
+            id=(
+                id_canonico_da_fonte(int(fonte["id"]), pedido.id)
+                if fonte.get("id") is not None
+                else pedido.id
+            ),
             canal=fonte["canal"],
             iniciada_em=pedido.mensagens[0].enviada_em,
             encerrada_em=pedido.encerrada_em,
             escalou_para_humano=pedido.escalou_para_humano,
+            feedback_declarado=pedido.feedback_declarado,
+            comentario_feedback=(
+                censurar_pii(pedido.comentario_feedback)
+                if pedido.comentario_feedback
+                else None
+            ),
             mensagens=sorted(mensagens_limpas, key=lambda m: m.enviada_em),
         )
     except ValidationError as erro:
@@ -96,6 +120,7 @@ def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> di
     )
     return {
         "id": conversa.id,
+        "id_externo": pedido.id,
         "canal": conversa.canal,
         "score": score,
         "nota": nota_0_10(score) if score is not None else None,

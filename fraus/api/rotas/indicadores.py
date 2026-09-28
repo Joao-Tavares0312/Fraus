@@ -36,24 +36,42 @@ def indicadores(
     registros = ctx.registros_do_recorte(de, ate)
     conversas = [conversa for conversa, _ in registros]
     scores = [score for _, score in registros if score is not None]
+    com_feedback = [
+        (conversa, score)
+        for conversa, score in registros
+        if conversa.feedback_declarado is not None and score is not None
+    ]
+    faixas = ctx.faixas_vigentes()
+    concordantes = sum(
+        1
+        for conversa, score in com_feedback
+        if (conversa.feedback_declarado == 1 and ctx.categoria_de(score, faixas) == "promotor")
+        or (conversa.feedback_declarado == -1 and ctx.categoria_de(score, faixas) == "detrator")
+    )
     return {
-        "nps": calcular_nps(scores, ctx.faixas_vigentes()),
+        "nps": calcular_nps(scores, faixas),
         # O MESMO NPS, com a incerteza AMOSTRAL junto. Vem ao lado do campo
         # antigo, nao no lugar dele: `nps` tem consumidor (export, plano B da
         # dashboard) e trocar o tipo por um dicionario quebraria os dois.
         # O intervalo NAO cobre a incerteza do modelo -- ver a docstring de
         # `nps_com_intervalo`, e a nota que a tela imprime junto.
-        "nps_intervalo": nps_com_intervalo(scores, ctx.faixas_vigentes()),
+        "nps_intervalo": nps_com_intervalo(scores, faixas),
         "csat": calcular_csat(scores),
         "containment_rate": containment_rate(conversas),
         # Contencao alta com falso containment alto e sucesso falso: o bot
         # segurou e o cliente saiu detrator. `contidos_com_score` vai junto
         # porque percentual sem denominador esconde a amostra.
-        "falso_containment": falso_containment(registros, ctx.faixas_vigentes()),
+        "falso_containment": falso_containment(registros, faixas),
         "contidos_com_score": contidos_com_score(registros),
         "total_conversas": len(conversas),
         "sem_sinal": len(conversas) - len(scores),
         "tempo_mediano_resposta_s": tempo_mediano_resposta(registros),
+        # Evidencia observada, separada do NPS inferido. O denominador vai
+        # junto para uma taxa baseada em dois cliques nunca parecer robusta.
+        "feedback_declarado_total": len(com_feedback),
+        "concordancia_com_feedback": (
+            concordantes / len(com_feedback) if com_feedback else None
+        ),
         # AS DUAS CONTAGENS SAO DO BANCO INTEIRO, e sao a unica coisa nesta
         # resposta que ignora `de`/`ate`. A regua misturada e propriedade do
         # banco, nao do recorte: um aviso que sumisse ao filtrar o periodo

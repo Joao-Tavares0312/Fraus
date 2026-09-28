@@ -206,6 +206,20 @@ CREATE TABLE IF NOT EXISTS perfis_mapeamento (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_perfis_mapeamento_assinatura
     ON perfis_mapeamento(assinatura);
+
+-- Estado de trabalhos que precisam sobreviver ao processo HTTP. A chave fixa
+-- tambem funciona como lock distribuido entre replicas que compartilham o
+-- Postgres: apenas uma consegue trocar um estado terminal por `rodando`.
+CREATE TABLE IF NOT EXISTS trabalhos (
+    nome TEXT PRIMARY KEY,
+    estado TEXT NOT NULL,
+    total INTEGER NOT NULL DEFAULT 0,
+    feitas INTEGER NOT NULL DEFAULT 0,
+    erro TEXT,
+    iniciado_em TEXT,
+    concluido_em TEXT,
+    atualizado_em TEXT NOT NULL
+);
 """
 
 # Os vereditos possiveis de uma entrega, num lugar so. A tela pinta cada um de
@@ -609,7 +623,13 @@ class Banco:
             ).fetchall()
         return [dict(linha) for linha in linhas]
 
-    def listar_com_conversa(self) -> list[tuple[dict, Conversa]]:
+    def listar_com_conversa(
+        self,
+        de: str | None = None,
+        ate: str | None = None,
+        limite: int | None = None,
+        deslocamento: int = 0,
+    ) -> list[tuple[dict, Conversa]]:
         """Como `listar`, mas trazendo a conversa inteira junto de cada linha.
 
         Existe para a lista de atendimentos poder mostrar tempo de resposta,
@@ -625,10 +645,28 @@ class Banco:
         projeto (milhares), e o ponto a trocar por uma materializacao se um dia
         deixar de ser.
         """
+        filtros: list[str] = []
+        parametros: list[object] = []
+        # O recorte e por DIA, como a API. SUBSTR funciona igual nos dois
+        # dialetos e evita comparar offsets ISO como texto completo.
+        if de is not None:
+            filtros.append("SUBSTR(iniciada_em, 1, 10) >= ?")
+            parametros.append(de)
+        if ate is not None:
+            filtros.append("SUBSTR(iniciada_em, 1, 10) <= ?")
+            parametros.append(ate)
+        onde = " WHERE " + " AND ".join(filtros) if filtros else ""
+        paginacao = ""
+        if limite is not None:
+            paginacao = " LIMIT ? OFFSET ?"
+            parametros.extend((limite, deslocamento))
         with self._conectar() as conexao:
             linhas = conexao.execute(
-                "SELECT id, canal, iniciada_em, score, categoria, payload FROM conversas "
-                f"ORDER BY {self._ordem('iniciada_em')} DESC"
+                "SELECT id, canal, iniciada_em, score, categoria, payload FROM conversas"
+                + onde
+                + f" ORDER BY {self._ordem('iniciada_em')} DESC"
+                + paginacao,
+                tuple(parametros),
             ).fetchall()
         return [
             (
@@ -649,6 +687,16 @@ class Banco:
         if linha is None:
             return None
         return Conversa(**json.loads(linha["payload"])), linha["score"], linha["categoria"]
+
+    def regua_da_conversa(self, conversa_id: str) -> tuple[int | None, str | None] | None:
+        """Versoes que produziram o score, sem desserializar a transcricao."""
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT lexico_versao, regua FROM conversas WHERE id = ?", (conversa_id,)
+            ).fetchone()
+        if linha is None:
+            return None
+        return linha["lexico_versao"], linha["regua"]
 
     def ler_configuracoes(self) -> dict:
         """So o que foi de fato alterado. O padrao de fabrica nao mora no banco."""
@@ -948,6 +996,60 @@ class Banco:
         with self._conectar() as conexao:
             linhas = conexao.execute("SELECT payload, score FROM conversas").fetchall()
         return [(Conversa(**json.loads(l["payload"])), l["score"]) for l in linhas]
+
+    def reservar_trabalho(
+        self, nome: str, total: int, agora: str, expirado_antes_de: str
+    ) -> bool:
+        """Adquire o lock; uma execucao sem heartbeat pode ser retomada."""
+        with self._conectar() as conexao:
+            conexao.execute(
+                "INSERT INTO trabalhos (nome, estado, total, feitas, erro, iniciado_em, concluido_em, atualizado_em) "
+                "VALUES (?, 'disponivel', 0, 0, NULL, NULL, NULL, ?) "
+                "ON CONFLICT (nome) DO NOTHING",
+                (nome, agora),
+            )
+            cursor = conexao.execute(
+                "UPDATE trabalhos SET estado = 'rodando', total = ?, feitas = 0, "
+                "erro = NULL, iniciado_em = ?, concluido_em = NULL, atualizado_em = ? "
+                "WHERE nome = ? AND (estado <> 'rodando' OR atualizado_em < ?)",
+                (total, agora, agora, nome, expirado_antes_de),
+            )
+            return cursor.rowcount > 0
+
+    def atualizar_trabalho(
+        self,
+        nome: str,
+        *,
+        feitas: int | None = None,
+        estado: str | None = None,
+        erro: str | None = None,
+        agora: str,
+    ) -> None:
+        campos = ["atualizado_em = ?"]
+        valores: list[object] = [agora]
+        if feitas is not None:
+            campos.append("feitas = ?")
+            valores.append(feitas)
+        if estado is not None:
+            campos.extend(("estado = ?", "concluido_em = ?"))
+            valores.extend((estado, agora))
+            campos.append("erro = ?")
+            valores.append(erro)
+        valores.append(nome)
+        with self._conectar() as conexao:
+            conexao.execute(
+                f"UPDATE trabalhos SET {', '.join(campos)} WHERE nome = ?",
+                tuple(valores),
+            )
+
+    def estado_do_trabalho(self, nome: str) -> dict | None:
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT estado, total, feitas, erro, iniciado_em, concluido_em "
+                "FROM trabalhos WHERE nome = ?",
+                (nome,),
+            ).fetchone()
+        return dict(linha) if linha is not None else None
 
     def criar_chave_acesso(self, nome: str, criada_em: str) -> dict:
         """Cria a LINHA da chave. O hash chega depois, por gravar_chave_acesso:

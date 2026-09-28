@@ -104,6 +104,7 @@ nav:
   - Treinamento: treinamento.md
   - Estado e pendências: handoff.md
   - Hospedagem: hospedagem.md
+  - Deploy no Cloud Run: cloud-run.md
   # Copiado de dashboard/DESIGN.md no build (`scripts/reunir_docs.py`), nunca
   # a mao: copia manual e a documentacao divergindo do produto em uma semana.
   - Design da interface: design.md

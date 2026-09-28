@@ -51,6 +51,13 @@ export const COOKIE_SESSAO = "fraus_sessao";
  * boot ficaria `undefined` para sempre no caso mais comum de primeiro uso.
  */
 function chaveDoArquivo(): string | undefined {
+  // O arquivo e conveniencia exclusiva do clone local. Em deploy a chave vem
+  // do ambiente; tentar descobrir caminho dinamico faz o bundler rastrear o
+  // projeto inteiro e pode empacotar arquivos que nao pertencem ao servidor.
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.FRAUS_MODO_LOCAL !== "1"
+  ) return undefined;
   const caminho =
     process.env.FRAUS_CAMINHO_CHAVES ??
     resolve(process.cwd(), "..", ".fraus-chaves.txt");

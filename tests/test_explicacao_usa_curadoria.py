@@ -47,12 +47,24 @@ def _montar(tmp_path):
     return cliente, banco, motor
 
 
-def test_atribuicao_explica_com_a_curadoria_vigente(tmp_path):
+def test_atribuicao_recusa_explicar_score_de_regua_antiga(tmp_path):
     cliente, banco, motor = _montar(tmp_path)
     agora = datetime(2026, 8, 13, 10, tzinfo=timezone.utc)
     conversa = Conversa(id="c1", canal="csv", iniciada_em=agora, mensagens=[
         Mensagem(autor="cliente", texto="lentissimo", enviada_em=agora)])
     banco.salvar(conversa, 50.0, "detrator")
+
+    resposta = cliente.get("/conversas/c1/atribuicao")
+    assert resposta.status_code == 409
+    assert "repontue" in resposta.json()["detail"]
+
+
+def test_atribuicao_explica_com_a_mesma_curadoria_que_pontuou(tmp_path):
+    cliente, banco, motor = _montar(tmp_path)
+    agora = datetime(2026, 8, 13, 10, tzinfo=timezone.utc)
+    conversa = Conversa(id="c1", canal="csv", iniciada_em=agora, mensagens=[
+        Mensagem(autor="cliente", texto="lentissimo", enviada_em=agora)])
+    banco.salvar(conversa, 50.0, "detrator", lexico_versao=banco.lexico_versao())
 
     assert cliente.get("/conversas/c1/atribuicao").status_code == 200
     assert motor.curadorias[-1].polaridade_de("lentissimo") == -1

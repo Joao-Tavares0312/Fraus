@@ -8,7 +8,7 @@ porta para o cliente escolher a propria nota.
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from fraus.modelos import Mensagem
 
@@ -18,14 +18,20 @@ from fraus.modelos import Mensagem
 TIPOS_DE_FONTE = ("csv", "webhook")
 
 
-class PedidoFonte(BaseModel):
+class EntradaEstrita(BaseModel):
+    """Contrato HTTP: erro de digitacao nunca some como campo ignorado."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class PedidoFonte(EntradaEstrita):
     nome: str
     canal: str
     tipo: str
     variavel_segredo: str | None = None  # NOME da variavel, nunca o segredo
 
 
-class PedidoAjusteFonte(BaseModel):
+class PedidoAjusteFonte(EntradaEstrita):
     nome: str | None = None
     ativa: bool | None = None
     # Ausente = nao mexe; null = a fonte deixa de nomear variavel. A diferenca
@@ -49,36 +55,36 @@ class PedidoPreviaImportacao(BaseModel):
     ordem_data: str | None = None
 
 
-class PedidoCadastro(BaseModel):
-    nome: str = Field(min_length=1)
+class PedidoCadastro(EntradaEstrita):
+    nome: str = Field(min_length=1, max_length=120)
     # Validacao minima e honesta: um @ com algo dos dois lados. EmailStr do
     # Pydantic exigiria a dependencia email-validator para pegar um punhado a
     # mais de casos -- e quem digita o proprio e-mail errado nao entra depois,
     # o que ja e o custo natural do erro.
-    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-    senha: str = Field(min_length=8)
-    codigo_dev: str | None = None  # o que diferencia o cadastro de dev
+    email: str = Field(max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    senha: str = Field(min_length=8, max_length=1024)
+    codigo_dev: str | None = Field(default=None, max_length=256)
 
 
-class PedidoEntrada(BaseModel):
-    email: str
-    senha: str
+class PedidoEntrada(EntradaEstrita):
+    email: str = Field(max_length=254)
+    senha: str = Field(max_length=1024)
 
 
-class PedidoSimulacao(BaseModel):
+class PedidoSimulacao(EntradaEstrita):
     texto: str  # unico campo aceito: probabilidade e derivada no servidor
 
 
-class PedidoAnalise(BaseModel):
+class PedidoAnalise(EntradaEstrita):
     csv: str  # conteudo do arquivo; veredito continua sendo derivado aqui
     nome: str | None = None  # so para escolher o leitor pela extensao
 
 
-class PedidoChaveAcesso(BaseModel):
+class PedidoChaveAcesso(EntradaEstrita):
     nome: str = Field(min_length=1)
 
 
-class PedidoPerfilMapeamento(BaseModel):
+class PedidoPerfilMapeamento(EntradaEstrita):
     """So nomes de coluna e papeis. Sem campo de conteudo, sem campo de nota."""
 
     nome: str = Field(min_length=1, max_length=80)
@@ -110,7 +116,9 @@ class PedidoIngestao(BaseModel):
     escolhe como ele e contabilizado.
     """
 
-    id: str
-    mensagens: list[Mensagem] = Field(min_length=1)
+    id: str = Field(min_length=1, max_length=256)
+    mensagens: list[Mensagem] = Field(min_length=1, max_length=500)
     encerrada_em: datetime | None = None
     escalou_para_humano: bool = False
+    feedback_declarado: Literal[-1, 1] | None = None
+    comentario_feedback: str | None = Field(default=None, max_length=1000)

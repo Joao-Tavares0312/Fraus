@@ -1,0 +1,20 @@
+# A imagem de producao usa ONNX: mesma decisao e mesmas categorias do backend
+# torch, mas sem carregar o PyTorch no container. Os pesos ficam num volume do
+# Cloud Storage e NAO entram no contexto nem na imagem.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - BACKEND=onnx
+      - --tag
+      - ${_IMAGE}
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args: [push, '${_IMAGE}']
+
+images:
+  - '${_IMAGE}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

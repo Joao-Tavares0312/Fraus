@@ -209,7 +209,8 @@ def repontuar(request: Request, ctx: Contexto = Depends(obter_contexto)) -> dict
 @router.get("/conversas/repontuar")
 def progresso_da_repontuacao(request: Request) -> dict:
     """Estado da ultima repontuacao deste processo. 404 se nunca houve uma."""
-    estado = request.app.state.repontuacao.estado()
+    ctx = request.app.state.contexto
+    estado = request.app.state.repontuacao.estado(ctx.banco)
     if estado is None:
         raise HTTPException(status_code=404, detail="nenhuma repontuacao desde que a API subiu")
     return estado
@@ -219,6 +220,8 @@ def progresso_da_repontuacao(request: Request) -> dict:
 def listar(
     de: str | None = None,
     ate: str | None = None,
+    limite: int | None = None,
+    deslocamento: int = 0,
     ctx: Contexto = Depends(obter_contexto),
 ) -> list[dict]:
     """Lista de atendimentos com a ficha operacional de cada um.
@@ -233,13 +236,21 @@ def listar(
     contrato do /serie-temporal. Sem filtro, a lista inteira, como sempre.
     """
     inicio, fim = recorte_ou_400(de, ate)
+    if limite is not None and not 1 <= limite <= 500:
+        raise HTTPException(status_code=400, detail="limite precisa estar entre 1 e 500")
+    if deslocamento < 0:
+        raise HTTPException(status_code=400, detail="deslocamento nao pode ser negativo")
     # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
     # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
     faixas = ctx.faixas_vigentes()
     return [
         _com_derivacoes(linha["score"], ctx.categoria_de(linha["score"], faixas), linha, conversa)
-        for linha, conversa in ctx.banco.listar_com_conversa()
-        if no_recorte(conversa.iniciada_em, inicio, fim)
+        for linha, conversa in ctx.banco.listar_com_conversa(
+            de=inicio.isoformat() if inicio else None,
+            ate=fim.isoformat() if fim else None,
+            limite=limite,
+            deslocamento=deslocamento,
+        )
     ]
 
 
@@ -301,6 +312,17 @@ def atribuir(
     if achado is None:
         raise HTTPException(status_code=404, detail="conversa nao encontrada")
     conversa, score, _categoria_gravada = achado
+    versoes = ctx.banco.regua_da_conversa(conversa_id)
+    vigente = (ctx.curadoria_vigente().versao, ctx.regua_vigente())
+    if versoes != vigente:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "a conversa foi pontuada com outra versao do lexico ou do modelo; "
+                "repontue antes de gerar uma explicacao, para nao explicar uma nota "
+                "historica com sinais atuais"
+            ),
+        )
     atribuicao = ctx.motor.atribuir_conversa(
         conversa, curadoria=ctx.curadoria_vigente()
     )
