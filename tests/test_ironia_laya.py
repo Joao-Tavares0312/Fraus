@@ -14,14 +14,15 @@ from fraus.sinais.ironia_laya import (
 class AgenteOnnxFalso:
     def __init__(self, probabilidades):
         self.probabilidades = probabilidades
+        self.lotes = []
 
     def predict_batch(self, estados, perguntas, **opcoes):
-        self.estados = estados
+        self.lotes.append(estados)
         self.perguntas = perguntas
         self.opcoes = opcoes
+        p = self.probabilidades[len(self.lotes) - 1]
         return [
             {"answers": {"ironia": {"probabilities": {"A": p, "B": 1 - p}}}}
-            for p in self.probabilidades
         ]
 
     def system_one(self, estado, perguntas, **opcoes):
@@ -82,9 +83,9 @@ def test_adaptador_onnx_usa_contrato_nativo_sem_router():
         [pytest.approx(0.1), 0.9],
         [0.8, 0.2],
     ]
-    assert agente.estados == ["ironia", "literal"]
+    assert agente.lotes == [["ironia"], ["literal"]]
     assert agente.perguntas == PERGUNTA_IRONIA
-    assert agente.opcoes == {"lang": "pt", "sort_by_length": True}
+    assert agente.opcoes == {"lang": "pt", "sort_by_length": False}
 
 
 def test_adaptador_onnx_preserva_contexto_configuravel():
