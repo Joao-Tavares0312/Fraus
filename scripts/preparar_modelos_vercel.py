@@ -11,6 +11,7 @@ Variaveis obrigatorias quando os modelos nao existem no workspace de build:
 """
 
 import hashlib
+import json
 import os
 import shutil
 import tempfile
@@ -62,6 +63,7 @@ def extrair_zip_seguro(pacote: Path, destino: Path) -> None:
 
 
 def conferir_modelos(raiz: Path) -> None:
+    laya_onnx = (os.environ.get("FRAUS_IRONIA_BACKEND") or "").strip().lower() == "laya-onnx"
     esperados = [raiz / "modelos" / "fusor.joblib"]
     esperados += [
         raiz / "modelos-onnx" / f"bertimbau-{nome}" / "model.onnx"
@@ -70,14 +72,11 @@ def conferir_modelos(raiz: Path) -> None:
     for nome in MODELOS:
         pasta = raiz / "modelos-onnx" / f"bertimbau-{nome}"
         esperados.extend((pasta / "config.json", pasta / "tokenizer_config.json"))
-    if (os.environ.get("FRAUS_IRONIA_BACKEND") or "").strip().lower() == "laya-onnx":
+    if laya_onnx:
         laya = raiz / "modelos-onnx" / "laya-ironia"
         esperados.extend(
             (
                 laya / "laya.onnx",
-                # O export FP32 da Laya usa dados externos: o arquivo ONNX
-                # sozinho tem apenas o grafo e nao abre sem estes pesos.
-                laya / "laya.onnx.data",
                 laya / "manifesto.json",
                 laya / "rl_agent_config.json",
                 laya / "tokenizer" / "tokenizer.json",
@@ -87,6 +86,20 @@ def conferir_modelos(raiz: Path) -> None:
     ausentes = [str(caminho.relative_to(raiz)) for caminho in esperados if not caminho.is_file()]
     if ausentes:
         raise ArtefatoDeModelosInvalido("artefato de modelo ausente: " + ", ".join(ausentes))
+    if laya_onnx:
+        try:
+            manifesto = json.loads((laya / "manifesto.json").read_text(encoding="utf-8"))
+            formato = manifesto["formato"]
+        except (OSError, ValueError, KeyError, TypeError) as erro:
+            raise ArtefatoDeModelosInvalido("manifesto da Laya invalido") from erro
+        if formato not in {"fp32", "int8"}:
+            raise ArtefatoDeModelosInvalido(f"formato da Laya desconhecido: {formato!r}")
+        # O export FP32 referencia estes pesos externos; o INT8 aprovado pelo
+        # notebook e autossuficiente e nao precisa carregar o arquivo FP32.
+        if formato == "fp32" and not (laya / "laya.onnx.data").is_file():
+            raise ArtefatoDeModelosInvalido(
+                "artefato de modelo ausente: modelos-onnx/laya-ironia/laya.onnx.data"
+            )
 
 
 def baixar(url: str, destino: Path, token: str | None = None) -> None:

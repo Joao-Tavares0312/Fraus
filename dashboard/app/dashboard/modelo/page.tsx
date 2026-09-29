@@ -190,7 +190,7 @@ export default async function PaginaModelo() {
               titulo="Classificador de ironia · Laya"
               legenda="Teste isolado do checkpoint multilíngue convaiinnovations/laya. Esta leitura não executa satisfação, emoção, emojis ou fusor e não altera a nota dos atendimentos."
               semPadding
-              rodape="As probabilidades são sinais experimentais. A promoção para uso corrente depende do gate de domínio e de calibração em dados portugueses separados do treino."
+              rodape="A decisão binária é experimental. A promoção para uso corrente depende do gate de domínio e de calibração em dados portugueses separados do treino."
             >
               <SimuladorIroniaLaya />
             </Painel>
