@@ -142,6 +142,7 @@ def criar_app(
     motor,
     raiz_importacao: Path | None = None,
     chave_mestra: str | None = None,
+    chave_acesso_ambiente: str | None = None,
     jwt_segredo: str | None = None,
     codigo_dev: str | None = None,
     codigo_convite: str | None = None,
@@ -155,6 +156,7 @@ def criar_app(
         # Vazia e ausente sao a mesma coisa: "Bearer " autorizando seria a pior
         # combinacao possivel de configuracao errada com acesso liberado.
         chave_mestra=chave_mestra or None,
+        chave_acesso_ambiente=chave_acesso_ambiente or None,
         # Mesma regra para os segredos da autenticacao de usuario.
         jwt_segredo=jwt_segredo or None,
         codigo_dev=codigo_dev or None,
@@ -378,6 +380,7 @@ def criar_app_padrao() -> FastAPI:
         banco=banco,
         motor=motor,
         chave_mestra=chave_mestra,
+        chave_acesso_ambiente=os.environ.get("FRAUS_CHAVE_ACESSO") or None,
         # Autenticacao de usuario (spec 2026-08-31): segredos do ambiente,
         # nunca do banco. Sem FRAUS_JWT_SEGREDO o login responde 503 dizendo o
         # que falta; sem FRAUS_CODIGO_DEV nenhum cadastro nasce dev.

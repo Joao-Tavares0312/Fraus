@@ -160,6 +160,10 @@ def acesso_autorizado(ctx: Contexto, chave: str) -> bool:
     uniforme la fora: daqui so sai sim ou nao."""
     if e_mestra(ctx, chave):
         return True
+    if ctx.chave_acesso_ambiente is not None and hmac.compare_digest(
+        chave.encode("utf-8"), ctx.chave_acesso_ambiente.encode("utf-8")
+    ):
+        return True
     chave_id = acesso.id_da_chave(chave)
     guardado = ctx.banco.hash_da_chave_acesso(chave_id) if chave_id is not None else None
     if credencial.confere(chave, guardado):

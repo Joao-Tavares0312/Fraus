@@ -90,6 +90,44 @@ def test_chave_errada_continua_401_com_as_duas_procedencias(tmp_path):
     assert recusada.json()["detail"] == "chave invalida"
 
 
+def test_chave_de_acesso_do_ambiente_funciona_sem_persistencia(tmp_path):
+    banco = Banco(tmp_path / "t.db")
+    banco.migrar()
+    app = criar_app(
+        banco=banco,
+        motor=MotorFalso(),
+        raiz_importacao=tmp_path,
+        chave_mestra="mestra-do-ambiente",
+        chave_acesso_ambiente="fra_dashboard-estavel",
+    )
+    cliente = TestClient(app)
+
+    resposta = cliente.get(
+        "/conversas",
+        headers={"Authorization": "Bearer fra_dashboard-estavel"},
+    )
+    assert resposta.status_code == 200
+
+
+def test_chave_de_acesso_do_ambiente_nao_herda_privilegio_da_mestra(tmp_path):
+    banco = Banco(tmp_path / "t.db")
+    banco.migrar()
+    app = criar_app(
+        banco=banco,
+        motor=MotorFalso(),
+        raiz_importacao=tmp_path,
+        chave_mestra="mestra-do-ambiente",
+        chave_acesso_ambiente="fra_dashboard-estavel",
+    )
+    cliente = TestClient(app)
+
+    resposta = cliente.get(
+        "/acesso/chaves",
+        headers={"Authorization": "Bearer fra_dashboard-estavel"},
+    )
+    assert resposta.status_code == 403
+
+
 def test_estado_sem_mestra_nenhuma(tmp_path):
     cliente, _ = _cliente(tmp_path)
     assert cliente.get("/acesso/estado").json() == {"ligada": False, "origem": None}
