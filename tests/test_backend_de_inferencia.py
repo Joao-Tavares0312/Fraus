@@ -30,6 +30,8 @@ def test_backend_de_ironia_padrao_e_laya(monkeypatch):
     assert caminhos.backend_ironia_declarado() == "padrao"
     monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya")
     assert caminhos.backend_ironia_declarado() == "laya"
+    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
+    assert caminhos.backend_ironia_declarado() == "laya-onnx"
 
 
 def test_backend_de_ironia_desconhecido_falha_alto(monkeypatch):

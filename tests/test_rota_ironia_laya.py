@@ -14,7 +14,9 @@ class ClassificadorFalso:
 def test_rota_laya_retorna_somente_parametros_de_ironia(monkeypatch):
     import fraus.sinais.ironia_laya as modulo
 
-    monkeypatch.setattr(modulo, "obter_classificador_ironia_laya", lambda: ClassificadorFalso())
+    monkeypatch.setattr(
+        modulo, "obter_classificador_ironia_laya_declarado", lambda: ClassificadorFalso()
+    )
     from fraus.api.esquemas import PedidoSimulacaoIroniaLaya
 
     resposta = modelo.simular_ironia_laya(PedidoSimulacaoIroniaLaya(

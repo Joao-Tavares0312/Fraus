@@ -70,6 +70,16 @@ def conferir_modelos(raiz: Path) -> None:
     for nome in MODELOS:
         pasta = raiz / "modelos-onnx" / f"bertimbau-{nome}"
         esperados.extend((pasta / "config.json", pasta / "tokenizer_config.json"))
+    if (os.environ.get("FRAUS_IRONIA_BACKEND") or "").strip().lower() == "laya-onnx":
+        laya = raiz / "modelos-onnx" / "laya-ironia"
+        esperados.extend(
+            (
+                laya / "laya.int8.onnx",
+                laya / "rl_agent_config.json",
+                laya / "tokenizer" / "tokenizer.json",
+                laya / "tokenizer" / "tokenizer_config.json",
+            )
+        )
     ausentes = [str(caminho.relative_to(raiz)) for caminho in esperados if not caminho.is_file()]
     if ausentes:
         raise ArtefatoDeModelosInvalido("artefato de modelo ausente: " + ", ".join(ausentes))

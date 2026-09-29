@@ -156,7 +156,8 @@ def ficha_ironia_laya() -> dict:
         "checkpoint": "multilingual",
         "revisao": revisao_laya_declarada(),
         "classes": ["nao-ironico", "ironico"],
-        "backend_ativo": backend_ironia_declarado() == "laya",
+        "backend_ativo": backend_ironia_declarado() in {"laya", "laya-onnx"},
+        "executor": backend_ironia_declarado(),
         "pontua": False,
     }
 
@@ -173,9 +174,9 @@ def simular_ironia_laya(pedido: PedidoSimulacaoIroniaLaya) -> dict:
             detail=f"texto acima do limite de {TETO_TEXTO_SIMULACAO} caracteres",
         )
     from fraus.sinais.ironia_laya import (
-        obter_classificador_ironia_laya, revisao_laya_declarada)
+        obter_classificador_ironia_laya_declarado, revisao_laya_declarada)
 
-    ironico = obter_classificador_ironia_laya().prever_configurado(
+    ironico = obter_classificador_ironia_laya_declarado().prever_configurado(
         texto,
         contexto=pedido.contexto,
         instrucao=pedido.instrucao,
