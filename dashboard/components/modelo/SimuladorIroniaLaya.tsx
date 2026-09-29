@@ -23,9 +23,13 @@ const BASE = {
   criterio_literal: "a fala é literal e não irônica",
 };
 const PERFIS = {
-  conservador: { limiar: 0.75, confianca_minima: 0.7 },
-  equilibrado: { limiar: 0.5, confianca_minima: 0.6 },
-  sensivel: { limiar: 0.3, confianca_minima: 0.0 },
+  // A Laya multilingual e subconfiante para ironia em portugues: no conjunto
+  // de verificacao do artefato, exemplos ironicos conhecidos ficaram entre
+  // 0,2255 e 0,3028. Estes limiares calibram a DECISAO; as probabilidades
+  // brutas continuam sendo exibidas sem transformacao.
+  conservador: { limiar: 0.5, confianca_minima: 0.7 },
+  equilibrado: { limiar: 0.3, confianca_minima: 0.6 },
+  sensivel: { limiar: 0.2, confianca_minima: 0.0 },
 } as const;
 type Perfil = keyof typeof PERFIS | "customizado";
 
@@ -121,6 +125,10 @@ export function SimuladorIroniaLaya() {
                 setConfiguracao((atual) => ({ ...atual, confianca_minima: Number(evento.target.value) }));
               }} />
           </label>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            O perfil calibra somente a decisão para português. As probabilidades
+            brutas da Laya permanecem inalteradas e aparecem no resultado.
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${idCampo}-contexto`} className="text-xs text-muted-foreground">Contexto anterior da conversa · opcional</Label>
