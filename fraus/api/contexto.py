@@ -33,6 +33,10 @@ class Contexto:
     motor: Any
     raiz: Path
     chave_mestra: str | None
+    # Credencial operacional da dashboard em ambientes sem estado local
+    # persistente. Diferente da mestra, esta chave autoriza apenas as rotas
+    # comuns; as rotas de gerenciamento continuam exigindo a mestra.
+    chave_acesso_ambiente: str | None = None
     # Autenticacao de USUARIO (spec 2026-08-31): o segredo que assina o JWT de
     # sessao e o codigo de convite que permite um cadastro nascer `dev`. Os
     # dois moram no ambiente, nunca no banco -- a mesma regra da mestra e do
