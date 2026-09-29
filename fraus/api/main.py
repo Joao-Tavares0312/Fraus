@@ -96,6 +96,7 @@ def validar_configuracao_de_producao(
     chave_mestra: str | None,
     jwt_segredo: str | None,
     codigo_convite: str | None,
+    database_url: str | None = None,
 ) -> None:
     """Falha fechado quando o operador declara que este e um deploy publico.
 
@@ -115,6 +116,11 @@ def validar_configuracao_de_producao(
             ("FRAUS_CHAVE_MESTRA", chave_mestra),
             ("FRAUS_JWT_SEGREDO", jwt_segredo),
             ("FRAUS_CODIGO_CONVITE", codigo_convite),
+            # SQLite e o arquivo de credenciais servem ao uso local, mas sao
+            # efemeros numa funcao serverless. A mestra no ambiente evita
+            # depender de `.fraus-chaves.txt`; exigir Postgres evita que banco,
+            # hashes e configuracoes desaparecam no proximo cold start.
+            ("FRAUS_DATABASE_URL", database_url),
         )
         if not valor
     ]
@@ -288,10 +294,10 @@ def montar_classificadores(backend: str):
             ClassificadorEmocao(CAMINHO_MODELO_EMOCAO),
             ClassificadorIronia(CAMINHO_MODELO_IRONIA),
         )
-    if backend_ironia_declarado() == "laya":
-        from fraus.sinais.ironia_laya import obter_classificador_ironia_laya
+    if backend_ironia_declarado() in {"laya", "laya-onnx"}:
+        from fraus.sinais.ironia_laya import obter_classificador_ironia_laya_declarado
 
-        return (*classificadores[:2], obter_classificador_ironia_laya())
+        return (*classificadores[:2], obter_classificador_ironia_laya_declarado())
     return classificadores
 
 
@@ -312,7 +318,11 @@ def criar_app_padrao() -> FastAPI:
     jwt_segredo = os.environ.get("FRAUS_JWT_SEGREDO") or None
     codigo_convite = os.environ.get("FRAUS_CODIGO_CONVITE") or None
     validar_configuracao_de_producao(
-        os.environ.get("FRAUS_AMBIENTE"), chave_mestra, jwt_segredo, codigo_convite
+        os.environ.get("FRAUS_AMBIENTE"),
+        chave_mestra,
+        jwt_segredo,
+        codigo_convite,
+        os.environ.get("FRAUS_DATABASE_URL") or None,
     )
 
     # Emocao entra no vetor desde a subida do contrato para 35 features

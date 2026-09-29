@@ -25,6 +25,7 @@ from scripts.preparar_modelos_vercel import (
 )
 
 PASTAS_ONNX = tuple(f"modelos-onnx/bertimbau-{nome}" for nome in ("satisfacao", "emocao", "ironia"))
+PASTA_LAYA = "modelos-onnx/laya-ironia"
 
 
 def sha256(caminho: Path) -> str:
@@ -41,6 +42,13 @@ def arquivos_do_bundle(raiz: Path) -> list[tuple[Path, str]]:
     for relativa in PASTAS_ONNX:
         pasta = raiz / relativa
         arquivos.extend((item, item.relative_to(raiz).as_posix()) for item in pasta.rglob("*") if item.is_file())
+    pasta_laya = raiz / PASTA_LAYA
+    if pasta_laya.is_dir():
+        arquivos.extend(
+            (item, item.relative_to(raiz).as_posix())
+            for item in pasta_laya.rglob("*")
+            if item.is_file()
+        )
     fusor = raiz / "modelos" / "fusor.joblib"
     arquivos.append((fusor, "modelos/fusor.joblib"))
     for opcional in (

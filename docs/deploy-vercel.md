@@ -125,6 +125,12 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 Nenhum valor secreto deve entrar no repositório. Alterar variável na Vercel
 exige novo deploy para entrar no processo.
 
+Com `FRAUS_AMBIENTE=producao`, a API falha no boot se
+`FRAUS_DATABASE_URL` estiver ausente. Isso impede que um deploy serverless
+pareça saudável usando SQLite efêmero e perca conversas, chaves e configurações
+num cold start. A chave mestra também continua obrigatória no ambiente, portanto
+o deploy não depende da escrita de `.fraus-chaves.txt`.
+
 ## Deploy reproduzível e smoke
 
 O workflow manual `.github/workflows/api-deploy.yml` usa ambiente protegido

@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pip install -r requirements.txt && pip install --no-deps laya==0.3.21",
   "buildCommand": "python scripts/preparar_modelos_vercel.py",
   "functions": {
     "api/index.py": {

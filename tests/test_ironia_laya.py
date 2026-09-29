@@ -4,10 +4,32 @@ import pytest
 
 from fraus.sinais.ironia_laya import (
     ClassificadorIroniaLaya,
+    ClassificadorIroniaLayaOnnx,
     DependenciaLayaAusenteError,
     PERGUNTA_IRONIA,
     RespostaLayaInvalidaError,
 )
+
+
+class AgenteOnnxFalso:
+    def __init__(self, probabilidades):
+        self.probabilidades = probabilidades
+
+    def predict_batch(self, estados, perguntas, **opcoes):
+        self.estados = estados
+        self.perguntas = perguntas
+        self.opcoes = opcoes
+        return [
+            {"answers": {"ironia": {"probabilities": {"A": p, "B": 1 - p}}}}
+            for p in self.probabilidades
+        ]
+
+    def system_one(self, estado, perguntas, **opcoes):
+        self.estado = estado
+        self.perguntas = perguntas
+        self.opcoes = opcoes
+        p = self.probabilidades[0]
+        return {"answers": {"ironia": {"probabilities": {"A": p, "B": 1 - p}}}}
 
 
 class RouterFalso:
@@ -50,6 +72,29 @@ def test_lista_vazia_nao_chama_modelo():
     router = RouterFalso([])
     assert ClassificadorIroniaLaya(router=router).prever_mensagens([]) == []
     assert router.requisicoes is None
+
+
+def test_adaptador_onnx_usa_contrato_nativo_sem_router():
+    agente = AgenteOnnxFalso([0.9, 0.2])
+    classificador = ClassificadorIroniaLayaOnnx(agente=agente)
+
+    assert classificador.prever_mensagens(["ironia", "literal"]) == [
+        [pytest.approx(0.1), 0.9],
+        [0.8, 0.2],
+    ]
+    assert agente.estados == ["ironia", "literal"]
+    assert agente.perguntas == PERGUNTA_IRONIA
+    assert agente.opcoes == {"lang": "pt", "sort_by_length": True}
+
+
+def test_adaptador_onnx_preserva_contexto_configuravel():
+    agente = AgenteOnnxFalso([0.77])
+    probabilidade = ClassificadorIroniaLayaOnnx(agente=agente).prever_configurado(
+        "ótimo", contexto="falhou", criterio_ironico="contradiz", criterio_literal="literal"
+    )
+    assert probabilidade == 0.77
+    assert agente.estado == {"contexto_anterior": "falhou", "fala_do_cliente": "ótimo"}
+    assert agente.opcoes == {"lang": "pt"}
 
 
 def test_previsao_configurada_envia_contexto_e_criterios():
