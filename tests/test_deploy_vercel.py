@@ -97,13 +97,14 @@ def test_modelos_incompletos_falham_alto(tmp_path):
 def test_backend_laya_onnx_exige_grafo_e_tokenizador(tmp_path, monkeypatch):
     _artefatos_minimos(tmp_path)
     monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
-    with pytest.raises(ArtefatoDeModelosInvalido, match="laya.int8.onnx"):
+    with pytest.raises(ArtefatoDeModelosInvalido, match="laya.onnx"):
         conferir_modelos(tmp_path)
 
     laya = tmp_path / "modelos-onnx" / "laya-ironia"
     (laya / "tokenizer").mkdir(parents=True)
     for relativo in (
-        "laya.int8.onnx",
+        "laya.onnx",
+        "manifesto.json",
         "rl_agent_config.json",
         "tokenizer/tokenizer.json",
         "tokenizer/tokenizer_config.json",
