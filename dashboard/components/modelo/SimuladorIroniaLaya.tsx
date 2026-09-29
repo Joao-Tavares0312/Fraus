@@ -25,10 +25,9 @@ const BASE = {
 const PERFIS = {
   // A Laya multilingual e subconfiante para ironia em portugues: no conjunto
   // de verificacao do artefato, exemplos ironicos conhecidos ficaram entre
-  // 0,2255 e 0,3028. Estes limiares calibram a DECISAO; as probabilidades
-  // brutas continuam sendo exibidas sem transformacao.
-  conservador: { limiar: 0.5, confianca_minima: 0.7 },
-  equilibrado: { limiar: 0.3, confianca_minima: 0.6 },
+  // 0,2255 e 0,3028. A tela apresenta sempre uma das duas classes.
+  conservador: { limiar: 0.5, confianca_minima: 0.0 },
+  equilibrado: { limiar: 0.3, confianca_minima: 0.0 },
   sensivel: { limiar: 0.2, confianca_minima: 0.0 },
 } as const;
 type Perfil = keyof typeof PERFIS | "customizado";
@@ -51,6 +50,7 @@ export function SimuladorIroniaLaya() {
     }
     setRodando(true);
     setErro(null);
+    setResultado(null);
     const resposta = await simularIroniaLaya(limpo, configuracao);
     setRodando(false);
     if (resposta.ok) setResultado(resposta.dado);
@@ -61,15 +61,18 @@ export function SimuladorIroniaLaya() {
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 px-5 py-4">
-      <div className="flex flex-col gap-2">
+    <div className="flex w-full min-w-0 flex-col gap-4 px-5 py-4">
+      <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor={idCampo} className="text-xs text-muted-foreground">
           Fala do cliente
         </Label>
         <Textarea
           id={idCampo}
           value={texto}
-          onChange={(evento) => setTexto(evento.target.value)}
+          onChange={(evento) => {
+            setTexto(evento.target.value);
+            setResultado(null);
+          }}
           onKeyDown={(evento) => {
             if ((evento.metaKey || evento.ctrlKey) && evento.key === "Enter") {
               evento.preventDefault();
@@ -78,7 +81,7 @@ export function SimuladorIroniaLaya() {
           }}
           rows={4}
           maxLength={TETO}
-          className="resize-y font-normal"
+          className="min-w-0 max-w-full resize-y font-normal"
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" onClick={simular} disabled={rodando}>
@@ -94,8 +97,8 @@ export function SimuladorIroniaLaya() {
         </div>
       </div>
 
-      <div className="grid gap-4 border-y border-linha py-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4 border-y border-linha py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label className="text-xs text-muted-foreground">Perfil de decisão</Label>
           <div className="flex flex-wrap gap-2">
             {(Object.keys(PERFIS) as Array<keyof typeof PERFIS>).map((nome) => (
@@ -115,38 +118,36 @@ export function SimuladorIroniaLaya() {
               value={configuracao.limiar} onChange={(evento) => {
                 setPerfil("customizado");
                 setConfiguracao((atual) => ({ ...atual, limiar: Number(evento.target.value) }));
-              }} />
-          </label>
-          <label className="text-xs text-muted-foreground">
-            Confiança mínima <b className="num text-foreground">{formatarNumero(configuracao.confianca_minima * 100)}%</b>
-            <input className="mt-2 block w-full accent-primary" type="range" min="0" max="1" step="0.05"
-              value={configuracao.confianca_minima} onChange={(evento) => {
-                setPerfil("customizado");
-                setConfiguracao((atual) => ({ ...atual, confianca_minima: Number(evento.target.value) }));
+                setResultado(null);
               }} />
           </label>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            O perfil calibra somente a decisão para português. As probabilidades
-            brutas da Laya permanecem inalteradas e aparecem no resultado.
+            O perfil ajusta o limiar da decisão para português.
           </p>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor={`${idCampo}-contexto`} className="text-xs text-muted-foreground">Contexto anterior da conversa · opcional</Label>
           <Textarea id={`${idCampo}-contexto`} value={configuracao.contexto}
-            onChange={(evento) => setConfiguracao((atual) => ({ ...atual, contexto: evento.target.value }))}
+            onChange={(evento) => {
+              setConfiguracao((atual) => ({ ...atual, contexto: evento.target.value }));
+              setResultado(null);
+            }}
             rows={5} maxLength={6000} placeholder="Cliente já tentou resolver três vezes; o pedido foi cancelado sem aviso…"
-            className="resize-y font-normal" />
+            className="min-w-0 max-w-full resize-y font-normal" />
         </div>
       </div>
 
-      <details className="rounded-lg border border-border px-4 py-3">
+      <details className="min-w-0 rounded-lg border border-border px-4 py-3">
         <summary className="cursor-pointer text-sm font-medium">Instrução e critérios avançados</summary>
         <div className="mt-4 grid gap-3">
           {([ ["instrucao", "Instrução"], ["criterio_ironico", "Critério para irônico"], ["criterio_literal", "Critério para literal"] ] as const).map(([chave, rotulo]) => (
             <label key={chave} className="text-xs text-muted-foreground">{rotulo}
               <Textarea value={configuracao[chave]}
-                onChange={(evento) => setConfiguracao((atual) => ({ ...atual, [chave]: evento.target.value }))}
-                rows={2} maxLength={600} className="mt-1 resize-y font-normal text-foreground" />
+                onChange={(evento) => {
+                  setConfiguracao((atual) => ({ ...atual, [chave]: evento.target.value }));
+                  setResultado(null);
+                }}
+                rows={2} maxLength={600} className="mt-1 min-w-0 max-w-full resize-y font-normal text-foreground" />
             </label>
           ))}
           <Button type="button" size="xs" variant="outline" className="w-fit" onClick={() => {
@@ -170,7 +171,7 @@ export function SimuladorIroniaLaya() {
               setResultado(null);
               setErro(null);
             }}
-            className="max-w-[24rem] justify-start truncate"
+            className="max-w-full justify-start truncate sm:max-w-[24rem]"
           >
             <RotateCcw aria-hidden />
             <span className="truncate">{partida}</span>
@@ -197,41 +198,16 @@ export function SimuladorIroniaLaya() {
 }
 
 function Resultado({ resultado }: { resultado: SimulacaoIroniaLaya }) {
-  const ironia = resultado.prob_ironia * 100;
-  const literal = resultado.prob_nao_ironico * 100;
+  const ironico = resultado.classe === "ironico" || (
+    resultado.classe === "inconclusivo" && resultado.prob_ironia >= resultado.limiar
+  );
   return (
-    <div className="flex flex-col gap-3 border-t border-linha pt-4">
-      <p className="flex flex-wrap items-baseline gap-2 text-sm">
-        <span className="text-muted-foreground">Classe mais provável:</span>
-        <strong className={resultado.classe === "ironico" ? "text-detrator-texto" : resultado.classe === "nao-ironico" ? "text-promotor-texto" : "text-neutro-texto"}>
-          {resultado.classe === "ironico" ? "Irônico" : resultado.classe === "nao-ironico" ? "Não irônico" : "Inconclusivo"}
+    <div className="min-w-0 border-t border-linha pt-4" role="status" aria-live="polite">
+      <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+        <span className="text-muted-foreground">Resultado:</span>
+        <strong className={ironico ? "text-detrator-texto" : "text-promotor-texto"}>
+          {ironico ? "Irônico" : "Não irônico"}
         </strong>
-      </p>
-      <div
-        className="flex h-2.5 overflow-hidden rounded-sm bg-muted"
-        role="img"
-        aria-label={`Não irônico ${formatarNumero(literal)}%, irônico ${formatarNumero(ironia)}%`}
-      >
-        <span className="bg-promotor" style={{ width: `${literal}%` }} />
-        <span className="bg-detrator" style={{ width: `${ironia}%` }} />
-      </div>
-      <div className="flex flex-wrap justify-between gap-3 text-xs">
-        <span className="text-promotor-texto">Não irônico <b className="num">{formatarNumero(literal)}%</b></span>
-        <span className="text-detrator-texto">Irônico <b className="num">{formatarNumero(ironia)}%</b></span>
-      </div>
-      <dl className="grid gap-2 border-t border-linha pt-3 text-xs sm:grid-cols-3">
-        <div><dt className="text-muted-foreground">Modelo</dt><dd className="num mt-1">{resultado.modelo}</dd></div>
-        <div><dt className="text-muted-foreground">Checkpoint</dt><dd className="num mt-1">{resultado.checkpoint}</dd></div>
-        <div><dt className="text-muted-foreground">Revisão</dt><dd className="num mt-1 truncate" title={resultado.revisao}>{resultado.revisao.slice(0, 12)}</dd></div>
-      </dl>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Limiar <span className="num">{formatarNumero(resultado.limiar * 100)}%</span>
-        {" · "}confiança observada <span className="num">{formatarNumero(resultado.confianca * 100)}%</span>
-        {" · "}mínima <span className="num">{formatarNumero(resultado.confianca_minima * 100)}%</span>
-        {resultado.contexto_usado ? " · contexto incluído" : " · sem contexto"}
-      </p>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Leitura experimental: não altera a nota, o NPS ou dados persistidos.
       </p>
     </div>
   );

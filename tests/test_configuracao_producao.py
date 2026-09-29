@@ -34,3 +34,17 @@ def test_producao_aceita_estado_externo():
         "convite",
         "postgresql://pooler/fraus",
     )
+
+
+@pytest.mark.parametrize("destino", ["fraus.db", "sqlite:///fraus.db", "https://banco"])
+def test_producao_recusa_destino_que_banco_trataria_como_sqlite(destino):
+    with pytest.raises(RuntimeError, match="FRAUS_DATABASE_URL.*PostgreSQL"):
+        validar_configuracao_de_producao(
+            "production", "m" * 32, "j" * 32, "convite", destino
+        )
+
+
+def test_producao_aceita_prefixo_postgres_curto():
+    validar_configuracao_de_producao(
+        "production", "m" * 32, "j" * 32, "convite", "postgres://pooler/fraus"
+    )

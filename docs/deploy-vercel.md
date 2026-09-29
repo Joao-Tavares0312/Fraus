@@ -107,6 +107,8 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 | `FRAUS_LAYA_MODELO_URL` | URL privada do ZIP Laya validado |
 | `FRAUS_LAYA_MODELO_SHA256` | identidade imutável do ZIP Laya separado |
 | `FRAUS_BACKEND=onnx` | escolhe ONNX Runtime sem fallback silencioso |
+| `FRAUS_AMBIENTE=producao` | ativa a validação de segredos e banco persistente no boot |
+| `FRAUS_IRONIA_BACKEND=laya-onnx` | ativa a Laya exportada para ONNX, quando o ZIP separado estiver configurado |
 | `FRAUS_DATABASE_URL` | transaction pooler do Supabase (`:6543`) |
 | `FRAUS_POSTGRES_MIN_CONEXOES=0` | não reserva conexão por instância fria |
 | `FRAUS_POSTGRES_MAX_CONEXOES=2` | teto por instância serverless (1–20) |
@@ -128,7 +130,8 @@ Nenhum valor secreto deve entrar no repositório. Alterar variável na Vercel
 exige novo deploy para entrar no processo.
 
 Com `FRAUS_AMBIENTE=producao`, a API falha no boot se
-`FRAUS_DATABASE_URL` estiver ausente. Isso impede que um deploy serverless
+`FRAUS_DATABASE_URL` estiver ausente ou não usar `postgres://` ou
+`postgresql://`. Isso impede que um deploy serverless
 pareça saudável usando SQLite efêmero e perca conversas, chaves e configurações
 num cold start. A chave mestra também continua obrigatória no ambiente, portanto
 o deploy não depende da escrita de `.fraus-chaves.txt`.

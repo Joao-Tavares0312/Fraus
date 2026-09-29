@@ -128,6 +128,11 @@ def validar_configuracao_de_producao(
         raise RuntimeError(
             "configuracao de producao incompleta: defina " + ", ".join(ausentes)
         )
+    if not database_url.startswith(("postgres://", "postgresql://")):
+        raise RuntimeError(
+            "FRAUS_DATABASE_URL em producao precisa ser uma URL PostgreSQL "
+            "(postgres:// ou postgresql://)"
+        )
 
 
 def origens_liberadas() -> list[str]:
