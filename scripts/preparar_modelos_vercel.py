@@ -75,6 +75,9 @@ def conferir_modelos(raiz: Path) -> None:
         esperados.extend(
             (
                 laya / "laya.onnx",
+                # O export FP32 da Laya usa dados externos: o arquivo ONNX
+                # sozinho tem apenas o grafo e nao abre sem estes pesos.
+                laya / "laya.onnx.data",
                 laya / "manifesto.json",
                 laya / "rl_agent_config.json",
                 laya / "tokenizer" / "tokenizer.json",
@@ -95,6 +98,27 @@ def baixar(url: str, destino: Path, token: str | None = None) -> None:
     requisicao = urllib.request.Request(url, headers=cabecalhos)
     with urllib.request.urlopen(requisicao, timeout=60) as resposta, destino.open("wb") as arquivo:
         shutil.copyfileobj(resposta, arquivo, length=1024 * 1024)
+
+
+def sobrepor_laya_se_declarada(raiz: Path, temporario: Path) -> None:
+    """Baixa a Laya separadamente e a sobrepoe no bundle base.
+
+    O FP32 tem mais de 1 GB descompactado. Separar esta cabeca evita republicar
+    os tres BERTimbau e o fusor a cada iteracao e permite rollback independente.
+    """
+    if (os.environ.get("FRAUS_IRONIA_BACKEND") or "").strip().lower() != "laya-onnx":
+        return
+    url = os.environ.get("FRAUS_LAYA_MODELO_URL", "")
+    checksum = os.environ.get("FRAUS_LAYA_MODELO_SHA256", "")
+    if not url or not checksum:
+        raise ArtefatoDeModelosInvalido(
+            "backend laya-onnx exige FRAUS_LAYA_MODELO_URL e "
+            "FRAUS_LAYA_MODELO_SHA256 no projeto da API"
+        )
+    pacote = temporario / "laya.zip"
+    baixar(url, pacote, os.environ.get("FRAUS_LAYA_MODELO_TOKEN"))
+    conferir_checksum(pacote, checksum)
+    extrair_zip_seguro(pacote, raiz)
 
 
 def instalar_extraido(extraido: Path, raiz: Path) -> None:
@@ -151,6 +175,7 @@ def preparar() -> None:
         baixar(url, pacote, os.environ.get("FRAUS_MODELOS_TOKEN"))
         conferir_checksum(pacote, checksum)
         extrair_zip_seguro(pacote, extraido)
+        sobrepor_laya_se_declarada(extraido, temporario)
         conferir_modelos(extraido)
 
         instalar_extraido(extraido, RAIZ)
