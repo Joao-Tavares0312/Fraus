@@ -189,7 +189,9 @@ class ClassificadorIroniaLayaOnnx(ClassificadorIroniaLaya):
             classe = _carregar_classe_onnx_agent()
             agente = classe(
                 str(diretorio),
-                onnx_path=str(diretorio / "laya.int8.onnx"),
+                # Nome estavel: o manifesto registra se o grafo validado e
+                # FP32 ou INT8. A API nao deve escolher precisao pelo nome.
+                onnx_path=str(diretorio / "laya.onnx"),
             )
         self._agente = agente
 

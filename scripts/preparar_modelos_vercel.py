@@ -74,7 +74,8 @@ def conferir_modelos(raiz: Path) -> None:
         laya = raiz / "modelos-onnx" / "laya-ironia"
         esperados.extend(
             (
-                laya / "laya.int8.onnx",
+                laya / "laya.onnx",
+                laya / "manifesto.json",
                 laya / "rl_agent_config.json",
                 laya / "tokenizer" / "tokenizer.json",
                 laya / "tokenizer" / "tokenizer_config.json",
