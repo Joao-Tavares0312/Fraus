@@ -12,8 +12,6 @@ from functools import lru_cache
 import json
 import os
 from pathlib import Path
-import sys
-import types
 from typing import Any
 
 
@@ -161,6 +159,9 @@ def _corrigir_config_tokenizador(caminho: str) -> None:
 
 def _carregar_classe_onnx_agent():
     """Carrega o runtime oficial ONNX sem acionar o modulo PyTorch do Laya."""
+    from fraus.sinais.laya_compat import instalar
+
+    instalar(_corrigir_config_tokenizador)
     try:
         from laya.onnx_agent import ONNXAgent
     except ImportError as erro:
@@ -171,10 +172,6 @@ def _carregar_classe_onnx_agent():
     # ONNXAgent importa laya.agent apenas no construtor para obter a funcao
     # acima. Esse modulo importa torch no topo. O shim preserva o runtime ONNX
     # puro e fica deliberadamente limitado a versao pinada no deploy.
-    if "laya.agent" not in sys.modules:
-        compatibilidade = types.ModuleType("laya.agent")
-        compatibilidade._fix_tokenizer_config = _corrigir_config_tokenizador
-        sys.modules["laya.agent"] = compatibilidade
     return ONNXAgent
 
 
