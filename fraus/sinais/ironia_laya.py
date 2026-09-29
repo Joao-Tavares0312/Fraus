@@ -196,9 +196,17 @@ class ClassificadorIroniaLayaOnnx(ClassificadorIroniaLaya):
     def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
         if not textos:
             return []
-        resultados = self._agente.predict_batch(
-            textos, PERGUNTA_IRONIA, lang="pt", sort_by_length=True
-        )
+        # O grafo oficial exportado pela Laya aceita sequencias dinamicas, mas
+        # conserva operacoes internas com batch 1. `predict_batch` com varias
+        # frases achata batch x tokens e falha no ORT (por exemplo, 65 contra
+        # 5*65). Mantemos o contrato em lote do Fraus e isolamos apenas cada
+        # execucao do grafo ate o upstream exportar batch dinamico de verdade.
+        resultados = [
+            self._agente.predict_batch(
+                [texto], PERGUNTA_IRONIA, lang="pt", sort_by_length=False
+            )[0]
+            for texto in textos
+        ]
         probabilidades = [self._probabilidade_ironia(resultado) for resultado in resultados]
         return [[1.0 - probabilidade, probabilidade] for probabilidade in probabilidades]
 
