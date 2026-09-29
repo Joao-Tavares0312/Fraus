@@ -100,6 +100,27 @@ def baixar(url: str, destino: Path, token: str | None = None) -> None:
         shutil.copyfileobj(resposta, arquivo, length=1024 * 1024)
 
 
+def sobrepor_laya_se_declarada(raiz: Path, temporario: Path) -> None:
+    """Baixa a Laya separadamente e a sobrepoe no bundle base.
+
+    O FP32 tem mais de 1 GB descompactado. Separar esta cabeca evita republicar
+    os tres BERTimbau e o fusor a cada iteracao e permite rollback independente.
+    """
+    if (os.environ.get("FRAUS_IRONIA_BACKEND") or "").strip().lower() != "laya-onnx":
+        return
+    url = os.environ.get("FRAUS_LAYA_MODELO_URL", "")
+    checksum = os.environ.get("FRAUS_LAYA_MODELO_SHA256", "")
+    if not url or not checksum:
+        raise ArtefatoDeModelosInvalido(
+            "backend laya-onnx exige FRAUS_LAYA_MODELO_URL e "
+            "FRAUS_LAYA_MODELO_SHA256 no projeto da API"
+        )
+    pacote = temporario / "laya.zip"
+    baixar(url, pacote, os.environ.get("FRAUS_LAYA_MODELO_TOKEN"))
+    conferir_checksum(pacote, checksum)
+    extrair_zip_seguro(pacote, raiz)
+
+
 def instalar_extraido(extraido: Path, raiz: Path) -> None:
     """Promove bundle completo e restaura o anterior se qualquer move falhar."""
     nomes = ("modelos-onnx", "modelos")
@@ -154,6 +175,7 @@ def preparar() -> None:
         baixar(url, pacote, os.environ.get("FRAUS_MODELOS_TOKEN"))
         conferir_checksum(pacote, checksum)
         extrair_zip_seguro(pacote, extraido)
+        sobrepor_laya_se_declarada(extraido, temporario)
         conferir_modelos(extraido)
 
         instalar_extraido(extraido, RAIZ)

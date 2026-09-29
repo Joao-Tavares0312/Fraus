@@ -10,6 +10,7 @@ from scripts.preparar_modelos_vercel import (
     conferir_modelos,
     extrair_zip_seguro,
     instalar_extraido,
+    sobrepor_laya_se_declarada,
 )
 from scripts.gerenciar_artefatos import empacotar, main as gerenciar_artefatos, validar
 
@@ -112,6 +113,15 @@ def test_backend_laya_onnx_exige_grafo_e_tokenizador(tmp_path, monkeypatch):
     ):
         (laya / relativo).write_text("{}")
     conferir_modelos(tmp_path)
+
+
+def test_backend_laya_onnx_exige_url_e_checksum_separados(tmp_path, monkeypatch):
+    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
+    monkeypatch.delenv("FRAUS_LAYA_MODELO_URL", raising=False)
+    monkeypatch.delenv("FRAUS_LAYA_MODELO_SHA256", raising=False)
+
+    with pytest.raises(ArtefatoDeModelosInvalido, match="FRAUS_LAYA_MODELO_URL"):
+        sobrepor_laya_se_declarada(tmp_path, tmp_path)
 
 
 def _artefatos_minimos(raiz: Path) -> None:

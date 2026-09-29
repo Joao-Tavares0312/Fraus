@@ -104,6 +104,8 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 | `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` | habilita o pacote acima do limite padrão |
 | `FRAUS_MODELOS_URL` | URL privada de leitura do ZIP |
 | `FRAUS_MODELOS_SHA256` | identidade imutável do artefato |
+| `FRAUS_LAYA_MODELO_URL` | URL privada do ZIP Laya validado |
+| `FRAUS_LAYA_MODELO_SHA256` | identidade imutável do ZIP Laya separado |
 | `FRAUS_BACKEND=onnx` | escolhe ONNX Runtime sem fallback silencioso |
 | `FRAUS_DATABASE_URL` | transaction pooler do Supabase (`:6543`) |
 | `FRAUS_POSTGRES_MIN_CONEXOES=0` | não reserva conexão por instância fria |
