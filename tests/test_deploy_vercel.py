@@ -104,6 +104,7 @@ def test_backend_laya_onnx_exige_grafo_e_tokenizador(tmp_path, monkeypatch):
     (laya / "tokenizer").mkdir(parents=True)
     for relativo in (
         "laya.onnx",
+        "laya.onnx.data",
         "manifesto.json",
         "rl_agent_config.json",
         "tokenizer/tokenizer.json",

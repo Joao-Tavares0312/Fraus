@@ -75,6 +75,9 @@ def conferir_modelos(raiz: Path) -> None:
         esperados.extend(
             (
                 laya / "laya.onnx",
+                # O export FP32 da Laya usa dados externos: o arquivo ONNX
+                # sozinho tem apenas o grafo e nao abre sem estes pesos.
+                laya / "laya.onnx.data",
                 laya / "manifesto.json",
                 laya / "rl_agent_config.json",
                 laya / "tokenizer" / "tokenizer.json",
