@@ -57,7 +57,7 @@ async function validar(nome, viewport, { movimentoReduzido = false } = {}) {
 
   const medidas = await pagina.evaluate(() => {
     const recursos = performance.getEntriesByType("resource");
-    const nomeAnimacao = getComputedStyle(document.querySelector(".vt-orbe i")).animationName;
+    const nomeAnimacao = getComputedStyle(document.querySelector(".vt-orbe__corpo i")).animationName;
     return {
       bytes: recursos.reduce((t, r) => t + (r.transferSize || r.encodedBodySize || 0), 0),
       largura: { rolavel: document.documentElement.scrollWidth, janela: document.documentElement.clientWidth },

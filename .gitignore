@@ -6,6 +6,7 @@ __pycache__/
 modelos/
 dados_brutos/
 *.db
+!dados_demo/*.db
 node_modules/
 .next/
 .superpowers/

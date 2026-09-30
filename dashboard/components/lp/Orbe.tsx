@@ -1,27 +1,37 @@
 /**
  * O ORBE: o unico elemento vivo da vitrine (Aurora, direcao aprovada em
- * 30/09/2026).
+ * 30/09/2026), reforcado em 30/09/2026 a pedido do dono do projeto.
  *
- * Tres manchas radiais em `mix-blend-mode: screen`, cada uma girando num
- * periodo primo com o das outras (14 / 18 / 22 s), entao a composicao nunca
- * fecha o ciclo dentro de uma visita. As cores sao AMBAR (`--dito`), AZUL
- * (`--medido`) e o magenta do atelie (`--atelie-halo`): cenografia, e por isso
- * pode ter croma alto sem inventar canal de significado -- o dado, na pagina,
- * continua sendo so o que esta escrito e tem rotulo.
+ * Camadas, de tras para frente: AURA (respira), CORPO (tres manchas em
+ * `screen` -- ambar/dito, azul/medido, magenta/atelie --, mais um feixe conico
+ * girando por cima), ANEIS orbitais com um satelite cada (as cores dos tres
+ * sinais que o orbe mistura), BRILHO especular e o REFLEXO no chao.
  *
- * MORA SO AQUI. A ferramenta e lida por horas e nao pode ter GPU girando atras
- * de tabela e grafico; a vitrine e visita curta (DESIGN.md secoes 6 e 8.7). E
- * CSS puro, sem canvas e sem requestAnimationFrame: o compositor cuida da
- * rotacao. `prefers-reduced-motion` recebe o orbe PARADO (ver vitrine.css).
- *
- * `aria-hidden`: nao e conteudo nem alvo.
+ * E cenografia: cor aqui nao e canal de dado. CSS puro, sem canvas e sem
+ * requestAnimationFrame; MORA SO NA VITRINE (DESIGN.md, movimento) e
+ * `prefers-reduced-motion` recebe tudo PARADO (ver vitrine.css). `aria-hidden`.
  */
 export function Orbe() {
   return (
     <div aria-hidden className="vt-orbe">
-      <i />
-      <i />
-      <i />
+      <span className="vt-orbe__aura" />
+      <div className="vt-orbe__corpo">
+        <i />
+        <i />
+        <i />
+        <b className="vt-orbe__feixe" />
+        <span className="vt-orbe__brilho" />
+      </div>
+      <span className="vt-anel vt-anel--1">
+        <em />
+      </span>
+      <span className="vt-anel vt-anel--2">
+        <em />
+      </span>
+      <span className="vt-anel vt-anel--3">
+        <em />
+      </span>
+      <span className="vt-orbe__reflexo" />
     </div>
   );
 }

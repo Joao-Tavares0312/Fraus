@@ -24,6 +24,7 @@ Como rodar:
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import tempfile
 from datetime import timedelta
@@ -349,11 +350,22 @@ def montar_app():
         # o mantiver aberto. Cair para um nome unico e melhor que recusar o boot:
         # o banco e descartavel e resemeado do zero a cada subida.
         caminho = Path(tempfile.mkdtemp(prefix="fraus-demo-")) / "fraus-demo.db"
-    banco = Banco(caminho)
-    banco.migrar()
-    motor = montar_motor()
-    total = semear(banco, motor)
-    print(f"[api_demo] banco de demonstracao em {caminho} com {total} conversas")
+    congelado = RAIZ / "dados_demo" / "fraus-demo.db"
+    if congelado.is_file() and os.environ.get("FRAUS_DEMO_RESSEMEAR") != "1":
+        # O SNAPSHOT VERSIONADO: as mesmas conversas ja pontuadas, para a
+        # demonstracao subir igual em qualquer maquina e o grafico NPS x latencia
+        # sempre ter serie. `FRAUS_DEMO_RESSEMEAR=1` recompoe do zero.
+        shutil.copyfile(congelado, caminho)
+        banco = Banco(caminho)
+        banco.migrar()
+        motor = montar_motor()
+        print(f"[api_demo] snapshot de {congelado.name} copiado para {caminho}")
+    else:
+        banco = Banco(caminho)
+        banco.migrar()
+        motor = montar_motor()
+        total = semear(banco, motor)
+        print(f"[api_demo] banco de demonstracao em {caminho} com {total} conversas")
     # A mesma leitura de `criar_app_padrao`: a doc de hospedagem promete que
     # definir FRAUS_CHAVE_MESTRA protege a API, e quem sobe o tunel pela demo
     # tinha essa promessa quebrada em silencio -- a variavel era ignorada aqui.

@@ -278,50 +278,134 @@
   width: min(100%, var(--orbe));
   aspect-ratio: 1;
   transform: translateX(-50%);
-  border-radius: 50%;
   pointer-events: none;
-  /* As manchas se somam em screen e, sem isto, o centro lia cinza-perolado. */
-  filter: saturate(1.7);
 }
-.vt-orbe i {
+.vt-orbe__aura {
+  position: absolute;
+  inset: -34%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--atelie-halo) 55%, transparent), color-mix(in oklch, var(--medido) 14%, transparent) 55%, transparent 72%);
+  filter: blur(18px);
+  animation: vt-respira 7s ease-in-out infinite;
+}
+.vt-orbe__corpo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  /* As manchas se somam em screen e, sem isto, o centro lia cinza-perolado. */
+  filter: saturate(1.85) contrast(1.05);
+  box-shadow: 0 0 80px color-mix(in oklch, var(--atelie-halo) 45%, transparent), 0 0 200px color-mix(in oklch, var(--dito) 16%, transparent);
+}
+.vt-orbe__corpo i {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   mix-blend-mode: screen;
   will-change: transform;
 }
-.vt-orbe i:nth-child(1) {
-  background: radial-gradient(circle at 24% 28%, var(--dito), transparent 46%);
+.vt-orbe__corpo i:nth-child(1) {
+  background: radial-gradient(circle at 24% 28%, var(--dito), transparent 50%);
   animation: vt-gira 14s linear infinite;
 }
-.vt-orbe i:nth-child(2) {
-  background: radial-gradient(circle at 78% 34%, var(--medido), transparent 46%);
+.vt-orbe__corpo i:nth-child(2) {
+  background: radial-gradient(circle at 78% 34%, var(--medido), transparent 50%);
   animation: vt-gira 18s linear infinite reverse;
 }
-.vt-orbe i:nth-child(3) {
-  background: radial-gradient(circle at 50% 84%, var(--atelie-halo), transparent 48%);
+.vt-orbe__corpo i:nth-child(3) {
+  background: radial-gradient(circle at 50% 84%, var(--atelie-halo), transparent 52%);
   animation: vt-gira 22s linear infinite;
 }
-.vt-orbe::after {
+.vt-orbe__feixe {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mix-blend-mode: overlay;
+  background: conic-gradient(from 0deg, transparent 0 62%, color-mix(in oklch, white 70%, transparent) 78%, transparent 92%);
+  animation: vt-gira 9s linear infinite;
+}
+.vt-orbe__corpo::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 50%;
   box-shadow:
-    inset 0 0 90px color-mix(in oklch, black 70%, transparent),
-    inset 0 0 0 1px color-mix(in oklch, var(--foreground) 22%, transparent);
+    inset -34px -40px 90px color-mix(in oklch, black 72%, transparent),
+    inset 18px 14px 50px color-mix(in oklch, white 14%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--foreground) 26%, transparent);
+}
+.vt-orbe__brilho {
+  position: absolute;
+  left: 16%;
+  top: 9%;
+  width: 34%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, white 80%, transparent), transparent);
+  filter: blur(6px);
+  transform: rotate(-24deg);
+  opacity: 0.75;
+}
+/* ANEIS: elipses inclinadas, cada uma com um satelite na cor de um sinal. */
+.vt-anel {
+  position: absolute;
+  left: -16%;
+  right: -16%;
+  top: 50%;
+  height: 34%;
+  margin-top: -17%;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklch, var(--foreground) 22%, transparent);
+  animation: vt-anel 26s linear infinite;
+}
+.vt-anel em {
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 14px 3px currentColor;
+}
+.vt-anel--1 { transform: rotate(-18deg); color: var(--dito); }
+.vt-anel--2 { transform: rotate(24deg); color: var(--medido); animation-duration: 34s; animation-direction: reverse; height: 26%; margin-top: -13%; left: -26%; right: -26%; }
+.vt-anel--3 { transform: rotate(-64deg); color: var(--atelie-halo); animation-duration: 42s; height: 20%; margin-top: -10%; left: -8%; right: -8%; }
+.vt-orbe__reflexo {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -9%;
+  height: 8%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--atelie-halo) 60%, transparent), transparent);
+  filter: blur(10px);
+  animation: vt-respira 7s ease-in-out infinite;
 }
 @keyframes vt-gira {
   to {
     transform: rotate(360deg);
   }
 }
+@keyframes vt-anel {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
+}
+@keyframes vt-respira {
+  0%, 100% { opacity: 0.7; scale: 0.96; }
+  50% { opacity: 1; scale: 1.05; }
+}
 /* Quem pediu menos movimento recebe o orbe PARADO, nao mais lento. */
 @media (prefers-reduced-motion: reduce) {
   /* `:nth-child(n)` iguala a especificidade das regras que ligam a animacao
      (`:nth-child(1)`...): sem isso a regra mais especifica vencia e o orbe
      continuava girando para quem pediu o contrario. Medido em Playwright. */
-  .vt-orbe i:nth-child(n) {
+  .vt-orbe__corpo i:nth-child(n),
+  .vt-orbe__feixe,
+  .vt-orbe__aura,
+  .vt-orbe__reflexo,
+  .vt-anel:nth-of-type(n) {
     animation: none;
   }
 }
