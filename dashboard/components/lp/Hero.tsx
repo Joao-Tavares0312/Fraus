@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { formatarSegundosLED } from "@/lib/formato";
+import { FATOS_DO_MODELO, emDuasCasas } from "./fatos";
 import { Orbe } from "./Orbe";
 
 /**
@@ -15,10 +16,10 @@ const LATENCIA_AMOSTRA = formatarSegundosLED(252); // 4 min 12 s
 
 /** Os fatos verdadeiros do produto (CLAUDE.md), em LED de tinta: dourado e so acao, foco e marca. */
 const FATOS = [
-  ["famílias de sinal", "07"],
-  ["features no fusor", "39"],
-  ["BERTimbau fine-tunados", "03"],
-  ["LLMs na inferência", "00"],
+  ["famílias de sinal", emDuasCasas(FATOS_DO_MODELO.familias)],
+  ["features no fusor", emDuasCasas(FATOS_DO_MODELO.features)],
+  ["BERTimbau fine-tunados", emDuasCasas(FATOS_DO_MODELO.bertimbau)],
+  ["LLMs na inferência", emDuasCasas(FATOS_DO_MODELO.llms)],
 ] as const;
 
 export function Hero() {

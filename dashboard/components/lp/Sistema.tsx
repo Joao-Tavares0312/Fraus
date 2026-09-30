@@ -1,4 +1,5 @@
 import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { FATOS_DO_MODELO } from "./fatos";
 import { Revelar } from "./Revelar";
 
 /**
@@ -83,15 +84,15 @@ export function Sistema() {
         <Revelar>
           <div className="vt-grade">
             <div className="vt-cel vt-cel--fusor">
-              <h3>Regressão logística sobre 39 features</h3>
+              <h3>Regressão logística sobre {FATOS_DO_MODELO.features} features</h3>
               <p className="max-w-[24rem]">
-                As sete famílias viram um vetor de 39 números. A nota sai de 0 a
+                As sete famílias viram um vetor de {FATOS_DO_MODELO.features} números. A nota sai de 0 a
                 100, vira 0–10 e ganha a categoria de NPS — sempre no servidor,
                 nunca no navegador.
               </p>
               <SegmentoLED
                 className="vt-fusor__led"
-                valor="39"
+                valor={String(FATOS_DO_MODELO.features)}
                 altura={72}
                 cor="tinta"
                 rotulo="features no fusor"

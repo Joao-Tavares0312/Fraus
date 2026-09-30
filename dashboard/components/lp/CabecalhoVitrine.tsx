@@ -5,6 +5,7 @@ import {
   TelemetriaValor,
 } from "@/components/instrumento/TelemetriaTopo";
 import { MarcaFraus } from "@/components/shell/MarcaFraus";
+import { FATOS_DO_MODELO, emDuasCasas } from "./fatos";
 
 /**
  * O TOPO DA VITRINE: a faixa de telemetria (a assinatura da Regua) e, por
@@ -33,9 +34,11 @@ export function CabecalhoVitrine() {
         }
         direita={
           <>
-            SINAIS <TelemetriaValor>07</TelemetriaValor> · FEATURES{" "}
-            <TelemetriaValor>39</TelemetriaValor> · LLM{" "}
-            <TelemetriaValor>00</TelemetriaValor> · NPS{" "}
+            SINAIS{" "}
+            <TelemetriaValor>{emDuasCasas(FATOS_DO_MODELO.familias)}</TelemetriaValor> ·
+            FEATURES <TelemetriaValor>{FATOS_DO_MODELO.features}</TelemetriaValor> ·
+            LLM <TelemetriaValor>{emDuasCasas(FATOS_DO_MODELO.llms)}</TelemetriaValor> ·
+            NPS{" "}
             <TelemetriaValor>ESTIMATIVA</TelemetriaValor>
           </>
         }
