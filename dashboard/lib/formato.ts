@@ -62,6 +62,37 @@ export function formatarSegundos(segundos: number): string {
   return `${horas} h ${minutos % 60} min`;
 }
 
+/**
+ * A MESMA duracao, na forma que o display de sete segmentos sabe desenhar:
+ * so digitos e separadores, e a UNIDADE separada do numero. `1 min 12 s` no
+ * LED viraria texto cru no meio dos segmentos.
+ *
+ *   38     -> { valor: "38",   unidade: "s" }
+ *   72     -> { valor: "1:12", unidade: "min:s" }
+ *   3.900  -> { valor: "1:05", unidade: "h:min" }
+ *
+ * E so APRESENTACAO: `formatarSegundos` continua sendo a forma por extenso que
+ * o texto corrido usa, e nenhuma das duas decide nada sobre a duracao.
+ */
+export function formatarSegundosLED(segundos: number): {
+  valor: string;
+  unidade: string;
+} {
+  if (segundos < 60) return { valor: NUMERO.format(segundos), unidade: "s" };
+  const total = Math.round(segundos);
+  const doisDigitos = (n: number) => String(n).padStart(2, "0");
+  if (total < 3600) {
+    return {
+      valor: `${Math.floor(total / 60)}:${doisDigitos(total % 60)}`,
+      unidade: "min:s",
+    };
+  }
+  return {
+    valor: `${Math.floor(total / 3600)}:${doisDigitos(Math.floor((total % 3600) / 60))}`,
+    unidade: "h:min",
+  };
+}
+
 export function formatarDataHora(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", {
     day: "2-digit",

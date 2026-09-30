@@ -41,6 +41,9 @@ const DIGITOS: Readonly<Record<string, readonly Segmento[]>> = {
  * Uma celula do display, ja classificada.
  *
  *  - `digito`: celula larga com os sete segmentos; `acesos` diz quais brilham.
+ *  - `mais`: o sinal de mais do NPS positivo (`+12`). O display de sete
+ *    segmentos nao tem `+`; desenha-se o segmento do meio mais um traco
+ *    vertical, que e o que qualquer painel de instrumento faz.
  *  - `virgula`: o ponto decimal, celula estreita (o pt-BR escreve `2,9`).
  *  - `doispontos`: separador de hora (`4:12`), celula estreita.
  *  - `espaco`: respiro entre grupos, sem desenho.
@@ -49,14 +52,20 @@ const DIGITOS: Readonly<Record<string, readonly Segmento[]>> = {
  */
 export type Celula =
   | { tipo: "digito"; acesos: readonly Segmento[] }
+  | { tipo: "mais" }
   | { tipo: "virgula" }
   | { tipo: "doispontos" }
   | { tipo: "espaco" }
   | { tipo: "cru"; texto: string };
 
 export function celulaDe(caractere: string): Celula {
-  const acesos = DIGITOS[caractere];
+  // O MENOS TIPOGRAFICO (U+2212) e o hifen sao o MESMO sinal: `Intl` e o
+  // servidor podem entregar qualquer um dos dois, e o NPS negativo nao pode
+  // mudar de desenho conforme quem formatou.
+  const chave = caractere === "−" ? "-" : caractere;
+  const acesos = DIGITOS[chave];
   if (acesos) return { tipo: "digito", acesos };
+  if (caractere === "+") return { tipo: "mais" };
   if (caractere === "," || caractere === ".") return { tipo: "virgula" };
   if (caractere === ":") return { tipo: "doispontos" };
   if (caractere === " ") return { tipo: "espaco" };

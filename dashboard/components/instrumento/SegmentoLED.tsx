@@ -44,12 +44,19 @@ const LARGURA = 68;
 const LARGURA_ESTREITA = 20;
 const ALTURA = 108;
 
-export type CorDoLED = "medido" | "marca" | "tinta";
+/**
+ * `medido` e a cor de sempre. `erro` existe para um unico caso: o easter egg
+ * da marca, que faz o numero MENTIR com o selo de aviso na tela (lib/mentira),
+ * e o numero falso vai para o vermelho de erro -- quem nao le o selo percebe
+ * que a tela mudou de regime.
+ */
+export type CorDoLED = "medido" | "marca" | "tinta" | "erro";
 
 const COR: Record<CorDoLED, string> = {
   medido: "var(--medido)",
   marca: "var(--primary)",
   tinta: "var(--foreground)",
+  erro: "var(--destructive)",
 };
 
 /** Um digito: os sete poligonos, apagados sempre, acesos por cima quando for o caso. */
@@ -129,6 +136,23 @@ function Peca({
   switch (celula.tipo) {
     case "digito":
       return <Digito acesos={celula.acesos} altura={altura} espaco={espaco} />;
+    case "mais":
+      return (
+        <svg
+          aria-hidden
+          focusable="false"
+          viewBox={`0 0 ${LARGURA} ${ALTURA}`}
+          height={altura}
+          width={(altura * LARGURA) / ALTURA}
+          style={{ marginRight: espaco, flex: "none", overflow: "visible" }}
+          data-celula="mais"
+        >
+          <g fill="currentColor" style={{ filter: "drop-shadow(0 0 3px currentColor)" }}>
+            <polygon points={POLIGONOS.g} />
+            <polygon points="28,26 34,20 40,26 40,82 34,88 28,82" />
+          </g>
+        </svg>
+      );
     case "virgula":
       return (
         <Estreita altura={altura} espaco={espaco} nome="virgula">

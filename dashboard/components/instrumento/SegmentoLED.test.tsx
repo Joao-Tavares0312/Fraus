@@ -35,6 +35,14 @@ describe("celulaDe", () => {
     expect(celulaDe("-")).toEqual({ tipo: "digito", acesos: ["g"] });
   });
 
+  it("o menos tipografico e o hifen sao o mesmo sinal", () => {
+    expect(celulaDe("−")).toEqual(celulaDe("-"));
+  });
+
+  it("o mais do NPS positivo e uma celula propria, nao texto cru", () => {
+    expect(celulaDe("+")).toEqual({ tipo: "mais" });
+  });
+
   it("separadores sao celulas estreitas", () => {
     expect(celulaDe(",")).toEqual({ tipo: "virgula" });
     expect(celulaDe(".")).toEqual({ tipo: "virgula" });
@@ -102,6 +110,12 @@ describe("SegmentoLED", () => {
     expect(m).not.toMatch(/aria-label="[^"]*\b0\b/);
   });
 
+  it("NPS positivo: +12 desenha o mais e nao vira texto", () => {
+    const m = html({ valor: "+12", rotulo: "NPS" });
+    expect(m).toContain('data-celula="mais"');
+    expect(m).not.toContain('data-celula="cru"');
+  });
+
   it("caractere invalido vira texto cru e nao quebra", () => {
     const m = html({ valor: "38%", rotulo: "contenção" });
     expect(m).toContain('data-celula="cru"');
@@ -125,5 +139,6 @@ describe("SegmentoLED", () => {
     expect(html({ valor: "1", rotulo: "x" })).toContain("var(--medido)");
     expect(html({ valor: "1", rotulo: "x", cor: "marca" })).toContain("var(--primary)");
     expect(html({ valor: "1", rotulo: "x", cor: "tinta" })).toContain("var(--foreground)");
+    expect(html({ valor: "1", rotulo: "x", cor: "erro" })).toContain("var(--destructive)");
   });
 });
