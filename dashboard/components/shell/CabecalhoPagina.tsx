@@ -20,6 +20,7 @@ export function CabecalhoPagina({
   periodo,
   extensao,
   acoes,
+  escopo = "indicadores, série, tabela e export",
 }: {
   titulo: string;
   /** Opcional: tela cuja tarefa e obvia pelo titulo nao paga um paragrafo. */
@@ -27,6 +28,13 @@ export function CabecalhoPagina({
   periodo?: Periodo;
   extensao?: Extensao;
   acoes?: ReactNode;
+  /**
+   * O QUE nesta tela obedece ao periodo, em uma frase curta. O padrao descreve
+   * a Visao geral; toda tela cujo conteudo e outro (o Grafo tem nos e arestas,
+   * nao serie nem export) passa o seu -- dizer "serie" onde nao ha serie e o
+   * tipo de promessa vazia que este cabecalho veio evitar.
+   */
+  escopo?: string;
 }) {
   return (
     // `top-[34px]`: cola logo abaixo da faixa de telemetria (34px, sticky no
@@ -63,7 +71,7 @@ export function CabecalhoPagina({
             <div className="sem-impressao flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <FiltroPeriodo periodo={periodo} extensao={extensao ?? null} />
               <p className="text-xs text-muted-foreground">
-                Tudo nesta tela — indicadores, série, tabela e export — fala de{" "}
+                Tudo nesta tela — {escopo} — fala de{" "}
                 <strong className="font-medium text-foreground">
                   {rotuloPeriodo(periodo, extensao ?? null)}
                 </strong>
