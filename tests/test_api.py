@@ -1348,7 +1348,8 @@ def test_indicadores_trazem_o_intervalo_de_confianca_do_nps(cliente, tmp_path):
     intervalo = cliente.get("/indicadores").json()["nps_intervalo"]
     assert intervalo["n"] == 1
     assert intervalo["nps"] is None
-    assert intervalo["ic_inferior"] <= intervalo["ic_superior"]
+    assert intervalo["ic_inferior"] < intervalo["ic_superior"]
+    assert intervalo["ic_inferior"] < 100.0
 
 
 def test_sem_score_nenhum_nao_ha_intervalo_de_nps(cliente):

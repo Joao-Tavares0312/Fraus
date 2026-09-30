@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { FormularioAuth } from "@/components/auth/FormularioAuth";
 import { MolduraDeConta } from "@/components/auth/MolduraDeConta";
 import { loginDisponivel, usuarioDaSessao } from "@/lib/sessao";
+import { destinoAuth, tokenDeConvite } from "@/lib/destino-auth";
 
 export const metadata: Metadata = { title: "Entrar — Fraus" };
 
-export default async function PaginaEntrar() {
+export default async function PaginaEntrar({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const convite = tokenDeConvite((await searchParams).convite);
   // Quem já está logado não tem o que fazer aqui.
-  if (await usuarioDaSessao()) redirect("/dashboard");
+  if (await usuarioDaSessao()) redirect(destinoAuth(convite));
 
   if (!(await loginDisponivel())) {
     // Estado vazio nomeia o que falta: sem FRAUS_JWT_SEGREDO na API não
@@ -35,7 +37,7 @@ export default async function PaginaEntrar() {
 
   return (
     <MolduraDeConta titulo="Entrar">
-      <FormularioAuth modo="entrar" />
+      <FormularioAuth modo="entrar" convite={convite} />
     </MolduraDeConta>
   );
 }

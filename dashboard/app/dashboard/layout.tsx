@@ -5,6 +5,7 @@ import { TelemetriaDaRota } from "@/components/instrumento/TelemetriaDaRota";
 import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
+import { SincronizarDados } from "@/components/shell/SincronizarDados";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProvedorDaMentira } from "@/lib/mentira";
@@ -56,6 +57,7 @@ export default async function DashboardLayout({
   return (
     <TooltipProvider>
       <SaudeProvider>
+        <SincronizarDados />
         {/* O easter egg da marca liga a mentira na NAVEGACAO e ela e exibida
             pelos INDICADORES, noutra sub-arvore -- o provedor precisa ficar
             acima das duas, e este e o ponto onde elas se encontram. Fora do

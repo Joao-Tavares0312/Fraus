@@ -1129,6 +1129,7 @@ export type ConversaAnalisada = {
 };
 
 export type ResultadoAnalise = {
+  gravacao?: { salvas: number; ids: string[]; banco: "postgres" | "sqlite"; de: string; ate: string };
   analises: ConversaAnalisada[];
   conversas_no_arquivo: number;
   conversas_analisadas: number;
@@ -1179,6 +1180,7 @@ export type MapeamentoInferido = {
 export type MapeamentoConfirmado = Partial<Record<Papel, string | null>>;
 
 export type OpcoesDeLeitura = {
+  salvar?: boolean;
   mapeamento?: MapeamentoConfirmado;
   ordemData?: OrdemData | null;
 };
@@ -1228,7 +1230,7 @@ export async function analisarUpload(
   arquivo: File,
   opcoes: OpcoesDeLeitura = {},
 ): Promise<Resultado<ResultadoAnalise>> {
-  return proteger(enviarArquivo<ResultadoAnalise>("/analisar/arquivo", arquivo, opcoes, ESPERA_ANALISE_MS));
+  return proteger(enviarArquivo<ResultadoAnalise>(opcoes.salvar ? "/analisar/registrar" : "/analisar/arquivo", arquivo, opcoes, ESPERA_ANALISE_MS));
 }
 
 /**

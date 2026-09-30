@@ -24,7 +24,7 @@ VALIDADE = timedelta(hours=12)
 _ALGORITMO = "HS256"
 
 
-def emitir(usuario_id: int, papel: str, segredo: str, agora: datetime) -> str:
+def emitir(usuario_id: int, papel: str, segredo: str, agora: datetime, versao: int | None = None) -> str:
     """`sub` vai como string porque a RFC 7519 o define assim -- verificador
     estrito (o proprio PyJWT, de 2.10 em diante) recusa numero."""
     return jwt.encode(
@@ -33,6 +33,7 @@ def emitir(usuario_id: int, papel: str, segredo: str, agora: datetime) -> str:
             "papel": papel,
             "iat": agora,
             "exp": agora + VALIDADE,
+            **({"versao": versao} if versao is not None else {}),
         },
         segredo,
         algorithm=_ALGORITMO,
@@ -61,4 +62,5 @@ def conferir(token: str, segredo: str, agora: datetime) -> dict | None:
     expira_em = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
     if agora >= expira_em:
         return None
-    return {"usuario_id": usuario_id, "papel": payload["papel"]}
+    return {"usuario_id": usuario_id, "papel": payload["papel"],
+            **({"versao": payload["versao"]} if "versao" in payload else {})}

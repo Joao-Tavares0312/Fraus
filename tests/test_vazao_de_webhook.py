@@ -39,6 +39,15 @@ SEGREDO = "whsec_" + "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWY="
 VARIAVEL = "FRAUS_WEBHOOK_VAZAO"
 
 
+@pytest.fixture(autouse=True)
+def relogio_estavel(monkeypatch):
+    # Estes testes verificam vazao e assinatura. A validade temporal tem
+    # cobertura propria em test_webhook.py e test_assinatura.py; aqui a
+    # requisicao nao deve expirar por uma pausa na execucao da suite.
+    agora = time.time()
+    monkeypatch.setattr(time, "time", lambda: agora)
+
+
 def _corpo(n):
     return {
         "id": f"atendimento-{n}",
@@ -139,7 +148,7 @@ def test_assinatura_invalida_nao_gasta_a_janela_da_fonte(cliente, fonte):  # noq
     caminho mais curto para derrubar uma integracao alheia."""
     for n in range(ENTREGAS_POR_JANELA + 5):
         recusada = _enviar(cliente, fonte["id"], n, segredo="whsec_" + "b3V0cm8=")
-        assert recusada.status_code == 401
+        assert recusada.status_code == 401, recusada.text
 
     assert _enviar(cliente, fonte["id"], "legitima").status_code == 201
 

@@ -364,6 +364,25 @@ def test_o_intervalo_usa_as_faixas_recebidas():
     assert nps_com_intervalo(scores, faixas)["nps"] == pytest.approx(100.0)
 
 
+@pytest.mark.parametrize("score", [0.0, 75.0, 100.0])
+@pytest.mark.parametrize("n", [1, 8, 30, 400])
+def test_categoria_unanime_nao_significa_incerteza_zero(score, n):
+    saida = nps_com_intervalo([score] * n)
+    assert -100 <= saida["ic_inferior"] < saida["ic_superior"] <= 100
+    # Os limites tambem precisam incluir o NPS observado nas extremidades.
+    assert saida["ic_inferior"] <= calcular_nps([score] * n) <= saida["ic_superior"]
+
+
+def test_intervalo_ajustado_reproduz_exemplo_do_artigo_2026():
+    # Stats 9(2):45, secao 5: 1 detrator, 2 passivos, 17 promotores.
+    # AW(3,T): contagens ajustadas 1.75 / 3.5 / 17.75, n*=23.
+    saida = nps_com_intervalo([0.0] + [75.0] * 2 + [100.0] * 17)
+    assert saida["n"] == 20  # pseudocontagens nao sao atendimentos reais
+    assert saida["nps"] is None
+    assert saida["ic_inferior"] == pytest.approx(44.36, abs=0.01)
+    assert saida["ic_superior"] == pytest.approx(94.77, abs=0.01)
+
+
 def test_containment_de_conjunto_vazio_e_ausencia_nao_zero():
     """Nenhuma conversa nao e "0% de contencao" -- e nao houve o que conter.
 

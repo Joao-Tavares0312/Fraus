@@ -107,6 +107,13 @@ export function FaixaIndicadores({
       ? `${indicadores.semSinal} de ${indicadores.total} sem sinal (${DEFINICAO_SEM_SINAL_AGREGADO}) — fora do cálculo, nunca como zero.`
       : undefined;
 
+  // O intervalo decide se ha amostra para mostrar o ponto. `??` aqui
+  // ressuscitaria o NPS bruto quando o servidor se abstem com `null`.
+  // Sem intervalo (API antiga ou plano B), preserva a leitura disponivel.
+  const npsExibido = indicadores.npsIntervalo
+    ? indicadores.npsIntervalo.nps
+    : indicadores.nps;
+
   // A faixa de leitura do NPS so existe se ha o que dizer sobre ele: o texto de
   // "com sinal" (so com NPS) ou o intervalo (so quando o SERVIDOR o calculou).
   const temLeituraDoNps =
@@ -145,17 +152,19 @@ export function FaixaIndicadores({
             qualificacao="estimativa"
             estimativa
             erro={erro}
-            valor={indicadores.nps}
+            valor={npsExibido}
             formatado={
-              indicadores.nps === null
+              npsExibido === null
                 ? undefined
-                : formatarNps(indicadores.nps)
+                : formatarNps(npsExibido)
             }
             trilho={TRILHO_NPS}
             explicacaoVazio={
-              indicadores.total === 0
-                ? "Nenhum atendimento no período selecionado."
-                : "Nenhum atendimento do período tem fala do cliente, então não há categoria para agregar."
+              indicadores.npsIntervalo?.nps === null
+                ? `Amostra insuficiente: ${indicadores.npsIntervalo.n} atendimento(s) com sinal. Consulte o intervalo abaixo.`
+                : indicadores.total === 0
+                  ? "Nenhum atendimento no período selecionado."
+                  : "Nenhum atendimento do período tem sinal de satisfação suficiente para agregar."
             }
           />
 

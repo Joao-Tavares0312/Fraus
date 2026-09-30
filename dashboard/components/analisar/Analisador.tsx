@@ -1,6 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
+import { anunciarAtualizacao } from "@/lib/atualizacao";
+import { Textarea } from "@/components/ui/textarea";
 import { FileText, RefreshCw, Upload } from "lucide-react";
 import {
   analisarUpload,
@@ -43,6 +46,9 @@ const TETO_BYTES = 200_000;
 const ACEITOS = ".csv,.tsv,.xlsx,.xlsm,.json,.jsonl,.txt,.docx,.pdf";
 
 export function Analisador() {
+  const [salvar, setSalvar] = useState(true);
+  const [texto, setTexto] = useState("");
+  const [formatoTexto, setFormatoTexto] = useState("csv");
   const entrada = useRef<HTMLInputElement>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -91,9 +97,9 @@ export function Analisador() {
       setPrevia(lida.dado);
       return;
     }
-    const resposta = await analisarUpload(escolhido);
+    const resposta = await analisarUpload(escolhido, { salvar });
     setOcupado(false);
-    if (resposta.ok) setResultado(resposta.dado);
+    if (resposta.ok) { setResultado(resposta.dado); if (resposta.dado.gravacao) anunciarAtualizacao(); }
     else setErro(resposta.erro);
   }
 
@@ -129,11 +135,12 @@ export function Analisador() {
         setAvisoPerfil(`O perfil não foi salvo: ${salvo.erro} A análise seguiu com as colunas escolhidas.`);
       }
     }
-    const resposta = await analisarUpload(ultimo, { mapeamento, ordemData });
+    const resposta = await analisarUpload(ultimo, { mapeamento, ordemData, salvar });
     setOcupado(false);
     if (resposta.ok) {
       setPrevia(null);
       setResultado(resposta.dado);
+      if (resposta.dado.gravacao) anunciarAtualizacao();
     } else {
       setErro(resposta.erro);
     }
@@ -156,9 +163,26 @@ export function Analisador() {
     <div className="flex flex-col gap-4">
       <Painel
         titulo="Arquivo do atendimento"
-        legenda="Nada aqui entra no banco: nem a conversa, nem a nota, nem o arquivo. Analisar não muda o NPS de ninguém — é a diferença entre esta tela e a importação. O conteúdo é lido no seu navegador e interpretado em memória pelo servidor; nenhum byte é gravado em disco."
+        legenda="Com a opção de salvar, as conversas analisadas entram no banco da instalação e passam a compor os indicadores e o grafo. Dados pessoais são censurados antes da análise. Reenviar a mesma conversa não duplica o agregado."
       >
         <div className="flex flex-col gap-3 px-5 py-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={salvar} disabled={ocupado || previa !== null} onChange={(e) => setSalvar(e.target.checked)} />
+            Salvar as conversas analisadas nos indicadores e no grafo
+          </label>
+          <details className="border border-linha p-3">
+            <summary className="cursor-pointer text-sm">Colar uma conversa</summary>
+            <div className="mt-3 flex flex-col gap-3">
+              <Textarea aria-label="Conversa para analisar" value={texto} onChange={(e) => setTexto(e.target.value)} disabled={ocupado} placeholder="Cole um CSV com horários ou uma transcrição exportada do WhatsApp." />
+              <label className="flex items-center gap-3 text-sm">Formato
+                <select aria-label="Formato da conversa colada" className="border border-input bg-background p-2" value={formatoTexto} onChange={(e) => setFormatoTexto(e.target.value)} disabled={ocupado}>
+                  <option value="csv">CSV com cabeçalho e horários</option><option value="json">JSON do Fraus</option><option value="txt">Transcrição / WhatsApp</option>
+                </select>
+              </label>
+              <Button type="button" size="sm" disabled={ocupado || !texto.trim()} onClick={() => analisar(new File([texto], `conversa.${formatoTexto}`, { type: formatoTexto === "csv" ? "text/csv" : formatoTexto === "json" ? "application/json" : "text/plain" }))}>Analisar conversa</Button>
+              <p className="text-xs text-muted-foreground">Para salvar, a conversa precisa trazer horários reais. Para transcrições sem horário, desmarque a opção de salvar.</p>
+            </div>
+          </details>
           <div className="text-sm text-muted-foreground">
             <p>Leio planilha, JSON, WhatsApp e transcrição — e descubro as colunas sozinho:</p>
             <ul className="mt-1.5 flex flex-col gap-1 text-xs">
@@ -249,6 +273,17 @@ export function Analisador() {
           ) : null}
         </div>
       </Painel>
+      {resultado?.gravacao ? (
+        <Alert role="status">
+          <AlertTitle>{resultado.gravacao.salvas} conversa(s) salva(s) no {resultado.gravacao.banco === "postgres" ? "Postgres / Supabase" : "banco local"}</AlertTitle>
+          <AlertDescription>
+            <p>Os indicadores e o grafo já consideram este lote. Abra o período das conversas para encontrá-las.</p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {[["/dashboard", "Ver indicadores"], ["/dashboard/atendimentos", "Ver atendimentos"], ["/dashboard/grafo", "Ver grafo"]].map(([rota, rotulo]) => <Link key={rota} className="text-sm underline underline-offset-4" href={`${rota}?de=${resultado.gravacao!.de}&ate=${resultado.gravacao!.ate}`}>{rotulo}</Link>)}
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {/* O erro carrega o MOTIVO e as duas saídas: corrigir e reenviar o mesmo
           arquivo, ou escolher outro. Recusa que só diz "não foi possível"

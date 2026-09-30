@@ -90,8 +90,8 @@ export function IntervaloDoNps({
             </strong>{" "}
             O intervalo de 95% vai de{" "}
             <span className="num">{formatarNps(ic_inferior)}</span> a{" "}
-            <span className="num">{formatarNps(ic_superior)}</span> — largo
-            demais para um ponto estimado significar alguma coisa.
+            <span className="num">{formatarNps(ic_superior)}</span>. O ponto
+            estimado fica oculto pelo critério de amostra mínima do servidor.
           </>
         ) : (
           <>

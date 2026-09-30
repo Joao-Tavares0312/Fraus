@@ -209,6 +209,9 @@ def sessao_do_jwt(ctx: Contexto, chave: str | None) -> dict | None:
     usuario = ctx.banco.buscar_usuario(sessao["usuario_id"])
     if usuario is None or not usuario["ativo"]:
         return None
+    versao = ctx.banco.documento("sessao", str(usuario["id"])) or {"versao": 0}
+    if sessao.get("versao", 0) != versao["versao"]:
+        return None
     # O papel vem do BANCO, nao do payload: e o que faz promover e rebaixar
     # valerem na hora, nos dois sentidos.
     return {**sessao, "papel": usuario["papel"]}
@@ -226,6 +229,8 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
     prefixo do webhook ANTES deste teste, e a plataforma externa nao carrega
     JWT de qualquer jeito.
     """
+    if caminho.startswith("/operacao/acesso") or (caminho == "/operacao/equipes" and metodo != "GET"):
+        return True
     if caminho.startswith("/integracoes") or caminho == "/modelo" or caminho.startswith("/modelo/"):
         return True
     if caminho in ("/conversas/importar", "/conversas/importar/previa", "/conversas/repontuar"):
@@ -287,6 +292,7 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
         caminho = request.url.path.rstrip("/")
         if (
             caminho in ISENTAS
+            or (request.method == "GET" and caminho.startswith("/operacao/convites/") and len(caminho.split("/")) == 4)
             or caminho.startswith(f"{PREFIXO_WEBHOOK}/")
             or request.method == "OPTIONS"
         ):
@@ -299,6 +305,7 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
         # e identidade de usuario nao administra em modo nenhum. 403, nao 401:
         # a credencial esta certa, o privilegio e que falta.
         sessao = sessao_do_jwt(ctx, chave_recebida)
+        request.state.sessao = sessao
         if (
             sessao is not None
             and sessao["papel"] != "dev"

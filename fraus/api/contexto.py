@@ -11,7 +11,7 @@ no modulo dele: este objeto atravessa a API inteira, e um saco de tudo seria
 pior do que a closure que ele veio substituir.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +48,8 @@ class Contexto:
     # comportamento de sempre e o certo para uso local. Ver
     # `fraus.api.rotas.auth.papel_do_cadastro` para o porque de ele existir.
     codigo_convite: str | None = None
+    usuario_id: int | None = None
+    papel: str | None = None
 
     def autenticacao_ligada(self) -> bool:
         """Se alguma mestra existe -- do ambiente ou gravada pela tela."""
@@ -118,4 +120,13 @@ class Contexto:
 
 def obter_contexto(request: Request) -> Contexto:
     """A dependencia que toda rota declara. Montada uma vez em `criar_app`."""
-    return request.app.state.contexto
+    ctx = request.app.state.contexto
+    sessao = getattr(request.state, "sessao", None)
+    if sessao is None:
+        return ctx
+    ctx = replace(ctx, usuario_id=sessao["usuario_id"], papel=sessao["papel"])
+    politica = ctx.banco.documento("permissao", str(ctx.usuario_id))
+    if ctx.papel != "dev" and politica is not None:
+        from fraus.api.escopo import BancoComEscopo
+        ctx = replace(ctx, banco=BancoComEscopo(ctx.banco, politica["canais"]))
+    return ctx

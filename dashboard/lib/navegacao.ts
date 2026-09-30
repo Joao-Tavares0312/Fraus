@@ -22,6 +22,7 @@ export const TELAS = [
   { href: "/dashboard/grafo", rotulo: "Grafo" },
   { href: "/dashboard/configuracoes", rotulo: "Configurações" },
   { href: "/dashboard/integracoes", rotulo: "Integrações" },
+  { href: "/dashboard/operacao", rotulo: "Operação" },
 ] as const;
 
 export type Tela = (typeof TELAS)[number];

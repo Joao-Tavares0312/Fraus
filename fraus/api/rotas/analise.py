@@ -1,17 +1,11 @@
-"""/analisar -- o que o modelo acha DESTE arquivo, sem gravar nada.
+"""Analise avulsa em /analisar e /analisar/arquivo; persistida em /analisar/registrar.
 
-Nada daqui entra no banco: nem a conversa, nem o score, nem o arquivo. E o que
-separa esta rota da importacao -- aqui se pergunta "o que o modelo acha
-disto?", nao "passe a considerar isto nos indicadores". Um arquivo analisado
-nao muda o NPS de ninguem.
-
-Sao duas portas para a mesma analise: `/analisar` recebe o conteudo no corpo
-JSON, e `/analisar/arquivo` recebe multipart -- porque formato binario
-(planilha, PDF) nao cabe em JSON, e obrigar base64 inflaria o corpo em um
-terco por nada.
+Somente registrar publica estimativas de modelos reais no banco configurado,
+com horarios reais e lote atomico. As duas portas avulsas preservam seu contrato.
 """
 
 import json
+import hashlib
 import threading
 import weakref
 from collections import Counter
@@ -20,6 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
 
 from fraus.api.contexto import Contexto, obter_contexto
+from fraus.api.motor_preguicoso import motor_e_real
 from fraus.api.esquemas import PedidoAnalise
 from fraus.indicadores import nota_0_10
 from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
@@ -60,6 +55,52 @@ PEDACO_DE_LEITURA = 64 * 1024
 LIMITE_MOTIVOS = 20
 
 router = APIRouter()
+
+
+@router.post("/analisar/registrar")
+async def analisar_e_registrar(
+    arquivo: UploadFile = File(...),
+    mapeamento: str | None = Form(None),
+    ordem_data: str | None = Form(None),
+    ctx: Contexto = Depends(obter_contexto),
+) -> dict:
+    """Analisa com o motor real e publica no banco configurado da instalacao.
+
+    A analise avulsa permanece disponivel nas rotas anteriores. Somente as
+    conversas efetivamente analisadas entram no banco; o lote e atomico.
+    Reenvio identico recebe o mesmo id, sem duplicar o NPS.
+    """
+    if not motor_e_real(ctx.motor):
+        raise HTTPException(503, "Salvar analises exige o motor real. O motor de demonstracao nao grava estimativas como dados reais.")
+    dados = await ler_ate_o_teto(arquivo, TETO_ARQUIVO_ANALISE)
+    if not dados:
+        raise HTTPException(400, "arquivo vazio")
+    opcoes = opcoes_de_leitura(ctx, mapeamento, ordem_data)
+    return await run_in_threadpool(_analisar_e_registrar, ctx, arquivo.filename or "arquivo", dados, opcoes)
+
+
+def _analisar_e_registrar(ctx: Contexto, nome: str, dados: bytes, opcoes) -> dict:
+    extracao = extrair_ou_400(nome, dados, opcoes)
+    if not extracao.tem_tempo:
+        raise HTTPException(422, "Para salvar nos indicadores, envie horarios reais das mensagens. Sem horarios, use a analise avulsa.")
+    if extracao.mapeamento is not None and extracao.perfil is None and not opcoes.forcado:
+        raise HTTPException(409, "Confirme as colunas antes de salvar a conversa.")
+    # Canonico a partir da conversa censurada, nunca do nome local do arquivo.
+    # IDs de uploads nao podem sobrescrever IDs de integracoes ou da demo.
+    extracao.conversas = [c.model_copy(update={"id": "analise:" + hashlib.sha256(
+        json.dumps(c.model_dump(mode="json"), sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()[:32]}) for c in extracao.conversas]
+    curadoria = ctx.curadoria_vigente()
+    resposta = montar_analise(ctx, extracao, curadoria=curadoria)
+    por_id = {c.id: c for c in extracao.conversas}
+    registros = [(por_id[a["conversa"]["id"]], a["score"], a["categoria"])
+                 for a in resposta["analises"]]
+    ctx.banco.salvar_lote(registros, curadoria.versao, ctx.regua_vigente())
+    ctx.banco.auditar(str(ctx.usuario_id) if ctx.usuario_id is not None else "credencial-tecnica-ou-local", "registrar_analise", str(len(registros)))
+    datas = sorted(c.iniciada_em.date().isoformat() for c, _, _ in registros)
+    return {**resposta, "gravacao": {"salvas": len(registros),
+        "ids": [c.id for c, _, _ in registros], "banco": ctx.banco.dialeto,
+        "de": datas[0], "ate": datas[-1]}}
 
 
 @router.post("/analisar")
@@ -322,7 +363,7 @@ def cabem_no_orcamento(conversas: list) -> tuple[list, int]:
     return escolhidas, total
 
 
-def montar_analise(ctx: Contexto, extracao) -> dict:
+def montar_analise(ctx: Contexto, extracao, curadoria=None) -> dict:
     resultado = extracao
     if not resultado.conversas:
         raise HTTPException(
@@ -363,7 +404,8 @@ def montar_analise(ctx: Contexto, extracao) -> dict:
         )
     # Lida UMA vez para o lote: toda conversa desta resposta e explicada pelo
     # mesmo lexico, e e o lexico vigente -- o mesmo que pontuaria a importacao.
-    curadoria = ctx.curadoria_vigente()
+    if curadoria is None:
+        curadoria = ctx.curadoria_vigente()
     analises = []
     for conversa in analisadas:
         analise = ctx.motor.analisar_conversa(conversa, referencia, curadoria=curadoria)

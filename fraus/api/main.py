@@ -47,7 +47,7 @@ from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os tes
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
 from fraus.api.rotas import (acesso, analise, auth, configuracoes, conversas,
                              grafo, indicadores, ingestao, integracoes, lexico, perfis,
-                             modelo, saude, webhook)
+                             modelo, saude, webhook, operacao)
 # Reexportados: os testes os importam daqui desde antes da quebra em modulos,
 # e mudar de onde se importa um teto seria mexer no contrato de quem consome
 # sem nenhum ganho.
@@ -236,6 +236,7 @@ def criar_app(
     app.include_router(perfis.router)
     app.include_router(webhook.router)
     app.include_router(auth.router)
+    app.include_router(operacao.router)
 
     return app
 
