@@ -12,10 +12,9 @@ export function Fecho() {
   return (
     <section aria-labelledby="titulo-fecho" className="vt-sec vt-fecho">
       <Revelar className="vt-wrap">
-        <p className="vt-rotulo justify-center">a conversa já tem a resposta</p>
         <h2
           id="titulo-fecho"
-          className="display-vitrine mx-auto mt-8 max-w-[14ch]"
+          className="display-vitrine mx-auto max-w-[14ch]"
         >
           O que foi <span className="text-dito-texto">dito</span> não é tudo que
           foi <span className="text-medido-texto">sentido.</span>

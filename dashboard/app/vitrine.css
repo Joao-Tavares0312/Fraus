@@ -111,23 +111,6 @@
   scroll-margin-top: 4.5rem;
   border-top: 1px solid var(--linha);
 }
-.vt-rotulo {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-family: var(--fonte-mono);
-  font-size: 0.6875rem;
-  line-height: 1;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-.vt-rotulo::before {
-  content: "";
-  width: 2rem;
-  height: 1px;
-  background: var(--primary);
-}
 .vt-prosa {
   max-width: 34rem;
   font-size: 1.0625rem;
@@ -146,6 +129,16 @@
   min-height: 100svh;
   padding-top: 6.75rem;
   padding-bottom: 1.5rem;
+  /* O DIAMETRO DO ORBE decide a altura do palco. Em tela larga ele acompanha a
+     ALTURA da janela (48svh, teto de 27,5rem): a 1280x720 o CTA precisa ficar
+     acima da dobra, e um orbe fixo de 440px empurrava titulo, sub e CTA para
+     fora. No celular o palco empilha e o orbe volta a 17rem. */
+  --orbe: 17rem;
+}
+@media (min-width: 64rem) {
+  .vt-hero {
+    --orbe: clamp(15rem, 48svh, 27.5rem);
+  }
 }
 /* O HALO: a mancha magenta atras do orbe. Cor de atelie -- nunca de dado. */
 .vt-halo {
@@ -179,7 +172,7 @@
 .vt-orbe-cel {
   order: 1;
   position: relative;
-  height: 17rem;
+  height: var(--orbe);
 }
 .vt-titulo {
   order: 2;
@@ -217,13 +210,15 @@
 @media (min-width: 64rem) {
   .vt-palco {
     grid-template-columns: minmax(0, 1fr) 27.5rem minmax(0, 1fr);
+    /* A linha do orbe tem a altura DELE; os paineis laterais transbordam para
+       baixo, ao lado do titulo, e nao empurram a dobra. */
+    grid-template-rows: var(--orbe) auto auto auto;
     column-gap: 2rem;
     align-items: start;
   }
   .vt-orbe-cel {
     grid-column: 2;
     grid-row: 1;
-    height: 27.5rem;
   }
   .vt-cel-esq {
     grid-column: 1;
@@ -248,7 +243,7 @@
   .vt-titulo {
     grid-column: 1 / -1;
     grid-row: 2;
-    margin-top: -6.25rem;
+    margin-top: calc(var(--orbe) * -0.23);
   }
   .vt-sub {
     grid-column: 1 / -1;
@@ -263,10 +258,10 @@
 /* O titulo herda `.display-vitrine` (globals) so pela FAMILIA; peso e corpo
    sao do hero. Sombra escura porque o texto atravessa o orbe. */
 .vt-titulo h1 {
-  font-size: clamp(2.6rem, 8.4vw, 5.6rem);
+  font-size: clamp(2.6rem, min(8.4vw, 10svh), 5.6rem);
   font-weight: 800;
   line-height: 0.93;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.04em;
   text-shadow: 0 0 48px color-mix(in oklch, var(--background) 82%, transparent);
 }
 .vt-titulo h1 span {
@@ -280,11 +275,13 @@
   position: absolute;
   left: 50%;
   top: 0;
-  width: min(100%, 27.5rem);
+  width: min(100%, var(--orbe));
   aspect-ratio: 1;
   transform: translateX(-50%);
   border-radius: 50%;
   pointer-events: none;
+  /* As manchas se somam em screen e, sem isto, o centro lia cinza-perolado. */
+  filter: saturate(1.7);
 }
 .vt-orbe i {
   position: absolute;
@@ -294,15 +291,15 @@
   will-change: transform;
 }
 .vt-orbe i:nth-child(1) {
-  background: radial-gradient(circle at 28% 30%, var(--dito), transparent 54%);
+  background: radial-gradient(circle at 24% 28%, var(--dito), transparent 46%);
   animation: vt-gira 14s linear infinite;
 }
 .vt-orbe i:nth-child(2) {
-  background: radial-gradient(circle at 74% 38%, var(--medido), transparent 52%);
+  background: radial-gradient(circle at 78% 34%, var(--medido), transparent 46%);
   animation: vt-gira 18s linear infinite reverse;
 }
 .vt-orbe i:nth-child(3) {
-  background: radial-gradient(circle at 50% 80%, var(--atelie-halo), transparent 54%);
+  background: radial-gradient(circle at 50% 84%, var(--atelie-halo), transparent 48%);
   animation: vt-gira 22s linear infinite;
 }
 .vt-orbe::after {
@@ -474,7 +471,7 @@
 
 .vt-fatos {
   margin-top: auto;
-  padding-top: 2.5rem;
+  padding-top: clamp(1rem, 4svh, 2.5rem);
 }
 .vt-fatos__grade {
   display: grid;
@@ -724,7 +721,7 @@
   font-family: var(--fonte-mono);
   font-size: 0.6875rem;
   letter-spacing: 0.16em;
-  color: var(--primary);
+  color: var(--muted-foreground);
 }
 .vt-cel h3 {
   margin-block: 0.45rem 0.5rem;
@@ -831,7 +828,7 @@
 .vt-aviso__no {
   font-family: var(--fonte-mono);
   font-size: 0.8125rem;
-  color: var(--primary);
+  color: var(--muted-foreground);
 }
 .vt-aviso h3 {
   font-size: 1.25rem;
@@ -875,7 +872,7 @@
   top: 0.62rem;
   width: 0.55rem;
   height: 1px;
-  background: var(--primary);
+  background: var(--muted-foreground);
 }
 .vt-limite b {
   font-weight: 500;

@@ -42,15 +42,14 @@ export function MolduraDeConta({
         </header>
 
         <div className="p-6">
-          <p className="rotulo-instrumento mb-3">
-            satisfação inferida · estimativa
-          </p>
           <h1 className="titulo-vitrine mb-6 text-3xl">{titulo}</h1>
           {children}
         </div>
 
+        {/* A etiqueta de estimativa mora aqui embaixo, junto do resto do
+            aparato, e nao num kicker acima do titulo. */}
         <footer className="rotulo-instrumento border-t border-compasso px-4 py-2.5">
-          modelos locais · sem LLM em runtime
+          satisfação inferida, estimativa · modelos locais · sem LLM em runtime
         </footer>
       </div>
     </main>

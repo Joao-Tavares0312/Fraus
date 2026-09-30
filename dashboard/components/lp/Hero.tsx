@@ -13,7 +13,7 @@ import { Orbe } from "./Orbe";
  */
 const LATENCIA_AMOSTRA = formatarSegundosLED(252); // 4 min 12 s
 
-/** Os fatos verdadeiros do produto (CLAUDE.md), em LED dourado. */
+/** Os fatos verdadeiros do produto (CLAUDE.md), em LED de tinta: dourado e so acao, foco e marca. */
 const FATOS = [
   ["famílias de sinal", "07"],
   ["features no fusor", "39"],
@@ -116,7 +116,7 @@ export function Hero() {
                 <SegmentoLED
                   valor={valor}
                   altura={46}
-                  cor="marca"
+                  cor="tinta"
                   rotulo={rotulo}
                 />
               </div>

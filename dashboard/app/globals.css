@@ -371,7 +371,10 @@
      saturada nao inventa canal de significado. */
   --atelie-marca: oklch(0.83 0.095 84);
   --atelie-fria: oklch(0.55 0.13 250);
-  --atelie-op-marca: 0.05;
+  /* Zerada em 30/09/2026 (revisao final): a mancha dourada no alto a esquerda
+     esquentava o cabecalho e a sidebar (medidos ~ (20,17,18) contra o fundo
+     frio (9,9,11)). O dourado e acao, foco e marca -- nao luz de ambiente. */
+  --atelie-op-marca: 0;
   --atelie-op-fria: 0.07;
   --atelie-asfalto: 0;
   --atelie-chuva: 0;
@@ -391,7 +394,9 @@
   --pauta-peso: 1px;
 
   --marca-cor: oklch(0.83 0.095 84);
-  --marca-op: 0.04;
+  /* Zerada em 30/09/2026: o monograma impresso no canto lia como artefato
+     atras dos paineis. A marca vive no nav e na telemetria. */
+  --marca-op: 0;
 
   /* A rampa das duas paradas do monograma (valores literais do
      `public/fraus-logo.svg`). `--marca-cor` (chapada, mascara) e esta rampa

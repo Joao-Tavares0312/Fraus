@@ -70,8 +70,7 @@ export function Sistema() {
       <div className="vt-wrap">
         <Revelar className="mb-12 grid gap-8 lg:mb-16 lg:grid-cols-[1fr_1fr] lg:items-end">
           <div>
-            <p className="vt-rotulo">02 — o sistema</p>
-            <h2 id="titulo-sistema" className="titulo-vitrine mt-8 max-w-[14ch]">
+            <h2 id="titulo-sistema" className="titulo-vitrine max-w-[14ch]">
               Sete sinais, um fusor, uma nota.
             </h2>
           </div>
@@ -84,7 +83,6 @@ export function Sistema() {
         <Revelar>
           <div className="vt-grade">
             <div className="vt-cel vt-cel--fusor">
-              <span className="vt-cel__no">FUSOR</span>
               <h3>Regressão logística sobre 39 features</h3>
               <p className="max-w-[24rem]">
                 As sete famílias viram um vetor de 39 números. A nota sai de 0 a
@@ -94,8 +92,8 @@ export function Sistema() {
               <SegmentoLED
                 className="vt-fusor__led"
                 valor="39"
-                altura={120}
-                cor="marca"
+                altura={72}
+                cor="tinta"
                 rotulo="features no fusor"
               />
               <p className="vt-fusor__formula">

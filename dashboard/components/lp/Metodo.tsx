@@ -36,12 +36,11 @@ export function Metodo() {
     <section id="metodo" aria-labelledby="titulo-metodo" className="vt-sec">
       <div className="vt-wrap vt-metodo">
         <Revelar>
-          <p className="vt-rotulo">03 — honestidade</p>
-          <h2 id="titulo-metodo" className="titulo-vitrine mt-8 max-w-[12ch]">
+          <h2 id="titulo-metodo" className="titulo-vitrine max-w-[12ch]">
             Um modelo que mostra os próprios limites.
           </h2>
           <p className="mt-8 flex gap-3 text-sm text-muted-foreground">
-            <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
+            <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0" />
             Sem número inventado. Sem depoimento fabricado.
           </p>
         </Revelar>

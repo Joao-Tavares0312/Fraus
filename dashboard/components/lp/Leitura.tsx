@@ -23,8 +23,7 @@ export function Leitura() {
     <section id="leitura" aria-labelledby="titulo-leitura" className="vt-sec">
       <div className="vt-wrap vt-leitura-sec">
         <Revelar>
-          <p className="vt-rotulo">01 — a leitura</p>
-          <h2 id="titulo-leitura" className="titulo-vitrine mt-8 max-w-[12ch]">
+          <h2 id="titulo-leitura" className="titulo-vitrine max-w-[12ch]">
             A cortesia mascara. O contexto denuncia.
           </h2>
           <p className="vt-prosa mt-8">
