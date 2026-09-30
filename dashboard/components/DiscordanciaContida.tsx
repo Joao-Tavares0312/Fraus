@@ -1,3 +1,4 @@
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,10 +39,7 @@ export function DiscordanciaContida({
       className={cn("flex flex-col gap-2", className)}
       aria-labelledby="falso-containment-rotulo"
     >
-      <h3
-        id="falso-containment-rotulo"
-        className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
-      >
+      <h3 id="falso-containment-rotulo" className="rotulo-instrumento">
         Contenção que não convenceu
       </h3>
 
@@ -64,11 +62,19 @@ export function DiscordanciaContida({
             e mesmo assim <strong>não escalou</strong> para humano
           </p>
 
-          <p className="font-mono text-3xl tabular-nums">
-            {percentual.toLocaleString("pt-BR", {
-              maximumFractionDigits: 1,
-            })}
-            <span className="text-lg text-muted-foreground">%</span>
+          {/* O percentual e do SERVIDOR (`falso_containment`); aqui so vira
+              display. Formatado uma vez, em pt-BR, como o resto da tela. */}
+          <p className="flex items-end gap-1.5">
+            <SegmentoLED
+              valor={percentual.toLocaleString("pt-BR", {
+                maximumFractionDigits: 1,
+              })}
+              rotulo="contenção que não convenceu, em percentual"
+              altura={34}
+            />
+            <span className="pb-0.5 text-lg leading-none text-muted-foreground">
+              %
+            </span>
           </p>
           <p className="text-xs text-muted-foreground">
             {insatisfeitos} de {contidos} atendimento(s) contido(s) com sinal.

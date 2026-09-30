@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import type { BarraDistribuicao } from "@/lib/derivacoes";
 import { DEFINICAO_SEM_SINAL_AGREGADO, ROTULO_CATEGORIA } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
@@ -103,11 +104,9 @@ export function DistribuicaoScores({
                   }}
                 />
                 <Tooltip cursor={{ fill: "var(--muted)" }} content={<Dica />} />
-                <Bar
-                  dataKey="quantidade"
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive={false}
-                >
+                {/* Sem raio: o Instrumento e retangular de ponta a ponta, e uma
+                    barra de histograma arredondada le como decoracao. */}
+                <Bar dataKey="quantidade" isAnimationActive={false}>
                   {barras.map((barra) => (
                     <Cell
                       key={barra.nota}
@@ -138,14 +137,18 @@ export function DistribuicaoScores({
       </div>
 
       <aside className="flex shrink-0 flex-col justify-center gap-1.5 border-t border-border px-5 py-4 lg:w-56 lg:border-t-0 lg:border-l">
-        <p className="text-xs font-medium text-muted-foreground">
-          Fora da escala
-        </p>
-        <p className="flex items-baseline gap-2">
-          <span className="num text-[1.75rem] leading-none font-semibold text-muted-foreground">
-            {semSinal}
-          </span>
-          <CabecaVazada />
+        <p className="rotulo-instrumento">Fora da escala</p>
+        {/* A CONTAGEM de ausencias e um numero, entao vai no display, mas na
+            TINTA (nao no azul do medido): ela conta o que NAO foi medido, e o
+            anel oco + a palavra ao lado dizem isso sem depender da cor. */}
+        <p className="flex items-end gap-2.5">
+          <SegmentoLED
+            valor={String(semSinal)}
+            rotulo="atendimentos sem sinal, fora da escala"
+            altura={30}
+            cor="tinta"
+          />
+          <CabecaVazada className="pb-0.5" />
         </p>
         <p className="text-xs leading-relaxed text-muted-foreground">
           Atendimentos sem sinal: {DEFINICAO_SEM_SINAL_AGREGADO}. Não têm nota e não entram como zero:

@@ -35,6 +35,7 @@ import {
 import { formatarDataHora } from "@/lib/formato";
 import { lerPeriodo } from "@/lib/periodo";
 import { AvisoLexicoAntigo } from "@/components/AvisoLexicoAntigo";
+import { CabecaVazada } from "@/components/CabecaVazada";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { DistribuicaoScores } from "@/components/DistribuicaoScores";
 import { EstadoVazio } from "@/components/EstadoVazio";
@@ -220,7 +221,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
 
           <Painel
             titulo="NPS inferido × latência mediana, por dia"
-            legenda="As duas séries aparecem sobrepostas de propósito: otimizar um indicador isolado costuma quebrar o outro — empurrar a deflexão para cima derruba a satisfação. Cada eixo tem domínio fixo, a latência é sempre tracejada, e a visão de tabela mostra os números exatos sem geometria entre eles."
+            legenda="As duas séries aparecem sobrepostas de propósito: otimizar um indicador isolado costuma quebrar o outro — empurrar a deflexão para cima derruba a satisfação. Cada eixo tem domínio fixo, o NPS é sempre linha e a latência é sempre barra — a forma separa as séries, não só a cor —, e a visão de tabela mostra os números exatos sem geometria entre eles."
             semPadding
             nivel="dominante"
             rodape="As duas escalas são independentes: a altura de uma curva em relação à outra não significa nada, só o formato de cada uma ao longo do tempo. Dias sem nenhum atendimento pontuado ficam com a linha do NPS interrompida — nunca em zero."
@@ -284,7 +285,10 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
             legenda="Menor nota inferida primeiro. Atendimento sem sinal (o cliente não falou ou só usou cortesia) não entra: sem nota não há “pior”."
             semPadding
             acessorio={
-              <span className="num text-xs text-muted-foreground">
+              <span className="num inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                {/* Anel oco + palavra: o contador de ausencia usa a mesma forma
+                    da cabeca vazada, nao um numero solto que pareceria escala. */}
+                <CabecaVazada comRotulo={false} />
                 {distribuicao.semSinal} sem sinal
               </span>
             }
