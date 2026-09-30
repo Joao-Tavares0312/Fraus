@@ -1,6 +1,7 @@
 import type { CabecaDeModelo, MetricasTreino as Metricas } from "@/lib/api";
 import { formatarNumero } from "@/lib/formato";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 
 /**
  * Campos numericos que a tela sabe nomear.
@@ -155,7 +156,7 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
   return (
     <section className="flex flex-col gap-3 border-t border-linha pt-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className="text-sm font-medium text-foreground">{nome}</h3>
+        <h3 className="titulo-instrumento text-sm text-foreground">{nome}</h3>
         {/* `pontua` NAO e unanime desde 04/09/2026: satisfacao e emocao valem
             `true`, ironia vale `false` -- ela continua carregada e lida por
             mensagem, mas saiu do vetor do fusor porque, medida no corpus de
@@ -188,15 +189,28 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
               return (
                 <div
                   key={chave}
-                  className="flex flex-col gap-1 rounded-lg bg-muted/40 px-4 py-3"
+                  className="flex flex-col gap-1 border border-compasso px-4 py-3"
                 >
-                  <dt className="text-xs font-medium text-muted-foreground">
+                  <dt className="rotulo-instrumento">
                     {NUMERICAS[chave].rotulo}
                   </dt>
-                  <dd className="num flex items-baseline gap-2 text-[1.75rem] leading-none font-semibold text-foreground">
-                    {chave === "exemplos_treino"
-                      ? formatarNumero(valor, 0)
-                      : percentual(valor)}
+                  <dd className="flex items-end gap-2 leading-none text-foreground">
+                    <SegmentoLED
+                      valor={
+                        chave === "exemplos_treino"
+                          ? formatarNumero(valor, 0)
+                          : formatarNumero(valor <= 1 ? valor * 100 : valor)
+                      }
+                      altura={30}
+                      rotulo={
+                        chave === "exemplos_treino"
+                          ? NUMERICAS[chave].rotulo
+                          : `${NUMERICAS[chave].rotulo}, em porcento`
+                      }
+                    />
+                    {chave === "exemplos_treino" ? null : (
+                      <span className="num text-sm text-muted-foreground">%</span>
+                    )}
                     {suspeita ? (
                       <span className="text-xs font-normal text-warning-rich-text">
                         suspeito
@@ -231,7 +245,7 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
 
           {porClasse.length > 0 ? (
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground">
+              <h4 className="rotulo-instrumento">
                 F1 por classe
               </h4>
               <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

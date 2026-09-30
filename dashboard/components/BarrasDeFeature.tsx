@@ -103,7 +103,7 @@ export function BarrasDeFeature({
               {/* eixo zero, sempre visivel: e ele que da sentido ao sinal */}
               <span
                 aria-hidden
-                className="absolute inset-y-[-3px] left-1/2 w-px -translate-x-1/2 bg-border"
+                className="absolute inset-y-[-3px] left-1/2 w-px -translate-x-1/2 bg-linha"
               />
               <span
                 className="absolute inset-y-0 rounded-sm"
