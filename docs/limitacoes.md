@@ -11,6 +11,15 @@ significa “sem limites”. A função ONNX tem cerca de 1,46 GB e usa Large
 Functions na Vercel. Depois de esfriar, o primeiro `/saude` observado levou
 10,8 s; requisições seguintes foram rápidas, mas não há garantia de latência.
 
+**Cold start e "motor aquecendo".** A API é serverless: cada instância tem o
+próprio motor, e ele só ficava pronto depois da primeira predição. Desde
+30/09/2026 o motor aquece em segundo plano no boot da instância e a cada sonda
+de saúde, e um workflow sonda a API a cada 5 minutos. Isso **reduz** o cold
+start, mas não o elimina — a Vercel não garante que a sonda e o usuário caiam na
+mesma instância. Eliminá-lo exige um processo sempre ligado com pelo menos
+1,5–2 GB de RAM; o plano gratuito do Render (512 MB, dorme em 15 min) não
+serve, porque a API mede cerca de 1,06 GB de RSS com os três modelos.
+
 Vercel Hobby, Supabase Free e Oracle Object Storage gratuito oferecem cotas,
 não SLA. Ao ultrapassá-las, a aplicação pode ser limitada ou pausada. O estado
 fica no Supabase; o Oracle participa do build, não da inferência. Uma restauração
@@ -18,8 +27,7 @@ do projeto pode alterar a URI do pooler, e o transaction pooler precisa usar a
 porta indicada no painel (6543 no deploy atual).
 
 Essas limitações são operacionais. Elas não alteram as limitações científicas
-abaixo e não autorizam apresentar a estimativa como NPS declarado. Detalhes em
-[Deploy gratuito na Vercel](deploy-vercel.md).
+abaixo e não autorizam apresentar a estimativa como NPS declarado.
 
 ---
 

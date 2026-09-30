@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 08/09/2026 (contestação, teto de vazão e a porta destrancada)
+# Handoff — Fraus, atualizado em 30/09/2026 (redesign Instrumento, cold start da API e a porta destrancada)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -24,7 +24,34 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 ---
 
-## 2. Estado atual — 08/09/2026
+## 2. Estado atual — 30/09/2026
+
+> **Atualização de 30/09/2026 (leia primeiro).**
+>
+> 1. **A interface foi redesenhada** (mundo "Instrumento"): números medidos são
+>    display de sete segmentos (`components/instrumento/SegmentoLED.tsx`), "sem
+>    sinal" é o segmento **apagado**, hairline de 1px, raio zero, Martian Mono +
+>    Inter + Bricolage, e a vitrine tem um orbe em CSS. A "Pauta", o espaço
+>    profundo e a Mona Sans foram descartados; o contrato é
+>    `dashboard/DESIGN.md`.
+> 2. **`scripts/api_demo.py` NÃO é mais dublê por padrão.** Ele carrega o motor
+>    real quando os pesos estão no disco (`FRAUS_DEMO_DUBLE=1` força o dublê) e
+>    sobe de um **snapshot versionado**, `dados_demo/fraus-demo.db` (64
+>    conversas sintéticas, sem segredo), para o gráfico NPS × latência sempre ter
+>    série. `FRAUS_DEMO_RESSEMEAR=1` recompõe do zero. Confira sempre o
+>    `motor` em `/saude` (ver "Como saber em qual você está").
+> 3. **Produção** = dois projetos Vercel (`fraus` e `fraus-api`, ONNX), Supabase
+>    Postgres e ZIP de modelos no Oracle Object Storage
+>    ([deploy-vercel.md](deploy-vercel.md)). A API esfria: o motor agora
+>    aquece em segundo plano (boot e `GET /saude`) e o workflow `api-aquecer`
+>    sonda a cada 5 min. Reduz o cold start, não o elimina; o Render gratuito
+>    não serve (512 MB contra ~1,06 GB medidos).
+> 4. Os números da vitrine moram em `dashboard/components/lp/fatos.ts`.
+>
+> O restante desta seção descreve o estado de 08–15/09/2026 e ainda vale nos
+> pontos que não contradizem o acima.
+
+## 2.1 Estado de 08/09/2026
 
 > **Atualização de 15/09/2026 (branch `feat/leva-1-api`, uma PR só).** Leia antes
 > do resto desta seção, porque três coisas mudaram o que o sistema faz:
@@ -47,10 +74,10 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 | | |
 |---|---|
-| Testes | **909 passed, 1 deselected** (Python) · **77** (front, 8 arquivos) — 14/09/2026 |
+| Testes | **1.057 passed, 1 deselected** (Python) · **144** (front, 17 arquivos) — medido em 30/09/2026 na branch do redesign; ~1.060 e 148 na branch do cold start. Eram 909 e 77 em 14/09 |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git**; fusor em dia (39 features, acurácia 0,950) |
 | API real | `uv run uvicorn fraus.api.main:app --port 8001` → confira `/saude`, tem de dizer `"motor":"real"` |
-| API dublê | `uv run python scripts/api_demo.py` → :8000. **Só para trabalho de interface sem modelo.** Números sintéticos com cara de predição — invariante 7 |
+| API de demonstração | `uv run python scripts/api_demo.py` → :8000. Motor real se houver pesos (senão dublê, dito no boot); banco = snapshot `dados_demo/fraus-demo.db`. **Não é produção**: banco descartável e sem chave |
 | Dashboard | `cd dashboard && npm run dev` (ou `npm run build && npx next start`) |
 
 **A API nasce FECHADA**, e este parágrafo dizia o contrário até 08/09/2026. Na
@@ -81,14 +108,15 @@ honestidade metodológica) e as telas moram em `/dashboard/*`, com redirect das
 rotas antigas. Nenhum número da LP é inventado — 39 features e sete sinais são
 fatos do código, e não há acurácia fabricada nem depoimento. **Isso impõe uma
 obrigação:** quando `NOMES_FEATURES` mudar, os números da LP mudam junto
-(`dashboard/app/page.tsx`, `lp/Contador.tsx`, `lp/Constelacao.tsx`). Em
+(hoje numa fonte só: `dashboard/components/lp/fatos.ts`). Em
 04/09/2026 o contrato foi a 38 (e no mesmo dia a 39) e a LP ficou anunciando 35 — número falso numa
 tela pública, exatamente o que esta seção promete que não acontece. Agora há
 guarda: `tests/test_derivacoes_dashboard.py::test_a_vitrine_anuncia_o_numero_real_de_features`
-lê o `page.tsx` como texto e compara com `NOMES_FEATURES`. Ela cobre só o
-contador principal — as menções em prosa (`lp/Contador.tsx`,
-`lp/Constelacao.tsx`, o texto corrido da própria página) continuam sendo
-conferência manual.
+lê `components/lp/fatos.ts` como texto e compara `features` com
+`NOMES_FEATURES`, e varre `components/lp/` e `app/page.tsx` atrás de qualquer
+outro "N features" digitado à mão (mutação conferida em 30/09/2026: as duas
+divergências derrubam o teste). Prosa que cite o número por extenso, fora desse
+formato, continua sendo conferência manual.
 
 **Usuário é identidade, não credencial técnica.** Tabela `usuarios` (senha
 scrypt em `fraus/usuarios.py`), JWT HS256 (`fraus/token_acesso.py`, PyJWT —
@@ -112,10 +140,13 @@ uv run uvicorn fraus.api.main:app --port 8001   # a API REAL, carrega os 3 model
 cd dashboard && npm run dev
 ```
 
-**Não suba `scripts/api_demo.py` achando que é a API.** Ele é o motor dublê:
-devolve números sintéticos com cara de predição, e a dashboard não distingue.
-Uma sessão já perdeu um dia inteiro com isso — inclusive os pesos por feature,
-que saíam numa progressão `0,2 / 0,25 / 0,3` e passavam por peso de regressão.
+**Não suba `scripts/api_demo.py` achando que é a API de produção.** Ele usa
+banco temporário sem autenticação, e cai no **motor dublê** se os pesos não
+estiverem no disco — aí devolve números sintéticos com cara de predição e a
+dashboard não distingue. Uma sessão já perdeu um dia inteiro com isso, inclusive
+os pesos por feature, que saíam numa progressão `0,2 / 0,25 / 0,3` e passavam
+por peso de regressão. (Desde 30/09/2026 o padrão é o motor real quando há
+pesos; o boot imprime qual subiu.)
 
 **Como saber em qual você está, em uma linha:** `curl -s :8001/saude` responde
 `{"status":"ok","motor":"real"}` ou `"motor":"duble"`. Desde a PR #32 os
@@ -125,7 +156,7 @@ você lança o uvicorn não decide mais o motor — mas confira mesmo assim.
 ### Comandos de verificação
 
 ```bash
-uv run pytest -q                 # 909 passed, 1 deselected
+uv run pytest -q                 # 1057 passed, 1 deselected (30/09/2026)
 uv run pytest -m lento           # o de minutos, obrigatório ao mexer no gerador
 cd dashboard && npx tsc --noEmit # tipos
 cd dashboard && npm run contraste # WCAG AA, por cálculo
@@ -253,8 +284,14 @@ lista, ela para de ser lida.
 
 ### Front — `dashboard/`
 
-Telas: `/` (visão geral), `/atendimentos`, `/analisar`, `/modelo`,
-`/configuracoes`, `/integracoes`.
+Rotas (mundo "Instrumento", 30/09/2026): `/` é a **vitrine** (`components/lp/`,
+CSS em `app/vitrine.css`, números em `components/lp/fatos.ts`); a ferramenta
+mora em `/dashboard` (visão geral), `/dashboard/atendimentos` (lista e
+`[id]`), `/dashboard/analisar`, `/dashboard/modelo`, `/dashboard/grafo`,
+`/dashboard/configuracoes` e `/dashboard/integracoes`; mais `/entrar`,
+`/cadastrar` e o 404. Todo número medido passa por
+`components/instrumento/SegmentoLED.tsx`; a faixa de telemetria é
+`TelemetriaTopo`, e a navegação numerada vive em `lib/navegacao.ts`.
 
 `lib/api.ts` é a **única** porta para a API — tipos e funções. `lib/formato.ts`
 concentra formatação (`formatarEsperaOuTraco` é quem transforma `null` em `—`).
@@ -667,14 +704,22 @@ compartilhada faria o volume de uma rota cortar a outra.
    id e leva "duplicada", e o atendimento some em silêncio. Há teste para isso
    (`test_o_429_nao_queima_o_webhook_id_para_a_retentativa`).
 
-### P0 — Hospedagem — BLOQUEADA POR CAPACIDADE DA ORACLE, 11/09/2026
+### P1 — Hospedagem sempre ligada — Oracle bloqueada por capacidade, 11/09/2026
+
+> **Reenquadrada em 30/09/2026.** A API de produção já roda na Vercel
+> (ver "Feita — API real hospedada sem VM", acima), então isto deixou de ser
+> P0. Continua aberta como **o caminho para eliminar o cold start**: a Vercel é
+> serverless e esfria; só um container sempre ligado (>= 1,5–2 GB de RAM) o
+> elimina. O Render gratuito não serve (512 MB contra ~1,06 GB medidos, e dorme
+> em 15 min). O texto abaixo é o estado de 11/09/2026.
 
 > Estado completo, com o que foi medido e o que foi descartado:
 > **[notas/2026-09-11-deploy-na-oracle.md](notas/2026-09-11-deploy-na-oracle.md)**
 
-A API **não cabe em serverless** (torch instalado mede 769 MB contra o teto de
-500 MB da Vercel, mais 1,3 GB de pesos). Precisa de container com volume e
-~2 GB de RAM.
+A API **com torch não cabe em serverless** (torch instalado mede 769 MB contra
+o teto de 500 MB da Vercel, mais 1,3 GB de pesos) — o que foi resolvido em
+17/09/2026 com ONNX e Large Function. Sem cold start, precisa de container com
+volume e ~2 GB de RAM.
 
 **Tudo está pronto menos a máquina.** A `oci` CLI está autenticada, a VCN e a
 Security List existem (22, 80 e 443 abertas), e
@@ -692,12 +737,13 @@ A alavanca que sobra é upgrade para **Pay As You Go** — mantém a franquia
 gratuita e costuma destravar a fila de A1, mas exige cartão e passa a cobrar
 qualquer coisa além dela. Decisão do João.
 
-### P1 — O site público da documentação
+### Feita — O site público da documentação
 
-O workflow, o recorte e as três camadas de guarda contra vazamento estão
-prontos e testados. Faltam três valores que só o João pode criar no
-repositório privado: o secret `DEPLOY_KEY_DOCS` e as variáveis `REPO_DOCS` e
-`FRAUS_URL_DASHBOARD`. Passo a passo na nota citada acima.
+O workflow, o recorte e as camadas de guarda contra vazamento estão de pé, e o
+site responde em <https://joao-tavares0312.github.io/fraus-docs/> (verificado
+em 30/09/2026). `deploy-vercel.md` e `cloud-run.md` são **internos**, como
+`hospedagem.md`: têm topologia e nomes de variáveis de segredo. Em 30/09/2026
+o visual do site foi alinhado ao Instrumento.
 
 ### P2 — Dívida de escala
 

@@ -1,0 +1,18 @@
+{#- Telemetria no topo e rodape do Instrumento. Fatos verdadeiros do CLAUDE.md;
+    nenhum numero de uso. Nada aqui carrega codigo-fonte nem segredo. -#}
+{% extends "base.html" %}
+
+{% block announce %}
+  <div class="fx-tele" role="note" aria-label="Fatos do produto">
+    <span>Fraus / documentação</span>
+    <span>Sinais <b>07</b> · Features <b>39</b> · LLM <b>00</b> · NPS <b>estimativa</b></span>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  {{ super() }}
+  <div class="fx-rodape">
+    <span>Modelos locais · sem LLM em runtime</span>
+    <span>Todo número é inferido, nunca declarado</span>
+  </div>
+{% endblock %}

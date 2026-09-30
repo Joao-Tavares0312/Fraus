@@ -112,6 +112,8 @@ FORA_DO_PUBLICO = {
     "handoff.md": 'tem a secao "a porta destrancada", que descreve a '
                   "arquitetura de autenticacao pelo lado de dentro",
     "hospedagem.md": "nomes de variavel de segredo e topologia de deploy",
+    "deploy-vercel.md": "topologia de producao e a tabela de variaveis de segredo",
+    "cloud-run.md": "roteiro de deploy: Secret Manager, bucket e topologia",
 }
 
 
