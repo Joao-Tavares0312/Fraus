@@ -46,3 +46,7 @@ node_modules/
 # repositorio que proibe justamente isso.
 /modelos-onnx*/
 /modelos-vercel*.zip
+
+# capturas de revisao do Impeccable: evidencia da sessao, nao codigo
+/dashboard/.impeccable/review/
+/dashboard/.impeccable/build/

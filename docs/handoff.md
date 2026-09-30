@@ -272,7 +272,9 @@ modelo envelhecem separadas, e a que envelhece é sempre a que ninguém olha.
 ## 5. Design — leia antes de mexer em pixel
 
 **`dashboard/DESIGN.md` e `dashboard/PRODUCT.md` são obrigatórios.** O mundo
-visual se chama **"Pauta"** e a regra mestra é:
+visual se chama **"Instrumento"** (redesign de 30/09/2026: painel de instrumento
+de laboratório, números em LED de sete segmentos, hero de orbe na vitrine; a
+"Pauta" e o espaço profundo foram descartados) e a regra mestra continua:
 
 > Acima da linha é o que foi **DITO**. Abaixo da linha é o que foi **MEDIDO**.
 
@@ -282,10 +284,11 @@ Encoding que atravessa tudo:
 - **azul** (`--medido`) = score, probabilidade, tendência;
 - **dourado** (`--primary`) = ação e foco, **nunca dado**.
 
-O `--primary` é o dourado do R da logo, medido do arquivo:
-`oklch(0.78 0.085 80)`. Ele convive com o âmbar porque o que os separa é o
-**croma** (0,085 fosco contra 0,15 saturado), e porque nunca dividem superfície.
-Detalhes e o par de risco em `DESIGN.md` §3.3.
+O `--primary` é o dourado do R da logo, medido do arquivo. Ele convive com o
+âmbar porque o que os separa é o **croma** (fosco contra saturado), e porque
+nunca dividem superfície. O **LED é azul** (medido): número que o servidor
+mediu vira display de sete segmentos, e "sem sinal" é o segmento **apagado**,
+nunca zero (`components/instrumento/SegmentoLED.tsx`). Detalhes no `DESIGN.md`.
 
 **Intocáveis declarados pelo João:** os textos de honestidade, o gráfico
 sobreposto NPS × latência, e âmbar=dito / azul=medido.

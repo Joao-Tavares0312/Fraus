@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------
    O SITE DE DOCUMENTACAO VESTIDO COM A IDENTIDADE DO PRODUTO.
 
-   Os valores sao OS MESMOS de `dashboard/app/globals.css` -- o espaco profundo
+   Os valores sao OS MESMOS de `dashboard/app/globals.css` -- o Instrumento
    (tema de fabrica), em OKLCH. Eles estao COPIADOS aqui, e nao importados, por
    um motivo que vale registrar antes de alguem tentar "consertar":
 
@@ -22,16 +22,16 @@
    --------------------------------------------------------------------------- */
 
 [data-md-color-scheme="slate"] {
-  /* Espaco profundo. O fundo NAO e preto puro, e a recusa e herdada palavra
-     por palavra do DESIGN.md: preto puro faz a regua flutuar no vacuo e
-     transforma dado em neon. Azul-marinho fundissimo TEM cor. */
-  --md-default-bg-color: oklch(0.128 0.022 264);
-  --md-default-bg-color--light: oklch(0.186 0.026 264);
-  --md-default-bg-color--lighter: oklch(0.258 0.028 266);
-  --md-default-fg-color: oklch(0.975 0.006 250);
-  --md-default-fg-color--light: oklch(0.845 0.02 254);
-  --md-default-fg-color--lighter: oklch(0.745 0.032 258);
-  --md-default-fg-color--lightest: oklch(0.4 0.03 262);
+  /* Instrumento. Quase-preto NEUTRO (matiz 285, croma 0.004), nunca #000: o
+     fundo e a folha de um painel de laboratorio, e a regua de hairline precisa
+     de uma superficie para ser lida. Mesmos valores do `:root` do dashboard. */
+  --md-default-bg-color: oklch(0.14 0.004 285);
+  --md-default-bg-color--light: oklch(0.185 0.005 285);
+  --md-default-bg-color--lighter: oklch(0.245 0.006 285);
+  --md-default-fg-color: oklch(0.96 0.003 285);
+  --md-default-fg-color--light: oklch(0.845 0.006 285);
+  --md-default-fg-color--lighter: oklch(0.74 0.01 285);
+  --md-default-fg-color--lightest: oklch(0.4 0.01 285);
 
   /* O DOURADO DO MONOGRAMA, lido das paradas do gradiente do SVG da logo.
      Ele e a cor de ACAO e de FOCO -- link, marcador, estado ativo -- e nunca
@@ -47,27 +47,27 @@
   /* O AMBAR DO "DITO" so aparece em um lugar aqui: citacao. Um bloco de
      citacao E fala -- e o unico elemento da documentacao que carrega o mesmo
      significado que o ambar carrega na dashboard. */
-  --fraus-dito: oklch(0.83 0.19 60);
-  --fraus-medido: oklch(0.74 0.2 265);
-  --fraus-linha: oklch(0.94 0.03 240 / 30%);
-  --fraus-card: oklch(0.186 0.026 264);
+  --fraus-dito: oklch(0.78 0.14 72);
+  --fraus-medido: oklch(0.74 0.13 250);
+  --fraus-linha: oklch(0.96 0.003 285 / 26%);
+  --fraus-card: oklch(0.185 0.005 285);
 
-  --md-code-bg-color: oklch(0.178 0.026 264);
-  --md-code-fg-color: oklch(0.93 0.012 250);
-  --md-code-hl-string-color: oklch(0.83 0.19 60);
-  --md-code-hl-number-color: oklch(0.74 0.2 265);
+  --md-code-bg-color: oklch(0.175 0.005 285);
+  --md-code-fg-color: oklch(0.93 0.004 285);
+  --md-code-hl-string-color: oklch(0.78 0.14 72);
+  --md-code-hl-number-color: oklch(0.74 0.13 250);
   --md-code-hl-keyword-color: oklch(0.83 0.095 84);
-  --md-code-hl-comment-color: oklch(0.62 0.03 260);
+  --md-code-hl-comment-color: oklch(0.62 0.01 285);
 
-  --md-footer-bg-color: oklch(0.11 0.02 264);
-  --md-footer-bg-color--dark: oklch(0.1 0.018 264);
+  --md-footer-bg-color: oklch(0.11 0.004 285);
+  --md-footer-bg-color--dark: oklch(0.1 0.004 285);
 }
 
-/* A tipografia e a MESMA do produto: Inter no texto, JetBrains Mono no dado.
+/* A tipografia e a MESMA do produto: Inter no texto, Martian Mono no dado.
    Nao ha `next/font` aqui para baixar no build, entao elas vem da fonte
    publica -- e a pilha de fallback existe porque um site de documentacao tem
    que ser legivel mesmo com a rede do auditorio caindo. */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap");
 
 body,
 .md-typeset {
@@ -77,7 +77,7 @@ body,
 .md-typeset code,
 .md-typeset pre,
 .md-typeset kbd {
-  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  font-family: "Martian Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 
 /* A LINHA. Na dashboard ela e a regua que afirma dito/medido; aqui ela e so
