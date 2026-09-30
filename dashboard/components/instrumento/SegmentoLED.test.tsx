@@ -45,7 +45,8 @@ describe("celulaDe", () => {
 
   it("separadores sao celulas estreitas", () => {
     expect(celulaDe(",")).toEqual({ tipo: "virgula" });
-    expect(celulaDe(".")).toEqual({ tipo: "virgula" });
+    // O ponto NAO e a virgula: em pt-BR `66.1` e `66,1` sao numeros diferentes.
+    expect(celulaDe(".")).toEqual({ tipo: "ponto" });
     expect(celulaDe(":")).toEqual({ tipo: "doispontos" });
     expect(celulaDe(" ")).toEqual({ tipo: "espaco" });
   });
@@ -88,7 +89,15 @@ describe("SegmentoLED", () => {
     const m = html({ valor: "2,9", rotulo: "nota" });
     expect(m.match(/data-celula="digito"/g)).toHaveLength(2);
     expect(m.match(/data-celula="virgula"/g)).toHaveLength(1);
+    // A virgula tem CAUDA (`data-cauda`); o ponto nao.
+    expect(m).toContain("data-cauda");
     expect(acesos(m)).toBe(5 + 6);
+  });
+
+  it("ponto: 2.9 desenha o ponto, sem cauda", () => {
+    const m = html({ valor: "2.9", rotulo: "nota" });
+    expect(m.match(/data-celula="ponto"/g)).toHaveLength(1);
+    expect(m).not.toContain("data-cauda");
   });
 
   it("hora: 4:12 tem tres digitos e dois-pontos", () => {

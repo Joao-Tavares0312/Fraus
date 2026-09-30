@@ -44,7 +44,9 @@ const DIGITOS: Readonly<Record<string, readonly Segmento[]>> = {
  *  - `mais`: o sinal de mais do NPS positivo (`+12`). O display de sete
  *    segmentos nao tem `+`; desenha-se o segmento do meio mais um traco
  *    vertical, que e o que qualquer painel de instrumento faz.
- *  - `virgula`: o ponto decimal, celula estreita (o pt-BR escreve `2,9`).
+ *  - `virgula`: a virgula decimal do pt-BR (`2,9`), celula estreita: um ponto
+ *    com CAUDA. Sem a cauda, `66,1` lia como `66.1` -- milhar em pt-BR.
+ *  - `ponto`: o ponto (`.`), celula estreita, so o ponto. Nao e a virgula.
  *  - `doispontos`: separador de hora (`4:12`), celula estreita.
  *  - `espaco`: respiro entre grupos, sem desenho.
  *  - `cru`: caractere fora do alfabeto. NAO e descartado: some um caractere e o
@@ -54,6 +56,7 @@ export type Celula =
   | { tipo: "digito"; acesos: readonly Segmento[] }
   | { tipo: "mais" }
   | { tipo: "virgula" }
+  | { tipo: "ponto" }
   | { tipo: "doispontos" }
   | { tipo: "espaco" }
   | { tipo: "cru"; texto: string };
@@ -66,7 +69,8 @@ export function celulaDe(caractere: string): Celula {
   const acesos = DIGITOS[chave];
   if (acesos) return { tipo: "digito", acesos };
   if (caractere === "+") return { tipo: "mais" };
-  if (caractere === "," || caractere === ".") return { tipo: "virgula" };
+  if (caractere === ",") return { tipo: "virgula" };
+  if (caractere === ".") return { tipo: "ponto" };
   if (caractere === ":") return { tipo: "doispontos" };
   if (caractere === " ") return { tipo: "espaco" };
   return { tipo: "cru", texto: caractere };

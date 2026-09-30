@@ -154,8 +154,17 @@ function Peca({
         </svg>
       );
     case "virgula":
+      // A virgula do pt-BR: o ponto com uma CAUDA que desce para a esquerda. E
+      // o que separa `66,1` de `66.1` -- milhar, em pt-BR.
       return (
         <Estreita altura={altura} espaco={espaco} nome="virgula">
+          <circle cx={11} cy={94} r={7.5} />
+          <polygon data-cauda points="12,98 19,94 16,108 6,120 2,115 9,106" />
+        </Estreita>
+      );
+    case "ponto":
+      return (
+        <Estreita altura={altura} espaco={espaco} nome="ponto">
           <circle cx={10} cy={98} r={7} />
         </Estreita>
       );
