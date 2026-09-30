@@ -186,6 +186,36 @@ class Motor:
     def atribuir_conversa(self, conversa, curadoria=None) -> dict:
         return self._atribuir(conversa, curadoria)[0]
 
+    def comparar_fusor(self, conversa, candidato, curadoria=None) -> dict:
+        """Mesmo vetor para os dois fusores, sem trocar o motor compartilhado."""
+        if not conversa.tem_sinal_cliente:
+            return {"atual": None, "candidato": None}
+        textos = [m.texto for m in conversa.mensagens_cliente]
+        todas = self._prever_todas(textos)
+        texto = _Precalculado(todas["satisfacao"]) if todas else self._classificador
+        emocao = _Precalculado(todas["emocao"]) if todas else self._emocao
+        features = montar_features(conversa, texto, emocao, curadoria)
+        return {"atual": self._fusor.pontuar(features), "candidato": candidato.pontuar(features)}
+
+    def scores_do_replay(self, conversa, curadoria=None) -> list:
+        """Le cada fala isoladamente uma vez, sem inferencia quadratica.
+
+        Nenhum texto futuro entra na leitura de uma fala. O vetor do fusor e
+        refeito em cada prefixo com os sinais das falas que ja ocorreram.
+        """
+        texto, emocao, scores = [], [], []
+        for indice, m in enumerate(conversa.mensagens):
+            if m.autor == "cliente":
+                todas = self._prever_todas([m.texto])
+                texto.extend(todas["satisfacao"] if todas else self._classificador.prever_mensagens([m.texto]))
+                emocao.extend(todas["emocao"] if todas else self._emocao.prever_mensagens([m.texto]))
+            prefixo = conversa.model_copy(update={"mensagens": conversa.mensagens[:indice + 1],
+                "encerrada_em": conversa.encerrada_em if indice == len(conversa.mensagens) - 1 else None,
+                "escalou_para_humano": conversa.escalou_para_humano if indice == len(conversa.mensagens) - 1 else any(p.autor == "humano" for p in conversa.mensagens[:indice + 1])})
+            score = self._fusor.pontuar(montar_features(prefixo, _Precalculado(texto), _Precalculado(emocao), curadoria)) if prefixo.tem_sinal_cliente else None
+            scores.append(score)
+        return scores
+
     def _atribuir(self, conversa, curadoria=None) -> tuple[dict, dict | None]:
         """Quebra a nota por mensagem: quem falou o que, e com que probabilidade.
 

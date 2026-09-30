@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { destinoAuth } from "@/lib/destino-auth";
 
 type Modo = "entrar" | "cadastrar";
 
@@ -30,7 +31,7 @@ async function detalheDe(resposta: Response): Promise<string> {
   return `o servidor respondeu ${resposta.status}`;
 }
 
-export function FormularioAuth({ modo }: { modo: Modo }) {
+export function FormularioAuth({ modo, convite = null }: { modo: Modo; convite?: string | null }) {
   const roteador = useRouter();
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -73,6 +74,7 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
             email,
             senha,
             ...(codigo ? { codigo_dev: codigo } : {}),
+            ...(convite ? { convite_equipe: convite } : {}),
           }),
         });
         if (!cadastro.ok) {
@@ -96,7 +98,7 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
       // abriria um piscar em que o botao volta ao normal com a navegacao a
       // caminho, que e o bug inteiro em miniatura.
       iniciarNavegacao(() => {
-        roteador.push("/dashboard");
+        roteador.push(destinoAuth(convite));
       });
     } catch {
       setErro("não foi possível falar com o servidor");
@@ -141,7 +143,7 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
         )}
       </div>
 
-      {modo === "cadastrar" && (
+      {modo === "cadastrar" && !convite && (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="codigo_dev">Código de convite (opcional)</Label>
           <Input id="codigo_dev" name="codigo_dev" autoComplete="off" />
@@ -168,7 +170,7 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
             tela. Numa instalacao por tunel esse trecho leva segundos, e dizer
             o que se espera e a diferenca entre aguardar e desistir. */}
         {navegando
-          ? "Abrindo a dashboard…"
+          ? convite ? "Abrindo o convite…" : "Abrindo a dashboard…"
           : enviando
             ? entrando
               ? "Entrando…"
@@ -182,14 +184,14 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
         {entrando ? (
           <>
             Ainda sem conta?{" "}
-            <Link href="/cadastrar" className="text-primary underline-offset-4 hover:underline">
+            <Link href={convite ? `/cadastrar?convite=${convite}` : "/cadastrar"} className="text-primary underline-offset-4 hover:underline">
               Criar conta
             </Link>
           </>
         ) : (
           <>
             Já tem conta?{" "}
-            <Link href="/entrar" className="text-primary underline-offset-4 hover:underline">
+            <Link href={convite ? `/entrar?convite=${convite}` : "/entrar"} className="text-primary underline-offset-4 hover:underline">
               Entrar
             </Link>
           </>

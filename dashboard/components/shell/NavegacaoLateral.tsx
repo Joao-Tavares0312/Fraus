@@ -33,24 +33,22 @@ import { SeletorTema } from "./SeletorTema";
  * canal. A numeracao (`01_VISAO GERAL`) vem de `lib/navegacao.ts`, a mesma
  * fonte da faixa de telemetria do topo.
  *
- * AS TELAS DE OLHAR (as cinco primeiras de `TELAS`): Analisar fica aqui, e nao
- * entre as de mexer, porque analisar nao grava nada -- nem conversa, nem nota,
- * nem arquivo --, e nenhum indicador se move por causa dela. O Grafo tambem: ele
- * mostra o que o sistema guarda, e nao grava nada.
+ * As telas do fluxo operacional incluem a analise com gravacao opcional,
+ * os indicadores, o grafo e a gestao da operacao. Configuracoes e integracoes
+ * ficam no grupo de ajustes administrativos.
  */
-const SECOES = TELAS.slice(0, 5);
+const SECOES = TELAS.filter((t) => !["/dashboard/configuracoes", "/dashboard/integracoes"].includes(t.href));
 
-// O que o papel `usuario` VE: visao geral e atendimentos -- decisao de
-// produto de 31/08/2026 (dev administra, usuario analisa). Esconder aqui e
-// cortesia de interface; quem nega mesmo e o middleware da API, com 403.
-const SECOES_DO_USUARIO = new Set(["/dashboard", "/dashboard/atendimentos"]);
+// O papel `usuario` acompanha e analisa dentro do seu escopo de canais.
+// A API aplica as permissoes; o menu apresenta as telas correspondentes.
+const SECOES_DO_USUARIO = new Set(["/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo", "/dashboard/operacao"]);
 
 /**
  * As telas de MEXER, separadas das de olhar por um grupo proprio: elas mudam o
  * comportamento do sistema, e misturá-las com as tres de leitura esconderia
  * essa diferenca no unico lugar onde ela e obvia de graca.
  */
-const AJUSTES = TELAS.slice(5);
+const AJUSTES = TELAS.filter((t) => ["/dashboard/configuracoes", "/dashboard/integracoes"].includes(t.href));
 
 /**
  * A DOCUMENTACAO -- o unico item do menu que sai do aplicativo.

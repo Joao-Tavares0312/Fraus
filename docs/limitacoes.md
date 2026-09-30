@@ -42,8 +42,19 @@ quanto o modelo pode estar errado" — isso exigiria calibração, que ainda nã
 existe. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
 IC nenhum, e por isso a ressalva está impressa junto do número, não só aqui.
 
-Abaixo de **30 atendimentos com sinal** a tela não mostra ponto estimado: mostra
-pausa e o `n`.
+O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
+para cada extremo e 1,5 para neutros, com variância dividida por `n + 2`,
+conforme [Turk, Cinderich e McNeill (2026)](https://doi.org/10.3390/stats9020045).
+Isso evita intervalo de largura zero quando todas as conversas pertencem à
+mesma categoria. O NPS pontual e a contagem continuam sendo os observados;
+o ajuste só participa dos limites do intervalo.
+
+Abaixo de **30 atendimentos com sinal** o cartão principal e a leitura do
+intervalo ocultam o ponto estimado e mostram o `n`. Esse corte é uma regra de
+exibição, não uma garantia de precisão a partir de 30. A série diária e o
+campo `nps` da API preservam o agregado observado; `nps_intervalo.nps` é o
+campo que autoriza a exibição do ponto no cartão. Sem intervalo (API antiga
+ou falha do endpoint), a dashboard preserva o agregado disponível.
 
 ---
 

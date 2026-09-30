@@ -26,6 +26,39 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 ## 2. Estado atual — 30/09/2026
 
+### Análise persistida e Operação — alterações locais desta sessão
+
+- `POST /analisar/registrar` analisa com motor real, exige timestamps reais,
+  confirma mapeamentos inferidos e grava o lote atomicamente. IDs canônicos no
+  namespace `analise:` impedem duplicação por reenvio e sobrescrita de fontes.
+  As rotas avulsas preservam o contrato anterior. Dashboard relê dados ao salvar,
+  voltar à janela e receber atualização de outra aba.
+- NPS usa AW(3,T); o cartão respeita `nps_intervalo.nps = null` abaixo de 30.
+  Há testes de amostras unânimes e do exemplo publicado do método.
+- `/dashboard/operacao` reaproveita Instrumento e oferece sete abas. Algoritmos
+  em `fraus/operacao.py`, rotas em `fraus/api/rotas/operacao.py`; sem LLM.
+- Metadados de equipe/jornada/problema/permissão/convite ficam em
+  `operacao_registros`. Alterações de histórico e aceites concorrentes usam
+  transações e locks em ambos os dialetos. Auditoria usa cadeia SHA-256, não
+  assinatura nem defesa contra reescrita integral do banco.
+- Proprietário administra hierarquia; gestor convida/remove membros; membro
+  participa. Convite nunca promove para `dev`. Cadastro por convite tem escopo
+  vazio na mesma transação de criação; aceite vincula e concede canais da
+  equipe atomicamente. Remoção recalcula escopos originados de convites.
+  Política manual do administrador prevalece. Equipe sem canais concede nenhum.
+- JWT carrega versão de sessão, conferida no banco a cada acesso; revogação é
+  imediata. `BancoComEscopo` limita lista, detalhe, indicadores, grafo, referência
+  de vocabulário e gravação por canal. `dev` e credenciais técnicas seguem amplos.
+- Exportação formal exige autorização temporária para `usuario`, incluindo o
+  botão CSV existente. Isso controla a ação de exportar, não impede copiar os
+  dados que a própria conta tem permissão de consultar.
+- Lab e replay não alteram registros. Comparação exige arquivo compatível em
+  `FRAUS_FUSOR_CANDIDATO`. Hipóteses, ausência de sinal e incerteza ficam visíveis.
+- Validação reproduzível: `scripts/validar_operacao_real.py` usa ONNX real com
+  SQLite temporário ou somente PostgreSQL local `fraus_validacao`; nunca escolhe
+  o banco de produção. `--servir --porta 8017` mantém a instância de QA.
+  A dashboard pode usar `FRAUS_DIST_DIR` para evitar disputa de cache com dev.
+
 > **Atualização de 30/09/2026 (leia primeiro).**
 >
 > 1. **A interface foi redesenhada** (mundo "Instrumento"): números medidos são

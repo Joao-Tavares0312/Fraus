@@ -134,26 +134,33 @@ def calcular_nps(
 def nps_com_intervalo(
     scores: list[float], faixas: dict[Categoria, tuple[int, int]] | None = None
 ) -> dict | None:
-    """NPS inferido com intervalo de confianca de 95% (Wald ajustado).
+    """NPS inferido com intervalo de confianca de 95% (AW(3,T)).
 
     Hoje "NPS -12" aparece igual com 8 conversas e com 8.000, e a primeira
     pergunta de quem avalia e "quantas conversas sustentam esse numero?".
     Mostrar ponto estimado sem incerteza e inconsistente com um sistema que
     ja recusa transformar ausencia em zero.
 
-    A CONTA. O NPS e a media de uma variavel em {-1, 0, +1} -- promotor +1,
-    detrator -1, neutro 0. Entao:
+    O ponto observado continua sendo percentual de promotores menos
+    percentual de detratores, sem suavizacao, igual a `calcular_nps`.
+    Para o INTERVALO usamos Wald ajustado triangular AW(3,T): acrescentar
+    0,75 as contagens de cada extremo e 1,5 aos neutros. Sao pseudocontagens
+    estatisticas, nunca atendimentos reais nem mudanca no score do fusor.
 
-        media     = p_prom - p_det
-        variancia = (p_prom + p_det) - media**2
-        erro      = sqrt(variancia / n)
-        ic        = media +- 1,96 * erro          (tudo x100 na escala do NPS)
+        n_ajustado = n + 3
+        p_prom     = (promotores + 0,75) / n_ajustado
+        p_det      = (detratores + 0,75) / n_ajustado
+        media      = p_prom - p_det
+        variancia  = (p_prom + p_det) - media**2
+        erro       = sqrt(variancia / (n_ajustado - 1))
+        ic         = media +- 1,96 * erro        (tudo x100 na escala do NPS)
 
-    O metodo e o Wald AJUSTADO: Wald puro e bootstrap-t sao instaveis em
-    amostra pequena (MDPI Stats, 2026), e o ajuste aqui e a regra de exibicao
-    -- abaixo de `N_MINIMO_NPS` o ponto estimado nao e devolvido, porque com
-    amostra assim ele sugere precisao que nao existe. O `n` VEM PREENCHIDO
-    mesmo assim: a tela precisa dizer quanto falta, nao so que nao sabe.
+    Referencia e implementacao dos autores (variancia com n_ajustado - 1):
+    https://doi.org/10.3390/stats9020045
+    https://github.com/philturk/Net_Promoter_Score_Confidence_Intervals
+    O ajuste evita largura zero em categoria unanime. Esconder o ponto em
+    amostra pequena e uma regra de exibicao SEPARADA do metodo estatistico:
+    abaixo de `N_MINIMO_NPS` ele nao e devolvido. O `n` permanece observado.
 
     None quando nao ha score nenhum -- nao existe intervalo de coisa nenhuma.
 
@@ -165,14 +172,15 @@ def nps_com_intervalo(
     if not scores:
         return None
 
-    categorias = [categoria_nps(s, faixas) for s in scores]
-    n = len(categorias)
-    p_prom = categorias.count("promotor") / n
-    p_det = categorias.count("detrator") / n
+    categorias = Counter(categoria_nps(s, faixas) for s in scores)
+    n = len(scores)
+    n_ajustado = n + 3
+    p_prom = (categorias["promotor"] + 0.75) / n_ajustado
+    p_det = (categorias["detrator"] + 0.75) / n_ajustado
 
     media = p_prom - p_det
     variancia = (p_prom + p_det) - media**2
-    erro = sqrt(variancia / n)
+    erro = sqrt(variancia / (n_ajustado - 1))
     margem = Z_95 * erro
 
     # Recortado na escala: o NPS vive em [-100, 100] por definicao, e ponta
@@ -181,7 +189,7 @@ def nps_com_intervalo(
     superior = min(100.0, 100.0 * (media + margem))
 
     return {
-        "nps": round(100.0 * media, 2) if n >= N_MINIMO_NPS else None,
+        "nps": calcular_nps(scores, faixas) if n >= N_MINIMO_NPS else None,
         "ic_inferior": round(inferior, 2),
         "ic_superior": round(superior, 2),
         "n": n,

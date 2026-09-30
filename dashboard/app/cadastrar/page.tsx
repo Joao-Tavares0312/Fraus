@@ -4,11 +4,13 @@ import { redirect } from "next/navigation";
 import { FormularioAuth } from "@/components/auth/FormularioAuth";
 import { MolduraDeConta } from "@/components/auth/MolduraDeConta";
 import { loginDisponivel, usuarioDaSessao } from "@/lib/sessao";
+import { destinoAuth, tokenDeConvite } from "@/lib/destino-auth";
 
 export const metadata: Metadata = { title: "Criar conta — Fraus" };
 
-export default async function PaginaCadastrar() {
-  if (await usuarioDaSessao()) redirect("/dashboard");
+export default async function PaginaCadastrar({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const convite = tokenDeConvite((await searchParams).convite);
+  if (await usuarioDaSessao()) redirect(destinoAuth(convite));
 
   if (!(await loginDisponivel())) {
     return (
@@ -32,7 +34,7 @@ export default async function PaginaCadastrar() {
 
   return (
     <MolduraDeConta titulo="Criar conta">
-      <FormularioAuth modo="cadastrar" />
+      <FormularioAuth modo="cadastrar" convite={convite} />
     </MolduraDeConta>
   );
 }

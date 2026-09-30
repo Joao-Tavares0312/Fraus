@@ -26,6 +26,44 @@ Fraus, a divindade romana da fraude e do engano — contraparte latina de
 
 ## Como funciona
 
+### Da análise à operação
+
+Na tela **Analisar**, envie um arquivo ou cole CSV/JSON/transcrição. A opção
+**Salvar as conversas analisadas nos indicadores e no grafo** publica o lote no
+banco configurado da API (`FRAUS_DATABASE_URL` para PostgreSQL/Supabase).
+Horários reais e motor real são obrigatórios; o mesmo conteúdo não duplica os
+atendimentos. A confirmação abre o período correto nos indicadores e no grafo.
+Desmarque salvar para manter a análise avulsa.
+
+**Operação** reúne sete ferramentas sobre esses registros:
+
+- Radar de temas recorrentes e crescimento de taxas, com evidências.
+- Equipes, competências e simulação de escala, filas e custo por canal.
+- Jornadas por referência pseudônima explícita entre contatos.
+- Investigações com responsáveis, prazo, ações e comparação antes/depois.
+- Replay com estimativa por prefixo, sem mensagens futuras.
+- Laboratório de cenários e comparação de fusores nas mesmas features.
+- Mapa de acessos por canal, exportação temporária, revogação de sessões e auditoria.
+
+Equipes têm **proprietário → gestor → membro**. Na aba Equipe e escala, gere um
+link com papel, validade (até sete dias) e limite de pessoas. O visitante entra
+ou cria conta e aceita o convite. Links podem ser revogados; a última pessoa
+proprietária não pode ser removida. Hierarquia da equipe não concede papel `dev`.
+
+Contas criadas por convite começam sem acesso às conversas. Ao aceitar, recebem
+os canais explicitamente cadastrados na equipe. Remoção recalcula esse escopo;
+políticas manuais do administrador são preservadas. Equipe sem canais não libera
+conversas. Contas anteriores sem política conservam seu acesso anterior.
+
+O NPS continua **inferido**. Seu cartão oculta o ponto abaixo de 30 conversas com
+sinal; o intervalo AW(3,T) mede incerteza amostral, não a calibração do modelo.
+Simulações e diferenças antes/depois não demonstram causalidade.
+
+Para comparar fusores, configure `FRAUS_FUSOR_CANDIDATO` com o arquivo de um
+artefato compatível no servidor. Nada é promovido ou repontuado automaticamente.
+Os testes locais podem usar `scripts/validar_operacao_real.py` e
+`dashboard/scripts/validar-operacao-playwright.mjs` (dados temporários).
+
 Sinais independentes, calculados sobre um modelo canônico de conversa e fundidos
 por um classificador leve:
 

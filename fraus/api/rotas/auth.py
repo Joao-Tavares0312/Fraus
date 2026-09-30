@@ -100,7 +100,14 @@ def papel_do_cadastro(ctx: Contexto, codigo: str | None) -> str:
 
 @router.post("/auth/registrar", status_code=201)
 def registrar(pedido: PedidoCadastro, ctx: Contexto = Depends(obter_contexto)) -> dict:
-    papel = papel_do_cadastro(ctx, pedido.codigo_dev)
+    if pedido.convite_equipe:
+        if ctx.banco.convite_valido(pedido.convite_equipe) is None:
+            raise HTTPException(410, "convite invalido, expirado ou esgotado")
+        if pedido.codigo_dev:
+            raise HTTPException(400, "o convite de equipe cria uma conta usuario; nao combine com codigo administrativo")
+        papel = "usuario"
+    else:
+        papel = papel_do_cadastro(ctx, pedido.codigo_dev)
     agora = datetime.now(timezone.utc).isoformat()
     try:
         return ctx.banco.criar_usuario(
@@ -109,6 +116,7 @@ def registrar(pedido: PedidoCadastro, ctx: Contexto = Depends(obter_contexto)) -
             senha_hash=usuarios.gerar_hash(pedido.senha),
             papel=papel,
             criado_em=agora,
+            escopo_convite=bool(pedido.convite_equipe),
         )
     except ErroDeIntegridade:
         # A unicidade e garantia do banco; aqui ela vira 409. Dizer que o
@@ -143,6 +151,7 @@ def entrar(pedido: PedidoEntrada, ctx: Contexto = Depends(obter_contexto)) -> di
         papel=usuario["papel"],
         segredo=ctx.jwt_segredo,
         agora=datetime.now(timezone.utc),
+        versao=(ctx.banco.documento("sessao", str(usuario["id"])) or {"versao": 0})["versao"],
     )
     return {"token": token, "usuario": usuario}
 
@@ -170,7 +179,8 @@ def eu(
     usuario = (
         ctx.banco.buscar_usuario(sessao["usuario_id"]) if sessao is not None else None
     )
-    if usuario is None or not usuario["ativo"]:
+    versao = ctx.banco.documento("sessao", str(usuario["id"])) if usuario else None
+    if usuario is None or not usuario["ativo"] or sessao.get("versao", 0) != (versao or {"versao": 0})["versao"]:
         raise HTTPException(
             status_code=401,
             detail="sessao invalida ou expirada",

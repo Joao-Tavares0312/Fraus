@@ -1,0 +1,36 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import type { Equipe, PapelNaEquipe } from "@/lib/operacao";
+import { formatarDataHora } from "@/lib/formato";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { CAMPO, Campo, Carregamento, GRADE, LINHA, lista, Medida, Numero, PILHA, useAcao, useRecurso } from "./comum";
+
+type ConviteGerado = { id: string; token: string; papel: PapelNaEquipe; expira_em: string; limite: number };
+type ConviteResumo = Omit<ConviteGerado, "token"> & { usos: number; revogado: boolean };
+const ROTULOS: Record<PapelNaEquipe, string> = { proprietario: "Proprietário", gestor: "Gestor", membro: "Membro" };
+
+export function ConvitesEquipe({ equipe, recarregar }: { equipe: Equipe; recarregar: () => void }) {
+  const permite = equipe.meu_papel !== "membro";
+  const r = useRecurso<{ convites: ConviteResumo[] }>(permite ? `/equipes/${equipe.id}/convites` : null);
+  const gerar = useAcao(), acao = useAcao();
+  const [horas, setHoras] = useState(24), [limite, setLimite] = useState(1), [papel, setPapel] = useState<PapelNaEquipe>("membro"), [convite, setConvite] = useState<(ConviteGerado & { link: string }) | null>(null), [copiado, setCopiado] = useState(false);
+  const [alteracoes, setAlteracoes] = useState<Record<number, string>>({});
+  const [nomeEquipe, setNomeEquipe] = useState(equipe.nome), [competencias, setCompetencias] = useState(equipe.competencias.join(", "));
+  return <details className="border-b border-linha py-4"><summary className="cursor-pointer text-sm">{equipe.nome} · integrantes, hierarquia e convites</summary><div className={`${PILHA} mt-4`}>
+    <p className="text-xs text-muted-foreground">Proprietário administra a hierarquia e pode convidar gestores. Gestor convida e remove membros. Membro participa da equipe. Esses papéis não concedem acesso administrativo ao Fraus.</p>
+    {permite ? <form className={PILHA} onSubmit={(e) => { e.preventDefault(); void acao.executar(`/equipes/${equipe.id}`, "PUT", { nome: nomeEquipe, competencias: lista(competencias), canais: equipe.canais, membros: equipe.membros }, recarregar, "Equipe atualizada."); }}><div className={GRADE}><Campo nome="Nome da equipe"><Input required maxLength={100} value={nomeEquipe} onChange={(e) => setNomeEquipe(e.target.value)} /></Campo><Campo nome="Competências · vírgulas"><Input value={competencias} onChange={(e) => setCompetencias(e.target.value)} /></Campo></div><Button type="submit" variant="outline" disabled={acao.ocupado}>Atualizar equipe</Button></form> : null}
+    {equipe.integrantes.map((m) => <div key={m.id} className={LINHA}><div className="flex-1 text-sm">{m.nome} · {ROTULOS[m.papel]}</div>{permite && (equipe.meu_papel === "proprietario" || m.papel === "membro") ? <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); const proximo = alteracoes[m.id] ?? m.papel; void acao.executar(`/equipes/${equipe.id}/membros/${m.id}`, "PATCH", { papel: proximo === "remover" ? null : proximo }, recarregar, "Hierarquia da equipe atualizada."); }}><select aria-label={`Papel de ${m.nome}`} className={CAMPO} value={alteracoes[m.id] ?? m.papel} onChange={(e) => setAlteracoes((v) => ({ ...v, [m.id]: e.target.value }))}>{equipe.meu_papel === "proprietario" ? <><option value="proprietario">Proprietário</option><option value="gestor">Gestor</option></> : null}<option value="membro">Membro</option><option value="remover">Remover da equipe</option></select><Button type="submit" variant="outline" disabled={acao.ocupado}>Aplicar</Button></form> : null}</div>)}{acao.feedback}
+    {permite ? <><form className={PILHA} onSubmit={(e) => { e.preventDefault(); void gerar.executar<ConviteGerado>(`/equipes/${equipe.id}/convites`, "POST", { papel, validade_horas: horas, limite }, (c) => { setConvite({ ...c, link: `${window.location.origin}/convite/${c.token}` }); setCopiado(false); r.recarregar(); }, "Convite gerado. Compartilhe o link com quem deseja convidar."); }}><div className={GRADE}><Numero nome="Validade · horas" valor={horas} aoMudar={setHoras} min={1} max={168} /><Numero nome="Máximo de pessoas" valor={limite} aoMudar={setLimite} min={1} max={100} /><Campo nome="Papel ao aceitar"><select className={CAMPO} value={papel} onChange={(e) => setPapel(e.target.value as PapelNaEquipe)}><option value="membro">Membro</option>{equipe.meu_papel === "proprietario" ? <option value="gestor">Gestor</option> : null}</select></Campo></div><Button type="submit" disabled={gerar.ocupado}>Gerar link de convite</Button>{gerar.feedback}</form>
+      {convite ? <div className={PILHA}><Campo nome="Link do convite"><Input readOnly value={convite.link} onFocus={(e) => e.target.select()} /></Campo><p className="text-xs text-muted-foreground">Expira em {formatarDataHora(convite.expira_em)}. O link só é exibido nesta geração; você pode revogá-lo e gerar outro.</p><Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(convite.link); setCopiado(true); } catch { setCopiado(false); } }}>{copiado ? "Link copiado" : "Copiar link"}</Button></div> : null}
+      {!r.dado ? <Carregamento erro={r.erro} recarregar={r.recarregar} /> : r.dado.convites.map((c) => <div key={c.id} className={LINHA}><div className="flex-1 text-xs">{ROTULOS[c.papel]} · até {formatarDataHora(c.expira_em)} · {c.revogado ? "Revogado" : "Validade e limite controlados pelo servidor"}</div><Medida nome="Usos" valor={c.usos} /><Medida nome="Limite" valor={c.limite} /><Button variant="outline" disabled={acao.ocupado || c.revogado} onClick={() => void acao.executar(`/equipes/${equipe.id}/convites/${c.id}/revogar`, "POST", undefined, () => { r.recarregar(); if (convite?.id === c.id) setConvite(null); }, "Convite revogado.")}>Revogar link</Button></div>)}</> : null}
+  </div></details>;
+}
+
+export function AceitarConvite({ token, logado, nome }: { token: string; logado: boolean; nome: string | null }) {
+  const r = useRecurso<{ nome: string; papel: PapelNaEquipe; expira_em: string; canais: string[] }>(`/convites/${token}`), acao = useAcao();
+  const [aceito, setAceito] = useState(false);
+  return <div className={PILHA}>{aceito ? <><p className="text-sm">Você entrou na equipe.</p><Link className="text-primary underline" href="/dashboard/operacao">Abrir a operação</Link></> : !r.dado ? <Carregamento erro={r.erro} recarregar={r.recarregar} /> : <><h2 className="text-lg font-medium">{r.dado.nome}</h2><p className="text-sm">Você foi convidado como {ROTULOS[r.dado.papel].toLowerCase()}. O convite expira em {formatarDataHora(r.dado.expira_em)}.</p><p className="text-xs text-muted-foreground">Canais da equipe: {r.dado.canais.join(", ") || "Nenhum definido"}. Contas criadas por este link recebem esses canais ao aceitar; políticas já existentes são preservadas.</p>{logado ? <><p className="text-sm">Aceitar como {nome}.</p><Button disabled={acao.ocupado} onClick={() => void acao.executar(`/convites/${token}/aceitar`, "POST", undefined, () => setAceito(true), "Convite aceito.")}>Aceitar convite</Button>{acao.feedback}</> : <><Link className="text-primary underline" href={`/entrar?convite=${token}`}>Entrar para aceitar</Link><Link className="text-primary underline" href={`/cadastrar?convite=${token}`}>Criar conta e aceitar</Link></>}</>}</div>;
+}

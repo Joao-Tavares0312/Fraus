@@ -64,6 +64,7 @@ class PedidoCadastro(EntradaEstrita):
     email: str = Field(max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     senha: str = Field(min_length=8, max_length=1024)
     codigo_dev: str | None = Field(default=None, max_length=256)
+    convite_equipe: str | None = Field(default=None, min_length=32, max_length=100)
 
 
 class PedidoEntrada(EntradaEstrita):

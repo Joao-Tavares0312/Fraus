@@ -18,6 +18,7 @@ Latencia NAO e persistida -- e derivada dos timestamps na leitura.
 """
 
 import json
+import hashlib
 import os
 import sqlite3
 import threading
@@ -221,6 +222,22 @@ CREATE TABLE IF NOT EXISTS trabalhos (
     iniciado_em TEXT,
     concluido_em TEXT,
     atualizado_em TEXT NOT NULL
+);
+
+-- Novos dominios operacionais. IDs de texto evitam misturar identidade de
+-- usuario, atendimento e equipe. Nenhum segredo nem texto original de PII.
+CREATE TABLE IF NOT EXISTS operacao_registros (
+    tipo TEXT NOT NULL,
+    id TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL,
+    PRIMARY KEY (tipo, id)
+);
+CREATE TABLE IF NOT EXISTS auditoria_eventos (
+    id {SERIAL},
+    payload TEXT NOT NULL,
+    anterior TEXT NOT NULL,
+    assinatura TEXT NOT NULL
 );
 """
 
@@ -699,6 +716,154 @@ class Banco:
                     regua,
                 ),
             )
+
+    def salvar_lote(self, registros: list, lexico_versao: int, regua: str | None) -> None:
+        """Publica o lote completo em UMA transacao, nos dois dialetos."""
+        with self._conectar() as conexao:
+            conexao.executemany(
+                self._upsert("conversas", ("id", "canal", "iniciada_em", "score",
+                    "categoria", "payload", "lexico_versao", "regua"), ("id",)),
+                [(c.id, c.canal, c.iniciada_em.isoformat(), score, categoria,
+                  c.model_dump_json(), lexico_versao, regua)
+                 for c, score, categoria in registros],
+            )
+
+    def documento(self, tipo: str, identificador: str) -> dict | None:
+        with self._conectar() as conexao:
+            linha = conexao.execute("SELECT payload FROM operacao_registros WHERE tipo = ? AND id = ?", (tipo, identificador)).fetchone()
+        return json.loads(linha["payload"]) if linha else None
+
+    def documentos(self, tipo: str) -> list[dict]:
+        with self._conectar() as conexao:
+            linhas = conexao.execute("SELECT id, payload FROM operacao_registros WHERE tipo = ? ORDER BY id", (tipo,)).fetchall()
+        return [{**json.loads(l["payload"]), "id": l["id"]} for l in linhas]
+
+    def guardar_documento(self, tipo: str, identificador: str, valor: dict) -> None:
+        with self._conectar() as conexao:
+            self._travar_operacao(conexao)
+            conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                (tipo, identificador, json.dumps(valor, ensure_ascii=False, sort_keys=True), datetime.now(timezone.utc).isoformat()))
+
+    def listar_usuarios(self) -> list[dict]:
+        with self._conectar() as conexao:
+            linhas = conexao.execute("SELECT * FROM usuarios ORDER BY id").fetchall()
+        return [self._usuario(linha) for linha in linhas]
+
+    def guardar_documentos(self, registros: list[tuple[str, str, dict]]) -> None:
+        """Publica metadados de um lote inteiro na mesma transacao."""
+        agora = datetime.now(timezone.utc).isoformat()
+        with self._conectar() as conexao:
+            self._travar_operacao(conexao)
+            conexao.executemany(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                [(t, i, json.dumps(v, ensure_ascii=False, sort_keys=True), agora) for t, i, v in registros])
+
+    def alterar_documento(self, tipo: str, identificador: str, transformar) -> dict | None:
+        """Serializa leitura e alteracao, inclusive entre replicas Postgres."""
+        with self._conectar() as conexao:
+            self._travar_operacao(conexao)
+            linha = conexao.execute("SELECT payload FROM operacao_registros WHERE tipo = ? AND id = ?", (tipo, identificador)).fetchone()
+            if linha is None:
+                return None
+            valor = transformar(json.loads(linha["payload"]))
+            conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                (tipo, identificador, json.dumps(valor, ensure_ascii=False, sort_keys=True), datetime.now(timezone.utc).isoformat()))
+            if tipo == "equipe":
+                self._atualizar_escopos_de_equipes(conexao)
+        return valor
+
+    def _atualizar_escopos_de_equipes(self, conexao):
+        equipes = [json.loads(r["payload"]) for r in conexao.execute("SELECT payload FROM operacao_registros WHERE tipo = 'equipe'").fetchall()]
+        politicas = conexao.execute("SELECT id, payload FROM operacao_registros WHERE tipo = 'permissao'").fetchall()
+        for r in politicas:
+            politica = json.loads(r["payload"])
+            if politica.get("origem_convite"):
+                politica["canais"] = sorted({canal for e in equipes if int(r["id"]) in e["membros"] for canal in e["canais"]})
+                conexao.execute("UPDATE operacao_registros SET payload = ?, atualizado_em = ? WHERE tipo = 'permissao' AND id = ?",
+                    (json.dumps(politica, ensure_ascii=False, sort_keys=True), datetime.now(timezone.utc).isoformat(), r["id"]))
+
+    def _travar_operacao(self, conexao):
+        if self._postgres:
+            conexao.execute("SELECT pg_advisory_xact_lock(?)", (818889,))
+        else:
+            conexao.execute("BEGIN IMMEDIATE")
+
+    def convite_valido(self, token: str) -> dict | None:
+        convite = self.documento("convite", hashlib.sha256(token.encode()).hexdigest())
+        if not convite or convite.get("revogado") or datetime.fromisoformat(convite["expira_em"]) <= datetime.now(timezone.utc) or len(convite["aceitos"]) >= convite["limite"]:
+            return None
+        return convite
+
+    def aceitar_convite(self, token: str, usuario_id: int) -> dict | None:
+        """Consome uso, filia membro e aplica escopo inicial atomicamente."""
+        chave = hashlib.sha256(token.encode()).hexdigest()
+        with self._conectar() as conexao:
+            self._travar_operacao(conexao)
+            def ler(tipo, i):
+                r = conexao.execute("SELECT payload FROM operacao_registros WHERE tipo = ? AND id = ?", (tipo, i)).fetchone()
+                return json.loads(r["payload"]) if r else None
+            c = ler("convite", chave)
+            if not c or c.get("revogado") or datetime.fromisoformat(c["expira_em"]) <= datetime.now(timezone.utc):
+                return None
+            equipe = ler("equipe", c["equipe_id"])
+            if not equipe:
+                return None
+            if usuario_id in equipe["membros"]:
+                return {"equipe_id": c["equipe_id"], "nome": equipe["nome"], "papel": equipe.get("papeis", {}).get(str(usuario_id), "membro"), "ja_membro": True}
+            if len(c["aceitos"]) >= c["limite"]:
+                return None
+            if len(equipe["membros"]) >= 100:
+                return None
+            equipe["membros"].append(usuario_id)
+            equipe.setdefault("papeis", {})[str(usuario_id)] = c["papel"]
+            c["aceitos"].append(usuario_id)
+            registros = [("equipe", c["equipe_id"], equipe), ("convite", chave, c)]
+            politica = ler("permissao", str(usuario_id))
+            if politica and politica.get("origem_convite"):
+                politica["canais"] = sorted(set(politica["canais"]) | set(equipe["canais"]))
+                registros.append(("permissao", str(usuario_id), politica))
+            conexao.executemany(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                [(t, i, json.dumps(v, ensure_ascii=False, sort_keys=True), datetime.now(timezone.utc).isoformat()) for t, i, v in registros])
+        return {"equipe_id": c["equipe_id"], "nome": equipe["nome"], "papel": c["papel"], "ja_membro": False}
+
+    def revogar_sessoes(self, usuario_id: int) -> int:
+        with self._conectar() as conexao:
+            if self._postgres:
+                conexao.execute("SELECT pg_advisory_xact_lock(?)", (819000 + usuario_id,))
+            else:
+                conexao.execute("BEGIN IMMEDIATE")
+            linha = conexao.execute("SELECT payload FROM operacao_registros WHERE tipo = 'sessao' AND id = ?", (str(usuario_id),)).fetchone()
+            versao = json.loads(linha["payload"])["versao"] + 1 if linha else 1
+            conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                ("sessao", str(usuario_id), json.dumps({"versao": versao}), datetime.now(timezone.utc).isoformat()))
+        return versao
+
+    def auditar(self, ator: str, acao: str, recurso: str) -> None:
+        """Cadeia SHA-256 para detectar alteracoes, nao assinatura criptografica.
+
+        O lock serializa escritores tambem entre replicas do Postgres.
+        So metadados entram: nenhum corpo, senha, token ou texto de conversa.
+        """
+        with self._conectar() as conexao:
+            if self._postgres:
+                conexao.execute("SELECT pg_advisory_xact_lock(?)", (818888,))
+            else:
+                conexao.execute("BEGIN IMMEDIATE")
+            ultimo = conexao.execute("SELECT assinatura FROM auditoria_eventos ORDER BY id DESC LIMIT 1").fetchone()
+            anterior = ultimo["assinatura"] if ultimo else ""
+            payload = json.dumps({"ator": ator, "acao": acao, "recurso": recurso,
+                "em": datetime.now(timezone.utc).isoformat()}, sort_keys=True)
+            assinatura = hashlib.sha256((anterior + payload).encode()).hexdigest()
+            self._inserir(conexao, "INSERT INTO auditoria_eventos (payload, anterior, assinatura) VALUES (?, ?, ?)", (payload, anterior, assinatura))
+
+    def auditoria(self) -> dict:
+        with self._conectar() as conexao:
+            linhas = conexao.execute("SELECT * FROM auditoria_eventos ORDER BY id").fetchall()
+        anterior = ""
+        integra = True
+        for l in linhas:
+            integra = integra and l["anterior"] == anterior and hashlib.sha256((anterior + l["payload"]).encode()).hexdigest() == l["assinatura"]
+            anterior = l["assinatura"]
+        return {"integra": integra, "total": len(linhas), "eventos": [json.loads(l["payload"]) for l in linhas[-200:]], "metodo": "encadeamento SHA-256; nao e assinatura nem protege contra reescrita integral"}
 
     def listar(self) -> list[dict]:
         with self._conectar() as conexao:
@@ -1187,7 +1352,7 @@ class Banco:
         return registro
 
     def criar_usuario(
-        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str
+        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str, escopo_convite: bool = False
     ) -> dict:
         """E-mail duplicado deixa o IntegrityError propagar: a unicidade e
         garantia do banco, e a borda HTTP traduz em 409 -- o mesmo desenho da
@@ -1199,6 +1364,9 @@ class Banco:
                 "VALUES (?, ?, ?, ?, ?)",
                 (nome, email, senha_hash, papel, criado_em),
             )
+            if escopo_convite:
+                conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                    ("permissao", str(identificador), json.dumps({"canais": [], "exporta_ate": None, "origem_convite": True}), criado_em))
         return {
             "id": identificador,
             "nome": nome,

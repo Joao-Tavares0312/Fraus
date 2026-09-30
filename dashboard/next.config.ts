@@ -2,6 +2,8 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Permite validar em paralelo sem disputar o cache de quem desenvolve.
+  distDir: process.env.FRAUS_DIST_DIR ?? ".next",
   // A dashboard vive dentro do repositorio Python do Fraus. Sem fixar a raiz,
   // o Turbopack sobe a arvore procurando lockfile e reclama de um
   // package-lock.json fora do repositorio.

@@ -47,14 +47,15 @@ de devolver um número opaco.
 
 ## Operating Context
 
-- Atendimentos entram por importação de CSV numa raiz configurável, ou por
-  fontes cadastradas na tela de Integrações.
+- Atendimentos entram por importação, fontes de Integrações ou análise de
+  upload/conversa colada com a opção de salvar. A análise avulsa segue disponível.
 - O analista filtra por período e desce da visão agregada para a transcrição de
   um atendimento.
-- A API é local, **sem autenticação**, destinada a uso na máquina do analista.
-- Sete telas: Visão geral, Atendimentos (lista e transcrição), Modelo,
-  Configurações, Integrações, Grafo (a memória do fusor) e Analisar (upload
-  avulso, fora do banco e dos indicadores).
+- A API oferece autenticação JWT de usuários e credenciais técnicas. Produção
+  usa PostgreSQL/Supabase; SQLite permanece para desenvolvimento e testes.
+- Oito telas: Visão geral, Atendimentos, Modelo, Configurações, Integrações,
+  Grafo, Analisar e Operação. A última reúne radar, equipe e escala, jornadas,
+  investigações, replay, laboratório e acessos.
 
 ## Capabilities and Constraints
 
@@ -64,14 +65,21 @@ de devolver um número opaco.
 - Score e categoria são **sempre derivados no servidor**; a interface nunca
   recalcula nota.
 - **Sem LLM em runtime** — requisito do trabalho, não escolha de custo.
-- O modelo ainda não foi treinado: hoje roda um motor dublê determinístico, e a
-  tela Modelo mostra métricas em estado vazio em vez de inventar número.
+- Os artefatos treinados são obrigatórios no motor real. A gravação pela tela
+  Analisar recusa motores de demonstração. Métricas ausentes ficam em estado vazio.
 - O sinal de tempo é treinado em conversas sintéticas, porque nenhum corpus
   público de review PT-BR tem timestamps de diálogo.
-- **A classe neutra conta como detratora**, e o NPS sai pessimista por
-  construção — decisão de projeto, declarada.
-- `GET /serie-temporal` agrega a série no servidor; léxico por classe e tempo
-  mediano ainda são derivados das transcrições no cliente.
+- A classe neutra pura pontua 75 (peso 0,75 no fusor), vira nota 8 e entra
+  na faixa neutra padrão. O NPS permanece uma estimativa. O intervalo usa
+  AW(3,T), e o cartão respeita a decisão do servidor de ocultar o ponto
+  quando há menos de 30 atendimentos com sinal.
+- Série temporal, léxico por classe, tempos e notas são derivados no servidor.
+- Equipes têm proprietário, gestor e membro. Convites possuem validade de uma
+  a 168 horas, limite de usos e revogação. O token é guardado somente como hash.
+  Cadastro por link começa sem acesso; aceitar publica filiação e escopo inicial
+  na mesma transação. Política administrativa explícita vence o escopo da equipe.
+- Cenários de escala e laboratório são hipóteses visíveis, nunca medidas reais.
+  Antes/depois não demonstra causalidade; comparar modelos não os promove.
 
 ## Brand Commitments
 
@@ -94,9 +102,9 @@ de devolver um número opaco.
   contagens de anotação humanas originais.
 - Referências citáveis no repositório (Springer 2025, IJHCI 2025, Ekman 1992,
   Plutchik 1980, Virgílio).
-- **Ausências que não podem ser fabricadas:** não há cliente real, nenhuma
-  métrica de modelo treinado, nenhum atendimento de operação real. Todo dado
-  visível hoje é sintético e precisa continuar rotulado como tal.
+- A demonstração contém atendimentos sintéticos; uma instalação conectada recebe
+  dados enviados pelo operador. Não afirmar desempenho em clientes reais sem
+  validação independente. Intervalo amostral não mede erro do classificador.
 
 ## Product Principles
 

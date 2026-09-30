@@ -16,6 +16,7 @@ import {
   type LegacyRow,
 } from "@tanstack/react-table/legacy";
 import type { Categoria, Contestacao, Desfecho } from "@/lib/api";
+import { consultarOperacao } from "@/lib/operacao";
 import {
   EXPLICACAO_DESFECHO,
   ROTULO_CATEGORIA,
@@ -341,8 +342,16 @@ export function TabelaConversas({
     .getFilteredRowModel()
     .rows.map((linha) => linha.original);
 
-  const baixarCsv = () => {
+  const [exportando, setExportando] = useState(false);
+  const [erroExportacao, setErroExportacao] = useState<string | null>(null);
+  const baixarCsv = async () => {
     if (filtradas.length === 0) return;
+    if (exportando) return;
+    setExportando(true);
+    setErroExportacao(null);
+    const autorizacao = await consultarOperacao(`/exportacao/autorizar${sufixoDeQuery}`, "POST");
+    setExportando(false);
+    if (!autorizacao.ok) { setErroExportacao(autorizacao.erro); return; }
     const cabecalho = [
       "id",
       "inicio",
@@ -502,13 +511,14 @@ export function TabelaConversas({
           variant="outline"
           className="mb-1.5 ml-auto"
           onClick={baixarCsv}
-          disabled={filtradas.length === 0}
+          disabled={filtradas.length === 0 || exportando}
         >
           <Download aria-hidden />
           Exportar CSV
         </Button>
       </div>
 
+      {erroExportacao ? <p role="alert" className="px-5 py-3 text-sm text-destructive">{erroExportacao}</p> : null}
       {/* Rolagem horizontal PROPRIA: o `body` nunca rola na horizontal. O corpo
           fica em superficie SOLIDA -- e dado, e vidro atras de texto longo
           rolando e o pior lugar para translucidez. So o cabecalho fixo (via
