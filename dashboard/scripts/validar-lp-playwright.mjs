@@ -26,7 +26,7 @@ await mkdir(saida, { recursive: true });
 
 // Medidos na build de producao com folga para hash e metadados. Fontes entram
 // (Bricolage, Martian Mono, Inter), e por isso o teto nao e menor.
-const ORCAMENTO_BYTES = 1_400_000;
+const ORCAMENTO_BYTES = 700_000; // medido em build de producao: ~485 KB, com folga para hash e fonte
 const navegador = await chromium.launch({ channel: "chrome", headless: true });
 const resultados = [];
 
@@ -40,16 +40,7 @@ async function validar(nome, viewport, { movimentoReduzido = false } = {}) {
     }).observe({ type: "layout-shift", buffered: true });
   });
   const erros = [];
-  pagina.on("console", (m) => {
-    if (m.type() !== "error") return;
-    const texto = m.text();
-    // RUIDO CONHECIDO, e nao e da vitrine: com `prefers-reduced-motion` o
-    // `MarcaFraus` (components/shell) hidrata com `transition` diferente do
-    // servidor -- vem do `useReducedMotion` do Motion. Fica fora do gate ate
-    // a marca ser corrigida; qualquer OUTRO erro de console derruba o teste.
-    if (texto.includes("hydrated but some attributes") && texto.includes("MarcaFraus")) return;
-    erros.push(`console: ${texto}`);
-  });
+  pagina.on("console", (m) => { if (m.type() === "error") erros.push(`console: ${m.text()}`); });
   pagina.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
 
   const resposta = await pagina.goto("http://localhost:3000", { waitUntil: "networkidle", timeout: 60_000 });
