@@ -67,13 +67,41 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/fusor.py` | `NOMES_FEATURES` (39) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
 | `fraus/configuracao.py` | configuração vigente: padrão de fábrica no código, delta no banco |
-| `fraus/db.py` | SQLite, sem ORM |
+| `fraus/db.py` | PostgreSQL/Supabase em produção, SQLite local; lotes e metadados transacionais, sem ORM |
+| `fraus/operacao.py` | temas, simulação de escala e cópia de cenários; nenhuma promoção de modelo |
+| `fraus/api/rotas/operacao.py` | equipes, convites, jornadas, investigações, replay, laboratório, acessos e exportação |
+| `fraus/api/escopo.py` | `BancoComEscopo`: canais autorizados antes de listar, agregar, consultar ou gravar |
+| `fraus/api/rotas/analise.py` | análise avulsa e `POST /analisar/registrar`, que salva apenas o lote analisado |
 | `fraus/api/main.py` | FastAPI: `criar_app` (fábrica) e `app` (lazy, PEP 562) |
 | `fraus/evidencia.py` | evidência fraca (a cabeça tracejada) — observável, nunca probabilidade |
 | `fraus/deriva.py` | deriva de distribuição — a invariante 10 como alarme de runtime |
 | `dashboard/` | Next.js — ver `dashboard/DESIGN.md` |
 | `notebooks/` | treino no Colab (BERTimbau, depois fusor) |
-| `scripts/api_demo.py` | servidor de demonstração, motor dublê — **nunca em produção** |
+| `scripts/api_demo.py` | snapshot sintético temporário; motor real se houver artefatos, dublê explícito caso contrário — **nunca em produção** |
+| `scripts/validar_operacao_real.py` | QA com ONNX real e banco temporário ou PostgreSQL local de validação |
+
+## Estado operacional — 30/09/2026
+
+A PR #75 entrou na `main` (`ab1b5da`) e a API desse commit foi publicada em
+produção. A dashboard e a API são **dois deploys**: merge do front não prova
+publicação do back. Nesta entrega, a dashboard nova recebeu 404 da API antiga
+até o deploy separado de `fraus-api`. Conferir rotas pelo proxy faz parte do
+fechamento de uma alteração de contrato; `/saude` sozinho não basta.
+
+- Análise com gravação alimenta filtros, indicadores e grafo; as rotas avulsas
+  seguem sem gravar. IDs `analise:` deduplicam reenvios.
+- O NPS é inferido; o cartão respeita ponto nulo abaixo de 30 conversas com
+  sinal. AW(3,T) mede incerteza amostral, não erro do modelo.
+- Papel global (`dev`/`usuario`) e hierarquia da equipe
+  (`proprietario`/`gestor`/`membro`) são contratos diferentes. Convite não
+  promove para `dev`; papel ausente não libera controles de gestão.
+- `integrantes` e `meu_papel` vêm do servidor. Resposta antiga/incompleta não
+  pode quebrar a tela nem ser tratada como permissão administrativa.
+- Aceitar convite exige JWT. Login desativado no modo local não habilita o
+  aceite pela credencial técnica.
+
+Contratos, evidências e pendências de configuração estão em
+[Operação e produção](docs/notas/2026-09-30-operacao-producao.md).
 
 ## Comandos
 
@@ -81,14 +109,14 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 uv sync --extra dev --extra torch   # `uv sync` puro REMOVE o pytest e o torch (os dois são extras)
 uv sync --extra dev --extra onnx    # alternativa sem torch: FRAUS_BACKEND=onnx lê modelos-onnx/
 uv run pytest -q
-uv run python scripts/api_demo.py      # API de demonstração, sem modelo
-uv run uvicorn fraus.api.main:app      # API real — exige modelos/ treinado (FRAUS_BACKEND=torch, padrão)
-FRAUS_BACKEND=onnx uv run uvicorn fraus.api.main:app   # sem torch — exige modelos-onnx/ e o fusor de modelos/
+uv run python scripts/api_demo.py      # :8000, dados sintéticos temporários; nunca produção
+uv run python -m uvicorn fraus.api.main:app --port 8001 --reload --reload-dir fraus
+FRAUS_BACKEND=onnx uv run python -m uvicorn fraus.api.main:app --port 8001 --reload --reload-dir fraus
 cd dashboard && npm run dev            # SÓ dentro de dashboard/ — não há package.json na raiz
 
-uv sync --extra docs                   # gerador do site (extra opt-in, como o dev)
+uv sync --extra dev --extra torch --extra docs  # docs sem remover os extras do desenvolvimento Torch
 uv run python scripts/reunir_docs.py   # traz dashboard/DESIGN.md para docs/
-uv run mkdocs serve -a localhost:8001  # prévia local — 8001, a 8000 é da API
+uv run mkdocs serve -a localhost:8010  # não disputa :8000 (demo) nem :8001 (API real)
 uv run mkdocs build --strict           # build INTERNO (tudo, com codigo-fonte)
 uv run mkdocs build --strict --config-file mkdocs-publico.yml   # o que vai pro ar
 ```
@@ -182,5 +210,7 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
 - `docs/superpowers/plans/2026-08-13-dolos-implementacao.md` — plano de implementação
 - `docs/treinamento.md` — os dois notebooks e os artefatos
 - `dashboard/DESIGN.md` — sistema de design da interface
+- `docs/notas/2026-09-30-operacao-producao.md` — análise persistida, Operação, convites e evidências da publicação
+- `docs/deploy-vercel.md` — procedimento interno; dashboard e API publicam separadamente
 - `docs/conformidade.md` — EU AI Act: o que obriga e o que **proíbe** (não pontuar atendente)
-- `mkdocs.yml` — o site publicado, que lê o Markdown de `docs/` e as docstrings do Python
+- `mkdocs.yml` — site interno; `mkdocs-publico.yml` define o recorte publicado

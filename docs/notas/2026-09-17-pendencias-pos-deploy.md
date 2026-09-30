@@ -161,7 +161,7 @@ aproximar uma peça isolada.
 `scripts/medir_latencia_deploy.py` decompõe DNS, conexão+TLS, TTFB e
 transferência e preserva região e `Server-Timing`, sem publicar o hostname.
 
-## P1 — CI/CD da API — concluído em 28/09/2026
+## P1 — CI/CD da API — código entregue; configuração pendente em 30/09/2026
 
 O projeto `fraus-api` foi publicado manualmente. Confirmar e documentar a
 integração Git; se ela não existir, mudanças em `main` podem atualizar a
@@ -170,9 +170,16 @@ dashboard sem atualizar a API.
 Critério de aceite: preview e produção reproduzíveis a partir de commit, com
 checksum do modelo registrado e smoke test de `/saude` após o deploy.
 
-O workflow manual e protegido `api-deploy.yml` valida, constrói com CLI fixo,
+O workflow manual `api-deploy.yml` usa o ambiente `production-api`, valida, constrói com CLI fixo,
 publica o prebuilt e roda smoke finito. Secrets precisam ser configurados no
 ambiente `production-api`; criar o workflow não executa deploy.
+
+**Verificação de 30/09/2026:** o ambiente `production-api` estava sem os
+secrets do workflow, e o merge da PR #75 publicou a dashboard enquanto a API
+continuou na versão anterior. As rotas de Operação deram 404 até a publicação
+separada pela CLI autenticada. O código do fluxo existe, mas sua configuração
+e execução continuam pendentes. O deploy manual foi concluído e validado;
+ver [Operação e produção](2026-09-30-operacao-producao.md).
 
 ## P1 — observabilidade e regressão — concluído em 28/09/2026
 

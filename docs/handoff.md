@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 30/09/2026 (redesign Instrumento, cold start da API e a porta destrancada)
+# Handoff — Fraus, atualizado em 30/09/2026 (Operação, convites e API publicada)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -19,14 +19,39 @@ que uma pesquisa de NPS declarada não captura.
 propondo chamar uma API de LLM para resolver alguma coisa, parou — isso invalida
 o trabalho.
 
-Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
+Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 + Recharts no front (`dashboard/`).
 
 ---
 
 ## 2. Estado atual — 30/09/2026
 
-### Análise persistida e Operação — alterações locais desta sessão
+### Análise persistida e Operação — mescladas e publicadas
+
+**Entrega fechada:** PR #75, commit da `main` `ab1b5da`. Dashboard publicada
+após merge; API publicada separadamente no projeto `fraus-api`, deploy
+`dpl_2ghd1GGyN6ftxYvZ7pgPwnA3KyvF`, confirmado `Ready` e associado a
+`https://fraus-api.vercel.app`. A função construída tem **1,95 GB**; isso é
+tamanho do pacote, não consumo de RAM. O 404 de Operação em produção foi
+resolvido com esse deploy. [Registro completo](notas/2026-09-30-operacao-producao.md).
+
+Validação em 30/09/2026:
+
+- CI da `main`: **1.091 passed, 4 skipped, 1 deselected em cada dialeto**
+  (SQLite e PostgreSQL), execução `36781395898`; documentação também aprovada.
+- Dashboard: **163 testes em 20 arquivos**, TypeScript, lint dos arquivos
+  alterados e build aprovados.
+- Interface local `localhost:3001`: sete abas sem erro de JavaScript,
+  hierarquia carregada e salvar equipe retornando 200.
+- Produção: saúde com `motor=real`, login disponível; radar, equipes, jornadas,
+  investigações, acessos e simulação retornando 200 pelo proxy da dashboard.
+  OpenAPI confirmou edição de equipes, convites, aceite e gravação de análise.
+  Esse smoke não executou aceite/cadastro nem gravou conversa de teste em produção.
+
+**Pendências de configuração:** `production-api` estava sem os secrets do
+workflow manual. O deploy acima usou a CLI autenticada; não declarar CI/CD da
+API automático. Comparar fusores exige `FRAUS_FUSOR_CANDIDATO` configurado com
+artefato compatível; sua presença em produção não foi confirmada.
 
 - `POST /analisar/registrar` analisa com motor real, exige timestamps reais,
   confirma mapeamentos inferidos e grava o lote atomicamente. IDs canônicos no
@@ -107,9 +132,9 @@ Stack: FastAPI + SQLite + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 
 | | |
 |---|---|
-| Testes | **1.057 passed, 1 deselected** (Python) · **144** (front, 17 arquivos) — medido em 30/09/2026 na branch do redesign; ~1.060 e 148 na branch do cold start. Eram 909 e 77 em 14/09 |
+| Testes históricos das branches | **1.057 passed, 1 deselected** (Python) · **144** (front, 17 arquivos) na branch do redesign; ~1.060 e 148 na branch do cold start. A entrega final de Operação passou com **1.091** por dialeto e **163** no front; veja §2 |
 | Modelos | os três em `modelos/`, 1,3 GB, **fora do git**; fusor em dia (39 features, acurácia 0,950) |
-| API real | `uv run uvicorn fraus.api.main:app --port 8001` → confira `/saude`, tem de dizer `"motor":"real"` |
+| API real | `uv run python -m uvicorn fraus.api.main:app --port 8001 --reload --reload-dir fraus` → confira `/saude` e `/saude/prontidao` |
 | API de demonstração | `uv run python scripts/api_demo.py` → :8000. Motor real se houver pesos (senão dublê, dito no boot); banco = snapshot `dados_demo/fraus-demo.db`. **Não é produção**: banco descartável e sem chave |
 | Dashboard | `cd dashboard && npm run dev` (ou `npm run build && npx next start`) |
 
@@ -312,7 +337,10 @@ lista, ela para de ser lida.
 | `indicadores.py` | NPS, CSAT, contenção, série diária |
 | `credencial.py` | chave de fonte (`frs_`): gerar, hash, conferir em tempo constante |
 | `acesso.py` | chave de acesso (`fra_`) e a mestra — mesmo desenho do `credencial.py` |
-| `db.py` | SQLite. `_fonte()` remove `chave_hash` **na origem** |
+| `db.py` | PostgreSQL/Supabase e SQLite, lote transacional e metadados de operação. `_fonte()` remove `chave_hash` **na origem** |
+| `operacao.py` | temas, escala e cópias de cenário |
+| `api/rotas/operacao.py` | contratos de equipes, convites, jornadas, investigações, replay, laboratório e acessos |
+| `api/escopo.py` | canais autorizados antes de listar, consultar, agregar e gravar |
 | `sinais/texto.py` | BERTimbau de satisfação — **o único que pontua** |
 | `sinais/emocao.py` | 7 de Ekman + desprezo derivado (Plutchik, média geométrica) |
 | `sinais/ironia.py` | binária. **Ver pendência 1** |

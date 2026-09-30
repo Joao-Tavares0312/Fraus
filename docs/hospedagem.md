@@ -5,6 +5,9 @@
 > **Supabase Postgres** para o estado e **Oracle Object Storage** só para o ZIP
 > de modelos, baixado no build. O passo a passo está em
 > [Deploy gratuito na Vercel](deploy-vercel.md).
+> Operação, análise persistida e convites estão publicados desde 30/09/2026;
+> [contratos e validação](notas/2026-09-30-operacao-producao.md). Dashboard e
+> API publicam separadamente; o workflow manual da API ainda exige configuração.
 >
 > Essa API é serverless e **esfria**. O aquecimento em segundo plano e o
 > workflow `api-aquecer` reduzem o cold start, mas não o eliminam. O caminho
@@ -20,20 +23,20 @@ moram no mesmo lugar:
 | | precisa de | cabe na Vercel? |
 |---|---|---|
 | **dashboard** (Next.js) | CPU por milissegundos, nenhum estado | sim |
-| **API** (FastAPI + BERTimbau) | 1,8 GB de disco, RAM, banco que persiste | **não** |
+| **API atual** (FastAPI + ONNX) | pacote de 1,95 GB, RAM e Postgres externo | **sim**, com Large Functions; sujeita a cold start |
 
 ## O que mudou em 2026, e o que não mudou
 
 > **Atualizado em 11/09/2026.** Duas premissas desta página envelheceram, e uma
 > delas era o argumento principal. Os números abaixo foram medidos nesta data,
-> não estimados.
+> não estimados. Esta seção preserva a avaliação anterior à publicação em
+> ONNX de 17/09; a solução vigente está no aviso acima e no guia Vercel.
 
 **O teto da Vercel subiu.** O limite de função Python passou de 250 MB para
 **500 MB** em 24/02/2026, e há **Large Functions** (até 5 GB, em Fluid compute)
 ainda em beta. O argumento "só o torch já é o dobro do teto" deixou de valer.
 
-**E mesmo assim a API não vai para lá**, por três motivos que o tamanho nunca
-foi:
+**Na avaliação de 11/09, a API ainda não era publicada lá**, por três motivos:
 
 1. **RAM.** Medido: **1.056 MB de RSS** com os três modelos carregados e uma
    pontuação executada. Isso é o piso, não o pico sob carga.

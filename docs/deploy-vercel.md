@@ -16,6 +16,18 @@ URLs de produção:
 - <https://fraus-one.vercel.app>
 - <https://fraus-api.vercel.app>
 
+**Atualização de 30/09/2026:** a entrega de Operação, análise persistida e
+convites (PR #75, `main` em `ab1b5da`) também foi publicada na API. Deploy
+`dpl_2ghd1GGyN6ftxYvZ7pgPwnA3KyvF` em estado `Ready`, com alias de produção
+aplicado e pacote Python de **1,95 GB** em `iad1`. O tamanho é do pacote, não
+da memória em execução. Contratos e evidências estão em
+[Operação e produção](notas/2026-09-30-operacao-producao.md).
+
+**Os deploys são independentes.** O merge atualizou a dashboard, mas a API
+antiga ainda devolvia 404 nas novas rotas. Publicar `fraus-api` resolveu o
+descompasso. O workflow de API é manual e ainda depende da configuração de
+secrets descrita abaixo; não há publicação automática da API no merge.
+
 Não há modelo executando no navegador e não há chamada a serviço de IA externo
 durante a inferência. A função contém os grafos ONNX; o bucket é acessado apenas
 no build.
@@ -68,10 +80,10 @@ da função Vercel.
 ### 3. Inicialização compatível com serverless
 
 `api/index.py` expõe uma aplicação ASGI preguiçosa. Importar o módulo é barato;
-os classificadores são montados na primeira chamada. Isso resolveu o timeout de
-inicialização que ocorria quando três sessões ONNX eram criadas durante o
-import. A trava protege o primeiro carregamento concorrente para montar uma
-única aplicação real.
+a aplicação é montada na primeira chamada, protegida por trava. O motor é um
+`ProvedorDeMotor`: sua carga começa em segundo plano no boot e em `/saude`,
+sem criar as três sessões ONNX durante o import. `/saude/prontidao` afirma se
+a carga terminou; veja a seção de aquecimento abaixo.
 
 ### 4. Estado persistente no Supabase
 
@@ -118,6 +130,7 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 | `FRAUS_JWT_SEGREDO` | assinatura das sessões |
 | `FRAUS_CODIGO_CONVITE` | controla cadastro |
 | `FRAUS_ORIGENS` | origens públicas permitidas |
+| `FRAUS_FUSOR_CANDIDATO` | opcional: caminho de `.joblib` compatível para comparar fusores; não promove o candidato |
 
 ### Projeto `fraus`
 
@@ -165,9 +178,11 @@ precisa de um processo sempre ligado (ver `Dockerfile` e `docs/hospedagem.md`).
 
 ## Deploy reproduzível e smoke
 
-O workflow manual `.github/workflows/api-deploy.yml` usa ambiente protegido
+O workflow manual `.github/workflows/api-deploy.yml` usa o ambiente
 `production-api`, trava concorrência de promoções e fixa a versão do CLI da
-Vercel. Configure nele os secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+Vercel. Em 30/09/2026, esse ambiente ainda não tinha secrets nem regras de
+proteção configuradas. O código do workflow está entregue; sua operação
+depende dessa configuração. Configure os secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
 `VERCEL_PROJECT_ID`, `FRAUS_API_PUBLIC_URL` e `FRAUS_CHAVE_ACESSO`. O job:
 
 1. instala pelo `uv.lock` com `--frozen` e testa os contratos operacionais;
@@ -178,6 +193,29 @@ Vercel. Configure nele os secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
 O smoke tem repetição limitada para propagação do deploy e termina. Ele não é
 agendado e não deve virar ping contínuo para esconder cold start. URL e token
 entram apenas por secrets e nunca são incluídos na saída do script.
+
+### Publicação manual pelo CLI
+
+Na entrega de 30/09/2026, foi usado o CLI da Vercel já autenticado, em checkout
+isolado da `main`. A raiz do repositório é o projeto **`fraus-api`**; o
+diretório `dashboard/` pertence ao projeto **`fraus`**. Confira o projeto
+vinculado antes de publicar:
+
+```bash
+vercel link --yes --project fraus-api --scope wakefull
+vercel --prod --yes
+vercel inspect <url-do-deploy>
+```
+
+O CLI perdeu a conexão durante o acompanhamento desta publicação (`fetch
+failed`), mas o deploy terminou. Antes de repetir, consulte `inspect` e confira
+`Ready` e os aliases: erro de acompanhamento não prova falha de build.
+
+Depois, confira `/saude`, `/saude/prontidao`, `/openapi.json` e as rotas
+modificadas pelo proxy `/api/fraus`. Para esta entrega, radar, equipes,
+jornadas, problemas e acessos devem existir em `/operacao`; `PUT` de equipe,
+convites e `/analisar/registrar` devem aparecer no OpenAPI. Não use gravação de
+conversa ou aceite de convite como smoke em produção sem dados destinados a isso.
 
 ## Artefatos e rollback
 
@@ -214,7 +252,21 @@ API→Postgres aparece em `Server-Timing` como `espera_pool` e `consulta_db`.
 
 ## Verificação realizada
 
-Em 17/09/2026:
+Em **30/09/2026**, depois da publicação da API:
+
+- deploy `Ready`, alias `fraus-api.vercel.app` e pacote de **1,95 GB**;
+- pelo proxy da dashboard, radar, equipes, jornadas, problemas e acessos: **200**;
+- simulação de escala, somente leitura: **200**, com cálculo realizado;
+- `/saude`: motor real; `/auth/estado`: login disponível;
+- OpenAPI com edição de equipe, convites, aceite e análise persistida;
+- CI da `main`: **1.091 passed, 4 skipped, 1 deselected** por dialeto,
+  SQLite e PostgreSQL; dashboard com **163 testes em 20 arquivos** e build aprovado.
+
+Este smoke não criou contas, aceitou convites ou gravou conversas em produção.
+Replay e cenários foram validados com motor real em bancos isolados, não neste
+smoke. A configuração do fusor candidato em produção não foi confirmada.
+
+Histórico de **17/09/2026**:
 
 - função Python construída com **1,46 GB**;
 - `GET /saude` direto: `status=ok`, `motor=real`;
@@ -239,6 +291,7 @@ Estão concluídas e não devem voltar como pendência aberta:
 
 ## Limites que continuam
 
+- Configurar os secrets do workflow manual de API; o merge sozinho não o executa.
 - O primeiro acesso após a função esfriar é mais lento.
 - As cotas gratuitas podem pausar ou limitar o serviço; gratuidade não é SLA.
 - Uma nova versão dos modelos exige gerar ZIP, checksum e atualizar as duas

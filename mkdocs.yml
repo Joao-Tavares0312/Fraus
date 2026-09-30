@@ -111,6 +111,7 @@ nav:
   - Integração com o Tars: integracao-tars.md
   - Estado e pendências: handoff.md
   - Operação:
+      - Contratos e validação: notas/2026-09-30-operacao-producao.md
       - Hospedagem: hospedagem.md
       - Deploy na Vercel: deploy-vercel.md
       - Deploy no Cloud Run: cloud-run.md
