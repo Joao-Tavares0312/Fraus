@@ -381,6 +381,13 @@ def criar_app_padrao() -> FastAPI:
     if destrancada is not None:
         print(destrancada)
 
+    # AQUECIMENTO NO BOOT: em serverless cada instancia nova comecava `frio` e
+    # so carregava os tres grafos ONNX dentro da primeira predicao do usuario.
+    # Disparar a carga em segundo plano aqui tira esse custo do caminho da
+    # requisicao. `FRAUS_AQUECER=0` desliga (ex.: depurar so as rotas leves).
+    if os.environ.get("FRAUS_AQUECER", "1") != "0":
+        motor.aquecer()
+
     return criar_app(
         banco=banco,
         motor=motor,

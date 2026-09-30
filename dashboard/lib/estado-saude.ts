@@ -25,3 +25,27 @@ export function classificarSaude(resultado: Resultado<Saude>): EstadoDeSaude {
   // `estado_motor` ausente preserva compatibilidade com uma API anterior.
   return "no-ar";
 }
+
+/**
+ * Impede o rodape de OSCILAR entre "no ar" e "aquecendo".
+ *
+ * Em serverless a API tem varias instancias, cada uma com o proprio motor: a
+ * sonda de saude cai numa quente, depois numa fria recem-criada, e o estado
+ * pulava de um lado para o outro. Uma instancia fria NAO e uma regressao da
+ * API -- quem ja viu o motor pronto mantem "no-ar". So o que e realmente pior
+ * (erro do motor, dublê, fora do ar) rebaixa.
+ */
+export function suavizarSaude(
+  anterior: EstadoDeSaude,
+  novo: EstadoDeSaude,
+): EstadoDeSaude {
+  if (anterior === "no-ar" && (novo === "frio" || novo === "aquecendo")) {
+    return "no-ar";
+  }
+  return novo;
+}
+
+/** Enquanto a API nao esta pronta, consulta rapido; depois, com calma. */
+export function intervaloDeSaudeMs(estado: EstadoDeSaude): number {
+  return estado === "no-ar" ? 20_000 : 4_000;
+}

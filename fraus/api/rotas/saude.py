@@ -8,7 +8,8 @@ so as duas primeiras eram verificaveis daqui.
 from fastapi import APIRouter, Depends, HTTPException
 
 from fraus.api.contexto import Contexto, obter_contexto
-from fraus.api.motor_preguicoso import estado_do_motor, motor_e_real
+from fraus.api.motor_preguicoso import (ProvedorDeMotor, estado_do_motor,
+                                        motor_e_real)
 
 router = APIRouter()
 
@@ -42,6 +43,10 @@ def saude(ctx: Contexto = Depends(obter_contexto)) -> dict:
     para este lado custa uma etiqueta a mais na tela; errar para o outro
     apresenta invencao como medicao.
     """
+    # Uma sonda de saude ja basta para uma instancia fria comecar a se
+    # aquecer: `aquecer` volta na hora e nao bloqueia a resposta.
+    if isinstance(ctx.motor, ProvedorDeMotor):
+        ctx.motor.aquecer()
     return {
         "status": "ok",
         "motor": "real" if motor_e_real(ctx.motor) else "duble",

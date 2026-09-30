@@ -7,7 +7,7 @@ fallback para motor sintetico ou parcialmente carregado.
 """
 
 from collections.abc import Callable
-from threading import Condition
+from threading import Condition, Thread
 from typing import Literal
 
 from fraus.api.observabilidade import medir
@@ -31,6 +31,29 @@ class ProvedorDeMotor:
         """Retrato instantaneo; consultar nunca inicia a carga."""
         with self._condicao:
             return self._estado
+
+    def aquecer(self) -> bool:
+        """Comeca a carga em segundo plano e volta na hora.
+
+        Idempotente: so dispara quando o estado e ``frio``. Existe porque o
+        motor so carregava na primeira PREDICAO, entao cada instancia serverless
+        nova mostrava ``frio`` ate alguem pagar a carga dentro da requisicao.
+        Uma falha fica memorizada no estado (``erro``) como sempre, sem
+        fallback; a thread nunca propaga excecao para quem chamou.
+
+        Devolve se esta chamada iniciou a carga.
+        """
+        with self._condicao:
+            if self._estado != "frio":
+                return False
+        Thread(target=self._carregar_calado, name="aquecer-motor", daemon=True).start()
+        return True
+
+    def _carregar_calado(self) -> None:
+        try:
+            self.carregar()
+        except Exception:  # noqa: BLE001 - o erro ja ficou memorizado no estado
+            pass
 
     def carregar(self) -> Motor:
         """Entrega o motor ou propaga a falha original, sem nova tentativa."""
