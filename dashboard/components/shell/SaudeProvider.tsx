@@ -5,11 +5,14 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { obterSaude } from "@/lib/api";
 import {
   classificarSaude,
+  intervaloDeSaudeMs,
+  suavizarSaude,
   type EstadoDeSaude,
 } from "@/lib/estado-saude";
 
@@ -21,8 +24,6 @@ import {
  * por um dia inteiro sobre números inventados.
  */
 export type { EstadoDeSaude } from "@/lib/estado-saude";
-
-const INTERVALO_MS = 20_000;
 
 type Contexto = {
   estado: EstadoDeSaude;
@@ -45,29 +46,42 @@ const SaudeContexto = createContext<Contexto | null>(null);
  */
 export function SaudeProvider({ children }: { children: React.ReactNode }) {
   const [estado, setEstado] = useState<EstadoDeSaude>("verificando");
+  // Espelho do estado para quem roda fora do render (o laco de consulta e o
+  // `reconsultar`): ler `estado` de dentro de um closure velho reintroduziria a
+  // oscilacao que `suavizarSaude` existe para impedir.
+  const estadoRef = useRef<EstadoDeSaude>("verificando");
+  const aplicar = useCallback((resultado: Parameters<typeof classificarSaude>[0]) => {
+    const proximo = suavizarSaude(estadoRef.current, classificarSaude(resultado));
+    estadoRef.current = proximo;
+    setEstado(proximo);
+    return proximo;
+  }, []);
 
   const reconsultar = useCallback(async () => {
     const resultado = await obterSaude();
-    setEstado(classificarSaude(resultado));
+    aplicar(resultado);
     return resultado.ok;
-  }, []);
+  }, [aplicar]);
 
   useEffect(() => {
     let vivo = true;
+    let relogio: ReturnType<typeof setTimeout>;
 
+    // setTimeout encadeado, e nao setInterval: o intervalo depende do estado
+    // (rapido enquanto aquece, devagar quando pronto).
     const verificar = async () => {
       const resultado = await obterSaude();
       if (!vivo) return;
-      setEstado(classificarSaude(resultado));
+      const proximo = aplicar(resultado);
+      relogio = setTimeout(verificar, intervaloDeSaudeMs(proximo));
     };
 
     verificar();
-    const relogio = setInterval(verificar, INTERVALO_MS);
     return () => {
       vivo = false;
-      clearInterval(relogio);
+      clearTimeout(relogio);
     };
-  }, []);
+  }, [aplicar]);
 
   return (
     <SaudeContexto.Provider value={{ estado, reconsultar }}>

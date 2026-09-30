@@ -1,0 +1,48 @@
+name: api-aquecer
+
+# Mantem a API da Vercel com o motor carregado.
+#
+# O PROBLEMA: em serverless a instancia esfria depois de alguns minutos sem
+# trafego, e a proxima visita paga o cold start (imports + tres sessoes ONNX).
+# O `GET /saude` agora dispara o aquecimento em segundo plano, entao uma sonda
+# periodica basta para a instancia estar pronta antes de o usuario chegar.
+#
+# LIMITES DECLARADOS: workflow agendado so roda a partir da branch padrao, o
+# GitHub pode atrasar execucoes e a Vercel nao garante que sonda e usuario caiam
+# na MESMA instancia. Isto reduz o cold start, nao o elimina.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-aquecer
+  cancel-in-progress: true
+
+jobs:
+  sondar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URL_DA_API: ${{ secrets.FRAUS_API_PUBLIC_URL || 'https://fraus-api.vercel.app' }}
+    steps:
+      - name: Acordar a instancia e aquecer o motor
+        run: |
+          for tentativa in 1 2 3; do
+            curl -fsS --max-time 60 "$URL_DA_API/saude" && break
+            echo "tentativa $tentativa falhou"; sleep 5
+          done
+      - name: Esperar o motor ficar pronto (ate 2 min)
+        run: |
+          for i in $(seq 1 24); do
+            if curl -fsS --max-time 30 "$URL_DA_API/saude/prontidao" >/dev/null; then
+              echo "motor pronto"; exit 0
+            fi
+            sleep 5
+          done
+          echo "motor nao ficou pronto em 2 min" >&2
+          exit 1

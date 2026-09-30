@@ -136,6 +136,33 @@ pareça saudável usando SQLite efêmero e perca conversas, chaves e configuraç
 num cold start. A chave mestra também continua obrigatória no ambiente, portanto
 o deploy não depende da escrita de `.fraus-chaves.txt`.
 
+## Cold start e motor aquecendo
+
+Em serverless cada instância tem o próprio motor. Até 30/09/2026 o motor só
+carregava na primeira **predição**, então `/saude` respondia `frio` por tempo
+indeterminado e o usuário pagava a abertura dos três grafos ONNX dentro da
+requisição. Com várias instâncias, a sonda caía numa quente e depois numa fria,
+e o rodapé do dashboard oscilava entre "no ar" e "motor aquecendo".
+
+O que foi feito, em três camadas:
+
+1. **Aquecer sem bloquear.** `ProvedorDeMotor.aquecer()` inicia a carga numa
+   thread e volta na hora (idempotente; falha fica memorizada como `erro`, sem
+   fallback). Ele é chamado no boot de `criar_app_padrao` (desligue com
+   `FRAUS_AQUECER=0`) e em cada `GET /saude`, então qualquer sonda basta para
+   uma instância fria começar a carregar. `/saude/prontidao` continua sendo a
+   afirmação forte: 503 até o motor estar pronto.
+2. **Manter quente.** `.github/workflows/api-aquecer.yml` sonda `/saude` e
+   espera `/saude/prontidao` a cada 5 minutos. Roda só a partir da branch padrão
+   e usa o secret `FRAUS_API_PUBLIC_URL` (ou `https://fraus-api.vercel.app`).
+3. **Não oscilar no dashboard.** `suavizarSaude` não deixa "no ar" ser
+   rebaixado por uma instância fria; enquanto a API não está pronta o polling é
+   de 4 s, depois 20 s.
+
+Limite declarado: a Vercel não garante que a sonda e o usuário caiam na mesma
+instância. Isto reduz o cold start, não o elimina. Para eliminá-lo de vez, a API
+precisa de um processo sempre ligado (ver `Dockerfile` e `docs/hospedagem.md`).
+
 ## Deploy reproduzível e smoke
 
 O workflow manual `.github/workflows/api-deploy.yml` usa ambiente protegido
