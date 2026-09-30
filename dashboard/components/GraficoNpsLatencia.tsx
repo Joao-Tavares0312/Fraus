@@ -95,6 +95,11 @@ function CursorDeLeitura({ x, y, width, height, points }: CursorProps) {
  */
 export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
   const [verTabela, setVerTabela] = useState(false);
+  // Numa tela estreita os dois TITULOS de eixo (rotacionados) comem quase 40% da
+  // largura do grafico e sobra um traco de plotagem. Abaixo de 520px o titulo
+  // vai para a LEGENDA -- onde o dominio de cada eixo continua escrito -- e o
+  // eixo fica so com os numeros. Nada e removido: so muda de lugar.
+  const [estreito, setEstreito] = useState(false);
   const idTabela = useId();
   const roteador = useRouter();
 
@@ -166,10 +171,14 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
               perder legibilidade por causa de um efeito de superficie. */}
           <div className="rounded-md bg-card p-3">
             <div className="h-[300px] sm:h-[340px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                onResize={(largura) => setEstreito(largura < 520)}
+              >
                 <ComposedChart
                   data={serie}
-                  margin={{ top: 8, right: 18, bottom: 22, left: 6 }}
+                  margin={{ top: 8, right: estreito ? 8 : 18, bottom: 22, left: estreito ? 0 : 6 }}
                   onClick={abrirDia}
                   className="cursor-pointer"
                 >
@@ -207,11 +216,11 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                     yAxisId="nps"
                     domain={[-100, 100]}
                     ticks={[-100, -50, 0, 50, 100]}
-                    width={52}
+                    width={estreito ? 34 : 52}
                     tick={{ fill: "var(--foreground)", fontSize: 11 }}
                     tickLine={false}
                     axisLine={false}
-                    label={{
+                    label={estreito ? undefined : {
                       value: "NPS inferido (−100 a +100)",
                       angle: -90,
                       position: "insideLeft",
@@ -227,12 +236,12 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                     yAxisId="latencia"
                     orientation="right"
                     domain={[0, topoLatencia]}
-                    width={58}
+                    width={estreito ? 40 : 58}
                     tick={{ fill: "var(--medido-texto)", fontSize: 11 }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(valor: number) => `${Math.round(valor)}s`}
-                    label={{
+                    label={estreito ? undefined : {
                       value: "Latência mediana (a partir de 0 s)",
                       angle: 90,
                       position: "insideRight",
@@ -299,7 +308,7 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
               </ResponsiveContainer>
             </div>
           </div>
-          <FaixaDePresenca serie={serie} />
+          <FaixaDePresenca serie={serie} estreito={estreito} />
         </div>
       )}
     </div>
@@ -321,7 +330,7 @@ function Legenda() {
           />
         </svg>
         <span className="text-foreground">NPS inferido</span>
-        <span>(estimativa, linha contínua)</span>
+        <span>(estimativa, linha contínua, eixo de −100 a +100)</span>
       </li>
       <li className="flex items-center gap-2 text-xs text-muted-foreground">
         <svg width="22" height="10" aria-hidden>
@@ -337,7 +346,7 @@ function Legenda() {
           />
         </svg>
         <span className="text-medido-texto">Latência mediana</span>
-        <span>(observada, barras)</span>
+        <span>(observada, barras, eixo a partir de 0 s)</span>
       </li>
     </ul>
   );
@@ -446,13 +455,27 @@ function TabelaDaSerie({ id, serie }: { id: string; serie: PontoSerie[] }) {
  * Os recuos laterais espelham as larguras dos dois eixos Y do grafico para que
  * cada marcador caia sob o seu dia.
  */
-function FaixaDePresenca({ serie }: { serie: PontoSerie[] }) {
+function FaixaDePresenca({
+  serie,
+  estreito,
+}: {
+  serie: PontoSerie[];
+  estreito: boolean;
+}) {
   if (serie.length === 0) return null;
 
   const semSinal = serie.filter((p) => p.atendimentos > 0 && p.comScore === 0);
 
   return (
-    <div className="mt-1 pl-[58px] pr-[76px]">
+    <div
+      className="mt-1"
+      // Os recuos espelham a largura dos dois eixos (mais a margem), para cada
+      // marcador cair sob o seu dia: 52+6 / 58+18 no largo, 34+0 / 40+8 no estreito.
+      style={{
+        paddingLeft: estreito ? 34 : 58,
+        paddingRight: estreito ? 48 : 76,
+      }}
+    >
       <div className="flex items-center" role="img"
         aria-label={
           semSinal.length === 0
