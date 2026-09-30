@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AparatoDaTela, ProvedorDeAparato } from "@/components/AparatoDaTela";
+import { TelemetriaDaRota } from "@/components/instrumento/TelemetriaDaRota";
 import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
@@ -79,6 +80,10 @@ export default async function DashboardLayout({
               <NavegacaoLateral papel={papel} usuario={usuario} />
             </Suspense>
             <SidebarInset id="conteudo" className="min-w-0">
+              {/* A TELEMETRIA: a faixa de 34px que assina toda tela do
+                  Instrumento ("FRAUS / 01_VISAO GERAL" e o regime do produto).
+                  Sticky no topo; o cabecalho de pagina cola logo abaixo. */}
+              <TelemetriaDaRota />
               {/* Acima do conteudo, em TODA tela: sem a API todas quebram
                   igual, e a instrucao tem que estar onde o Joao ja esta. */}
               <AvisoApiFora />

@@ -29,7 +29,9 @@ export function CabecalhoPagina({
   acoes?: ReactNode;
 }) {
   return (
-    <header className="vidro-fino vidro-faixa sticky top-0 z-20">
+    // `top-[34px]`: cola logo abaixo da faixa de telemetria (34px, sticky no
+    // topo em `TelemetriaDaRota`), e nao sobre ela.
+    <header className="vidro-fino vidro-faixa sticky top-[34px] z-20">
       <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <SidebarTrigger className="sem-impressao -ml-1 mt-0.5 shrink-0" />
@@ -38,7 +40,7 @@ export function CabecalhoPagina({
               de uma ou duas palavras ao lado de "Todos os atendimentos". Com
               base, quando os dois nao cabem, as acoes quebram para baixo. */}
           <div className="min-w-0 flex-1 basis-64">
-            <h1 className="text-lg leading-tight font-semibold tracking-tight text-foreground">
+            <h1 className="titulo-instrumento text-lg leading-tight text-foreground">
               {titulo}
             </h1>
             {subtitulo ? (
