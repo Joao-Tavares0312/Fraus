@@ -1,31 +1,31 @@
 /**
  * OS DOIS TEMAS.
  *
- * O "espaco profundo" e o PADRAO DE FABRICA desde 01/09/2026, e por isso ele
- * mora no `:root` do globals.css e nao num bloco proprio: tema padrao e a
- * AUSENCIA de classe (ver `classeDoTema`). A "chuva de neon" e a opcao.
+ * O "instrumento" e o PADRAO DE FABRICA desde 30/09/2026, e por isso ele mora
+ * no `:root` do globals.css e nao num bloco proprio: tema padrao e a AUSENCIA
+ * de classe (ver `classeDoTema`). A "chuva de neon" e a opcao.
  *
- * O GRAFITE FOI DESCARTADO na mesma data, por decisao do dono do projeto. Ele
- * era o padrao desde o inicio; o que ele tinha de melhor -- o papel pautado e o
- * ouro fosco da marca -- foi absorvido pelo espaco em vez de ser jogado fora.
- * Quem tiver "grafite" gravado no storage cai no padrao sozinho: `temaValido`
- * so aceita o que existe, entao a migracao nao precisou de codigo.
+ * O "ESPACO PROFUNDO" (01/09/2026) SAIU do padrao para o instrumento, por
+ * decisao do dono do projeto, e o grafite tinha saido antes dele. Quem tiver
+ * "espacial" ou "grafite" gravado no storage cai no padrao sozinho:
+ * `temaValido` so aceita o que existe, entao a migracao nao precisou de codigo.
  *
  * O QUE MUDA E O QUE NAO MUDA: o tema troca o CHASSI (fundo, superficie,
- * borda, quina do vidro, luz do atelie). A camada de DADO nao entra aqui --
- * `--dito` continua ambar e `--medido` continua azul nos dois, porque o
- * encoding e compromisso do PRODUCT.md e nao pele. Ver globals.css.
+ * borda, quina do vidro, luz do atelie). O ENCODING nao entra aqui --
+ * `--dito` continua ambar e `--medido` continua azul nos dois, porque
+ * ambar = dito / azul = medido e compromisso do PRODUCT.md e nao pele. Ver
+ * globals.css.
  *
  * A classe vive no `<html>` e nao num provider de contexto: quem precisa saber
  * o tema e o CSS, e o CSS ja sabe ler classe. Estado em React aqui so criaria
  * uma segunda fonte de verdade para uma coisa que o navegador ja guarda.
  */
 
-export const TEMAS = ["espacial", "chuva"] as const;
+export const TEMAS = ["instrumento", "chuva"] as const;
 
 export type Tema = (typeof TEMAS)[number];
 
-export const TEMA_PADRAO: Tema = "espacial";
+export const TEMA_PADRAO: Tema = "instrumento";
 
 /** Onde a escolha sobrevive ao refresh. */
 export const CHAVE_TEMA = "fraus-tema";
@@ -37,7 +37,8 @@ export const CHAVE_TEMA = "fraus-tema";
  *
  * Escrito contra `TEMA_PADRAO` e nao contra o nome literal do tema: foi
  * exatamente essa indirecao que permitiu trocar o padrao de grafite para
- * espacial em 01/09/2026 sem tocar nesta funcao.
+ * espacial em 01/09/2026, e de espacial para instrumento em 30/09/2026, sem
+ * tocar nesta funcao.
  */
 export function classeDoTema(tema: Tema): string | null {
   return tema === TEMA_PADRAO ? null : `tema-${tema}`;

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 /**
  * O DESIGN.md §4 proíbe fonte de display em rótulo e dado, e a vitrine é a
  * única excecao nomeada. Este teste le o globals.css de verdade: se alguem
- * ligar a Mona Sans no corpo, num rotulo ou num dado, ele cai.
+ * ligar a Bricolage Grotesque no corpo, num rotulo ou num dado, ele cai.
  */
 const CSS = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 
@@ -29,8 +29,8 @@ function regras(): Array<{ seletor: string; corpo: string }> {
 }
 
 describe("a familia de display", () => {
-  it("define --fonte-mona", () => {
-    expect(CSS).toContain("--fonte-mona");
+  it("define --fonte-bricolage", () => {
+    expect(CSS).toContain("--fonte-bricolage");
   });
 
   it("governa .display-vitrine e .titulo-vitrine", () => {
@@ -43,14 +43,14 @@ describe("a familia de display", () => {
 
   it("nao vaza para nenhuma outra regra", () => {
     // `:root` fica de fora do alvo: e la que `--fonte-display` e DEFINIDA em
-    // termos de `--fonte-mona` (linha 243 do globals.css), e isso e a
-    // declaracao do token, nao um vazamento para uma regra de estilo.
+    // termos de `--fonte-bricolage`, e isso e a declaracao do token, nao um
+    // vazamento para uma regra de estilo.
     const vazamentos = regras()
       .filter((r) => !r.seletor.includes(":root"))
       .filter(
         (r) =>
           r.corpo.includes("var(--fonte-display)") ||
-          r.corpo.includes("var(--fonte-mona)"),
+          r.corpo.includes("var(--fonte-bricolage)"),
       )
       .map((r) => r.seletor)
       .filter((s) => s !== ".display-vitrine" && s !== ".titulo-vitrine");
@@ -59,7 +59,7 @@ describe("a familia de display", () => {
 
   it("nao troca a sans nem a mono do resto do produto", () => {
     expect(CSS).toContain("--fonte-sans: var(--fonte-inter)");
-    expect(CSS).toContain("--fonte-mono: var(--fonte-jetbrains)");
+    expect(CSS).toContain("--fonte-mono: var(--fonte-martian)");
   });
 });
 

@@ -39,7 +39,7 @@ const Particles = lazy(() => import("@/components/Particles"));
 const PALETA: Record<Tema, string[]> = {
   // Magnitude e temperatura de estrela de verdade: brancas-azuladas dominam,
   // e a dourada e a mesma estrela que ilumina o ateliê do tema.
-  espacial: ["#eaf2ff", "#a9c6ff", "#f2d9a8"],
+  instrumento: ["#eaf2ff", "#a9c6ff", "#f2d9a8"],
   // O par canonico do vaporwave, o mesmo da quina do vidro deste tema.
   chuva: ["#7fe6ff", "#ff8ad4", "#e6d9ff"],
 };
@@ -122,7 +122,7 @@ export function CampoDeParticulas() {
       }}
     >
       <Suspense fallback={null}><Particles
-        particleColors={PALETA[pathname === "/" ? "espacial" : tema]}
+        particleColors={PALETA[pathname === "/" ? "instrumento" : tema]}
         // Contido de proposito. O componente aceita muito mais, e muito mais
         // vira nevoeiro: o hero tem TEXTO por cima, e densidade alta apaga a
         // frase que a secao inteira existe para entregar.

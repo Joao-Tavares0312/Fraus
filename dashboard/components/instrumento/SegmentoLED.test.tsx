@@ -1,6 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { celulaDe, celulasDoValor, totalDeAcesos } from "../../lib/segmentos";
+
+/** Segmentos acesos de um digito; qualquer outra celula nao tem nenhum. */
+const acesosDe = (caractere: string) => {
+  const c = celulaDe(caractere);
+  return c.tipo === "digito" ? c.acesos : [];
+};
 import { SegmentoLED } from "./SegmentoLED";
 
 /**
@@ -21,8 +27,8 @@ describe("celulaDe", () => {
     expect(celulaDe("1")).toEqual({ tipo: "digito", acesos: ["b", "c"] });
     expect(celulaDe("7")).toEqual({ tipo: "digito", acesos: ["a", "b", "c"] });
     expect(celulaDe("8")).toMatchObject({ tipo: "digito" });
-    expect((celulaDe("8") as { acesos: string[] }).acesos).toHaveLength(7);
-    expect((celulaDe("0") as { acesos: string[] }).acesos).not.toContain("g");
+    expect(acesosDe("8")).toHaveLength(7);
+    expect(acesosDe("0")).not.toContain("g");
   });
 
   it("o hifen e so o segmento do meio", () => {

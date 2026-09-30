@@ -1,53 +1,39 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
-import localFont from "next/font/local";
+import { Bricolage_Grotesque, Inter, Martian_Mono } from "next/font/google";
 import "./globals.css";
 import { Atelier } from "@/components/shell/Atelier";
 import { Movimento } from "@/components/shell/Movimento";
 import { SCRIPT_ANTI_PISCADA } from "@/lib/tema";
 
 /**
- * Etapa 1 do Pauta evoluído (spec 2026-08-31): Inter no lugar da sans de
- * sistema, JetBrains Mono nos dados. `next/font` baixa os arquivos NO BUILD e
- * os serve do próprio deploy — nenhuma chamada ao Google em runtime, que é a
- * regra da casa. As variáveis entram no `<html>` e o globals.css as põe na
- * frente da pilha com fallback de sistema.
+ * As TRES FAMILIAS do Instrumento (spec 2026-09-30). `next/font` baixa os
+ * arquivos NO BUILD e os serve do proprio deploy -- nenhuma chamada ao Google
+ * em runtime, que e a regra da casa. As variaveis entram no `<html>` e o
+ * globals.css as poe na frente de cada pilha, com fallback de sistema.
+ *
+ *  - Martian Mono: rotulo, nav, telemetria, dado e titulo de tela
+ *    (`--fonte-mono`). E o que faz a interface parecer instrumento.
+ *  - Inter: a PROSA (`--fonte-sans`) -- transcricao, explicacao, aparato --,
+ *    onde mono cansa em texto corrido.
+ *  - Bricolage Grotesque: a display da VITRINE e so dela (`--fonte-display`,
+ *    `.display-vitrine` e `.titulo-vitrine`). DESIGN.md §4: fonte de display
+ *    em rotulo e dado continua proibida; `lib/tipografia.test.ts` barra o
+ *    vazamento pelo CSS. Ela substituiu a Mona Sans em 30/09/2026.
  */
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
   variable: "--fonte-inter",
   display: "swap",
 });
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--fonte-jetbrains",
+const martian = Martian_Mono({
+  subsets: ["latin", "latin-ext"],
+  variable: "--fonte-martian",
   display: "swap",
 });
-
-/**
- * A DISPLAY DA VITRINE, e só dela — DESIGN.md §4. Mona Sans variável, a mesma
- * da landonorris.com, escolhida em 04/09/2026 pelo diagnóstico da nota de
- * reformulação: as seis referências usam grotescas de autoria, e a Inter
- * carrega a memória de "aplicação moderna bem-feita".
- *
- * O corte usado é `MonaSansVF[opsz,wght].woff2` (eixos `opsz` e `wght`), não
- * o corte com `wdth` do mesmo release: nenhuma regra desta tarefa aciona o
- * eixo de largura (`.display-vitrine` e `.titulo-vitrine` só definem
- * `font-family`, e a primeira trava `font-weight: 500`), então o corte com
- * `wdth` seria 2,2x o tamanho por um eixo morto. O `opsz`, ao contrário, serve
- * ao caso: é uma display em corpo grande, e o ajuste óptico automático é
- * ganho de graça. O nome do arquivo não foi alterado — ele anuncia os eixos
- * que de fato tem.
- *
- * `next/font/local` a partir do arquivo VERSIONADO no repo, e não
- * `next/font/google`: o binário está em app/fontes/, servido do próprio
- * deploy. Nenhuma chamada de rede, nem no build nem em runtime.
- */
-const mona = localFont({
-  src: "./fontes/MonaSansVF[opsz,wght].woff2",
-  variable: "--fonte-mona",
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin", "latin-ext"],
+  variable: "--fonte-bricolage",
   display: "swap",
-  weight: "200 900",
 });
 
 const DESCRICAO =
@@ -96,7 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // intencional e e o ponto do script.
     <html
       lang="pt-BR"
-      className={`dark ${inter.variable} ${jetbrains.variable} ${mona.variable}`}
+      className={`dark ${inter.variable} ${martian.variable} ${bricolage.variable}`}
       suppressHydrationWarning
     >
       <head>
