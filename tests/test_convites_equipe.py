@@ -26,6 +26,30 @@ def registrar(cli, token, email="nova@empresa.com"):
     return r.json(), {"Authorization": "Bearer " + entrada.json()["token"]}
 
 
+def test_contrato_de_hierarquia_na_criacao_listagem_edicao_e_promocao(ambiente):
+    cli, banco, h, u = ambiente
+    pedido = {"nome": "Suporte", "membros": [u["usuario"]], "canais": ["chat"]}
+    criada = cli.post("/operacao/equipes", headers=h["dev"], json=pedido).json()
+    eid = criada["id"]
+    assert criada["meu_papel"] == "proprietario"
+    assert {m["id"] for m in criada["integrantes"]} == {u["dev"], u["usuario"]}
+    assert cli.get("/operacao/equipes", headers=h["dev"]).json()["equipes"][0] == criada
+    editada = cli.put(f"/operacao/equipes/{eid}", headers=h["dev"], json={**pedido, "nome": "Suporte novo", "membros": criada["membros"]}).json()
+    assert editada["integrantes"] == criada["integrantes"]
+    promovida = cli.patch(f"/operacao/equipes/{eid}/membros/{u['usuario']}", headers=h["dev"], json={"papel": "gestor"}).json()
+    assert next(m for m in promovida["integrantes"] if m["id"] == u["usuario"])["papel"] == "gestor"
+    propria = cli.get("/operacao/equipes", headers=h["usuario"]).json()["equipes"][0]
+    assert propria["meu_papel"] == "gestor"
+    assert propria["integrantes"] == promovida["integrantes"]
+    # Uma equipe gravada antes da hierarquia recebe os campos na leitura;
+    # nomes e papeis nao sao inventados pelo navegador.
+    banco.guardar_documento("equipe", "antiga", {**pedido, "competencias": []})
+    antiga = next(e for e in cli.get("/operacao/equipes", headers=h["dev"]).json()["equipes"] if e["id"] == "antiga")
+    assert antiga["meu_papel"] == "proprietario"
+    assert antiga["integrantes"][0]["id"] == u["usuario"]
+    assert antiga["integrantes"][0]["papel"] == "membro"
+
+
 def test_convite_publico_cadastro_restrito_aceite_idempotente_e_remocao(ambiente):
     cli, banco, h, u = ambiente
     cli.app.state.contexto = replace(cli.app.state.contexto, codigo_convite="instalacao-fechada")

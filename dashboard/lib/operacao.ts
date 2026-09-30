@@ -3,7 +3,7 @@ import { cabecalhosDaApi, urlDaApi, type Categoria, type IntervaloNps, type Resu
 export type Tema = { id: string; termos: string[]; conversa_ids: string[]; total: number; recentes: number; anteriores: number; taxa_atual: number | null; taxa_anterior: number | null; emergente: boolean; nps: number | null; intervalo: IntervaloNps | null };
 export type Radar = { temas: Tema[]; amostra: number; truncadas: number; janela: { de: string; ate: string; base_atual: number; base_anterior: number } | null; metodo?: string };
 export type PapelNaEquipe = "proprietario" | "gestor" | "membro";
-export type Equipe = { id: string; nome: string; membros: number[]; competencias: string[]; canais: string[]; papeis: Record<string, PapelNaEquipe>; meu_papel: PapelNaEquipe; integrantes: { id: number; nome: string; papel: PapelNaEquipe }[] };
+export type Equipe = { id: string; nome: string; membros: number[]; competencias: string[]; canais: string[]; papeis: Record<string, PapelNaEquipe>; meu_papel?: PapelNaEquipe; integrantes?: { id: number; nome: string; papel: PapelNaEquipe }[] };
 export type Turno = { inicio: number; fim: number; pessoas: number; canais: string[] };
 export type SimulacaoEscala = { demanda: number; atendidas: number; pendentes: number; espera_mediana_s: number | null; espera_p95_s: number | null; custo: number; dias: { dia: string; demanda: number; atendidas: number; pendentes: number; espera_mediana_s: number | null }[]; previsao: { dia_semana: number; dias_observados: number; contatos_medios: number }[]; metodo: string };
 export type Contato = { id: string; canal: string; iniciada_em: string; score: number | null; nota: number | null; categoria: Categoria | null; feedback: number | null };

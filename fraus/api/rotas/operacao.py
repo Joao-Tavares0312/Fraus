@@ -139,13 +139,20 @@ def escala(pedido: CenarioEscala, de: str | None = None, ate: str | None = None,
     return simular_escala(ctx.registros_do_recorte(de, ate), [t.model_dump() for t in pedido.turnos], pedido.duracao_s, pedido.custo_hora)
 
 
+def apresentar_equipe(ctx, equipe):
+    """O mesmo contrato de hierarquia na listagem e nas mutacoes."""
+    return {**equipe,
+        "meu_papel": "proprietario" if ctx.papel in (None, "dev") else equipe.get("papeis", {}).get(str(ctx.usuario_id), "membro"),
+        "integrantes": [{"id": i, "nome": (ctx.banco.buscar_usuario(i) or {"nome": "Conta removida"})["nome"],
+            "papel": equipe.get("papeis", {}).get(str(i), "membro")} for i in equipe["membros"]]}
+
+
 @router.get("/equipes")
 def equipes(ctx: Contexto = Depends(obter_contexto)):
     registros = ctx.banco.documentos("equipe")
     if ctx.papel == "usuario":
         registros = [e for e in registros if ctx.usuario_id in e["membros"]]
-    return {"equipes": [{**e, "meu_papel": "proprietario" if ctx.papel in (None, "dev") else e.get("papeis", {}).get(str(ctx.usuario_id), "membro"),
-        "integrantes": [{"id": i, "nome": (ctx.banco.buscar_usuario(i) or {"nome": "Conta removida"})["nome"], "papel": e.get("papeis", {}).get(str(i), "membro")} for i in e["membros"]]} for e in registros]}
+    return {"equipes": [apresentar_equipe(ctx, e) for e in registros]}
 
 
 @router.post("/equipes")
@@ -162,7 +169,7 @@ def criar_equipe(pedido: Equipe, ctx: Contexto = Depends(obter_contexto)):
         valor["papeis"][str(ctx.usuario_id)] = "proprietario"
     ctx.banco.guardar_documento("equipe", identificador, valor)
     ctx.banco.auditar(ator(ctx), "criar_equipe", identificador)
-    return {"id": identificador, **valor}
+    return apresentar_equipe(ctx, {"id": identificador, **valor})
 
 
 @router.put("/equipes/{identificador}")
@@ -184,7 +191,7 @@ def editar_equipe(identificador: str, pedido: Equipe, ctx: Contexto = Depends(ob
     if atualizado is None:
         raise HTTPException(404, "equipe inexistente")
     ctx.banco.auditar(ator(ctx), "editar_equipe", identificador)
-    return {"id": identificador, **atualizado}
+    return apresentar_equipe(ctx, {"id": identificador, **atualizado})
 
 
 @router.patch("/equipes/{identificador}/membros/{usuario_id}")
@@ -207,7 +214,7 @@ def definir_papel(identificador: str, usuario_id: int, pedido: PapelEquipe, ctx:
     if equipe is None:
         raise HTTPException(404, "equipe inexistente")
     ctx.banco.auditar(ator(ctx), "alterar_hierarquia", identificador)
-    return {"id": identificador, **equipe}
+    return apresentar_equipe(ctx, {"id": identificador, **equipe})
 
 
 @router.post("/equipes/{identificador}/convites")
