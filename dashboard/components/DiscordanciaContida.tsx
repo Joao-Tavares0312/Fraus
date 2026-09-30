@@ -50,32 +50,38 @@ export function DiscordanciaContida({
         </p>
       ) : (
         <>
-          {/* ACIMA DA LINHA -- o que o cliente DISSE (ambar). */}
-          <p className="text-sm text-dito-texto">
-            {insatisfeitos} saiu(ram) <strong>detrator(es)</strong>
-          </p>
+          {/* O numero a esquerda, a contradicao a direita: a peca fica baixa
+              para dividir a faixa com a leitura do NPS sem empurrar o grafico. */}
+          <div className="flex items-center gap-4">
+            {/* O percentual e do SERVIDOR (`falso_containment`); aqui so vira
+                display. Formatado uma vez, em pt-BR, como o resto da tela. */}
+            <p className="flex shrink-0 items-end gap-1.5">
+              <SegmentoLED
+                valor={percentual.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 1,
+                })}
+                rotulo="contenção que não convenceu, em percentual"
+                altura={34}
+              />
+              <span className="pb-0.5 text-lg leading-none text-muted-foreground">
+                %
+              </span>
+            </p>
 
-          <div className="h-px w-full bg-linha" aria-hidden />
+            <div className="flex min-w-0 flex-col gap-1.5">
+              {/* ACIMA DA LINHA -- o que o cliente DISSE (ambar). */}
+              <p className="text-sm text-dito-texto">
+                {insatisfeitos} saiu(ram) <strong>detrator(es)</strong>
+              </p>
 
-          {/* ABAIXO DA LINHA -- o que o log MEDIU (azul). */}
-          <p className="text-sm text-medido-texto">
-            e mesmo assim <strong>não escalou</strong> para humano
-          </p>
+              <div className="h-px w-full bg-linha" aria-hidden />
 
-          {/* O percentual e do SERVIDOR (`falso_containment`); aqui so vira
-              display. Formatado uma vez, em pt-BR, como o resto da tela. */}
-          <p className="flex items-end gap-1.5">
-            <SegmentoLED
-              valor={percentual.toLocaleString("pt-BR", {
-                maximumFractionDigits: 1,
-              })}
-              rotulo="contenção que não convenceu, em percentual"
-              altura={34}
-            />
-            <span className="pb-0.5 text-lg leading-none text-muted-foreground">
-              %
-            </span>
-          </p>
+              {/* ABAIXO DA LINHA -- o que o log MEDIU (azul). */}
+              <p className="text-sm text-medido-texto">
+                e mesmo assim <strong>não escalou</strong> para humano
+              </p>
+            </div>
+          </div>
           <p className="text-xs text-muted-foreground">
             {insatisfeitos} de {contidos} atendimento(s) contido(s) com sinal.
             Contenção alta com esta taxa alta é sucesso falso: a métrica sobe
