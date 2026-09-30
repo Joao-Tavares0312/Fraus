@@ -52,6 +52,19 @@ tocar em sinal, fusor ou indicador.
 | **estilo** | caixa alta, alongamento, palavrão, censura | intensidade que o classificador de sentença perde |
 | **incongruência** | elogio convivendo com situação negativa | é o que alcança a frase canônica do projeto |
 
+## Onde roda, e com que motor
+
+| | |
+|---|---|
+| **Backend dos modelos** | `FRAUS_BACKEND=torch` (padrão) ou `onnx` — os mesmos checkpoints, sem torch em runtime no segundo |
+| **Cabeça de ironia** | `FRAUS_IRONIA_BACKEND`: `padrao` (BERTimbau), `laya` ou `laya-onnx` — troca só a leitura por mensagem; a ironia não entra no score |
+| **Motor** | carregado por um provedor preguiçoso (`ProvedorDeMotor`): `frio` → `carregando` → `pronto` ou `erro`, sem fallback para dublê |
+| **Aquecimento** | a carga começa em segundo plano no boot e a cada `GET /saude`; `GET /saude/prontidao` só dá 200 com o motor pronto |
+| **Produção** | dashboard e API em dois projetos Vercel, estado no Supabase Postgres; a API é serverless e **esfria** |
+
+O aquecimento reduz o cold start e não o elimina. Para eliminá-lo, a API precisa
+de um container sempre ligado (ver [Limitações](limitacoes.md)).
+
 ## A ironia continua carregada, e não pontua
 
 A oitava cabeça existe, é obrigatória para a API subir e aparece na tela **por

@@ -1,9 +1,18 @@
 # Hospedar o Fraus
 
-> **Caminho atual sem Oracle:** o deploy automatizado em Cloud Run, com ONNX,
-> Cloud Storage e Supabase, está em [API no Google Cloud Run](cloud-run.md).
-> Ele escala a zero e é a alternativa adotada quando a Ampere A1 gratuita não
-> tem capacidade na região de origem.
+> **Estado atual (30/09/2026).** A aplicação real roda em **dois projetos
+> Vercel** — dashboard `fraus` e API `fraus-api` (ONNX, sem torch) —, com
+> **Supabase Postgres** para o estado e **Oracle Object Storage** só para o ZIP
+> de modelos, baixado no build. O passo a passo está em
+> [Deploy gratuito na Vercel](deploy-vercel.md).
+>
+> Essa API é serverless e **esfria**. O aquecimento em segundo plano e o
+> workflow `api-aquecer` reduzem o cold start, mas não o eliminam. O caminho
+> definitivo é um **container sempre ligado** com pelo menos 1,5–2 GB de RAM
+> (este documento). O **Render gratuito não serve**: 512 MB contra ~1.056 MB
+> medidos, e ainda dorme em 15 min. O Cloud Run
+> ([API no Google Cloud Run](cloud-run.md)) e a Oracle Ampere continuam como
+> alternativas documentadas, não como produção.
 
 O Fraus são **duas peças com necessidades opostas**, e é por isso que elas não
 moram no mesmo lugar:

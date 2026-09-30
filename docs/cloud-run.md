@@ -1,6 +1,13 @@
 # API no Google Cloud Run
 
-O deploy recomendado quando a Oracle Ampere não tem capacidade disponível é:
+!!! note "Alternativa documentada, não é a produção atual"
+    Desde 17/09/2026 a API de produção roda na Vercel (projeto `fraus-api`,
+    ver [Deploy gratuito na Vercel](deploy-vercel.md)). Este roteiro continua
+    válido como alternativa quando a Oracle Ampere não tem capacidade e a
+    Vercel não serve, mas o script `configurar_cloud_run.ps1` não foi usado
+    para o deploy vigente.
+
+O deploy alternativo, quando a Oracle Ampere não tem capacidade disponível, é:
 
 ```text
 dashboard (Vercel)
