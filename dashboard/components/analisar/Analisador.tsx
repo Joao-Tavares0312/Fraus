@@ -21,6 +21,7 @@ import {
   EXPLICACAO_DESFECHO,
   ROTULO_AUTOR,
   ROTULO_DESFECHO,
+  ROTULO_SEM_SINAL,
   formatarEsperaOuTraco,
   formatarHora,
   formatarSegundos,
@@ -29,6 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Painel } from "@/components/Painel";
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
+import { NotaLED } from "@/components/NotaLED";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { TextoComPesos } from "./TextoComPesos";
@@ -424,23 +426,25 @@ function Analise({
     <div className="flex flex-col gap-4">
       <Painel
         titulo={`Resultado — ${analise.conversa.id}`}
-        legenda="A nota sai do fusor, que aprendeu com 38 medidas das sete famílias do vetor — texto, emoji, tempo, emoção, léxico, estilo e incongruência. Emoção aparece na transcrição abaixo e também entra nessa conta; a ironia aparece junto, mas é leitura por mensagem — desde 04/09/2026 não pesa mais na nota."
+        legenda="A nota sai do fusor, que aprendeu com 39 medidas das sete famílias do vetor — texto, emoji, tempo, emoção, léxico, estilo e incongruência. Emoção aparece na transcrição abaixo e também entra nessa conta; a ironia aparece junto, mas é leitura por mensagem — desde 04/09/2026 não pesa mais na nota."
       >
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <dt className="text-xs text-muted-foreground">Nota inferida</dt>
-            <dd className="flex items-baseline gap-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <dt className="rotulo-instrumento">
+              Nota inferida <span className="text-foreground">· estimativa</span>
+            </dt>
+            <dd className="flex flex-col items-start gap-1.5">
+              {/* A nota e do SERVIDOR; nula = display APAGADO + o motivo por
+                  extenso, nunca 0. O motivo distingue "o cliente nao falou" de
+                  "o arquivo nao traz horario": sao problemas em lugares
+                  diferentes. */}
+              <NotaLED nota={semNota ? null : analise.nota} altura={44} />
               {semNota ? (
                 <span className="text-sm text-muted-foreground">
-                  {motivoSemNota}
+                  {ROTULO_SEM_SINAL} — {motivoSemNota}
                 </span>
               ) : (
-                <>
-                  <span className="num estimado text-2xl leading-none text-foreground">
-                    {analise.nota}
-                  </span>
-                  <EtiquetaCategoria categoria={analise.categoria} />
-                </>
+                <EtiquetaCategoria categoria={analise.categoria} />
               )}
             </dd>
           </div>
