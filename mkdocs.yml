@@ -23,6 +23,12 @@ theme:
     accent: amber
   logo: assets/fraus-logo.svg
   favicon: assets/fraus-logo.svg
+  # As fontes vem do `@import` de assets/fraus.css (Martian Mono, Inter,
+  # Bricolage), com pilha de fallback. `font: false` impede o Material de
+  # baixar a Roboto por cima.
+  font: false
+  # Telemetria no topo e rodape do Instrumento (overrides/main.html).
+  custom_dir: overrides
   features:
     - navigation.sections
     - navigation.top
@@ -102,9 +108,12 @@ nav:
   - Invariantes: invariantes.md
   - Arquitetura: arquitetura.md
   - Treinamento: treinamento.md
+  - Integração com o Tars: integracao-tars.md
   - Estado e pendências: handoff.md
-  - Hospedagem: hospedagem.md
-  - Deploy no Cloud Run: cloud-run.md
+  - Operação:
+      - Hospedagem: hospedagem.md
+      - Deploy na Vercel: deploy-vercel.md
+      - Deploy no Cloud Run: cloud-run.md
   # Copiado de dashboard/DESIGN.md no build (`scripts/reunir_docs.py`), nunca
   # a mao: copia manual e a documentacao divergindo do produto em uma semana.
   - Design da interface: design.md
