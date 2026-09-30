@@ -206,6 +206,8 @@ vence RAG em acurácia e latência[^3].
 
 ## Documentação
 
+- [Estado operacional — 30/09/2026](docs/notas/2026-09-30-operacao-producao.md) — análise persistida, sete abas de Operação, convites, permissões e evidências da publicação
+- [Handoff interno](docs/handoff.md) — estado atual e histórico de decisões
 - [Spec de design](docs/superpowers/specs/2026-08-13-dolos-design.md) — decisões e referências
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
 - [Treinamento](docs/treinamento.md) — os notebooks do Colab, os corpora de cada sinal, os artefatos que eles produzem e o registro do vazamento que matou o primeiro fusor
@@ -220,11 +222,13 @@ Requisitos: Python 3.11+ com [`uv`](https://docs.astral.sh/uv/), Node 20+ e npm.
 ### 1. Dependências do Python
 
 ```bash
-uv sync --extra dev
+uv sync --extra dev --extra torch   # API real com backend Torch (padrão)
 ```
 
-> Use `--extra dev`. O `uv sync` puro **remove o pytest**: o grupo `dev` é
-> opt-in, e sem ele a suíte não roda.
+> Os extras são opt-in: `uv sync` puro remove pytest e Torch. Para ONNX, use
+> `uv sync --extra dev --extra onnx`, defina `FRAUS_BACKEND=onnx` no ambiente
+> e instale os artefatos ONNX. Ao adicionar `docs`, conserve os extras de
+> desenvolvimento que usa.
 
 ### 2. Testes
 
@@ -235,7 +239,7 @@ uv run pytest -q       # ou -v para ver caso a caso
 ### 3. API
 
 ```bash
-uv run python -m uvicorn fraus.api.main:app --reload   # http://127.0.0.1:8000
+uv run python -m uvicorn fraus.api.main:app --port 8001 --reload --reload-dir fraus
 ```
 
 > `python -m uvicorn`, e não `uv run uvicorn`: o segundo passa pelo trampolim
@@ -243,11 +247,13 @@ uv run python -m uvicorn fraus.api.main:app --reload   # http://127.0.0.1:8000
 > `uv trampoline failed to canonicalize script path` se o venv foi recriado ou
 > movido. Chamar o módulo pelo interpretador não depende de shim nenhum.
 
-A API real **exige o modelo treinado** em `modelos/` (BERTimbau fine-tunado e
-`fusor.joblib`) e **falha alto no boot** se ele não existir — por design:
-servir predição sem modelo carregado é pior do que estar fora do ar. Os dois
-artefatos saem dos notebooks `01_treino_bertimbau.ipynb` e
-`02_treino_fusor.ipynb`, nessa ordem; veja
+A API real **exige os classificadores treinados e o fusor** em `modelos/`
+(ou os grafos em `modelos-onnx/`, com `FRAUS_BACKEND=onnx`). O provedor aquece
+em segundo plano e expõe o estado; `/saude/prontidao` responde 503 até ficar
+pronto. Modelo ausente fica como falha explícita, sem predição substituta.
+Os artefatos de satisfação e fusor saem dos notebooks
+`01_treino_bertimbau.ipynb` e `02_treino_fusor.ipynb`; emoção e ironia também
+são obrigatórias, conforme
 [docs/treinamento.md](docs/treinamento.md).
 
 Variáveis de ambiente reconhecidas:
@@ -768,11 +774,16 @@ ZIP privado, confere o SHA-256, recusa *path traversal*, valida os três grafos
 ONNX, tokenizadores e fusor, e só então permite o deploy.
 
 O runtime usa satisfação e emoção em ONNX fp32 e ironia quantizada em int8. O
-pacote final da função tem cerca de **1,46 GB**, aceito pelo recurso Large
-Functions. Os modelos são carregados preguiçosamente: importar a função e
-consultar `/saude` não abrem as sessões ONNX. Antes dessa separação, o primeiro
-`/saude` medido em produção levou **10,8 s**; uma inferência logo depois levou
-**0,8 s**.
+pacote publicado em **30/09/2026 tem 1,95 GB** (1,46 GB na entrega de 17/09),
+aceito por Large Functions. Isso é tamanho do pacote, não memória consumida.
+Importar a função é barato; o provedor aquece os modelos em segundo plano no
+boot e em `/saude`. `/saude/prontidao` responde 503 até terminar. Na medição
+histórica de 17/09, o primeiro `/saude` levou **10,8 s** e uma inferência logo
+depois, **0,8 s**; esses tempos não são uma promessa para instâncias novas.
+
+Dashboard e API publicam separadamente. Em 30/09, a API da PR #75 foi
+publicada a partir da `main` (`ab1b5da`), corrigindo o 404 de Operação. O
+workflow da API é manual e ainda precisa de secrets; merge do front não o aciona.
 
 Endereços verificados em 17/09/2026:
 
@@ -871,11 +882,18 @@ Onde o trabalho está. **Entregue** é o que existe no repositório e tem teste 
 verificação por trás; **falta** está detalhado em [Pendências](#pendências), e a
 ordem lá é a ordem de importância.
 
-### Road map vigente — atualizado em 17/09/2026
+### Estado atual — 30/09/2026
+
+Análise persistida, Operação e convites estão mesclados e publicados. A suíte
+da `main` passou nos dois dialetos de banco. Contratos, validações e pendências
+de configuração estão na [referência interna](docs/notas/2026-09-30-operacao-producao.md).
+
+### Revisão histórica — 17/09/2026
 
 Revisão do projeto inteiro (testes rodados, API real e webhook exercitados com
-`curl`, front auditado). É esta lista que governa o próximo trabalho; as seções
-[Entregue](#entregue) e [Falta](#falta) abaixo continuam como histórico.
+`curl`, front auditado). Esta revisão registra o estado daquela data; o estado
+operacional atual está acima. As pendências científicas exigem sua própria
+evidência de resolução e não são encerradas pela publicação de Operação.
 
 **Verificado em 14/09/2026:** a API real (`motor: real`) e o webhook funcionam
 de ponta a ponta **com a mestra ligada** — cadastro de fonte, chave `frs_`,
@@ -1036,8 +1054,12 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 | **Origem das escritas** | ✅ | as rotas do servidor Next que mudam estado recusam **403** o que vem de outro site (`Sec-Fetch-Site`, com `Origin` de reserva) |
 | **Teto de corpo** | ✅ | **413** por `Content-Length` antes de qualquer parse, e o upload de `/analisar` lido em pedaços com abort no primeiro byte excedente |
 | **Léxico curado** | ✅ | o que o analista ensina por cima do SentiLex e do ranking de emoji de 2015: cadastro, edição e revogação por rota e por painel; a curadoria **vence** o léxico base e atravessa até o score. Cada escrita versiona, a conversa grava com qual versão foi pontuada, a Visão geral **nomeia** a régua misturada e `POST /conversas/repontuar` a zera |
-| **Hospedagem da aplicação real** | ✅ | dashboard e API em projetos Vercel separados; função Python de 1,46 GB com ONNX; modelos validados e baixados do Oracle Object Storage no build; Supabase pelo transaction pooler; saúde, inferência autenticada e proxy verificados em produção em 17/09/2026 |
-| **Suíte** | ✅ | **909 testes** de Python passando e **77** no front (8 arquivos) — contados em 14/09/2026, build da dashboard verde, contraste AA verificado por `npm run contraste`. O front ganhou runner próprio em 25/08 (`cd dashboard && npm test`, vitest); renderização continua coberta por build e contraste |
+| **Análise persistida** | ✅ | `POST /analisar/registrar`, motor real, horários reais, gravação transacional e deduplicação; filtros, indicadores e grafo consultam o banco atualizado |
+| **Operação** | ✅ | sete abas: Radar, Equipe e escala, Jornadas, Investigações, Replay, Laboratório e Acessos; hipóteses e limites explícitos; comparação de fusores depende do artefato candidato |
+| **Equipes e convites** | ✅ | proprietário/gestor/membro, links com validade e limite, revogação e aceite transacional com JWT; escopo por canais e proteção do último proprietário |
+| **Escopo e auditoria** | ✅ | filtros por canal antes da paginação, exportação temporária, versão de sessão revalidada e eventos encadeados por hash |
+| **Hospedagem da aplicação real** | ✅ | dois projetos Vercel; pacote Python de **1,95 GB** em 30/09/2026; ONNX no build e Supabase persistente; rotas de Operação e proxy verificados; API tem publicação separada |
+| **Suíte** | ✅ | CI da `main` em 30/09/2026: **1.091 passed, 4 skipped, 1 deselected** em cada dialeto (SQLite e PostgreSQL); **163 testes** no front (20 arquivos), TypeScript e build aprovados |
 
 ### Falta
 

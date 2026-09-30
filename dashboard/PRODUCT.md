@@ -78,13 +78,16 @@ de devolver um número opaco.
   a 168 horas, limite de usos e revogação. O token é guardado somente como hash.
   Cadastro por link começa sem acesso; aceitar publica filiação e escopo inicial
   na mesma transação. Política administrativa explícita vence o escopo da equipe.
+- Papel global e papel na equipe são distintos: convite não concede `dev`.
+  Hierarquia ausente não libera gestão; respostas incompletas têm estado de
+  erro recuperável. Aceitar convite exige uma sessão de usuário válida.
 - Cenários de escala e laboratório são hipóteses visíveis, nunca medidas reais.
   Antes/depois não demonstra causalidade; comparar modelos não os promove.
 
 ## Brand Commitments
 
 - Nome **Fraus**, a divindade romana da fraude — contraparte latina de
-  Ápate/Dolos, posta por Virgílio à entrada do Inferno. O nome carrega a tese:
+  Ápate/Dolos, citada por Cícero entre a prole de Érebo e da Noite. O nome carrega a tese:
   o cliente mente, o texto não.
 - Logo: monograma **FR**, F branco e R dourado sobre preto (`#070707`).
 - Vinculante por decisão do usuário nesta sessão:
@@ -96,12 +99,12 @@ de devolver um número opaco.
 
 ## Evidence on Hand
 
-- 62 atendimentos sintéticos do simulador no banco de demonstração, incluindo
+- Snapshot versionado de atendimentos sintéticos no banco de demonstração, incluindo
   atendimentos **sem fala do cliente** para exercitar o estado "sem sinal".
 - Léxico de emoji real: 969 entradas do Emoji Sentiment Ranking, com as
   contagens de anotação humanas originais.
 - Referências citáveis no repositório (Springer 2025, IJHCI 2025, Ekman 1992,
-  Plutchik 1980, Virgílio).
+  Plutchik 1980, Cícero).
 - A demonstração contém atendimentos sintéticos; uma instalação conectada recebe
   dados enviados pelo operador. Não afirmar desempenho em clientes reais sem
   validação independente. Intervalo amostral não mede erro do classificador.
@@ -130,6 +133,11 @@ de devolver um número opaco.
 - Interface inteiramente em português do Brasil.
 
 ## Open Decisions
+
+- A comparação de fusores precisa de artefato candidato compatível configurado
+  no servidor. A funcionalidade não equivale a promoção automática de modelo.
+- A publicação da API é separada da dashboard. O workflow está implementado;
+  seus secrets no ambiente `production-api` ainda precisam ser configurados.
 
 - A **empresa fictícia** do trabalho não está definida (ramo, porte, canais,
   volume plausível de atendimentos). Ela atravessa a apresentação inteira e
