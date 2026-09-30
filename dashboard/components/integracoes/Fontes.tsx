@@ -233,7 +233,7 @@ export function Fontes({
               </Label>
               <Input
                 id={`${identificador}-canal`}
-                className="mt-1"
+                className="mt-1 placeholder:text-xs"
                 value={nova.canal}
                 placeholder="webchat, whatsapp, instagram…"
                 onChange={(evento) =>

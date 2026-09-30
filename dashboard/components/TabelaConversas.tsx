@@ -424,7 +424,7 @@ export function TabelaConversas({
   return (
     <div className="min-w-0">
       <div className="sem-impressao flex flex-wrap items-end gap-3 border-b border-border px-5 py-3">
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <Label
             htmlFor="filtro-atendimentos"
             className="rotulo-instrumento font-normal"
@@ -437,7 +437,7 @@ export function TabelaConversas({
             value={filtro}
             onChange={(evento) => setFiltro(evento.target.value)}
             placeholder="id, canal, desfecho ou categoria"
-            className="h-9 w-56"
+            className="h-9 w-full placeholder:text-xs sm:w-56"
           />
         </div>
 
