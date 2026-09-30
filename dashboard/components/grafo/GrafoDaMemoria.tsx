@@ -247,7 +247,7 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
           <div
             ref={refCaixa}
             aria-hidden
-            className="h-[70vh] min-h-[26rem] w-full overflow-hidden rounded-md border border-linha bg-background"
+            className="h-[70vh] min-h-[26rem] w-full overflow-hidden border border-linha bg-background bg-[radial-gradient(var(--compasso)_1px,transparent_1px)] bg-[size:24px_24px]"
           >
             {medida.largura > 0 ? (
               <ForceGraph2D

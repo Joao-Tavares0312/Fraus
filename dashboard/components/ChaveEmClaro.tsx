@@ -58,7 +58,7 @@ export function ChaveEmClaro({
       <AlertDescription>
         <div className="mb-2">{children}</div>
         <div className="flex flex-wrap items-center gap-2">
-          <code className="num min-w-0 flex-1 overflow-x-auto rounded-sm bg-muted px-2 py-1.5 text-xs text-foreground">
+          <code className="num min-w-0 flex-1 overflow-x-auto border border-linha bg-background px-2 py-1.5 text-xs text-foreground">
             {chave}
           </code>
           <Button type="button" size="sm" variant="outline" onClick={copiar}>

@@ -1,3 +1,4 @@
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { cn } from "@/lib/utils";
 
 export type Faixas = Record<string, [number, number]>;
@@ -53,9 +54,12 @@ export function EscalaNps({
   className?: string;
 }) {
   return (
-    <div className={cn("min-w-0", className)}>
+    <div className={cn("min-w-0 overflow-x-auto", className)}>
+      {/* `min-w` para o celular: onze celulas com o nome da categoria embaixo
+          nao cabem em 390px sem cortar a palavra, e cortar a palavra deixaria
+          a categoria so na cor. A escala rola dentro do proprio container. */}
       <ol
-        className="grid grid-cols-11 gap-px overflow-hidden rounded-md border border-border bg-border"
+        className="grid min-w-[34rem] grid-cols-11 gap-px overflow-hidden border border-border bg-border"
         aria-label="Escala de notas de 0 a 10 e a categoria de cada nota"
       >
         {NOTAS.map((nota) => {
@@ -80,16 +84,16 @@ export function EscalaNps({
                   : undefined
               }
             >
-              <span
-                className={cn(
-                  "num text-sm font-medium tabular-nums",
-                  orfa || conflito
-                    ? "text-muted-foreground"
-                    : "text-foreground",
-                )}
-              >
-                {nota}
-              </span>
+              {/* A nota da escala em LED: e o indice 0-10, nao um valor
+                  medido, entao a cor e `tinta` e nao o azul do medido. A nota
+                  sem faixa ou em conflito apaga o brilho -- ela nao tem dona. */}
+              <SegmentoLED
+                valor={String(nota)}
+                altura={18}
+                cor="tinta"
+                rotulo={`nota ${nota}`}
+                className={orfa || conflito ? "opacity-50" : undefined}
+              />
               <span
                 aria-hidden
                 className="h-1 w-full rounded-xs"

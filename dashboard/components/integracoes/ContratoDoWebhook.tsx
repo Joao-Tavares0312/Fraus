@@ -140,8 +140,8 @@ export function ContratoDoWebhook({
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-linha text-muted-foreground">
-              <th className="py-1.5 pr-4 font-medium">Cabeçalho</th>
-              <th className="py-1.5 font-medium">O que ele carrega</th>
+              <th className="rotulo-instrumento py-1.5 pr-4 font-medium">Cabeçalho</th>
+              <th className="rotulo-instrumento py-1.5 font-medium">O que ele carrega</th>
             </tr>
           </thead>
           <tbody className="text-muted-foreground">

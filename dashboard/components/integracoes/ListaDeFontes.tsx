@@ -41,7 +41,7 @@ export function ListaDeFontes({
   return (
     <div className="flex min-w-0 flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-linha pb-2">
-        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <h3 className="rotulo-instrumento">
           Fontes{" "}
           <span className="num tabular-nums text-foreground">
             {fontes.length}

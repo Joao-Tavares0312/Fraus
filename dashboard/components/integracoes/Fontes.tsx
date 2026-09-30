@@ -190,9 +190,9 @@ export function Fontes({
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {formularioAberto ? (
-        <div className="min-w-0 rounded-sm border border-border bg-muted/20 p-4">
+        <div className="min-w-0 border border-linha bg-muted/20 p-4">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-medium text-foreground">
+            <h3 className="titulo-instrumento text-sm text-foreground">
               Cadastrar uma fonte
             </h3>
             {fontes.length > 0 ? (
@@ -210,7 +210,7 @@ export function Fontes({
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_minmax(0,1.3fr)_auto]">
             <div className="min-w-0">
-              <Label htmlFor={`${identificador}-nome`} className="text-xs">
+              <Label htmlFor={`${identificador}-nome`} className="text-xs xl:min-h-9 xl:items-end">
                 Nome
               </Label>
               <Input
@@ -228,7 +228,7 @@ export function Fontes({
             </div>
 
             <div className="min-w-0">
-              <Label htmlFor={`${identificador}-canal`} className="text-xs">
+              <Label htmlFor={`${identificador}-canal`} className="text-xs xl:min-h-9 xl:items-end">
                 Canal
               </Label>
               <Input
@@ -246,7 +246,7 @@ export function Fontes({
             </div>
 
             <div className="min-w-0">
-              <Label htmlFor={`${identificador}-tipo`} className="text-xs">
+              <Label htmlFor={`${identificador}-tipo`} className="text-xs xl:min-h-9 xl:items-end">
                 Tipo
               </Label>
               <Select
@@ -275,7 +275,7 @@ export function Fontes({
             </div>
 
             <div className="min-w-0">
-              <Label htmlFor={`${identificador}-segredo`} className="text-xs">
+              <Label htmlFor={`${identificador}-segredo`} className="text-xs xl:min-h-9 xl:items-end">
                 Nome da variável de ambiente do segredo
               </Label>
               <Input
