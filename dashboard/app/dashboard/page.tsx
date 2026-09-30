@@ -202,15 +202,14 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
         ) : null}
 
         {/*
-          O PRIMEIRO SISTEMA. A tese da tela — o trade-off entre satisfação e
-          tempo — abre a página, e os indicadores agregados ficam à esquerda
-          como armadura: lidos de uma vez, não relidos a cada compasso.
-
-          Antes, quatro cartões de métrica ocupavam a primeira dobra inteira e
-          empurravam este gráfico para 560px abaixo do topo. Quem chega quer
-          ver a forma da semana, não quatro números soltos.
+          O PRIMEIRO SISTEMA. A armadura de indicadores abre a tela em largura
+          total — quatro leituras em LED, lidas de uma vez — e o gráfico que
+          carrega a tese (o trade-off entre satisfação e tempo) vem logo abaixo,
+          ainda na primeira dobra. Até 30/09/2026 a armadura era uma coluna de
+          15rem à esquerda; o Instrumento a deitou (a fatia de 4 células cabe em
+          uma fileira e o número em LED pede corpo).
         */}
-        <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
+        <div className="grid min-w-0 grid-cols-1 gap-6">
           <FaixaIndicadores
             indicadores={indicadores}
             tempoMediano={tempoMediano}

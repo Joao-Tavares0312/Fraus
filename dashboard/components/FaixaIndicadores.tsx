@@ -16,7 +16,7 @@ import {
   DEFINICAO_SEM_SINAL_AGREGADO,
   formatarNps,
   formatarNumero,
-  formatarSegundos,
+  formatarSegundosLED,
 } from "@/lib/formato";
 
 /**
@@ -108,11 +108,12 @@ export function FaixaIndicadores({
 
   return (
     <>
-    {/* A ARMADURA: empilhada, lida de uma vez, como a armadura de clave que nao
-        se rele a cada compasso. Ela mora a ESQUERDA da linha do tempo, entao a
-        pilha vertical e a forma certa em tela larga -- a fileira de quatro
-        colunas era o template de metrica-heroi, e ele empurrava a tese da tela
-        para baixo da dobra. */}
+    {/* A ARMADURA: uma faixa horizontal de quatro celulas, lida de uma vez --
+        como o painel de leitura de um instrumento. Desde 30/09/2026 (Instrumento)
+        ela abre a tela em largura total, e nao mais empilhada a esquerda: o
+        numero em LED pede corpo, e quatro leituras lado a lado cabem na dobra
+        sem empurrar o grafico. O que continua valendo da regra antiga: e
+        rotulo mais numero, sem barra de progresso decorativa. */}
     <motion.section
       aria-label={`Indicadores de ${rotuloDoPeriodo}`}
       // A ARMADURA e o container da pilha: ela escalona os quatro indicadores
@@ -123,14 +124,13 @@ export function FaixaIndicadores({
       initial="oculto"
       whileInView="presente"
       viewport={{ once: true, margin: "0px 0px -64px 0px" }}
-      // A §2.2 do DESIGN.md sempre disse que os indicadores sao "rotulo mais
-      // numero tabular, sem barra de progresso decorativa e sem cartao": a
-      // armadura NAO e um painel, entao perde vidro/chanfro/borda -- ela le
-      // como pilha compacta, separada por regua (`CartaoIndicador` usa
-      // `border-linha`, nao mais `border-compasso`, porque compasso e a linha
-      // fraca pensada para viver DENTRO de uma superficie de vidro).
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-5 xl:grid-cols-1"
+      // O HAIRLINE ENTRE CELULAS e o `gap-px` sobre fundo de regua: cada celula
+      // pinta o proprio fundo opaco e o vao de 1px deixa aparecer a `--linha`
+      // por baixo. Uma tecnica so serve a qualquer numero de colunas (1, 2 ou 4)
+      // sem cada breakpoint recontar qual celula leva qual borda.
+      className="grid min-w-0 grid-cols-1 gap-px border border-linha bg-linha sm:grid-cols-2 xl:grid-cols-4 [&>*]:bg-background"
     >
+      <div className="flex min-w-0 flex-col">
       <CartaoIndicador
         rotulo="NPS inferido"
         qualificacao="estimativa"
@@ -162,9 +162,10 @@ export function FaixaIndicadores({
       {erro || !indicadores.npsIntervalo ? null : (
         <IntervaloDoNps
           intervalo={indicadores.npsIntervalo}
-          className="-mt-1"
+          className="-mt-2 px-4 pb-4"
         />
       )}
+      </div>
 
       <CartaoIndicador
         rotulo="CSAT inferido"
@@ -203,7 +204,14 @@ export function FaixaIndicadores({
         erro={erro}
         valor={tempoMediano}
         formatado={
-          tempoMediano === null ? undefined : formatarSegundos(tempoMediano)
+          tempoMediano === null
+            ? undefined
+            : formatarSegundosLED(tempoMediano).valor
+        }
+        unidade={
+          tempoMediano === null
+            ? undefined
+            : formatarSegundosLED(tempoMediano).unidade
         }
         trilho={trilhoDeLatencia(limiares)}
         explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
@@ -217,7 +225,7 @@ export function FaixaIndicadores({
         <DiscordanciaContida
           percentual={indicadores.falsoContainment}
           contidos={indicadores.contidosComSinal}
-          className="border-t border-linha pt-3"
+          className="col-span-full p-4"
         />
       )}
     </motion.section>

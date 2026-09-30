@@ -1309,7 +1309,10 @@
   }
 }
 
-@layer utilities {
+/* O VOCABULARIO DO INSTRUMENTO mora em `components`, e nao em `utilities`, de
+   proposito: as utilidades do Tailwind (`text-xs`, `text-foreground`) precisam
+   VENCER estas classes quando uma tela pede um tamanho ou cor pontual. */
+@layer components {
   /* --- O VOCABULARIO DO INSTRUMENTO --------------------------------------
      `.rotulo-instrumento`: mono, caixa alta, tracking aberto -- o rotulo de
      campo, de painel e de telemetria. E o contrapeso do numero em LED.
@@ -1334,7 +1337,9 @@
   .filete {
     border-color: var(--compasso);
   }
+}
 
+@layer utilities {
   /* Marca de proveniencia: todo numero ESTIMADO carrega este sublinhado
      pontilhado; numero observado nunca carrega. E o detalhe de marca do
      produto — o Fraus existe porque a origem do dado importa. */
