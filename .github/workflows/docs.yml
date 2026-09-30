@@ -111,7 +111,7 @@ jobs:
             echo "::error::o site construido embute codigo-fonte (show_source)"
             vazou=1
           fi
-          for proibido in superpowers notas handoff hospedagem colab ; do
+          for proibido in superpowers notas handoff hospedagem colab deploy-vercel cloud-run ; do
             if [ -e "site/$proibido" ] ; then
               echo "::error::'$proibido' entrou no site publico"
               vazou=1

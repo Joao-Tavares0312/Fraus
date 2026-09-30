@@ -44,6 +44,8 @@ exclude_docs: |
   # API, e nao interessa a ninguem que so queira entender o trabalho.
   hospedagem.md
   colab.md
+  deploy-vercel.md
+  cloud-run.md
 
   # NAO ACRESCENTE `assets/*.css` AQUI. Ja esteve, com o comentario dizendo
   # que "o CSS e copiado para o site pelo proprio tema" -- e nao e: quem copia
@@ -66,6 +68,7 @@ nav:
   - Invariantes: invariantes.md
   - Arquitetura: arquitetura.md
   - Treinamento: treinamento.md
+  - Integração com o Tars: integracao-tars.md
   - Design da interface: design.md
   - Conformidade (AI Act): conformidade.md
   - Encolher os modelos: encolhimento.md

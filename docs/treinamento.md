@@ -1,5 +1,14 @@
 # Treinamento dos modelos do Fraus
 
+!!! note "Como ler esta página (30/09/2026)"
+    Ela é o **diário técnico do treino** e preserva a ordem em que as coisas
+    aconteceram, inclusive números que já foram superados. O estado **atual**
+    é: fusor de **39 features** (a ironia saiu do vetor em 04/09/2026 e
+    `incongruencia_situacao_negativa` entrou: 40 − 2 + 1), espera em `log1p` e
+    acurácia de 0,947 no holdout do notebook 02 — ver o
+    [cartão do modelo](cartao-do-modelo.md). As menções a 35, 38 e 40 features
+    abaixo são história, não o contrato vigente.
+
 | # | Notebook | O que produz | GPU? | Estado |
 |---|---|---|---|---|
 | 1 | `notebooks/01_treino_bertimbau.ipynb` | `modelos/bertimbau-satisfacao/` — classificador de texto (3 classes), fine-tune do `neuralmind/bert-base-portuguese-cased` sobre o B2W-Reviews01 | **sim** | pronto |
@@ -610,7 +619,9 @@ O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM
 
 O Laya multilíngue pode substituir apenas a cabeça de ironia, sem alterar
 satisfação, emoção ou o fusor. Ele é opt-in porque baixa aproximadamente 647 MB
-de pesos e exige torch:
+de pesos. O backend `laya` exige torch; o `laya-onnx` (30/09/2026) roda a mesma
+cabeça pelo ONNX Runtime, **sem PyTorch**, e é o que a API serverless usa quando
+o ZIP da Laya está configurado (ver `docs/deploy-vercel.md`, interno):
 
 ```bash
 uv sync --extra laya
