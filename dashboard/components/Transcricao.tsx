@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { DetalheConversa } from "@/lib/api";
 import {
   latenciasAnotadas,
@@ -8,7 +9,15 @@ import {
   type SentidoAtribuicao,
   type SeveridadeLatencia,
 } from "@/lib/derivacoes";
-import { formatarHora, formatarSegundos, ROTULO_AUTOR } from "@/lib/formato";
+import {
+  formatarHora,
+  formatarSegundos,
+  formatarSegundosLED,
+  ROTULO_AUTOR,
+} from "@/lib/formato";
+import { fracaoDaPausa } from "@/lib/pausa";
+import { cn } from "@/lib/utils";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 
 const COR_SEVERIDADE: Record<SeveridadeLatencia, string> = {
   pico: "var(--promotor)",
@@ -40,8 +49,8 @@ function porcentagem(valor: number): string {
  * modulo dele, com teto de 26% de opacidade -- acima disso o texto perde
  * contraste, e nenhuma marcacao vale um paragrafo ilegivel.
  *
- * A intensidade e o TERCEIRO canal, nunca o primeiro: a direcao ja esta na
- * borda colorida E no rotulo textual embaixo. Quem nao distingue as cores
+ * A intensidade e o TERCEIRO canal, nunca o primeiro: a direcao ja esta no
+ * ponto colorido E no rotulo textual embaixo. Quem nao distingue as cores
  * continua lendo "puxou a nota para baixo · 82% de insatisfeito".
  */
 function realce(marca: MarcaAtribuicao): string | undefined {
@@ -54,11 +63,16 @@ function realce(marca: MarcaAtribuicao): string | undefined {
  * Transcricao com as tres coisas que transformam "nota ruim" em "oportunidade
  * de melhoria":
  *
- *   1. cliente e bot visualmente distintos -- a fala do cliente e o que foi
- *      DITO, entao ela veste ambar (`--dito`) e a superficie elevada; a
- *      resposta da maquina fica recuada, em superficie de painel;
- *   2. a latencia anotada em CADA resposta, com a faixa de severidade da
- *      literatura de live chat -- ela sai dos timestamps, nao do modelo;
+ *   1. cliente e maquina visualmente distintos, em CARTOES RETANGULARES -- a
+ *      fala do cliente e o que foi DITO, entao leva o filete ambar (`--dito`) e
+ *      o fundo do papel; a resposta do bot ou do atendente fica RECUADA e em
+ *      contorno TRACEJADO, porque nao e fala que o classificador de texto
+ *      pontue. A prosa fica em Inter: mono em paragrafo cansa;
+ *   2. a ESPERA do cliente, desenhada como a PAUSA da notacao (DESIGN.md §1.1):
+ *      um intervalo tracejado entre a fala e a resposta, com o COMPRIMENTO
+ *      proporcional a latencia e o tempo em LED. Ela sai dos timestamps, nao do
+ *      modelo, e a faixa de severidade da literatura de live chat continua
+ *      escrita por extenso ao lado (o ponto colorido nunca e o unico canal);
  *   3. a marcacao das falas do cliente pela probabilidade POR MENSAGEM do
  *      classificador, vinda de `GET /conversas/{id}/atribuicao`, com
  *      intensidade proporcional a essa probabilidade.
@@ -67,6 +81,10 @@ function realce(marca: MarcaAtribuicao): string | undefined {
  * atribuicao falhou), a transcricao aparece SEM marcacao nenhuma em vez de
  * cair de volta numa heuristica de emoji: uma fonte so para "o que puxou a
  * nota".
+ *
+ * A pausa mora ANTES da resposta que ela antecede (era uma legenda embaixo da
+ * resposta): a leitura de cima para baixo passa a ser fala, silencio, resposta
+ * -- a ordem em que o cliente viveu.
  */
 export function Transcricao({
   conversa,
@@ -84,7 +102,7 @@ export function Transcricao({
   );
 
   return (
-    <ol className="divide-y divide-border bg-card">
+    <ol className="flex flex-col gap-2.5 bg-card p-3 sm:p-5">
       {conversa.mensagens.map((mensagem, indice) => {
         const doCliente = mensagem.autor === "cliente";
         const latencia = latencias.get(indice);
@@ -93,65 +111,73 @@ export function Transcricao({
           latencia === undefined
             ? null
             : severidadeLatencia(latencia, limiares);
+        const marcada = doCliente && marca && marca.sentido !== "sem_inclinacao";
 
         return (
-          <li
-            key={`${indice}-${mensagem.enviada_em}`}
-            className={`quebra-evitar grid grid-cols-[5.5rem_1fr] gap-x-4 px-5 py-3.5 sm:grid-cols-[7rem_1fr] ${
-              doCliente ? "bg-muted/50" : ""
-            }`}
-          >
-            <div className="flex flex-col gap-0.5 pt-0.5">
-              <span
-                className={`text-xs font-medium ${
-                  doCliente ? "text-dito-texto" : "text-muted-foreground"
-                }`}
+          <Fragment key={`${indice}-${mensagem.enviada_em}`}>
+            {latencia !== undefined && severidade ? (
+              <li
+                className="quebra-evitar grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-0.5 sm:pl-10"
+                aria-label={`espera de ${formatarSegundos(latencia)} do cliente até esta resposta`}
               >
-                {ROTULO_AUTOR[mensagem.autor] ?? mensagem.autor}
-              </span>
-              <span className="num text-[0.6875rem] text-muted-foreground">
-                {formatarHora(mensagem.enviada_em)}
-              </span>
-            </div>
-
-            <div className="min-w-0">
-              <p
-                className={`max-w-[70ch] rounded-md text-sm leading-relaxed text-foreground ${
-                  doCliente
-                    ? marca && marca.sentido !== "sem_inclinacao"
-                      ? "border-l-2 px-3 py-1.5"
-                      : "px-0"
-                    : "border-l border-border pl-3"
-                }`}
-                style={
-                  doCliente && marca && marca.sentido !== "sem_inclinacao"
-                    ? {
-                        borderColor: COR_SENTIDO[marca.sentido],
-                        backgroundColor: realce(marca),
-                      }
-                    : undefined
-                }
-              >
-                {mensagem.texto}
-              </p>
-
-              {latencia !== undefined && severidade ? (
-                <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <PausaEmLED segundos={latencia} />
+                <span aria-hidden className="relative block h-4 min-w-0">
+                  <span
+                    className="absolute inset-y-0 left-0 border-x border-medido"
+                    style={{ width: `${fracaoDaPausa(latencia, limiares) * 100}%` }}
+                  >
+                    <span className="absolute inset-x-0 top-1/2 border-t border-dashed border-medido" />
+                  </span>
+                </span>
+                <p className="col-span-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.6875rem] text-muted-foreground">
                   <span
                     aria-hidden
                     className="inline-block size-1.5 rounded-full"
                     style={{ background: COR_SEVERIDADE[severidade] }}
                   />
-                  <span className="num text-[0.6875rem] text-tempo-texto">
-                    {formatarSegundos(latencia)}
-                  </span>
-                  <span className="text-[0.6875rem] text-muted-foreground">
+                  <span>
                     de espera do cliente até esta resposta ·{" "}
                     {rotulos[severidade].titulo.toLowerCase()} (
                     {rotulos[severidade].detalhe})
                   </span>
                 </p>
-              ) : null}
+              </li>
+            ) : null}
+
+            <li
+              className={cn(
+                "quebra-evitar min-w-0 border p-3.5",
+                doCliente
+                  ? "border-linha border-l-2 border-l-dito bg-background"
+                  : "border-dashed border-border sm:ml-10",
+              )}
+            >
+              <div className="mb-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <span
+                  className={cn(
+                    "rotulo-instrumento",
+                    doCliente && "text-dito-texto",
+                  )}
+                >
+                  {ROTULO_AUTOR[mensagem.autor] ?? mensagem.autor}
+                </span>
+                <span className="num text-[0.6875rem] text-muted-foreground">
+                  {formatarHora(mensagem.enviada_em)}
+                </span>
+              </div>
+
+              <p
+                className={cn(
+                  "max-w-[70ch] text-sm leading-relaxed",
+                  doCliente ? "text-foreground" : "text-muted-foreground",
+                  marcada && "-mx-2 px-2 py-1",
+                )}
+                style={
+                  marcada && marca ? { backgroundColor: realce(marca) } : undefined
+                }
+              >
+                {mensagem.texto}
+              </p>
 
               {marca ? (
                 <div className="mt-2 flex flex-col gap-1">
@@ -172,11 +198,28 @@ export function Transcricao({
                   <BarraProbabilidade marca={marca} />
                 </div>
               ) : null}
-            </div>
-          </li>
+            </li>
+          </Fragment>
         );
       })}
     </ol>
+  );
+}
+
+/** A duracao da pausa no display: so digitos, e a unidade escrita ao lado. */
+function PausaEmLED({ segundos }: { segundos: number }) {
+  const { valor, unidade } = formatarSegundosLED(segundos);
+  return (
+    <span className="flex items-end gap-1">
+      <SegmentoLED
+        valor={valor}
+        rotulo="espera do cliente até esta resposta"
+        altura={18}
+      />
+      <span className="pb-px text-[0.6875rem] leading-none text-muted-foreground">
+        {unidade}
+      </span>
+    </span>
   );
 }
 
@@ -184,7 +227,8 @@ export function Transcricao({
  * Barra das tres probabilidades da mensagem, na ordem fixa das classes
  * (0 insatisfeito, 1 neutro, 2 satisfeito -- invariante 8). E a leitura mais
  * rapida possivel de "o quanto o modelo esta convencido": a largura E a
- * probabilidade.
+ * probabilidade. Intensidade RELATIVA, nao confianca: probabilidade nao
+ * calibrada nao e confianca.
  */
 function BarraProbabilidade({ marca }: { marca: MarcaAtribuicao }) {
   const faixas = [
@@ -195,7 +239,7 @@ function BarraProbabilidade({ marca }: { marca: MarcaAtribuicao }) {
 
   return (
     <span
-      className="flex h-1 w-full max-w-[22rem] gap-px overflow-hidden rounded-sm bg-muted"
+      className="flex h-1 w-full max-w-[22rem] gap-px overflow-hidden bg-muted"
       role="img"
       aria-label={faixas
         .map((faixa) => `${faixa.chave} ${porcentagem(faixa.valor)}`)
