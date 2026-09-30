@@ -1,4 +1,5 @@
-import { formatarEsperaOuTraco, ROTULO_DESFECHO } from "@/lib/formato";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { formatarSegundosLED, ROTULO_DESFECHO } from "@/lib/formato";
 import type { ResumoConversa } from "@/lib/api";
 
 /**
@@ -36,22 +37,43 @@ function medidos(
     .filter((valor): valor is number => typeof valor === "number");
 }
 
+/**
+ * Uma medida da faixa, no display. `valor: null` NAO e zero: e uma espera que
+ * nao existiu (nenhum atendimento chegou a um humano, por exemplo), e o display
+ * a mostra APAGADO -- o mesmo desenho de "sem sinal" do resto do produto -- com
+ * o motivo escrito embaixo. Um `0 s` ali leria como "respondeu na hora".
+ */
 function Medida({
   rotulo,
   valor,
+  unidade,
   detalhe,
 }: {
   rotulo: string;
-  valor: string;
+  valor: string | null;
+  unidade?: string;
   detalhe: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <dt className="text-xs text-muted-foreground">{rotulo}</dt>
-      <dd className="num text-lg leading-none text-foreground">{valor}</dd>
+    <div className="flex min-w-0 flex-col gap-2 bg-card px-5 py-4">
+      <dt className="rotulo-instrumento">{rotulo}</dt>
+      <dd className="flex items-end gap-1.5">
+        <SegmentoLED valor={valor} rotulo={rotulo} altura={28} />
+        {valor !== null && unidade ? (
+          <span className="pb-0.5 text-xs leading-none text-muted-foreground">
+            {unidade}
+          </span>
+        ) : null}
+      </dd>
       <p className="text-[11px] leading-tight text-muted-foreground">{detalhe}</p>
     </div>
   );
+}
+
+/** Mediana em segundos -> par do display, ou nulo quando nao houve espera. */
+function emLED(segundos: number | null): { valor: string | null; unidade?: string } {
+  if (segundos === null) return { valor: null };
+  return formatarSegundosLED(segundos);
 }
 
 export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
@@ -67,7 +89,10 @@ export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
   const comEscalada = doHumano.length;
 
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-linha px-5 py-4 sm:grid-cols-4">
+    // A armadura da lista: quatro celulas separadas por filete de 1px (o `gap-px`
+    // sobre fundo de compasso), como a armadura da Visao geral. Cada celula pinta
+    // o proprio fundo opaco -- e dado, e nao fica sobre vidro.
+    <dl className="grid grid-cols-2 gap-px border-b border-linha bg-compasso sm:grid-cols-4">
       <Medida
         rotulo="Registros"
         valor={String(linhas.length)}
@@ -75,7 +100,7 @@ export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
       />
       <Medida
         rotulo="1ª resposta (mediana)"
-        valor={formatarEsperaOuTraco(mediana(primeiras))}
+        {...emLED(mediana(primeiras))}
         detalhe={
           primeiras.length === linhas.length
             ? "de todos os atendimentos"
@@ -84,12 +109,12 @@ export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
       />
       <Medida
         rotulo="Resposta do bot (mediana)"
-        valor={formatarEsperaOuTraco(mediana(doBot))}
+        {...emLED(mediana(doBot))}
         detalhe={`em ${doBot.length} atendimento(s)`}
       />
       <Medida
         rotulo="Resposta humana (mediana)"
-        valor={formatarEsperaOuTraco(mediana(doHumano))}
+        {...emLED(mediana(doHumano))}
         detalhe={
           comEscalada === 0
             ? "nenhum atendimento chegou a um humano"
@@ -97,8 +122,8 @@ export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
         }
       />
 
-      <div className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-4">
-        <dt className="text-xs text-muted-foreground">Desfecho</dt>
+      <div className="col-span-2 flex min-w-0 flex-col gap-1 bg-card px-5 py-3 sm:col-span-4">
+        <dt className="rotulo-instrumento">Desfecho</dt>
         <dd className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           {Object.keys(ROTULO_DESFECHO)
             .filter((chave) => porDesfecho.has(chave))

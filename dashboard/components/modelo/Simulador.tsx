@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 
 /** Teto de `/modelo/simular`. Repetido aqui so para avisar ANTES do 400. */
 const TETO = 2000;
@@ -190,8 +191,13 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
           <span className={`font-semibold ${vencedora.texto}`}>
             {vencedora.rotulo}
           </span>
-          <span className="num text-muted-foreground">
-            {formatarNumero(vencedora.valor * 100)}%
+          <span className="inline-flex items-end gap-1">
+            <SegmentoLED
+              valor={formatarNumero(vencedora.valor * 100)}
+              altura={22}
+              rotulo={`probabilidade da classe ${vencedora.rotulo}, em porcento`}
+            />
+            <span className="num text-muted-foreground">%</span>
           </span>
         </p>
 
@@ -223,7 +229,7 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
             <li key={classe.chave} className="flex items-baseline gap-1.5">
               <span
                 aria-hidden
-                className="size-2 shrink-0 translate-y-px rounded-full"
+                className="size-2 shrink-0 translate-y-px"
                 style={{ background: classe.cor }}
               />
               <span className="text-xs text-muted-foreground">

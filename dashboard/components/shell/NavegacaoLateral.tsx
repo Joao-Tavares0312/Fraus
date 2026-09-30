@@ -3,18 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import {
-  Activity,
-  BarChart3,
-  BookOpen,
-  ExternalLink,
-  LogOut,
-  MessagesSquare,
-  PlugZap,
-  ScanText,
-  Share2,
-  SlidersHorizontal,
-} from "lucide-react";
+import { BookOpen, ExternalLink, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +16,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { numeroDaRota, TELAS, type Tela } from "@/lib/navegacao";
 import { EstadoSaude } from "./EstadoSaude";
 import { MarcaFraus } from "./MarcaFraus";
 import { SeletorTema } from "./SeletorTema";
@@ -39,23 +29,16 @@ import { SeletorTema } from "./SeletorTema";
  * telas passariam a falar de conjuntos diferentes sem avisar ninguem.
  *
  * A secao ativa nao e indicada so por cor (o dourado da marca): o item ativo
- * tambem carrega `aria-current="page"` e uma barra de 2px a esquerda -- cor
- * nunca e o unico canal.
+ * tambem carrega `aria-current="page"` e o CURSOR `█` -- cor nunca e o unico
+ * canal. A numeracao (`01_VISAO GERAL`) vem de `lib/navegacao.ts`, a mesma
+ * fonte da faixa de telemetria do topo.
+ *
+ * AS TELAS DE OLHAR (as cinco primeiras de `TELAS`): Analisar fica aqui, e nao
+ * entre as de mexer, porque analisar nao grava nada -- nem conversa, nem nota,
+ * nem arquivo --, e nenhum indicador se move por causa dela. O Grafo tambem: ele
+ * mostra o que o sistema guarda, e nao grava nada.
  */
-const SECOES = [
-  { href: "/dashboard", rotulo: "Visão geral", Icone: BarChart3 },
-  { href: "/dashboard/atendimentos", rotulo: "Atendimentos", Icone: MessagesSquare },
-  // Fica no grupo de OLHAR, e nao no de mexer, porque analisar nao grava nada:
-  // nem conversa, nem nota, nem arquivo. Nenhum indicador se move por causa
-  // dela, e e por isso que ela nao pertence ao lado das telas que alteram
-  // configuracao e fonte de dado.
-  { href: "/dashboard/analisar", rotulo: "Analisar", Icone: ScanText },
-  { href: "/dashboard/modelo", rotulo: "Modelo", Icone: Activity },
-  // Tambem fica em OLHAR, nao em AJUSTES: o grafo mostra o que o sistema
-  // guarda, e nao grava nada -- nenhuma configuracao ou fonte muda por causa
-  // dele.
-  { href: "/dashboard/grafo", rotulo: "Grafo", Icone: Share2 },
-] as const;
+const SECOES = TELAS.slice(0, 5);
 
 // O que o papel `usuario` VE: visao geral e atendimentos -- decisao de
 // produto de 31/08/2026 (dev administra, usuario analisa). Esconder aqui e
@@ -67,10 +50,7 @@ const SECOES_DO_USUARIO = new Set(["/dashboard", "/dashboard/atendimentos"]);
  * comportamento do sistema, e misturá-las com as tres de leitura esconderia
  * essa diferenca no unico lugar onde ela e obvia de graca.
  */
-const AJUSTES = [
-  { href: "/dashboard/configuracoes", rotulo: "Configurações", Icone: SlidersHorizontal },
-  { href: "/dashboard/integracoes", rotulo: "Integrações", Icone: PlugZap },
-] as const;
+const AJUSTES = TELAS.slice(5);
 
 /**
  * A DOCUMENTACAO -- o unico item do menu que sai do aplicativo.
@@ -97,7 +77,7 @@ function ItemDaDocumentacao({ url }: { url: string }) {
     <SidebarMenuItem>
       <SidebarMenuButton
         tooltip="Documentação (abre em nova aba)"
-        className="transition-colors duration-150 ease-fluid [&>svg]:text-muted-foreground [&>svg]:transition-colors [&>svg]:duration-150 hover:[&>svg]:text-sidebar-foreground"
+        className={ITEM_MONO}
         render={
           <a
             href={url}
@@ -169,6 +149,13 @@ function SessaoNoRodape({
   );
 }
 
+const ROTULO_DE_GRUPO =
+  "font-mono text-[0.6875rem] tracking-[0.14em] uppercase text-muted-foreground";
+
+/** O item do menu no idioma do Instrumento: mono, caixa alta, filete embaixo. */
+const ITEM_MONO =
+  "rounded-none border-b border-sidebar-border/60 font-mono text-[0.6875rem] tracking-[0.12em] uppercase transition-colors duration-150 ease-fluid hover:bg-transparent hover:text-sidebar-foreground data-[active]:bg-transparent data-[active]:font-medium data-[active]:text-sidebar-foreground [&>svg]:text-muted-foreground";
+
 function estaAtiva(href: string, caminho: string): boolean {
   return href === "/dashboard" ? caminho === "/dashboard" : caminho.startsWith(href);
 }
@@ -200,36 +187,35 @@ export function NavegacaoLateral({
   }
   const sufixo = consulta.toString() ? `?${consulta}` : "";
 
-  function itemDaSecao({
-    href,
-    rotulo,
-    Icone,
-  }: {
-    href: string;
-    rotulo: string;
-    Icone: typeof BarChart3;
-  }) {
+  function itemDaSecao({ href, rotulo }: Tela) {
     const ativa = estaAtiva(href, caminho);
+    const numero = numeroDaRota(href);
     return (
       <SidebarMenuItem key={href}>
         <SidebarMenuButton
           isActive={ativa}
           tooltip={rotulo}
-          // O icone descansa em muted e so ACENDE no item ativo -- e acende em
-          // dourado porque secao ativa e foco, territorio legitimo do
-          // `--primary` (DESIGN.md 3.3). A barra de 2px e o aria-current
-          // continuam: cor nunca e o unico canal.
-          //
-          // `data-[active]:`, sem `=true`: o base-ui seta `data-active=""`
-          // como atributo booleano, e o seletor com valor nunca casava -- a
-          // barra prometida aqui passou meses sem existir na tela.
-          className="transition-colors duration-150 ease-fluid [&>svg]:text-muted-foreground [&>svg]:transition-colors [&>svg]:duration-150 hover:[&>svg]:text-sidebar-foreground data-[active]:border-l-2 data-[active]:border-primary data-[active]:font-medium data-[active]:[&>svg]:text-primary"
+          // `data-[active]:`, sem `=true`: o base-ui seta `data-active=""` como
+          // atributo booleano, e o seletor com valor nunca casava.
+          className={ITEM_MONO}
           render={
             <Link href={`${href}${sufixo}`} aria-current={ativa ? "page" : undefined} />
           }
         >
-          <Icone aria-hidden />
-          <span>{rotulo}</span>
+          {/* O NUMERO e o que sobra com a armadura recolhida (so 32px de
+              largura): por isso ele e o primeiro filho, e o resto some. */}
+          <span className="num shrink-0">{numero}</span>
+          <span className="flex flex-1 items-center justify-between gap-2 group-data-[collapsible=icon]:hidden">
+            <span className="truncate">_{rotulo}</span>
+            {/* O CURSOR: o bloco dourado da secao ativa. Dourado e foco, territorio
+                legitimo do `--primary` (DESIGN.md 3.3); o `aria-current` e o
+                proprio bloco garantem que cor nao e o unico canal. */}
+            {ativa ? (
+              <span aria-hidden className="text-primary">
+                █
+              </span>
+            ) : null}
+          </span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -250,10 +236,10 @@ export function NavegacaoLateral({
               e a fenda pode abrir. Ver `MarcaFraus`. */}
           <MarcaFraus tamanho={28} />
           <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-sm font-semibold tracking-tight">
+            <span className="truncate font-mono text-xs font-medium tracking-[0.18em] uppercase">
               Fraus
             </span>
-            <span className="truncate text-xs text-muted-foreground">
+            <span className="rotulo-instrumento truncate tracking-[0.08em]">
               satisfação inferida
             </span>
           </span>
@@ -262,7 +248,7 @@ export function NavegacaoLateral({
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Seções</SidebarGroupLabel>
+          <SidebarGroupLabel className={ROTULO_DE_GRUPO}>Seções</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>{secoes.map(itemDaSecao)}</SidebarMenu>
           </SidebarGroupContent>
@@ -278,7 +264,7 @@ export function NavegacaoLateral({
             precisa saber o que "NPS inferido" significa tanto quanto `dev`. */}
         {urlDaDocumentacao && (
           <SidebarGroup>
-            <SidebarGroupLabel>Referência</SidebarGroupLabel>
+            <SidebarGroupLabel className={ROTULO_DE_GRUPO}>Referência</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <ItemDaDocumentacao url={urlDaDocumentacao} />
@@ -291,7 +277,7 @@ export function NavegacaoLateral({
             "Ajustes" sem nenhum item seria uma promessa vazia. */}
         {papel === "dev" && (
           <SidebarGroup>
-            <SidebarGroupLabel>Ajustes</SidebarGroupLabel>
+            <SidebarGroupLabel className={ROTULO_DE_GRUPO}>Ajustes</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>{AJUSTES.map(itemDaSecao)}</SidebarMenu>
             </SidebarGroupContent>
@@ -300,6 +286,14 @@ export function NavegacaoLateral({
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        {/* O REGIME do produto, em duas linhas: os dois fatos que valem para a
+            ferramenta inteira (invariante 1: sem LLM em runtime; inferencia
+            local em CPU). Some com a armadura recolhida. */}
+        <p className="rotulo-instrumento border border-sidebar-border px-2.5 py-2 leading-relaxed tracking-[0.06em] group-data-[collapsible=icon]:hidden">
+          Modelos locais
+          <br />
+          Sem LLM em runtime
+        </p>
         {usuario && <SessaoNoRodape usuario={usuario} papel={papel} />}
         <SidebarMenu>
           <SidebarMenuItem>

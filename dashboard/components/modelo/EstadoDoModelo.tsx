@@ -2,6 +2,7 @@ import type { FichaModelo } from "@/lib/api";
 import { formatarNumero } from "@/lib/formato";
 import { Painel } from "@/components/Painel";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { LIMIAR_SUSPEITO } from "./MetricasTreino";
 
 /**
@@ -80,7 +81,7 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
                 alerta -- so warning quando o rotulo realmente avisa algo
                 (ver a etiqueta de F1 abaixo). Cor de alerta aqui contradiria
                 o texto sempre que a cabeca estivesse no estado normal. */}
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            <span className="rotulo-instrumento border border-linha px-2 py-0.5">
               {ironia === null ? "fora do vetor" : ironia.pontua ? "no vetor" : "fora do vetor"}
             </span>
             <span className="text-sm font-medium text-foreground">
@@ -113,8 +114,8 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
             <span
               className={
                 f1Suspeito
-                  ? "rounded-full bg-warning-rich-text/10 px-2 py-0.5 text-xs font-medium text-warning-rich-text"
-                  : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                  ? "rotulo-instrumento border border-warning-rich-text/50 bg-warning-rich-text/10 px-2 py-0.5 text-warning-rich-text"
+                  : "rotulo-instrumento border border-linha px-2 py-0.5"
               }
             >
               {f1Suspeito ? "suspeito" : "abaixo do limiar"}
@@ -125,7 +126,7 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
           </span>
           {f1Percentual !== null ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              <span className="num text-foreground">{f1Percentual}%</span> de
+              <span className="inline-flex items-end gap-1 align-middle"><SegmentoLED valor={f1Percentual} altura={22} rotulo="F1 da classe irônica, em porcento" /><span className="num text-foreground">%</span></span> de
               F1 na classe irônica, {f1Suspeito ? "acima" : "abaixo"} do limiar
               que este projeto trata como suspeito.{" "}
               {f1Suspeito
@@ -146,7 +147,7 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
           <span className="flex flex-wrap items-baseline gap-2">
             {/* Neutra: limitacao declarada de arquitetura, nao um alerta que
                 pede acao -- mesma etiqueta neutra usada acima. */}
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            <span className="rotulo-instrumento border border-linha px-2 py-0.5">
               sintético
             </span>
             <span className="text-sm font-medium text-foreground">

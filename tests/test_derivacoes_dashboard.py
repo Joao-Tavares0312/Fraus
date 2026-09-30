@@ -27,6 +27,8 @@ from fraus.fusor import NOMES_FEATURES
 RAIZ = pathlib.Path(__file__).parent.parent
 CAMINHO_DERIVACOES = RAIZ / "dashboard" / "lib" / "derivacoes.ts"
 CAMINHO_VITRINE = RAIZ / "dashboard" / "app" / "page.tsx"
+DIRETORIO_DA_VITRINE = RAIZ / "dashboard" / "components" / "lp"
+CAMINHO_FATOS_DA_VITRINE = DIRETORIO_DA_VITRINE / "fatos.ts"
 
 
 def _prefixo_de(nome: str) -> str:
@@ -97,21 +99,32 @@ def test_a_vitrine_anuncia_o_numero_real_de_features():
     em vez de estar num sinal -- vale MAIS, porque e a parte que o visitante ve
     antes de qualquer ressalva.
     """
-    fonte = CAMINHO_VITRINE.read_text(encoding="utf-8")
+    # O numero mora em UM lugar (`components/lp/fatos.ts`) e os componentes o
+    # consomem. Duas cobranças: a fonte bate com o contrato, e nenhum
+    # componente da vitrine digita outro "N features" a mao.
+    fonte = CAMINHO_FATOS_DA_VITRINE.read_text(encoding="utf-8")
 
-    anunciado = re.search(
-        r'\[\s*"(\d+)"\s*,\s*"features no fusor"(?:\s*,\s*"[^"]+")?\s*\]',
-        fonte,
-    )
+    anunciado = re.search(r"\bfeatures\s*:\s*(\d+)\b", fonte)
     assert anunciado, (
-        "nao encontrei o contador de features em dashboard/app/page.tsx. Se o "
+        "nao encontrei `features: N` em dashboard/components/lp/fatos.ts. Se o "
         "formato mudou, atualize esta busca -- nao apague a guarda."
     )
 
     assert int(anunciado.group(1)) == len(NOMES_FEATURES), (
         f"a vitrine anuncia {anunciado.group(1)} features, mas NOMES_FEATURES tem "
-        f"{len(NOMES_FEATURES)}. Atualize dashboard/app/page.tsx -- e as outras "
-        "mencoes do numero em lp/Contador.tsx e lp/Constelacao.tsx junto."
+        f"{len(NOMES_FEATURES)}. Atualize FATOS_DO_MODELO em "
+        "dashboard/components/lp/fatos.ts -- e so la."
+    )
+
+    literais = []
+    for arquivo in sorted(DIRETORIO_DA_VITRINE.rglob("*.tsx")) + [CAMINHO_VITRINE]:
+        texto = arquivo.read_text(encoding="utf-8")
+        for achado in re.finditer(r"\b(\d+)\s+(?:features|numeros|números)\b", texto):
+            if int(achado.group(1)) != len(NOMES_FEATURES):
+                literais.append(f"{arquivo.name}: {achado.group(0)!r}")
+    assert not literais, (
+        "a vitrine digita a contagem de features a mao e ela diverge de "
+        f"NOMES_FEATURES ({len(NOMES_FEATURES)}): {literais}. Use FATOS_DO_MODELO."
     )
 
 

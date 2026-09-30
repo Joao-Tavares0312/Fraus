@@ -15,8 +15,10 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Componentes puros (sem hook, sem estado) como o SegmentoLED renderizam em
+  // `react-dom/server` mesmo em node, entao entram na suite sem jsdom.
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "components/**/*.test.tsx"],
   },
 });

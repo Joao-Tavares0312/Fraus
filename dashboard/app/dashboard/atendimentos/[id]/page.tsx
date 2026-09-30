@@ -14,19 +14,11 @@ import {
   marcasDaAtribuicao,
   type MarcaAtribuicao,
 } from "@/lib/derivacoes";
-import {
-  EXPLICACAO_SEM_SINAL,
-  formatarDataHora,
-  formatarSegundos,
-  ROTULO_SEM_SINAL,
-} from "@/lib/formato";
+import { EXPLICACAO_SEM_SINAL } from "@/lib/formato";
 import { lerPeriodo, paraQuery } from "@/lib/periodo";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
-import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
-import { MarcaContestacao } from "@/components/MarcaContestacao";
+import { ResumoDoAtendimento } from "@/components/atendimentos/ResumoDoAtendimento";
 import { Painel } from "@/components/Painel";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { Transcricao } from "@/components/Transcricao";
@@ -64,7 +56,7 @@ export default async function PaginaDoAtendimento(
     // por consistencia com os outros dois ramos de erro da tela.
     return (
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-10 sm:px-6">
-        <h1 className="text-lg font-semibold text-foreground">
+        <h1 className="titulo-instrumento text-lg text-foreground">
           Não foi possível abrir o atendimento
         </h1>
         <EstadoVazio
@@ -106,7 +98,7 @@ export default async function PaginaDoAtendimento(
         acoes={
           <Link
             href={`/dashboard/atendimentos${sufixo}`}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="rotulo-instrumento inline-flex min-h-9 items-center gap-1.5 px-2 outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ArrowLeft aria-hidden className="size-4" />
             Todos os atendimentos
@@ -116,86 +108,16 @@ export default async function PaginaDoAtendimento(
 
       {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx. */}
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
-        <section
-          aria-label="Resumo do atendimento"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        >
-          <Card size="sm" className="quebra-evitar gap-2 px-4 py-3.5">
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="text-xs font-medium text-muted-foreground">
-                Nota inferida
-              </h2>
-              <Badge
-                variant="outline"
-                className="rounded-sm text-[0.6875rem] text-muted-foreground"
-              >
-                estimativa
-              </Badge>
-            </div>
-            {conversa.nota === null ? (
-              <>
-                <p className="text-lg leading-none font-medium text-muted-foreground">
-                  {ROTULO_SEM_SINAL}
-                </p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {EXPLICACAO_SEM_SINAL[conversa.motivo_sem_sinal ?? "sem_fala_do_cliente"]}{" "}
-                  Sem sinal, não há nota — e ausência de dado não é
-                  insatisfação.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="flex items-baseline gap-1.5">
-                  <span className="num estimado text-[1.75rem] leading-none font-semibold tracking-tight text-foreground">
-                    {conversa.nota}
-                  </span>
-                  <span className="text-sm text-muted-foreground">/ 10</span>
-                </p>
-                {/* Colada no numero, e nao no aparato da tela: uma ressalva
-                    sobre ESTE numero que morasse no rodape perderia a que
-                    numero se refere (DESIGN.md §4.1). */}
-                <MarcaContestacao
-                  contestacao={conversa.contestacao}
-                  detalhado
-                  className="leading-relaxed"
-                />
-              </>
-            )}
-          </Card>
-
-          <Celula rotulo="Categoria">
-            <EtiquetaCategoria
-              categoria={conversa.categoria}
-              className="text-base"
-            />
-          </Celula>
-
-          <Celula rotulo="Latência mediana" qualificacao="observado">
-            <span className="num text-base text-foreground">
-              {mediana === null ? "—" : formatarSegundos(mediana)}
-            </span>
-            <span className="block text-xs text-muted-foreground">
-              sobre {respostas} {respostas === 1 ? "resposta" : "respostas"}
-            </span>
-          </Celula>
-
-          <Celula rotulo="Atendimento" qualificacao="observado">
-            <span className="text-sm text-foreground">{conversa.canal}</span>
-            <span className="num block text-xs text-muted-foreground">
-              {formatarDataHora(conversa.iniciada_em)}
-              {duracao !== null ? ` · ${formatarSegundos(duracao)}` : ""}
-            </span>
-            <span className="block text-xs text-muted-foreground">
-              {conversa.escalou_para_humano
-                ? "escalou para humano"
-                : "contido no bot"}
-            </span>
-          </Celula>
-        </section>
+        <ResumoDoAtendimento
+          conversa={conversa}
+          mediana={mediana}
+          respostas={respostas}
+          duracao={duracao}
+        />
 
         <Painel
           titulo="Transcrição"
-          legenda="Fala do cliente sobre a superfície elevada e em âmbar — é o que foi dito. Resposta do bot ou do atendente recuada, em cinza. A espera do cliente aparece embaixo de cada resposta, e o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala."
+          legenda="Fala do cliente em cartão com filete âmbar — é o que foi dito. Resposta do bot ou do atendente recuada, em contorno tracejado. A espera do cliente é um intervalo tracejado antes de cada resposta, com o comprimento proporcional ao tempo (a régua é o limiar de degradação vigente) e o tempo em display; o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala."
           semPadding
         >
           <Transcricao
@@ -237,7 +159,7 @@ export default async function PaginaDoAtendimento(
                 explicacao="Todas as mensagens do cliente ficaram com P(satisfeito) e P(insatisfeito) próximas demais. A transcrição mostra a probabilidade de cada uma; apontar uma delas como causa seria ler ruído como evidência."
               />
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-compasso">
                 {decisivas.map((marca) => (
                   <li
                     key={marca.indice}
@@ -267,7 +189,8 @@ export default async function PaginaDoAtendimento(
                         mensagem {marca.indice + 1}
                       </span>
                     </div>
-                    <p className="max-w-[70ch] text-sm leading-relaxed text-dito-texto">
+                    {/* A fala e o DITO: filete ambar, como na transcricao. */}
+                    <p className="max-w-[70ch] border-l-2 border-dito pl-3 text-sm leading-relaxed text-dito-texto">
                       “{atribuicao.mensagens[marca.indice]?.texto}”
                     </p>
                     <p className="num text-xs text-muted-foreground">
@@ -305,32 +228,5 @@ export default async function PaginaDoAtendimento(
         </div>
       </div>
     </>
-  );
-}
-
-function Celula({
-  rotulo,
-  qualificacao,
-  children,
-}: {
-  rotulo: string;
-  qualificacao?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card size="sm" className="quebra-evitar gap-2 px-4 py-3.5">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-xs font-medium text-muted-foreground">{rotulo}</h2>
-        {qualificacao ? (
-          <Badge
-            variant="outline"
-            className="rounded-sm text-[0.6875rem] text-muted-foreground"
-          >
-            {qualificacao}
-          </Badge>
-        ) : null}
-      </div>
-      <div>{children}</div>
-    </Card>
   );
 }

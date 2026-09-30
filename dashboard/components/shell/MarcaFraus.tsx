@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "motion/react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   CONTADOR_ZERADO,
   type EstadoContador,
@@ -11,6 +16,30 @@ import {
 import { useMentira } from "@/lib/mentira";
 import { type LeituraDeCliques, lerCliques } from "@/lib/pontuarCliques";
 import { RevelacaoFraus } from "./RevelacaoFraus";
+
+const CONSULTA_MOVIMENTO_REDUZIDO = "(prefers-reduced-motion: reduce)";
+
+/**
+ * Preferencia de movimento reduzido, SEGURA PARA HIDRATACAO.
+ *
+ * O `useReducedMotion` do Motion le `matchMedia` no primeiro render do
+ * cliente: quem pede menos movimento hidratava com `transition` diferente do
+ * HTML que o servidor mandou (o servidor nao tem `matchMedia`) e o React
+ * acusava o atributo. `useSyncExternalStore` resolve na raiz: o snapshot do
+ * servidor e `false`, e o valor real so chega depois da hidratacao. A marca e
+ * imovel parada, entao o primeiro quadro com `false` nao anima nada.
+ */
+function useMovimentoReduzido(): boolean {
+  return useSyncExternalStore(
+    (aoMudar) => {
+      const consulta = window.matchMedia(CONSULTA_MOVIMENTO_REDUZIDO);
+      consulta.addEventListener("change", aoMudar);
+      return () => consulta.removeEventListener("change", aoMudar);
+    },
+    () => window.matchMedia(CONSULTA_MOVIMENTO_REDUZIDO).matches,
+    () => false,
+  );
+}
 
 /**
  * A MARCA, e o unico gesto que ela responde.
@@ -29,7 +58,7 @@ import { RevelacaoFraus } from "./RevelacaoFraus";
  */
 export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   const [contador, setContador] = useState<EstadoContador>(CONTADOR_ZERADO);
-  const semMovimento = useReducedMotion();
+  const semMovimento = useMovimentoReduzido();
   const gatilho = useRef<SVGSVGElement>(null);
   const { mentir } = useMentira();
 

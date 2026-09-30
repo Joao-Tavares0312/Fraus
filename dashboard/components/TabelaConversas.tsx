@@ -45,6 +45,7 @@ import { EtiquetaCategoria } from "./EtiquetaCategoria";
 import { MarcaContestacao } from "./MarcaContestacao";
 import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
+import { NotaLED } from "./NotaLED";
 import { ausenciaNoFim } from "@/lib/ordenacao";
 
 export type LinhaConversa = {
@@ -261,17 +262,25 @@ export function TabelaConversas({
           },
         }),
         colunas.accessor("nota", {
-          header: "Nota inferida",
+          // "estimativa" no cabecalho: a nota e INFERIDA do texto, e o LED nao
+          // tem sublinhado pontilhado para carregar essa proveniencia, entao ela
+          // sobe para o rotulo da coluna, sempre visivel.
+          header: "Nota inferida (estimativa)",
           sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) =>
             ausenciaNoFim(a.original.nota, b.original.nota, descendenteEm("nota")),
           cell: (contexto) => {
             const nota = contexto.getValue();
             const linha = contexto.row.original;
             return nota === null ? (
-              <CabecaVazada rotulo={ROTULO_SEM_SINAL} />
+              // LED apagado + anel oco + a palavra: a ausencia desenhada tres
+              // vezes de proposito, nenhuma delas um zero.
+              <div className="flex min-w-0 flex-col items-start gap-1.5">
+                <NotaLED nota={null} altura={22} />
+                <CabecaVazada rotulo={ROTULO_SEM_SINAL} />
+              </div>
             ) : (
-              <div className="flex min-w-0 flex-col items-start gap-1">
-                <span className="num estimado text-foreground">{nota}</span>
+              <div className="flex min-w-0 flex-col items-start gap-1.5">
+                <NotaLED nota={nota} altura={22} />
                 <EtiquetaCategoria
                   categoria={linha.categoria}
                   evidenciaFraca={linha.evidencia_fraca}
@@ -415,10 +424,10 @@ export function TabelaConversas({
   return (
     <div className="min-w-0">
       <div className="sem-impressao flex flex-wrap items-end gap-3 border-b border-border px-5 py-3">
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <Label
             htmlFor="filtro-atendimentos"
-            className="text-xs font-normal text-muted-foreground"
+            className="rotulo-instrumento font-normal"
           >
             Buscar
           </Label>
@@ -428,14 +437,14 @@ export function TabelaConversas({
             value={filtro}
             onChange={(evento) => setFiltro(evento.target.value)}
             placeholder="id, canal, desfecho ou categoria"
-            className="h-9 w-56"
+            className="h-9 w-full placeholder:text-xs sm:w-56"
           />
         </div>
 
         <div className="flex flex-col gap-1">
           <Label
             htmlFor="filtro-categoria"
-            className="text-xs font-normal text-muted-foreground"
+            className="rotulo-instrumento font-normal"
           >
             Categoria
           </Label>
@@ -461,7 +470,7 @@ export function TabelaConversas({
         <div className="flex flex-col gap-1">
           <Label
             htmlFor="filtro-desfecho"
-            className="text-xs font-normal text-muted-foreground"
+            className="rotulo-instrumento font-normal"
           >
             Desfecho
           </Label>

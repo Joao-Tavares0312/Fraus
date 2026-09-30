@@ -1,0 +1,1005 @@
+/* ============================================================================
+   A VITRINE DO INSTRUMENTO (rota `/`).
+
+   TODO CSS da landing page mora aqui e nao em globals.css, e o prefixo `vt-` e
+   deliberado: o globals.css ainda carrega `.lp-*` da vitrine anterior
+   (`.lp-sinal`, `.lp-amostra`, `.lp-leitor`, `.lp-fecho`), e uma colisao de
+   nome faria a LP nova herdar hover de uma peca que nao existe mais.
+
+   O QUE ESTA FOLHA NAO FAZ, e vale registrar porque e onde erro tipografico
+   aparece: ela NAO declara `var(--fonte-display)`. A display (Bricolage) chega
+   ao DOM so pelas classes `.display-vitrine` e `.titulo-vitrine`, que o
+   globals.css governa e o `tipografia.test.ts` vigia. Aqui so se sobrepoe
+   TAMANHO e PESO nelas -- familia nunca.
+
+   Piso de 11px em todo texto (a banca le no projetor). Cor sempre por token:
+   nenhum hex. Dourado so em acao e marca; o magenta so no orbe e no halo (o
+   atelie da vitrine), nunca em dado.
+   ========================================================================== */
+
+.vt {
+  --vt-max: 80rem;
+  --vt-gutter: clamp(1rem, 4vw, 3rem);
+  overflow-x: clip;
+}
+.vt-wrap {
+  width: 100%;
+  max-width: var(--vt-max);
+  margin-inline: auto;
+  padding-inline: var(--vt-gutter);
+}
+
+/* --- topo: telemetria + pilula de vidro --------------------------------- */
+
+.vt-topo {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+}
+.vt-nav {
+  position: fixed;
+  left: 50%;
+  top: 2.9rem;
+  z-index: 60;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: clamp(0.9rem, 2.4vw, 1.6rem);
+  max-width: calc(100vw - 2rem);
+  padding: 0.35rem 0.4rem 0.35rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--foreground) 16%, transparent);
+  background: color-mix(in oklch, var(--background) 66%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .vt-nav {
+    background: var(--card);
+  }
+}
+.vt-nav a {
+  color: var(--muted-foreground);
+  transition: color 150ms var(--ease-fluid);
+}
+.vt-nav a:hover {
+  color: var(--foreground);
+}
+.vt-nav .vt-nav__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--foreground);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+.vt-nav .vt-nav__acessar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 700;
+  transition: filter 150ms var(--ease-fluid);
+}
+.vt-nav .vt-nav__acessar:hover {
+  color: var(--primary-foreground);
+  filter: brightness(1.08);
+}
+.vt-nav :is(a, button):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+@media (max-width: 47.99rem) {
+  .vt-nav .vt-nav__elo {
+    display: none;
+  }
+}
+
+/* --- secoes: ritmo e etiqueta ------------------------------------------- */
+
+.vt-sec {
+  position: relative;
+  padding-block: clamp(4.5rem, 9vw, 8rem);
+  scroll-margin-top: 4.5rem;
+  border-top: 1px solid var(--linha);
+}
+.vt-prosa {
+  max-width: 34rem;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+}
+
+/* --- HERO ---------------------------------------------------------------- */
+
+.vt-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  padding-top: 6.75rem;
+  padding-bottom: 1.5rem;
+  /* O DIAMETRO DO ORBE decide a altura do palco. Em tela larga ele acompanha a
+     ALTURA da janela (48svh, teto de 27,5rem): a 1280x720 o CTA precisa ficar
+     acima da dobra, e um orbe fixo de 440px empurrava titulo, sub e CTA para
+     fora. No celular o palco empilha e o orbe volta a 17rem. */
+  --orbe: 17rem;
+}
+@media (min-width: 64rem) {
+  .vt-hero {
+    --orbe: clamp(15rem, 48svh, 27.5rem);
+  }
+}
+/* O HALO: a mancha magenta atras do orbe. Cor de atelie -- nunca de dado. */
+.vt-halo {
+  position: absolute;
+  left: 50%;
+  top: -4%;
+  z-index: -2;
+  width: min(72rem, 150vw);
+  height: 48rem;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, var(--atelie-halo), transparent);
+  opacity: var(--atelie-halo-op);
+  pointer-events: none;
+}
+/* O GRAO: ruido de SVG inline, custo zero de rede. Tira o aspecto plano. */
+.vt-grao {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--grao-op);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.6'/></svg>");
+}
+
+.vt-palco {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+.vt-orbe-cel {
+  order: 1;
+  position: relative;
+  height: var(--orbe);
+}
+.vt-titulo {
+  order: 2;
+  position: relative;
+  z-index: 3;
+  margin-top: -5.5rem;
+  text-align: center;
+}
+.vt-sub {
+  order: 3;
+  justify-self: center;
+  max-width: 38rem;
+  text-align: center;
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  line-height: 1.85;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.vt-cta {
+  order: 4;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+}
+.vt-cel-esq {
+  order: 5;
+}
+.vt-cel-dir {
+  order: 6;
+}
+
+@media (min-width: 64rem) {
+  .vt-palco {
+    grid-template-columns: minmax(0, 1fr) 27.5rem minmax(0, 1fr);
+    /* A linha do orbe tem a altura DELE; os paineis laterais transbordam para
+       baixo, ao lado do titulo, e nao empurram a dobra. */
+    grid-template-rows: var(--orbe) auto auto auto;
+    column-gap: 2rem;
+    align-items: start;
+  }
+  .vt-orbe-cel {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .vt-cel-esq {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    width: 100%;
+    max-width: 19rem;
+    margin-top: 4rem;
+    position: relative;
+    z-index: 4;
+  }
+  .vt-cel-dir {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    width: 100%;
+    max-width: 19rem;
+    margin-top: 0.5rem;
+    position: relative;
+    z-index: 4;
+  }
+  .vt-titulo {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: calc(var(--orbe) * -0.23);
+  }
+  .vt-sub {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .vt-cta {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+}
+
+/* O titulo herda `.display-vitrine` (globals) so pela FAMILIA; peso e corpo
+   sao do hero. Sombra escura porque o texto atravessa o orbe. */
+.vt-titulo h1 {
+  font-size: clamp(2.6rem, min(8.4vw, 10svh), 5.6rem);
+  font-weight: 800;
+  line-height: 0.93;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 48px color-mix(in oklch, var(--background) 82%, transparent);
+}
+.vt-titulo h1 span {
+  display: block;
+}
+
+/* --- o ORBE: tres manchas em `screen` girando devagar ---------------------
+   E o unico elemento vivo da pagina (Aurora). Ambar (dito), azul (medido) e o
+   magenta do atelie: a cor do orbe e cenografia, nao canal de dado. */
+.vt-orbe {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: min(100%, var(--orbe));
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.vt-orbe__aura {
+  position: absolute;
+  inset: -34%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--atelie-halo) 55%, transparent), color-mix(in oklch, var(--medido) 14%, transparent) 55%, transparent 72%);
+  filter: blur(18px);
+  animation: vt-respira 7s ease-in-out infinite;
+}
+.vt-orbe__corpo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  /* As manchas se somam em screen e, sem isto, o centro lia cinza-perolado. */
+  filter: saturate(1.85) contrast(1.05);
+  box-shadow: 0 0 80px color-mix(in oklch, var(--atelie-halo) 45%, transparent), 0 0 200px color-mix(in oklch, var(--dito) 16%, transparent);
+}
+.vt-orbe__corpo i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.vt-orbe__corpo i:nth-child(1) {
+  background: radial-gradient(circle at 24% 28%, var(--dito), transparent 50%);
+  animation: vt-gira 14s linear infinite;
+}
+.vt-orbe__corpo i:nth-child(2) {
+  background: radial-gradient(circle at 78% 34%, var(--medido), transparent 50%);
+  animation: vt-gira 18s linear infinite reverse;
+}
+.vt-orbe__corpo i:nth-child(3) {
+  background: radial-gradient(circle at 50% 84%, var(--atelie-halo), transparent 52%);
+  animation: vt-gira 22s linear infinite;
+}
+.vt-orbe__feixe {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mix-blend-mode: overlay;
+  background: conic-gradient(from 0deg, transparent 0 62%, color-mix(in oklch, white 70%, transparent) 78%, transparent 92%);
+  animation: vt-gira 9s linear infinite;
+}
+.vt-orbe__corpo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow:
+    inset -34px -40px 90px color-mix(in oklch, black 72%, transparent),
+    inset 18px 14px 50px color-mix(in oklch, white 14%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--foreground) 26%, transparent);
+}
+.vt-orbe__brilho {
+  position: absolute;
+  left: 16%;
+  top: 9%;
+  width: 34%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, white 80%, transparent), transparent);
+  filter: blur(6px);
+  transform: rotate(-24deg);
+  opacity: 0.75;
+}
+/* ANEIS: elipses inclinadas, cada uma com um satelite na cor de um sinal. */
+.vt-anel {
+  position: absolute;
+  left: -16%;
+  right: -16%;
+  top: 50%;
+  height: 34%;
+  margin-top: -17%;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklch, var(--foreground) 22%, transparent);
+  animation: vt-anel 26s linear infinite;
+}
+.vt-anel em {
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 14px 3px currentColor;
+}
+.vt-anel--1 { transform: rotate(-18deg); color: var(--dito); }
+.vt-anel--2 { transform: rotate(24deg); color: var(--medido); animation-duration: 34s; animation-direction: reverse; height: 26%; margin-top: -13%; left: -26%; right: -26%; }
+.vt-anel--3 { transform: rotate(-64deg); color: var(--atelie-halo); animation-duration: 42s; height: 20%; margin-top: -10%; left: -8%; right: -8%; }
+.vt-orbe__reflexo {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -9%;
+  height: 8%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--atelie-halo) 60%, transparent), transparent);
+  filter: blur(10px);
+  animation: vt-respira 7s ease-in-out infinite;
+}
+@keyframes vt-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes vt-anel {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
+}
+@keyframes vt-respira {
+  0%, 100% { opacity: 0.7; scale: 0.96; }
+  50% { opacity: 1; scale: 1.05; }
+}
+/* Quem pediu menos movimento recebe o orbe PARADO, nao mais lento. */
+@media (prefers-reduced-motion: reduce) {
+  /* `:nth-child(n)` iguala a especificidade das regras que ligam a animacao
+     (`:nth-child(1)`...): sem isso a regra mais especifica vencia e o orbe
+     continuava girando para quem pediu o contrario. Medido em Playwright. */
+  .vt-orbe__corpo i:nth-child(n),
+  .vt-orbe__feixe,
+  .vt-orbe__aura,
+  .vt-orbe__reflexo,
+  .vt-anel:nth-of-type(n) {
+    animation: none;
+  }
+}
+
+/* --- CTA com borda conica (dourado -> magenta) ---------------------------- */
+
+.vt-botao {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0 1.6rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  background: var(--background);
+  transition:
+    filter 150ms var(--ease-fluid),
+    transform 150ms var(--ease-fluid);
+}
+.vt-botao svg {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 150ms var(--ease-fluid);
+}
+.vt-botao:hover svg {
+  transform: translateX(3px);
+}
+.vt-botao:active {
+  transform: translateY(1px);
+}
+.vt-botao:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.vt-botao--feixe {
+  /* A borda conica e o `border-box`, o miolo escuro e o `padding-box`: um
+     pseudo em z-index negativo pintaria POR CIMA do fundo do proprio botao. */
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--background), var(--background)) padding-box,
+    conic-gradient(
+      from 20deg,
+      var(--primary),
+      transparent 30%,
+      var(--atelie-halo) 55%,
+      transparent 72%,
+      var(--primary)
+    ) border-box;
+}
+.vt-botao--feixe:hover {
+  filter: brightness(1.12);
+}
+.vt-botao--contorno {
+  border: 1px solid var(--linha);
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+  font-weight: 500;
+}
+.vt-botao--contorno:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.vt-botao--ouro {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.vt-botao--ouro:hover {
+  filter: brightness(1.08);
+}
+
+/* --- cartao da fala do cliente (o DITO) ------------------------------------ */
+
+.vt-fala {
+  position: relative;
+  border: 1px solid var(--linha);
+  border-left: 2px solid var(--dito);
+  background: color-mix(in oklch, var(--background) 62%, transparent);
+  backdrop-filter: blur(8px);
+  padding: 1rem 1.15rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.vt-fala--bot {
+  border: 1px dashed var(--linha);
+  color: var(--muted-foreground);
+  backdrop-filter: none;
+}
+.vt-fala__quem {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dito-texto);
+}
+.vt-fala--bot .vt-fala__quem {
+  color: var(--muted-foreground);
+}
+.vt-fala mark {
+  background: none;
+  color: var(--dito-texto);
+  box-shadow: inset 0 -2px 0 var(--dito);
+}
+
+/* --- painel de leitura em LED --------------------------------------------- */
+
+.vt-leitura {
+  border: 1px solid var(--linha);
+  background: color-mix(in oklch, var(--background) 58%, transparent);
+  backdrop-filter: blur(10px);
+}
+.vt-leitura > div {
+  padding: 0.7rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--linha);
+}
+.vt-leitura > div:last-child {
+  border-bottom: 0;
+}
+.vt-leitura__rotulo {
+  display: block;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.vt-leitura__valor {
+  margin-top: 0.5rem;
+}
+.vt-leitura__nota {
+  margin-top: 0.45rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* --- faixa de fatos (rodape do hero) ---------------------------------------- */
+
+.vt-fatos {
+  margin-top: auto;
+  padding-top: clamp(1rem, 4svh, 2.5rem);
+}
+.vt-fatos__grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--linha);
+  background: color-mix(in oklch, var(--background) 60%, transparent);
+  backdrop-filter: blur(6px);
+}
+.vt-fatos__grade > div {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-right: 1px solid var(--linha);
+  border-bottom: 1px solid var(--linha);
+}
+.vt-fatos__grade > div:nth-child(2n) {
+  border-right: 0;
+}
+.vt-fatos__grade > div:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+.vt-fatos__grade span {
+  align-self: flex-start;
+  max-width: 7.5rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+@media (min-width: 48rem) {
+  .vt-fatos__grade {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .vt-fatos__grade > div {
+    padding: 0.85rem 1.2rem;
+    border-bottom: 0;
+  }
+  .vt-fatos__grade > div:nth-child(2n) {
+    border-right: 1px solid var(--linha);
+  }
+  .vt-fatos__grade > div:last-child {
+    border-right: 0;
+  }
+}
+
+/* --- LEITURA: a regua dito / medido --------------------------------------- */
+
+.vt-leitura-sec {
+  display: grid;
+  gap: 3rem;
+}
+@media (min-width: 64rem) {
+  .vt-leitura-sec {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+    gap: 4rem;
+    align-items: start;
+  }
+}
+.vt-regua {
+  border: 1px solid var(--linha);
+  background: var(--background);
+}
+.vt-regua__cab {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--linha);
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.vt-regua__zona {
+  position: relative;
+  padding: 2.4rem 0.9rem 1.1rem;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--compasso) 0 1px,
+    transparent 1px 14px
+  );
+}
+.vt-regua__lado {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.9rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.is-dito {
+  color: var(--dito-texto);
+}
+.is-medido {
+  color: var(--medido-texto);
+}
+/* A REGUA: a unica linha que AFIRMA alguma coisa. Com as barras de compasso. */
+.vt-regua__linha {
+  position: relative;
+  height: 1px;
+  background: var(--foreground);
+}
+.vt-regua__linha::before {
+  content: "";
+  position: absolute;
+  inset: -5px 0 auto 0;
+  height: 9px;
+  background: repeating-linear-gradient(90deg, var(--foreground) 0 1px, transparent 1px 3.5rem);
+}
+.vt-regua__acima {
+  display: grid;
+  gap: 0.9rem;
+}
+.vt-regua__acima > * {
+  min-width: 0;
+}
+.vt-ligadura {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dito-texto);
+}
+.vt-ligadura::before {
+  content: "";
+  height: 0.6rem;
+  border: 2px solid var(--dito);
+  border-top: 0;
+}
+.vt-regua__abaixo {
+  display: grid;
+  gap: 1rem;
+}
+/* A PAUSA: intervalo TRACEJADO, comprimento proporcional a latencia (a
+   notacao musical da pausa, sem desenhar glifo). O tempo vem em LED. */
+.vt-pausa {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.2rem;
+  border-inline: 1px solid var(--medido);
+  background: repeating-linear-gradient(90deg, var(--medido) 0 6px, transparent 6px 12px) center / 100% 1px no-repeat;
+}
+.vt-pausa__rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.25rem 0.7rem;
+  background: var(--background);
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--medido-texto);
+}
+.vt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+.vt-chips li {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid color-mix(in oklch, var(--medido) 55%, transparent);
+  background: color-mix(in oklch, var(--medido) 8%, transparent);
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--medido-texto);
+}
+.vt-nota {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+@media (min-width: 48rem) {
+  .vt-regua__zona {
+    padding-inline: 1.2rem;
+  }
+  .vt-regua__acima {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+  }
+  .vt-fala-g1 {
+    grid-column: 1 / 7;
+    grid-row: 1;
+  }
+  .vt-fala-bot {
+    grid-column: 4 / 10;
+    grid-row: 2;
+  }
+  .vt-fala-g2 {
+    grid-column: 8 / 13;
+    grid-row: 1;
+  }
+  .vt-regua__abaixo {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: start;
+  }
+  .vt-pausa {
+    grid-column: 1 / 9;
+    grid-row: 1;
+  }
+  .vt-chips {
+    grid-column: 1 / 9;
+    grid-row: 2;
+  }
+  .vt-nota {
+    grid-column: 9 / 13;
+    grid-row: 1 / 3;
+    align-items: flex-end;
+    text-align: right;
+  }
+}
+
+/* --- SISTEMA: a grade de 1px --------------------------------------------- */
+
+.vt-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--linha);
+  background: var(--linha);
+}
+.vt-cel {
+  position: relative;
+  min-height: 10rem;
+  padding: 1.1rem 1.15rem 3rem;
+  background: var(--background);
+  transition: background-color 150ms var(--ease-fluid);
+}
+.vt-cel:hover {
+  background: var(--card);
+}
+.vt-cel__no {
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  color: var(--muted-foreground);
+}
+.vt-cel h3 {
+  margin-block: 0.45rem 0.5rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.vt-cel p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+.vt-cel__rodape {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.9rem;
+}
+.vt-cel--fusor {
+  grid-column: 1 / -1;
+  min-height: 19rem;
+  padding: 1.4rem;
+}
+.vt-fusor__led {
+  margin-top: 1.6rem;
+}
+.vt-fusor__formula {
+  margin-top: 1.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--linha);
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  line-height: 1.9;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+@media (min-width: 48rem) {
+  .vt-grade {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .vt-cel--fusor {
+    grid-column: 1 / 3;
+    grid-row: 1 / 3;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .vt-fusor__formula {
+    margin-top: auto;
+  }
+}
+/* A LAMPADA: cor sempre COM a palavra ao lado (dito / medido). */
+.vt-lampada {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.vt-lampada i {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--medido);
+  box-shadow: 0 0 10px var(--medido);
+}
+.vt-lampada.is-dito i {
+  background: var(--dito);
+  box-shadow: 0 0 10px var(--dito);
+}
+.vt-lampada.is-vazio i {
+  background: transparent;
+  border: 1px solid var(--muted-foreground);
+  box-shadow: none;
+}
+
+/* --- METODO ----------------------------------------------------------------- */
+
+.vt-metodo {
+  display: grid;
+  gap: 3rem;
+}
+@media (min-width: 64rem) {
+  .vt-metodo {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 5rem;
+  }
+}
+.vt-aviso {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.1rem 0 1.6rem;
+  border-bottom: 1px solid var(--compasso);
+}
+@media (min-width: 40rem) {
+  .vt-aviso {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
+}
+.vt-aviso__no {
+  font-family: var(--fonte-mono);
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+.vt-aviso h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.vt-aviso p {
+  margin-top: 0.6rem;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+}
+.vt-limite {
+  margin-top: 2.5rem;
+  border: 1px solid var(--linha);
+  padding: 1.25rem 1.35rem;
+}
+.vt-limite h3 {
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.vt-limite ul {
+  margin-top: 0.85rem;
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
+}
+.vt-limite li {
+  position: relative;
+  padding-left: 1.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+.vt-limite li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62rem;
+  width: 0.55rem;
+  height: 1px;
+  background: var(--muted-foreground);
+}
+.vt-limite b {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+/* --- FECHO e RODAPE --------------------------------------------------------- */
+
+.vt-fecho {
+  text-align: center;
+  padding-block: clamp(5.5rem, 11vw, 10rem);
+  background: radial-gradient(
+    circle at 50% 115%,
+    color-mix(in oklch, var(--primary) 16%, transparent),
+    transparent 50%
+  );
+}
+.vt-rodape {
+  border-top: 1px solid var(--linha);
+  padding-block: 1.5rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.vt-rodape > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+@media (min-width: 40rem) {
+  .vt-rodape > div {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+.vt-rodape a:hover {
+  color: var(--foreground);
+}
+
+/* Titulos de secao: mesmo peso firme do hero, para a escala nao cair. */
+.vt-sec .titulo-vitrine {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}

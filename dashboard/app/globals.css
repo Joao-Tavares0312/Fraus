@@ -44,68 +44,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Keyframes dos componentes da vitrine. Ver o bloco `--animate-*` no `@theme`
-   logo abaixo sobre por que eles moram aqui e nao num `tailwind.config.js`. */
-@keyframes star-movement-bottom {
-  0% {
-    transform: translate(0%, 0%);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-100%, 0%);
-    opacity: 0;
-  }
-}
-@keyframes star-movement-top {
-  0% {
-    transform: translate(0%, 0%);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(100%, 0%);
-    opacity: 0;
-  }
-}
-/* O GLITCH. A tabela original tinha vinte e um passos de 5%; esta e a mesma
-   curva reamostrada nos pontos que mudam de direcao -- `clip-path` nao
-   interpola entre passos de forma util aqui (o salto E o efeito), entao passos
-   intermediarios so engordavam a folha de estilo. */
-@keyframes glitch {
-  0% {
-    clip-path: inset(20% 0 50% 0);
-  }
-  10% {
-    clip-path: inset(15% 0 55% 0);
-  }
-  20% {
-    clip-path: inset(30% 0 40% 0);
-  }
-  30% {
-    clip-path: inset(10% 0 60% 0);
-  }
-  40% {
-    clip-path: inset(25% 0 35% 0);
-  }
-  50% {
-    clip-path: inset(20% 0 50% 0);
-  }
-  60% {
-    clip-path: inset(15% 0 55% 0);
-  }
-  70% {
-    clip-path: inset(30% 0 40% 0);
-  }
-  80% {
-    clip-path: inset(20% 0 50% 0);
-  }
-  90% {
-    clip-path: inset(15% 0 55% 0);
-  }
-  100% {
-    clip-path: inset(30% 0 40% 0);
-  }
-}
-
 @theme inline {
   --font-sans: var(--fonte-sans);
   --font-mono: var(--fonte-mono);
@@ -196,22 +134,6 @@
   --color-promotor-texto: var(--promotor-texto);
   --color-sem-sinal: var(--sem-sinal);
 
-  /* --- ANIMACOES DOS COMPONENTES DA VITRINE ------------------------------
-     Os componentes vindos do React Bits (registry `@react-bits`, ver
-     `components.json`) na variante Tailwind declaram utilitarios `animate-*` e
-     esperam que os keyframes existam no tema. No Tailwind v4 isso e um
-     `--animate-*` aqui e um `@keyframes` no arquivo -- nao ha mais
-     `tailwind.config.js` para receber o bloco que eles documentam no rodape de
-     cada arquivo.
-
-     A DURACAO declarada aqui e so o padrao: os dois componentes escrevem
-     `animationDuration` inline, entao quem manda no ritmo e a prop. */
-  --animate-star-movement-bottom: star-movement-bottom 6s linear infinite
-    alternate;
-  --animate-star-movement-top: star-movement-top 6s linear infinite alternate;
-  --animate-glitch-after: glitch 3s infinite linear alternate-reverse;
-  --animate-glitch-before: glitch 2s infinite linear alternate-reverse;
-
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -221,111 +143,70 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Tema unico (dark). `:root` e `.dark` recebem os mesmos valores porque o app
-   renderiza sempre com a classe `.dark` (app/layout.tsx) — trava a identidade. */
+/* O CHASSI PADRAO: "INSTRUMENTO" (30/09/2026, spec 2026-09-30-instrumento-design).
+   `:root` e `.dark` recebem os mesmos valores porque o app renderiza sempre com a
+   classe `.dark` (app/layout.tsx). O tema padrao e a AUSENCIA de classe; a
+   "chuva de neon" (o bloco de tema abaixo) sobrepoe so o que muda. */
 :root,
 .dark {
   color-scheme: dark;
 
-  /* Pauta evoluído, etapa 1 (spec 2026-08-31): Inter na frente da pilha,
-     JetBrains Mono nos dados. As variáveis --fonte-inter/--fonte-jetbrains
-     vêm do next/font no layout raiz — self-hosted, zero rede em runtime.
-     A pilha de sistema fica atrás como fallback do primeiro paint. */
+  /* --- tipografia -----------------------------------------------------------
+     Martian Mono no que e ROTULO, DADO e TITULO DE TELA; Inter na PROSA;
+     Bricolage Grotesque so na vitrine. As variaveis vem do next/font no layout
+     raiz (self-hosted, zero rede em runtime); a pilha de sistema e o fallback
+     do primeiro paint. */
   --fonte-sans: var(--fonte-inter), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --fonte-mono: var(--fonte-jetbrains), ui-monospace, "Cascadia Mono",
+  --fonte-mono: var(--fonte-martian), ui-monospace, "Cascadia Mono",
     "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
 
-  /* A display da vitrine. Ela NAO entra em --fonte-sans: quem manda no corpo,
-     no rotulo e no dado continua sendo a Inter, e a fonte de display segue
-     proibida ali (DESIGN.md secao 4). O fallback e a propria pilha de sistema,
-     para o caso de o .woff2 falhar em carregar. */
-  --fonte-display: var(--fonte-mona), ui-sans-serif, system-ui, sans-serif;
+  /* A display da vitrine. Ela NAO entra em --fonte-sans nem em --fonte-mono:
+     quem manda no corpo, no rotulo e no dado continua sendo Inter/Martian, e a
+     fonte de display segue proibida ali (DESIGN.md secao 4). */
+  --fonte-display: var(--fonte-bricolage), ui-sans-serif, system-ui, sans-serif;
 
   --duration-sidebar: 300ms;
 
-  /* --- chassi --- */
+  /* --- chassi ----------------------------------------------------------------
 
-  /* A TESE DO PADRAO DE FABRICA: O VAZIO VISTO DE DENTRO DE UMA CABINE.
-     Nao e "fundo preto com estrelinhas". A cena tem tres corpos, e cada peca do
-     atelie e um deles: a ESTRELA quente e distante (`--atelie-marca`, que e o
-     proprio ouro da marca), a NEBULOSA fria (`--atelie-fria`) e o PLANETA
-     nascendo no horizonte (`--sol-*`, o disco listrado). Nenhuma peca foi
-     inventada para isso -- so o campo de estrelas.
+     A TESE: UM INSTRUMENTO DE LABORATORIO SOBRE QUASE-PRETO. O fundo e neutro
+     (croma ~0.004), sem o azul-marinho do "espaco profundo" -- o Instrumento
+     recusa cenario, e o unico cenario que sobra e o orbe da vitrine.
 
-     O FUNDO NAO E PRETO PURO, e a recusa e HERDADA do grafite palavra por
-     palavra: preto puro faz a regua de meio ponto flutuar no vacuo e transforma
-     dado em neon. Azul-marinho fundissimo tem cor -- o ceu profundo devolve luz,
-     ele nao e ausencia dela. E o mesmo argumento que dizia "papel, nao vazio",
-     aplicado a outro material. Ver DESIGN.md 3.1 e 8. */
-  --background: oklch(0.128 0.022 264);
-  --foreground: oklch(0.975 0.006 250);
-  --card: oklch(0.186 0.026 264);
-  --card-foreground: oklch(0.975 0.006 250);
-  --popover: oklch(0.178 0.026 264);
-  --popover-foreground: oklch(0.975 0.006 250);
-  /* O DOURADO DO MONOGRAMA. Medido do proprio arquivo da logo: o R e um
-     gradiente, e este valor e o meio da rampa dele.
+     NAO E PRETO PURO, e a recusa vem do grafite: preto puro faz a regua de meio
+     ponto flutuar no vacuo. Quase-preto com um traco de matiz (285) devolve
+     luz, e os degraus card/popover/sidebar sao passos de claridade, nao de
+     cor. Superficie e opacidade branca baixa; separacao e HAIRLINE de 1px. */
+  --background: oklch(0.14 0.004 285);
+  --foreground: oklch(0.96 0.003 285);
+  --card: oklch(0.185 0.005 285);
+  --card-foreground: oklch(0.96 0.003 285);
+  --popover: oklch(0.175 0.005 285);
+  --popover-foreground: oklch(0.96 0.003 285);
 
-     A medicao original saiu do PNG (oklch 0.514 0.066 84 no pe a 0.824 0.079
-     76 no topo) -- amostragem de pixel, com o ruido que isso tem. Em
-     24/08/2026 a marca passou a ser vetorial e a rampa virou EXATA, lida das
-     paradas do gradiente de `public/fraus-logo.svg`: oklch(0.642 0.084 76) no
-     pe a oklch(0.832 0.071 78) no topo. O token nao mudou, e nao precisou:
-     0.78 0.085 80 cai dentro dessa rampa. A fonte da verdade agora e o SVG.
-
-     O lime que estava aqui (oklch 0.843 0.179 134) nao vinha da marca --
-     nenhum pixel da logo e verde. Era heranca do chassi, e uma dashboard cuja
-     cor de acao nao existe na identidade e uma marca aplicada pela metade.
-
-     POR QUE ISTO NAO COLIDE COM `--dito`, que e ambar e semantico: o que
-     separa os dois nao e o matiz, e o CROMA. O dourado da marca e fosco
-     (0.085) e o ambar do "dito" e saturado (0.15) -- metalico contra pigmento.
-     Some-se que eles nunca dividem superficie: `--primary` preenche controle,
-     `--dito` marca dado. Ver DESIGN.md, "A cor da marca". */
+  /* O DOURADO DO MONOGRAMA -- cor de ACAO e de FOCO, nunca de dado. Medido do
+     proprio `public/fraus-logo.svg` (meio da rampa do R). Nao colide com
+     `--dito` porque o que separa os dois e o CROMA (fosco 0.095 contra
+     saturado 0.14) e porque nunca dividem superficie: `--primary` preenche
+     controle, `--dito` marca dado. Ver DESIGN.md, "A cor da marca". */
   --primary: oklch(0.83 0.095 84);
   --primary-foreground: oklch(0.15 0.02 84);
-  --secondary: oklch(0.258 0.028 266);
-  --secondary-foreground: oklch(0.975 0.006 250);
-  --muted: oklch(0.258 0.028 266);
-  --muted-foreground: oklch(0.745 0.032 258);
-  --accent: oklch(0.258 0.028 266);
-  --accent-foreground: oklch(0.975 0.006 250);
-  /* O VERMELHO DE ERRO CLAREOU PARA O VIDRO PODER AFINAR (24/08/2026).
-     Era oklch(0.704 0.191 22.216), e ele era o gargalo da interface inteira:
-     sobre o piso do vidro fino ele fechava em 4,52:1 contra o minimo de 4,5,
-     entao NENHUMA espessura de vidro podia afinar sem derrubar o portao. Dois
-     pontos a menos ja levavam o par para 4,44.
+  --secondary: oklch(0.245 0.006 285);
+  --secondary-foreground: oklch(0.96 0.003 285);
+  --muted: oklch(0.245 0.006 285);
+  /* PISO DE COR DE TEXTO: nada mais escuro que isto carrega texto. */
+  --muted-foreground: oklch(0.74 0.01 285);
+  --accent: oklch(0.245 0.006 285);
+  --accent-foreground: oklch(0.96 0.003 285);
 
-     Clarea-lo e a unica alavanca que compra fundo visivel sem tocar em dado:
-     o que se ve do atelie atraves do vidro E a claridade do piso, entao pedir
-     "mais fundo" e pedir piso mais claro, e piso mais claro exige texto mais
-     claro. Nao e afrouxar o portao -- e consertar a cor do texto.
-
-     E SEGURO porque `bg-destructive` cheio so pinta BOLINHA de status; o botao
-     e o badge usam `/10` e `/20` com `text-destructive` por cima, entao clarear
-     melhora os dois usos e nao ha rotulo sobre preenchimento solido.
-
-     O CROMA CAIU DE PROPOSITO, de 0.191 para 0.121. O valor antigo estava FORA
-     DO GAMUT sRGB (R = 1,013) e o navegador ja o cortava; subir a claridade
-     mantendo 0.191 pioraria isso (R = 1,319). 0.121 e o croma maximo dentro do
-     gamut nesta claridade -- rgb(255,83,79) --, entao o token passa a declarar
-     a cor que de fato renderiza, e de quebra rende um pouco mais de contraste
-     que a versao cortada. O MATIZ nao se moveu: vermelho continua sendo erro. */
+  /* O vermelho de erro clareou em 24/08/2026 para o vidro poder afinar, e o
+     croma foi para dentro do gamut sRGB (0.121). Nada disso mudou. */
   --destructive: oklch(0.79 0.121 22.216);
   --success: oklch(0.78 0.16 150);
   --warning: oklch(0.8 0.14 80);
 
-  /* CONVERTIDOS de hsl() para oklch() em 24/08/2026, e a conversão é
-     matematicamente equivalente -- mesma cor, outra notação.
-
-     O motivo não é estético: `scripts/contraste.mjs` só faz parse de
-     `oklch()` literal, de propósito (ver o comentário de `lerTokens`), então
-     estes nove eram INVISÍVEIS para o portão. Três deles carregam texto e
-     nunca foram medidos, em tema nenhum -- e o rosa de
-     `--destructive-rich-text` sobre o índigo do tema chuva foi confirmado
-     ilegível numa captura de tela. Convertidos, o gate passa a enxergá-los
-     sem uma linha de mudança no script. */
+  /* Em oklch() literal de proposito: `scripts/contraste.mjs` so le oklch. */
   --destructive-rich: oklch(0.199 0.064 23);
   --destructive-rich-border: oklch(0.27 0.103 25.5);
   --destructive-rich-text: oklch(0.799 0.116 17.8);
@@ -336,170 +217,94 @@
   --warning-rich-border: oklch(0.291 0.063 109.8);
   --warning-rich-text: oklch(0.864 0.142 92.2);
 
-  --border: oklch(0.86 0.06 230 / 15%);
-  --input: oklch(0.86 0.06 230 / 21%);
+  --border: oklch(0.96 0.003 285 / 13%);
+  --input: oklch(0.96 0.003 285 / 20%);
   --ring: oklch(0.83 0.095 84);
-  /* 2px, e não zero. A seção 3.3.1 já argumentava nesta direção -- o F e o R
-     são chanfrados a 45° e não têm uma curva de canto sequer -- e só parou em
-     0.375rem para o controle não brigar com um chassi arredondado. Com o
-     chassi inteiro endurecendo, a objeção deixa de existir.
-     Não vai a zero porque canto absolutamente vivo serrilha em tela não-HiDPI
-     e o chanfro da marca é um corte, não uma quina. Emenda de 24/08/2026 à
-     seção 3.3.1 -- ver DESIGN.md. */
-  --radius: 0.125rem;
+  /* ZERO. O Instrumento e retangulo de hairline: o chanfro de 45 graus que
+     acompanhava o F e o R do monograma saiu junto com o vidro (DESIGN.md
+     3.3.1, emenda de 30/09/2026). O que aparece como circulo (a cabeca da
+     categoria, o ponto de status) usa `rounded-full` explicito. */
+  --radius: 0;
 
-  --sidebar: oklch(0.158 0.026 266);
-  --sidebar-foreground: oklch(0.975 0.006 250);
+  --sidebar: oklch(0.16 0.004 285);
+  --sidebar-foreground: oklch(0.96 0.003 285);
   --sidebar-primary: oklch(0.83 0.095 84);
   --sidebar-primary-foreground: oklch(0.15 0.02 84);
-  --sidebar-accent: oklch(0.258 0.028 266);
-  --sidebar-accent-foreground: oklch(0.975 0.006 250);
-  --sidebar-border: oklch(0.86 0.06 230 / 15%);
+  --sidebar-accent: oklch(0.245 0.006 285);
+  --sidebar-accent-foreground: oklch(0.96 0.003 285);
+  --sidebar-border: oklch(0.96 0.003 285 / 13%);
   --sidebar-ring: oklch(0.83 0.095 84);
 
-  /* --- A MATERIALIDADE: vidro liquido ---------------------------------
-     Ver DESIGN.md, "A materialidade", e a spec de 2026-08-21.
+  /* --- A MATERIALIDADE -------------------------------------------------------
+     No Instrumento a superficie e QUASE OPACA: o vidro liquido saiu (spec
+     2026-09-30) e o que sobrou dele e a hierarquia de tres espessuras, que agora
+     e so de OPACIDADE -- fino/medio ~90%, denso ~97% para menu suspenso. Blur so
+     onde ha sobreposicao real: o denso (popover/sheet) e a faixa colada no topo
+     (cabecalho sticky), que rola por cima do conteudo.
 
-     Tres espessuras, e nao uma escala continua, porque o custo de
-     `backdrop-filter` e real e cada espessura resolve um problema diferente:
-       fino  -> so sinaliza flutuacao (header, tooltip)
-       medio -> superficie de trabalho (sidebar, painel, controle)
-       denso -> o conteudo atras PRECISA sumir (sheet, popover, select), ou o
-                rotulo da opcao compete com a tabela por tras dele.
+     Os PISOS sao medidos por `node scripts/pisos.mjs`, nao estimados, e
+     `node scripts/contraste.mjs` diz se passam. O portao manda no vidro; o vidro
+     nunca afrouxa o portao. */
+  --vidro-fino-fundo: color-mix(in oklch, var(--card) 90%, transparent);
+  --vidro-fundo: color-mix(in oklch, var(--card) 92%, transparent);
+  --vidro-denso-fundo: color-mix(in oklch, var(--card) 97%, transparent);
 
-     Cada espessura tem um PISO: a cor mais clara que ela pode assumir, com o
-     vidro composto sobre a mancha mais brilhante do atelie. E contra o piso
-     que `scripts/contraste.mjs` verifica o texto -- superficie translucida
-     nao tem cor fixa, e o pior caso e o unico caso honesto de medir.
+  /* MEDIDOS por `npm run pisos` em 30/09/2026: 0.191 / 0.190 / 0.187. Com o
+     atelie calmo (planeta, estrelas e grade em zero) o piso mal sobe do card. */
+  --vidro-fino-piso: oklch(0.192 0.005 285);
+  --vidro-piso: oklch(0.191 0.005 285);
+  --vidro-denso-piso: oklch(0.188 0.005 285);
 
-     Os pisos nasceram mais ESCUROS que --muted (L 0.274), que ja estava no
-     conjunto verificado ha tempo, e por um tempo isso serviu de alarme barato:
-     piso acima de 0.274 significava vidro clareando a ponto de ameacar o
-     texto. NAO SERVE MAIS, e vale dizer por que em vez de deixar a frase
-     bonita no arquivo: com o atelie aceso, o vidro fino ja passa de 0.274 nos
-     dois temas e ainda assim cruza AA. O alarme virou falso positivo, e quem
-     manda hoje e a medicao -- `node scripts/pisos.mjs` recalcula os pisos e
-     `node scripts/contraste.mjs` diz se passam. */
-  /* REMEDIDOS em 24/08/2026 ao imprimir a marca no fundo e engrossar o papel
-     pautado. `--muted-foreground` e `--destructive` sobre vidro fino cairam
-     para 4.25 e 3.86, entao a ESPESSURA ganhou opacidade -- 45% -> 55% no fino
-     e 62% -> 72% no medio. O portao manda no vidro; o vidro nao afrouxa o
-     portao, e baixar a luz para salvar contraste seria resolver pelo lado
-     errado num pedido cujo enunciado era ficar mais chamativo. */
-  /* Task 8, mesmo dia: com os pisos remedidos (piso honesto, ver comentario
-     abaixo), `--destructive` sobre vidro fino reprovava em 4.13 (minimo
-     4.5). O fino subiu de 2 em 2 pontos, remedindo o piso a cada passo --
-     55% -> 57% (4.21) -> 59% (4.29) -> 61% (4.37) -> 63% (4.47) -> 65%
-     (passa). Medio e denso nao mudaram. */
-  /* Task 8, exercicio de recuperacao (mesmo dia, depois): descido de 1 em 1
-     para achar o minimo que ainda passa. 65% -> 64% (razao 4.50, no limite
-     exato) -> 63% (4.47, reprova). Ficou em 64%: 1 ponto de folga
-     recuperado, e SO 1 -- este par nasceu do proprio engrossamento acima e
-     nao tinha margem para dar. Nao tente descer mais sem antes engrossar
-     outra coisa. */
-  /* Revisao final da branch (24/08/2026): `pisos.mjs` tratava marca impressa e
-     grade a laser como ALTERNATIVAS mutuamente exclusivas, premissa que morreu
-     quando a mascara da marca foi alargada (de `120% 120% ... transparent 72%`
-     para `150% 150% ... black 34%, transparent 96%`) e ela passou a se
-     sobrepor a grade na quina inferior direita. Com as duas SOMADAS -- o
-     modelo honesto --, os seis pisos ficaram otimistas e `--destructive` x
-     `--vidro-fino-piso` caiu para 4.29. O fino subiu de 1 em 1, remedindo o
-     piso a cada passo: 64% (4.29) -> 65% (4.34) -> 66% (4.39) -> 67% (4.44)
-     -> 68% (4.49) -> 69% (passa). Medio e denso nao precisaram mudar. */
-  --vidro-fino-fundo: color-mix(in oklch, var(--card) 56%, transparent);
-  --vidro-fundo: color-mix(in oklch, var(--card) 56%, transparent);
-  --vidro-denso-fundo: color-mix(in oklch, var(--card) 86%, transparent);
+  /* O FILTRO e token inteiro (nao so o raio) porque o Instrumento nao quer
+     `backdrop-filter` nenhum nas superficies comuns -- custo de CSS real por
+     nada --, e a chuva quer o blur de sempre. Blur so onde ha sobreposicao:
+     o denso (popover/sheet) e a faixa sticky do cabecalho. */
+  --vidro-filtro-fino: none;
+  --vidro-filtro: none;
+  --vidro-filtro-denso: blur(16px) saturate(1.2);
+  --vidro-filtro-faixa: blur(12px);
 
-  /* MEDIDOS por `node scripts/pisos.mjs`, nao estimados. Eram 0.25/0.24/0.23
-     com o fundo liso, 0.309/0.28/0.246 ao ligar o papel pautado, 0.31/0.274/0.253
-     com a marca impressa, e estes agora, remedidos ao acender o sol listrado
-     (Task 2) -- o sol e camada somada e mais clara que a mancha quente que
-     substituiu, entao o composto do atelie clareou e o piso antigo ficou
-     otimista. */
-  /* REMEDIDOS de novo (Task 8) ao engrossar o vidro fino para fechar o par
-     `--destructive` x `--vidro-fino-piso`: 55%->65% de fundo baixa o piso
-     fino de 0.336 para 0.310 (mais card opaco, menos atelie por baixo).
-     Medio e denso ficaram identicos ao medido -- nenhuma mudanca. */
-  /* REMEDIDO mais uma vez ao afinar o fino de volta para 64% (recuperacao de
-     espessura, mesmo dia): 0.310 -> 0.313. */
-  /* REMEDIDOS na revisao final, com marca+grade somadas (ver acima): eram
-     0.313/0.291/0.264 com o modelo antigo. Medio e denso subiram sozinhos
-     (0.302/0.271); o fino fechou em 0.311 porque a espessura dele engordou. */
-  --vidro-fino-piso: oklch(0.336 0.026 264);
-  --vidro-piso: oklch(0.336 0.026 264);
-  --vidro-denso-piso: oklch(0.236 0.026 264);
+  /* A quina e a sombra viraram FILETE e ASSENTAMENTO: sem realce colorido, sem
+     halo. Os nomes ficam porque o tema chuva ainda os sobrepoe. */
+  --vidro-quina: oklch(0.96 0.003 285 / 16%);
+  --vidro-quina-baixa: oklch(0.96 0.003 285 / 7%);
+  --vidro-sombra: 0 1px 0 oklch(0 0 0 / 30%);
 
-  --vidro-blur-fino: 8px;
-  --vidro-blur: 16px;
-  --vidro-blur-denso: 28px;
+  /* --- a pauta ---------------------------------------------------------------
 
-  /* A QUINA ILUMINADA. E este par -- claro na aresta de cima, escuro na de
-     baixo -- que faz a superficie parecer vidro em vez de plastico fosco.
-     Sem ele, translucidez sozinha le como opacidade mal resolvida. */
-  /* A quina sobe junto com o resto: e ela que faz a superficie parecer vidro
-     em vez de plastico fosco, e acender a aresta acende a interface inteira
-     sem uma celula de dado mudar de cor. Continua BRANCA no grafite -- aqui
-     ela e reflexo de luz de escritorio, e reflexo nao tem cor propria. */
-  /* REFORCADA em 01/09/2026, junto com a entrada da refracao, e as duas peças
-     precisam ser lidas juntas porque fazem trabalhos DIFERENTES.
-     A refracao (`components/shell/VidroLiquido.tsx`) so aparece onde ha
-     ESTRUTURA atras para entortar; sobre a luz lisa do atelie ela nao tem o que
-     mostrar -- medido: com escala baixa, o diff de pixel entre ligada e
-     desligada dava 0,16% da tela. O REALCE DE QUINA nao depende do fundo: ele
-     e a propria aresta pegando luz, e e ele que da espessura a superficie mesmo
-     parada sobre um gradiente uniforme. Era a peça mais barata da lista e
-     estava subusada. 40% -> 55% em cima, 30% -> 42% embaixo. */
-  --vidro-quina: oklch(0.94 0.07 222 / 55%);
-  --vidro-quina-baixa: oklch(0.64 0.2 300 / 42%);
-  /* GLOW, nao buraco. Sombra preta sob um painel que flutua sobre a luz do
-     ateliê lê como recorte no papel; um halo quente lê como a luz da própria
-     superfície vazando para baixo. É a mesma ideia que o tema chuva já
-     aplicou em violeta, agora na cor deste tema -- ouro FOSCO, croma 0.06,
-     porque aqui ele é luz de escritório e não neon de fachada. */
-  --vidro-sombra: 0 1px 2px oklch(0.07 0.03 285 / 38%),
-    0 10px 34px oklch(0.4 0.16 295 / 24%);
+     A REGUA do sistema: o eixo que separa o dito (acima) do medido (abaixo).
+     Meio ponto de tinta, sempre visivel e nunca dominante -- ~26% de branco. E
+     a unica linha que AFIRMA alguma coisa. */
+  --linha: oklch(0.96 0.003 285 / 26%);
+  /* A BARRA DE COMPASSO / o FILETE interno: mais fraca, agrupa sem pedir
+     atencao (~9%). */
+  --compasso: oklch(0.96 0.003 285 / 9%);
 
-  /* --- a pauta --- */
-
-  /* A REGUA do sistema: o eixo que separa o dito (acima) do medido (abaixo).
-     Precisa estar sempre visivel e nunca dominar -- meio ponto de tinta. */
-  /* A régua sobe junto com a quina. Ela continua sendo a única linha que
-     AFIRMA alguma coisa -- o papel pautado do ateliê é papel, esta é medida --
-     e por isso ela tem que continuar mais forte que o papel, que subiu para
-     0.12 em 24/08/2026. Era 24% e 8%. */
-  --linha: oklch(0.94 0.03 240 / 30%);
-  /* A BARRA DE COMPASSO: virada de dia. Mais fraca que a regua de proposito;
-     ela agrupa o tempo sem pedir atencao. */
-  --compasso: oklch(0.94 0.03 240 / 10%);
-
-  /* --- camada de dado (Fraus) — substitui --chart-1..5 do Kronos --- */
+  /* --- camada de dado (Fraus) -----------------------------------------------
+     O ENCODING, que nao e pele: ambar = o que foi DITO, azul = o que foi
+     MEDIDO. O LED do SegmentoLED e azul porque numero e medido. */
 
   /* ambar: o que foi DITO */
-  --dito: oklch(0.83 0.19 60);
+  --dito: oklch(0.78 0.14 72);
   --dito-fraco: color-mix(in oklch, var(--dito) 18%, transparent);
-  --dito-texto: oklch(0.87 0.17 60); /* AA sobre card e muted */
+  --dito-texto: oklch(0.85 0.125 72); /* AA sobre card e muted */
 
-  /* azul: o que foi MEDIDO */
-  --medido: oklch(0.74 0.2 265);
+  /* azul: o que foi MEDIDO (e o LED) */
+  --medido: oklch(0.74 0.13 250);
   --medido-fraco: color-mix(in oklch, var(--medido) 18%, transparent);
-  --medido-texto: oklch(0.81 0.18 265);
+  --medido-texto: oklch(0.82 0.105 250);
 
-  /* --- as quatro familias que entraram no fusor em 21/08/2026 ---
-     texto, emoji e tempo ja tinham cor (dito/medido/tempo); emocao, lexico,
-     ironia e estilo sao NOVAS, sem reciclar hue de nenhuma existente -- ver
-     PesosFeatures.tsx e BarrasDeFeature.tsx, que agora tem sete familias. */
+  /* --- as familias que entraram no fusor -------------------------------------
+     texto, emoji e tempo ja tinham cor; emocao, lexico, ironia e estilo sao
+     NOVAS, sem reciclar matiz de nenhuma existente. */
   --emocao: oklch(0.75 0.21 10); /* vermelho: as sete emocoes + desprezo */
   --emocao-fraco: color-mix(in oklch, var(--emocao) 18%, transparent);
   --emocao-texto: oklch(0.82 0.19 10);
 
   /* AS SETE EMOCOES NA PARTITURA DA FALA (15/09/2026). Cor de MARCA, nunca de
-     texto: o numero ao lado continua em foreground/muted. Tons longe das tres
-     classes (22, 90, 190) e do ambar do dito (60), porque a pauta mostra classe
-     e emocao juntas. Validados pelo validador de paleta da skill dataviz sobre
-     o card, na ORDEM da pauta (lib/partitura.ts, ORDEM_EMOCOES) -- a ordem faz
-     parte da validacao: pares vizinhos CVD ΔE 12,5 e visao normal 16,2, e as
-     sete >= 3:1. Trocar a ordem ou um tom sem rodar o validador de novo e
-     desfazer a medicao. Neutro e acromatico de proposito: ausencia de afeto. */
+     texto. Validadas na ORDEM da pauta (lib/partitura.ts, ORDEM_EMOCOES): trocar
+     a ordem ou um tom sem rodar o validador de novo e desfazer a medicao. Neutro
+     e acromatico de proposito: ausencia de afeto. */
   --emo-medo: oklch(0.56 0.13 315);
   --emo-nojo: oklch(0.6 0.13 160);
   --emo-tristeza: oklch(0.64 0.16 245);
@@ -520,25 +325,11 @@
   --estilo-fraco: color-mix(in oklch, var(--estilo) 18%, transparent);
   --estilo-texto: oklch(0.85 0.17 170);
 
-  /* --- os tipos de no do GRAFO DA MEMORIA ---
-
-     O canvas do grafo precisa distinguir NOVE tipos de no, e a dupla
-     dito/medido so oferece duas vozes: com ela, `categoria`, `canal`, `fonte`
-     e `feature` saiam todas do mesmo azul, e quem olhava a tela nao
-     distinguia o eixo aprendido pelo fusor de um canal de atendimento.
-
-     A regra antiga NAO foi jogada fora -- ela virou a FAMILIA. Matiz quente
-     (30-95) continua sendo o que foi DITO; matiz frio (150-340), o que foi
-     MEDIDO ou cadastrado. O que o matiz individual acrescenta e o tipo. Ou
-     seja: a leitura de longe ("isto e fala ou e medida?") sobrevive intacta,
-     e a leitura de perto ("que coisa e esta?") passa a existir.
-
-     L e C sao os MESMOS em todos (0.75 / 0.14) de proposito: matiz distingue
-     o tipo, e claridade nao pode virar hierarquia acidental -- um no mais
-     claro pareceria mais importante, e nenhum tipo e mais importante que
-     outro. `--no-importacao` e a unica excecao, e ela e semantica: importacao
-     e um no SOLTO, cuja origem o schema nao rastreia, e cinza e a ausencia de
-     afirmacao. Ver DESIGN.md, "O grafo da memoria". */
+  /* --- os tipos de no do GRAFO DA MEMORIA -------------------------------------
+     Nove tipos, duas familias: matiz quente (30-95) = DITO, frio (150-340) =
+     MEDIDO ou cadastrado. L e C iguais (0.79 / 0.19) de proposito: matiz
+     distingue o tipo, claridade nao pode virar hierarquia acidental.
+     `--no-importacao` e a excecao semantica: cinza, ausencia de afirmacao. */
   --no-conversa: oklch(0.79 0.19 60); /* ambar: a espinha, e fala */
   --no-termo: oklch(0.79 0.19 95); /* amarelo: palavra do lexico */
   --no-emoji: oklch(0.79 0.19 30); /* laranja: fala sem letra */
@@ -549,7 +340,7 @@
   --no-fonte: oklch(0.79 0.19 150); /* verde: de onde veio */
   --no-importacao: oklch(0.7 0 0); /* cinza: origem nao rastreavel */
 
-  /* magenta: tempo — a serie e SEMPRE tracejada, cor nunca e o unico canal */
+  /* magenta: tempo -- a serie e SEMPRE tracejada, cor nunca e o unico canal */
   --tempo: oklch(0.76 0.19 320);
   --tempo-fraco: color-mix(in oklch, var(--tempo) 18%, transparent);
   --tempo-texto: oklch(0.83 0.17 320);
@@ -565,148 +356,63 @@
   /* ausencia de dado NAO pertence a escala de satisfacao: e cinza de proposito. */
   --sem-sinal: oklch(0.705 0.015 286.067);
 
-  /* prefixo de feature que nenhuma das sete familias reconhece. Cinza de
-     proposito, igual --sem-sinal e --no-importacao: nunca reciclar a cor de
-     uma familia real, ou um prefixo novo (bug ou coluna renomeada) some
-     silenciosamente dentro do balde errado -- ver derivacoes.ts,
-     sinalDaFeature. */
+  /* prefixo de feature que nenhuma das sete familias reconhece: cinza, nunca
+     reciclar a cor de uma familia real (ver derivacoes.ts, sinalDaFeature). */
   --outros-sinal: oklch(0.705 0.015 286.067);
   --outros-sinal-texto: oklch(0.78 0.015 286.067);
 
-  /* AS DUAS LUZES DO ATELIE.
-     No tema chuva (ver bloco da chuva mais abaixo) as duas sao literais e
-     independentes da camada de dado. Aqui no grafite NAO: --atelie-fria
-     continua alias de --medido, token da
-     camada de DADO usado como cor de luz. Isso nao e livre de custo --
-     repintar o dado desta sessao (Task 6) moveu a luz do ateliê grafite
-     junto, e os pisos de vidro precisaram ser remedidos por causa disso. O
-     desacoplamento completo (dar token proprio tambem ao grafite) ficou
-     como decisao para outro dia, nao foi feito aqui. */
+  /* --- O ATELIE: CALMO --------------------------------------------------------
+     O Instrumento recusa cenario. Planeta, estrelas, grade laser, sol listrado e
+     marca impressa forte ficam em ZERO (ou quase) por token -- os componentes
+     continuam la, e o tema decide se acendem, o que evita um segundo Atelier
+     so para a variante. O papel pautado sobra como ruido de instrumento.
+
+     Nada disto carrega dado: e a mesma camada do atelie, o unico lugar onde cor
+     saturada nao inventa canal de significado. */
   --atelie-marca: oklch(0.83 0.095 84);
-  --atelie-fria: oklch(0.58 0.19 296);
-
-  /* A FORCA de cada mancha. Token e nao numero cravado no componente porque e
-     exatamente aqui que os dois temas discordam: o grafite quer luz que so
-     insinua, e a chuva quer neon. */
-  --atelie-op-marca: 0.14;
-  --atelie-op-fria: 0.24;
-
-  /* AS PECAS QUE SO OUTRO TEMA ACENDE. Zeradas aqui de proposito: elas
-     existem no componente nos tres temas e o TEMA decide se aparecem, o que
-     evita um segundo componente de atelie so para a variante.
-     Asfalto e chuva sao da "chuva de neon"; o campo de estrelas e do "espaco
-     profundo" (01/09/2026) e entrou pela mesma porta, sem abrir excecao. */
+  --atelie-fria: oklch(0.55 0.13 250);
+  /* Zerada em 30/09/2026 (revisao final): a mancha dourada no alto a esquerda
+     esquentava o cabecalho e a sidebar (medidos ~ (20,17,18) contra o fundo
+     frio (9,9,11)). O dourado e acao, foco e marca -- nao luz de ambiente. */
+  --atelie-op-marca: 0;
+  --atelie-op-fria: 0.07;
   --atelie-asfalto: 0;
   --atelie-chuva: 0;
-  --estrelas-op: 0.55;
+  --estrelas-op: 0;
+  --especular-cor: oklch(1 0 0 / 4%);
 
-  /* A cor do realce especular. Branco puro no grafite: ali ele e reflexo de
-     luz de escritorio, e reflexo nao tem cor propria. */
-  --especular-cor: oklch(0.88 0.09 235 / 13%);
+  /* O HALO E O GRAO DA VITRINE. Tokens para a LP usar (o orbe e o halo magenta
+     moram so la, `coreografiaValeEm`) -- o Atelier NAO os desenha. Magenta so
+     no atelie, nunca em dado. */
+  --atelie-halo: oklch(0.62 0.2 320);
+  --atelie-halo-op: 0.2;
+  --grao-op: 0.14;
 
-  /* --- O PAPEL PAUTADO -------------------------------------------------
-     A textura de fundo: linhas horizontais de ritmo CONSTANTE.
-
-     POR QUE NAO E UM PENTAGRAMA. A secao 1.1 do DESIGN.md e explicita --
-     "nenhum glifo musical e desenhado, sem clave, sem seminima, sem
-     pentagrama de cinco linhas" -- e manda a gramatica entrar como
-     ESTRUTURA E RITMO, nao como fantasia. Agrupar em cincos seria desenhar
-     a pauta; ritmo constante e papel pautado, que e a mesma ideia sem o
-     glifo. A regua do sistema (`--linha`) continua sendo a unica linha que
-     AFIRMA alguma coisa; estas aqui sao papel.
-
-     Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. O fundo deixou de
-     ser papel liso nos DOIS temas, por decisao do dono do projeto. */
-  /* A OPACIDADE subiu de 0.055 para 0.12 em 24/08/2026, por reclamacao do dono
-     do projeto -- "continua a mesma coisa". A 5,5%, 1px a cada 13px sobre
-     grafite escuro nao chega a ser visto, entao a peca existia no codigo e nao
-     na tela. A contencao da secao 3.1 ja tinha sido negociada e emendada; a
-     implementacao e que continuou protegendo o contrato antigo. */
-  --pauta-cor: oklch(0.9 0.075 228);
-  --pauta-op: 0.07;
+  --pauta-cor: oklch(0.96 0.003 285);
+  --pauta-op: 0.03;
   --pauta-espaco: 13px;
   --pauta-peso: 1px;
 
-  /* --- A MARCA IMPRESSA NO PAPEL ---------------------------------------
-     O monograma sangrando pela quina inferior direita, pintado por MASCARA
-     (ver Atelier.tsx). A cor e token porque e exatamente onde os dois temas
-     discordam: no grafite a marca e o ouro do proprio `--primary`, e na chuva
-     ela vira o magenta do neon -- "a logo no fundo com o tema respectivo
-     aplicado", que foi o pedido.
+  --marca-cor: oklch(0.83 0.095 84);
+  /* Zerada em 30/09/2026: o monograma impresso no canto lia como artefato
+     atras dos paineis. A marca vive no nav e na telemetria. */
+  --marca-op: 0;
 
-     Nao carrega dado nenhum: e a mesma camada do atelie, o unico lugar onde
-     cor saturada nao inventa canal de significado.
-
-     Emenda de 24/08/2026 as secoes 3.1 e 8 -- ver DESIGN.md. */
-  --marca-cor: oklch(0.66 0.17 296);
-  --marca-op: 0.17;
-
-  /* --- A RAMPA DA MARCA ---------------------------------------------------
-     As duas paradas do gradiente do monograma. Sao os valores literais do
-     `public/fraus-logo.svg` convertidos: o pe rgb(170,134,80) e o topo
-     rgb(226,195,148). A nota acima ja registrava essa rampa como a fonte da
-     verdade do `--primary`; agora ela e TOKEN, e a marca inline pode herdar o
-     tema em vez de carregar o dourado colado no desenho.
-
-     `--marca-cor` (logo acima) e outra coisa, e a distincao importa: aquela e a
-     cor CHAPADA da marca impressa no fundo do atelie, que e mascara e nao tem
-     gradiente nenhum. Esta aqui e a rampa de duas paradas do monograma da
-     navegacao. Trocar uma pela outra apaga o gradiente que E a marca. */
+  /* A rampa das duas paradas do monograma (valores literais do
+     `public/fraus-logo.svg`). `--marca-cor` (chapada, mascara) e esta rampa
+     sao coisas DIFERENTES: trocar uma pela outra apaga o gradiente que E a
+     marca. */
   --marca-cor-pe: oklch(0.63 0.09 80);
   --marca-cor-topo: oklch(0.86 0.078 84);
 
-  /* --- A GRADE A LASER ---------------------------------------------------
-     O chao da cena: linhas fugindo ao ponto de fuga mais linhas horizontais
-     comprimindo com a distancia. E o elemento mais reconhecivel do
-     vocabulario synthwave, e e CSS puro -- dois `repeating-linear-gradient`
-     num plano rotacionado, nao mil elementos.
-
-     ESTATICA, pelo mesmo motivo que a chuva nao cai: a secao 6 do DESIGN.md
-     ja gastou os dois momentos de movimento da interface, e grade animada
-     seria um terceiro que nao comunica estado nenhum.
-
-     Mora no TERCO DE BAIXO, e isso e o que a torna barata: a mascara do papel
-     pautado ja zerou ali. Ver o comentario de `scripts/pisos.mjs` sobre
-     alternativas disjuntas.
-
-     `--grade-horizonte` alimenta a `perspective` do CONTEINER em
-     Atelier.tsx, nao a funcao `transform` do plano rotacionado -- ver o
-     comentario la sobre por que a primeira versao (perspective+rotateX no
-     mesmo elemento) colapsava a grade numa faixa fina e vazava uma malha
-     acima do horizonte. Fix de 24/08/2026, fix round 1.
-
-     Emenda de 24/08/2026 a secao 3.1 -- ver DESIGN.md. */
   --grade-cor: oklch(0.86 0.09 218);
-  --grade-op: 0.13;
+  --grade-op: 0;
   --grade-espaco: 44px;
   --grade-horizonte: 320px;
 
-  /* --- O SOL LISTRADO ----------------------------------------------------
-     O retrosun: disco com faixas horizontais, nascendo na linha do horizonte
-     da grade.
-
-     NÃO É PEÇA NOVA. É a "mancha quente fraca" que já existia no ateliê --
-     cuja função declarada era quebrar a simetria das outras duas manchas --
-     ganhando borda e faixas. A função antiga sobrevive; o que muda é a forma.
-     Peça nova somaria luz ao pior caso; esta não soma.
-
-     No grafite ele é a lâmpada de SÓDIO do poste, que a seção 8.1 já
-     estabeleceu como a leitura que reconcilia o dourado da marca com o neon
-     frio -- e é por isso que ele é âmbar aqui e magenta na chuva. */
   --sol-cor-alta: oklch(0.82 0.115 248);
   --sol-cor-baixa: oklch(0.47 0.185 303);
-  /* 0.26 -> 0.15 -> 0.09, e a ULTIMA queda tem uma causa que so a LP revelou:
-     o atelie e `fixed`, entao numa pagina de 6.000px o planeta nao passa --
-     ele ACOMPANHA a rolagem e fica atras de toda seção, uma atras da outra.
-     Na dashboard, que e uma viewport so, ele e um corpo no horizonte; na
-     vitrine ele virava uma mancha permanente na lente, aparecendo atras da
-     manchete, do titulo de "Sete sinais" e do botao do fecho. A 0.09 ele volta
-     a ser profundidade -- presente onde o olho procura, ausente onde o olho le. */
-  /* 0.09 -> 0.07 no ajuste final: com a constelação ocupando o meio da tela, o
-     disco listrado caía exatamente atrás do núcleo do score e as faixas
-     competiam com as sete linhas que convergem ali. Cenário nunca disputa com
-     a figura. */
-  --sol-op: 0.07;
+  --sol-op: 0;
   --sol-faixa: 15px;
 }
 
@@ -856,6 +562,13 @@
   --vidro-piso: oklch(0.346 0.031 274);
   --vidro-denso-piso: oklch(0.270 0.031 274);
 
+  /* O VIDRO DA CHUVA CONTINUA SENDO VIDRO: aqui ha atelie aceso atras, e o blur
+     e o que impede a grade e a chuva de cortarem o texto. */
+  --vidro-filtro-fino: blur(8px) saturate(1.4);
+  --vidro-filtro: blur(16px) saturate(1.5);
+  --vidro-filtro-denso: blur(28px) saturate(1.6);
+  --vidro-filtro-faixa: blur(8px) saturate(1.4);
+
   /* A QUINA VIRA TUBO DE NEON, e este e o item que mais muda a tela: toda
      superficie de vidro tem quina, entao acender a aresta acende a interface
      inteira de uma vez -- sem que uma unica celula de dado mude de cor.
@@ -970,46 +683,6 @@
   ::selection {
     background-color: color-mix(in oklch, var(--primary) 20%, transparent);
   }
-  /* --- A ESTEIRA DA VITRINE ---------------------------------------------
-     Ticker horizontal infinito, e ele mora SO na landing page.
-
-     POR QUE ELE NAO VIOLA A SECAO 6 do DESIGN.md, que gasta os dois momentos
-     de movimento da interface: aquele orcamento e da FERRAMENTA, cujo
-     argumento e tempo de exposicao -- o analista fica horas na tela e
-     movimento perpetuo atras do dado e ruido permanente. A vitrine e visita
-     curta com a atencao inteira na tela, e la o movimento e o proprio
-     conteudo. Mesma fronteira que autoriza o WebGL do hero (ver
-     `components/lp/CampoDeParticulas.tsx`).
-
-     A TECNICA: a lista e renderizada DUAS VEZES lado a lado, e a animacao
-     desloca -50%. Quando o primeiro par sai, o segundo esta exatamente onde o
-     primeiro comecou -- o corte e invisivel e nao ha JavaScript medindo
-     largura. A copia duplicada leva `aria-hidden`: leitor de tela nao pode
-     ouvir os sete sinais duas vezes.
-
-     `linear` e nao `--ease-fluid`, e e a unica animacao da casa que escapa da
-     curva: esteira com aceleracao pulsa, e pulsacao le como travamento.
-
-     Quem pediu menos movimento recebe a esteira PARADA, nao mais lenta -- a
-     lista continua legivel de cabo a rabo porque ela cabe na tela em telas
-     largas e rola na horizontal nas estreitas. */
-  @keyframes esteira {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
-  .esteira {
-    animation: esteira 38s linear infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .esteira {
-      animation: none;
-    }
-  }
-
   /* --- O DISPLAY DA VITRINE ----------------------------------------------
      A escala tipografica da LP e OUTRA, e essa e a correcao central do
      redesenho de 01/09/2026. A versao anterior punha a manchete em 4,75rem e
@@ -1055,413 +728,6 @@
     font-weight: 500;
     text-wrap: balance;
   }
-  /* DOIS DEGRAUS ABAIXO DE `.titulo-vitrine`, para seções que precisam de
-     âncora própria por ESCALA sem sair do sistema de tipo da vitrine (Task
-     10, fix round 1). Nasceram porque duas seções tinham título em
-     `clamp()` inline fora de `.titulo-vitrine`/`.display-aurora` — o que
-     junto a `display-aurora` reintroduzia texto com `background-clip: text`
-     e cor calibrada por fora do sistema medido. `--sm` e `--md` herdam
-     `line-height`/`letter-spacing`/`font-weight` de `.titulo-vitrine`
-     (mesma família tipográfica) e só encolhem o corpo. */
-  .titulo-vitrine--sm {
-    font-size: clamp(1.5rem, 2.6vw, 2.1rem);
-    line-height: 1.15;
-    letter-spacing: -0.02em;
-    font-weight: 500;
-    text-wrap: balance;
-  }
-  .titulo-vitrine--md {
-    font-size: clamp(1.85rem, 3.2vw, 2.75rem);
-    line-height: 1.06;
-    letter-spacing: -0.025em;
-    font-weight: 500;
-    text-wrap: balance;
-  }
-  /* A ETIQUETA: mono, caixa alta, tracking aberto. E o contrapeso do display --
-     e o par (enorme + minusculo) que produz a sensacao de escala. Sozinho, o
-     display grande so parece grande. */
-  .etiqueta-vitrine {
-    font-family: var(--fonte-mono);
-    font-size: 0.6875rem;
-    line-height: 1;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  .nav-link {
-    font-family: var(--fonte-mono);
-    font-size: 0.6875rem;
-    line-height: 1;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted-foreground);
-    transition: color 180ms var(--ease-fluid);
-  }
-  .nav-link:hover { color: var(--foreground); }
-  .nav-acao {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    min-height: 2.25rem;
-    padding: 0 0.9rem;
-    border: 1px solid var(--linha);
-    font-family: var(--fonte-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    transition: border-color 180ms var(--ease-fluid), color 180ms var(--ease-fluid), background-color 180ms var(--ease-fluid);
-  }
-  .nav-acao:hover { border-color: var(--primary); color: var(--primary); background: color-mix(in oklch, var(--primary) 7%, transparent); }
-
-  .hero-espacial__horizonte {
-    background: linear-gradient(to top, color-mix(in oklch, var(--background) 82%, transparent), transparent);
-    mask-image: linear-gradient(to top, black, transparent);
-  }
-  .sistema-fraus-cena { perspective: 1100px; }
-  .sistema-fraus {
-    --orbita-rx: 0deg;
-    --orbita-ry: 0deg;
-    --orbita-x: 0px;
-    --orbita-y: 0px;
-    transform: translate3d(var(--orbita-x), var(--orbita-y), 0) rotateX(calc(5deg + var(--orbita-rx))) rotateY(var(--orbita-ry));
-    transform-style: preserve-3d;
-    transition: transform 480ms var(--ease-fluid);
-  }
-  .sistema-fraus__lente {
-    background: radial-gradient(circle at 54% 48%, color-mix(in oklch, var(--medido) 5%, transparent), transparent 52%);
-    box-shadow: 0 0 110px oklch(0 0 0 / 22%);
-    animation: lente-respira 7s ease-in-out infinite;
-  }
-  .sistema-fraus__reticula {
-    opacity: 0.34;
-    background-image: radial-gradient(circle, transparent 62%, var(--compasso) 62.2%, transparent 62.8%), linear-gradient(var(--compasso) 1px, transparent 1px), linear-gradient(90deg, var(--compasso) 1px, transparent 1px);
-    background-size: 100% 100%, 42px 42px, 42px 42px;
-    mask-image: radial-gradient(circle, black 12%, transparent 70%);
-  }
-  .sistema-fraus__eixo {
-    opacity: .32;
-    background:
-      linear-gradient(90deg, transparent calc(50% - .5px), var(--compasso) 50%, transparent calc(50% + .5px)),
-      linear-gradient(transparent calc(50% - .5px), var(--compasso) 50%, transparent calc(50% + .5px));
-    mask-image: radial-gradient(circle, black, transparent 70%);
-    animation: eixo-gira 42s linear infinite;
-  }
-  .sistema-fraus__orbita {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    border: 0;
-    border-radius: 999px;
-    transform-style: preserve-3d;
-  }
-  .sistema-fraus__orbita i {
-    position: absolute;
-    left: 0;
-    top: 0;
-    display: block;
-    border-radius: 999px;
-    offset-path: ellipse(50% 50% at 50% 50%);
-    offset-anchor: center;
-    offset-rotate: 0deg;
-  }
-  .sistema-fraus__orbita--externa { width: 88%; height: 48%; margin: -24% -44%; transform: rotate(-9deg); }
-  .sistema-fraus__orbita--externa i { width: 11px; height: 11px; background: radial-gradient(circle at 32% 28%, white, var(--dito) 42%, oklch(0.42 0.12 60)); box-shadow: 0 0 22px var(--dito); animation: corpo-orbital 17s -4s linear infinite; }
-  .sistema-fraus__orbita--media { width: 67%; height: 39%; margin: -19.5% -33.5%; transform: rotate(18deg); }
-  .sistema-fraus__orbita--media i { width: 8px; height: 8px; background: radial-gradient(circle at 30% 25%, white, var(--primary) 44%, oklch(0.38 0.08 80)); box-shadow: 0 0 18px var(--primary); animation: corpo-orbital 12s -7s linear infinite reverse; }
-  .sistema-fraus__orbita--interna { width: 48%; height: 28%; margin: -14% -24%; transform: rotate(-24deg); }
-  .sistema-fraus__orbita--interna i { width: 7px; height: 7px; background: radial-gradient(circle at 30% 25%, white, var(--medido) 44%, oklch(0.35 0.1 250)); box-shadow: 0 0 17px var(--medido); animation: corpo-orbital 7.5s -2s linear infinite; }
-  .sistema-fraus__nucleo {
-    background: oklch(0.21 0.055 258);
-    box-shadow: inset -24px -18px 36px oklch(0 0 0 / 72%), inset 12px 8px 24px oklch(0.82 0.12 245 / 28%), 0 0 55px color-mix(in oklch, var(--medido) 38%, transparent), 0 0 110px color-mix(in oklch, var(--medido) 12%, transparent);
-  }
-  .sistema-fraus__nucleo::before {
-    content: "";
-    position: absolute;
-    inset: -22%;
-    border: 1px solid color-mix(in oklch, var(--medido) 34%, transparent);
-    border-radius: 999px;
-    animation: nucleo-pulso 3.2s ease-out infinite;
-  }
-  .sistema-fraus__superficie {
-    background: radial-gradient(circle at 31% 25%, oklch(0.91 0.06 236 / 95%) 0 3%, transparent 23%), radial-gradient(ellipse at 44% 56%, oklch(0.63 0.16 252 / 60%), transparent 34%), linear-gradient(112deg, oklch(0.18 0.055 267), oklch(0.56 0.15 247) 42%, oklch(0.15 0.035 270) 76%);
-  }
-  .sistema-fraus__superficie::before,
-  .sistema-fraus__superficie::after {
-    content: "";
-    position: absolute;
-    inset: -20% -45%;
-    border-radius: 45%;
-    background: repeating-linear-gradient(174deg, transparent 0 10px, oklch(0.88 0.07 230 / 13%) 11px 14px, transparent 15px 25px);
-    animation: textura-planeta 18s linear infinite;
-  }
-  .sistema-fraus__superficie::after { inset: 12% -55%; opacity: .48; filter: blur(5px); background: repeating-radial-gradient(ellipse at center, transparent 0 13px, oklch(0.86 0.08 235 / 18%) 15px 18px, transparent 21px 31px); animation-duration: 27s; animation-direction: reverse; }
-  .sistema-fraus__superficie i { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, transparent 45%, oklch(0 0 0 / 62%) 80%), radial-gradient(circle at 38% 34%, transparent 20%, oklch(0 0 0 / 28%) 78%); }
-  .sistema-fraus__atmosfera { inset: -7%; border: 1px solid color-mix(in oklch, var(--medido) 42%, transparent); box-shadow: inset 8px 0 12px color-mix(in oklch, var(--medido) 20%, transparent), 0 0 18px color-mix(in oklch, var(--medido) 16%, transparent); }
-  .sistema-fraus__scanner {
-    border: 1px solid transparent;
-    background: conic-gradient(from 0deg, transparent 0 78%, color-mix(in oklch, var(--medido) 42%, transparent) 91%, transparent 100%);
-    mask: radial-gradient(circle, transparent 57%, black 58% 60%, transparent 61%);
-    animation: scanner-gira 5.4s linear infinite;
-  }
-  .sistema-fraus__mira {
-    border: 1px solid color-mix(in oklch, var(--medido) 18%, transparent);
-    box-shadow: 0 0 32px color-mix(in oklch, var(--medido) 7%, transparent);
-    animation: mira-foco 4.8s ease-in-out infinite;
-  }
-  .sistema-fraus__mira::before,
-  .sistema-fraus__mira::after {
-    content: "";
-    position: absolute;
-    background: color-mix(in oklch, var(--medido) 38%, transparent);
-  }
-  .sistema-fraus__mira::before { left: 50%; top: -8%; width: 1px; height: 116%; }
-  .sistema-fraus__mira::after { left: -8%; top: 50%; width: 116%; height: 1px; }
-  .sistema-fraus__leitura { display: grid; gap: .2rem; padding-left: .7rem; border-left: 1px solid color-mix(in oklch, var(--medido) 42%, transparent); animation: leitura-pisca 3.6s steps(1) infinite; }
-  .sistema-fraus__leitura b { font-size: 1.25rem; font-weight: 500; letter-spacing: -.03em; }
-  @keyframes corpo-orbital { from { offset-distance: 0%; } to { offset-distance: 100%; } }
-  @keyframes textura-planeta { to { transform: translateX(22%); } }
-  @keyframes nucleo-pulso { 0% { transform: scale(.82); opacity: 0; } 28% { opacity: .6; } 100% { transform: scale(1.28); opacity: 0; } }
-  @keyframes scanner-gira { to { transform: rotate(1turn); } }
-  @keyframes eixo-gira { to { transform: rotate(1turn); } }
-  @keyframes lente-respira { 0%, 100% { opacity: .62; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.015); } }
-  @keyframes mira-foco { 0%, 100% { opacity: .32; transform: translate(-50%, -50%) scale(.92); } 50% { opacity: .7; transform: translate(-50%, -50%) scale(1.04); } }
-  @keyframes leitura-pisca { 0%, 94% { opacity: .72; } 95%, 97% { opacity: .28; } 98%, 100% { opacity: .72; } }
-
-  .botao-vitrine-base::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(105deg, transparent 22%, oklch(1 0 0 / 34%) 48%, transparent 74%);
-    transform: translateX(-140%);
-    transition: transform 520ms var(--ease-fluid);
-  }
-
-  .botao-vitrine-base:hover::before { transform: translateX(140%); }
-  .botao-vitrine-base:hover svg { transform: translateX(3px); }
-  .botao-vitrine-base svg { transition: transform 180ms var(--ease-fluid); }
-  .botao-vitrine-primario { box-shadow: 0 0 0 1px oklch(1 0 0 / 10%), 0 0 28px color-mix(in oklch, var(--primary) 22%, transparent); }
-  .botao-vitrine-primario:hover { filter: brightness(1.08); box-shadow: 0 0 0 1px oklch(1 0 0 / 18%), 0 0 42px color-mix(in oklch, var(--primary) 34%, transparent); }
-  .botao-vitrine-contorno:hover { border-color: color-mix(in oklch, var(--primary) 55%, transparent); color: var(--primary); }
-  .botao-vitrine-fantasma:hover { background: color-mix(in oklch, var(--accent) 50%, transparent); color: var(--foreground); }
-
-  .lp-sinal {
-    position: relative;
-    overflow: hidden;
-    transition: background-color 220ms var(--ease-fluid), transform 220ms var(--ease-fluid), border-color 220ms var(--ease-fluid);
-  }
-  .lp-sinal::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 0;
-    height: 1px;
-    background: var(--medido);
-    transition: width 360ms var(--ease-fluid);
-  }
-  .lp-sinal:hover { background: color-mix(in oklch, var(--accent) 30%, transparent); transform: translateY(-5px); border-color: var(--linha); }
-  .lp-sinal:hover::after { width: 100%; }
-  .lp-sinal__icone { display: inline-flex; transition: transform 260ms var(--ease-fluid), filter 260ms var(--ease-fluid); }
-  .lp-sinal:hover .lp-sinal__icone { transform: scale(1.18) rotate(-6deg); filter: drop-shadow(0 0 8px currentColor); }
-  .lp-sinal--nucleo::after { background: var(--primary-foreground); }
-  .lp-sinal--nucleo:hover { filter: brightness(1.06); }
-
-  .lp-amostra { transition: transform 260ms var(--ease-fluid); }
-  .lp-amostra:hover { transform: translateY(-6px); }
-  .lp-leitor {
-    position: relative;
-    background:
-      linear-gradient(135deg, color-mix(in oklch, var(--medido) 7%, transparent), transparent 38%),
-      color-mix(in oklch, var(--card) 88%, transparent);
-    box-shadow: 0 24px 80px oklch(0 0 0 / 22%), inset 0 1px oklch(1 0 0 / 4%);
-    transition: border-color 260ms var(--ease-fluid), box-shadow 260ms var(--ease-fluid);
-  }
-  .lp-leitor::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    pointer-events: none;
-    background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--medido) 14%, transparent), transparent);
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-  .lp-amostra:hover .lp-leitor { border-color: color-mix(in oklch, var(--medido) 55%, var(--linha)); box-shadow: 0 30px 90px oklch(0 0 0 / 30%), 0 0 36px color-mix(in oklch, var(--medido) 10%, transparent); }
-  .lp-amostra:hover .lp-leitor::before { animation: leitor-varredura 900ms var(--ease-fluid); }
-  .lp-leitor__turno { border-bottom: 1px solid var(--compasso); }
-  .lp-leitor__turno--marcado {
-    position: relative;
-    background: linear-gradient(90deg, color-mix(in oklch, var(--dito) 10%, transparent), transparent 88%);
-  }
-  .lp-leitor__turno--marcado::before { content: ""; position: absolute; inset-block: 0; left: -1.25rem; width: 2px; background: var(--dito); box-shadow: 0 0 12px color-mix(in oklch, var(--dito) 50%, transparent); }
-  .lp-leitor__score { box-shadow: 0 0 12px color-mix(in oklch, var(--medido) 65%, transparent); }
-  @keyframes leitor-varredura { 45% { opacity: .7; } 100% { opacity: 0; transform: translateX(100%); } }
-
-  @media (prefers-reduced-motion: reduce) {
-    .sistema-fraus-cena,
-    .sistema-fraus__lente,
-    .sistema-fraus__eixo,
-    .sistema-fraus__scanner,
-    .sistema-fraus__mira,
-    .sistema-fraus__leitura,
-    .sistema-fraus__orbita i,
-    .sistema-fraus__superficie::before,
-    .sistema-fraus__superficie::after,
-    .sistema-fraus__nucleo::before { animation: none; }
-    .sistema-fraus__orbita--externa i { offset-distance: 60%; }
-    .sistema-fraus__orbita--media i { offset-distance: 12%; }
-    .sistema-fraus__orbita--interna i { offset-distance: 38%; }
-    .botao-vitrine-base::before { display: none; }
-    .lp-amostra:hover .lp-leitor::before { animation: none; }
-    .lp-sinal:hover, .lp-amostra:hover { transform: none; }
-  }
-
-  .lp-fecho {
-    background: radial-gradient(circle at 50% 110%, color-mix(in oklch, var(--primary) 16%, transparent), transparent 48%);
-  }
-
-  /* --- A CONSTELAÇÃO DO FUSOR -------------------------------------------
-     Ver `components/lp/Constelacao.tsx` para o argumento inteiro. Aqui mora
-     só o desenho da entrada.
-
-     A LINHA SE DESENHA. `stroke-dasharray: 1` com `pathLength` implícito não
-     serve para `<line>` (ele não tem `pathLength` por padrão em todo motor),
-     então o traço é grande o bastante para cobrir a maior diagonal possível do
-     viewBox e o `dashoffset` anda de 100% dele até zero. Grosseiro e à prova
-     de motor.
-
-     ATRASO POR ÍNDICE via `--i`, e ele conta alguma coisa: a ordem é a mesma em
-     que os sete sinais entraram no vetor de features. Termina e PARA — laço
-     infinito atrás de texto é a decoração-pela-decoração que a §6 recusa.
-
-     A estrela nasce depois da linha que a liga (atraso maior), porque a leitura
-     é "o sinal chega, então acende". Invertido, as sete acendem e depois as
-     linhas as alcançam, que é a mesma animação contando a história ao contrário. */
-  .constelacao-linha {
-    stroke-dasharray: 620;
-    stroke-dashoffset: 620;
-    animation: constelacao-traco 900ms var(--ease-fluid) forwards;
-    animation-delay: calc(var(--i) * 110ms);
-  }
-  .constelacao-estrela,
-  .constelacao-nucleo {
-    opacity: 0;
-    animation: constelacao-acende 500ms var(--ease-fluid) forwards;
-    animation-delay: calc(var(--i, 7) * 110ms + 420ms);
-  }
-  .constelacao-rotulo {
-    font-family: var(--fonte-mono);
-    font-size: 12px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    opacity: 0;
-    animation: constelacao-acende 500ms var(--ease-fluid) forwards;
-    animation-delay: calc(var(--i, 7) * 110ms + 560ms);
-  }
-  @keyframes constelacao-traco {
-    to {
-      stroke-dashoffset: 0;
-    }
-  }
-  @keyframes constelacao-acende {
-    to {
-      opacity: 1;
-    }
-  }
-  /* Tudo desenhado, de uma vez. Não é uma versão mais lenta: o desenho é o
-     estado final, e a animação nunca carregou informação que o estado final
-     não carregue. */
-  @media (prefers-reduced-motion: reduce) {
-    .constelacao-linha {
-      stroke-dashoffset: 0;
-      animation: none;
-    }
-    .constelacao-estrela,
-    .constelacao-nucleo,
-    .constelacao-rotulo {
-      opacity: 1;
-      animation: none;
-    }
-  }
-
-  /* --- A AURORA DO DISPLAY -----------------------------------------------
-     Um gradiente vivo dentro do tipo grande, recortado pelo glifo.
-
-     ONDE ELA PODE E ONDE NÃO PODE: só em texto PURO da vitrine — hoje, nos
-     `.titulo-vitrine`. Ela NÃO pode ir no `<h1>` do hero, e a tentativa está
-     registrada porque o defeito é sutil: `background-clip: text` com
-     `-webkit-text-fill-color: transparent` recorta todo o conteúdo do
-     elemento, INCLUSIVE OS FILHOS. No hero isso apagou o âmbar do
-     `text-dito-texto` da frase citada -- que é encoding do PRODUCT.md, não
-     estilo -- e transformou o emoji numa bolha branca, porque emoji é colorido
-     pela fonte e a fonte perde para o recorte. Regra: aurora só em elemento
-     sem filho colorido e sem emoji.
-     Texto com gradiente tem contraste VARIÁVEL ao longo do próprio glifo, e
-     `scripts/contraste.mjs` mede um par de cores fixas — ou seja, o portão não
-     enxerga esta peça. Por isso as três paradas do gradiente ficam todas na
-     faixa alta de claridade (0.93 a 1.0): a mais escura delas ainda cruza AA
-     contra `--background` sozinha, então não existe pedaço de letra abaixo do
-     mínimo. É o mesmo raciocínio do piso do vidro — medir o PIOR ponto, não a
-     média.
-
-     Ela é sutil de propósito. Gradiente berrante em manchete é a assinatura
-     mais datada da década; aqui ele é quase branco com um sopro do azul-gelo da
-     cabine e do ouro da estrela, e o efeito é a letra parecer ILUMINADA pela
-     cena atrás dela, não pintada de arco-íris. */
-  .display-aurora {
-    background-image: linear-gradient(
-      104deg,
-      oklch(1 0 0) 0%,
-      oklch(0.95 0.03 240) 38%,
-      oklch(0.98 0.012 90) 68%,
-      oklch(0.93 0.035 250) 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    /* `text-fill-color` transparente é o que faz o WebKit respeitar o recorte;
-       sem ele o Safari pinta a cor herdada por cima do gradiente. */
-    -webkit-text-fill-color: transparent;
-  }
-
-  /* --- A BARRA DE PROGRESSO DE LEITURA ------------------------------------
-     Um fio de ouro no topo, largura proporcional à rolagem.
-
-     `animation-timeline: scroll()` — progresso de rolagem resolvido pelo
-     COMPOSITOR, sem `requestAnimationFrame`, sem listener de scroll e sem uma
-     linha de JavaScript. É a razão de esta peça caber numa página que já gasta
-     dois contextos WebGL: ela custa efetivamente zero.
-
-     O `@supports` não é adorno de compatibilidade — sem ele, o navegador que
-     não implementa timelines de rolagem mostraria a barra CHEIA e parada no
-     topo da página, o que é pior que não ter barra: seria um indicador
-     mentindo. Onde não há suporte, ela simplesmente não existe. */
-  .progresso-leitura {
-    display: none;
-  }
-  @supports (animation-timeline: scroll()) {
-    .progresso-leitura {
-      display: block;
-      transform-origin: 0 50%;
-      animation: progresso-leitura linear;
-      animation-timeline: scroll(root block);
-    }
-    @keyframes progresso-leitura {
-      from {
-        transform: scaleX(0);
-      }
-      to {
-        transform: scaleX(1);
-      }
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .progresso-leitura {
-      display: none;
-    }
-  }
-
   /* Todo numero que se compara e monoespacado e tabular. Numero que dança na
      vertical entre linhas de tabela e erro, nao estilo. */
   .num {
@@ -1520,6 +786,36 @@
     .campo-data {
       height: 2.75rem;
     }
+  }
+}
+
+/* O VOCABULARIO DO INSTRUMENTO mora em `components`, e nao em `utilities`, de
+   proposito: as utilidades do Tailwind (`text-xs`, `text-foreground`) precisam
+   VENCER estas classes quando uma tela pede um tamanho ou cor pontual. */
+@layer components {
+  /* --- O VOCABULARIO DO INSTRUMENTO --------------------------------------
+     `.rotulo-instrumento`: mono, caixa alta, tracking aberto -- o rotulo de
+     campo, de painel e de telemetria. E o contrapeso do numero em LED.
+     `.titulo-instrumento`: o titulo de TELA (nao de vitrine). Mono, medio,
+     caixa alta. A fonte de display continua proibida aqui (DESIGN.md secao 4).
+     `.filete`: a linha interna fraca, 9% (`--compasso`); a regua que AFIRMA
+     (`--linha`, 26%) e `border-linha`. Piso de 11px: banca le em projetor. */
+  .rotulo-instrumento {
+    font-family: var(--fonte-mono);
+    font-size: 0.6875rem;
+    line-height: 1.3;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  .titulo-instrumento {
+    font-family: var(--fonte-mono);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .filete {
+    border-color: var(--compasso);
   }
 }
 
@@ -1582,6 +878,19 @@
   .vidro-fino,
   .vidro,
   .vidro-denso {
+    /* HAIRLINE: a superficie do Instrumento e retangulo de 1px, sem realce de
+       quina e sem halo. Quem quer vidro de verdade e a chuva (abaixo). */
+    box-shadow: var(--vidro-sombra);
+    border: 1px solid var(--linha);
+  }
+
+  /* A QUINA ILUMINADA e da CHUVA. Duas linhas retas descreveriam uma chapa; a
+     quina que da a volta, mais forte de onde a luz vem (alto a esquerda), e o
+     que le como aresta de vidro. Sem atelie aceso atras nao ha o que refratar,
+     entao o Instrumento nao paga esta sombra. */
+  .tema-chuva .vidro-fino,
+  .tema-chuva .vidro,
+  .tema-chuva .vidro-denso {
     box-shadow:
       inset 0 1px 0 0 var(--vidro-quina),
       inset 1px 0 0 0 var(--vidro-quina),
@@ -1594,34 +903,27 @@
 
   .vidro-fino {
     background-color: var(--vidro-fino-fundo);
-    backdrop-filter: blur(var(--vidro-blur-fino)) saturate(1.4);
+    backdrop-filter: var(--vidro-filtro-fino);
   }
   .vidro {
     background-color: var(--vidro-fundo);
-    backdrop-filter: blur(var(--vidro-blur)) saturate(1.5);
+    backdrop-filter: var(--vidro-filtro);
   }
   .vidro-denso {
     background-color: var(--vidro-denso-fundo);
-    backdrop-filter: blur(var(--vidro-blur-denso)) saturate(1.6);
+    backdrop-filter: var(--vidro-filtro-denso);
   }
 
-  /* O CHANFRO A 45°, recortado do monograma.
-
-     Por que `clip-path` e nao `border-radius`: raio e curva, e o F e o R nao
-     tem uma curva de canto sequer (secao 3.3.1). Chanfro e corte reto, que e
-     a geometria da marca.
-
-     ARMADILHA PAGA: `clip-path` DESCARTA `box-shadow` -- o recorte come o
-     elemento inteiro, sombra inclusive. Por isso a sombra sai de `box-shadow`
-     e vira `drop-shadow`, que segue o recorte. `drop-shadow` aceita uma
-     sombra por funcao, entao as duas camadas do `--vidro-sombra` viram duas
-     funcoes encadeadas, e os valores estao repetidos aqui de proposito: o
-     token e uma lista de `box-shadow` e nao pode ser interpolado dentro de
-     `drop-shadow()`.
-
-     So nas superficies GRANDES. Chanfro em badge de 18px de altura come o
-     rotulo. */
+  /* O CHANFRO A 45 GRAUS saiu do Instrumento (30/09/2026): superficie grande e
+     retangulo de hairline. A classe FICA -- 30 componentes a carregam, e uma
+     regra que so a esvazia custa menos que tocar todos -- mas ela nao recorta
+     mais nada. A chuva a reativa por baixo, com o halo de neon dela. */
   .chanfro {
+    clip-path: none;
+    filter: none;
+  }
+
+  .tema-chuva .chanfro {
     --chanfro: 10px;
     clip-path: polygon(
       var(--chanfro) 0,
@@ -1632,11 +934,6 @@
       0 var(--chanfro)
     );
     box-shadow: none;
-    filter: drop-shadow(0 1px 2px oklch(0.12 0.02 80 / 28%))
-      drop-shadow(0 8px 26px oklch(0.42 0.06 80 / 22%));
-  }
-
-  .tema-chuva .chanfro {
     filter: drop-shadow(0 1px 2px oklch(0.08 0.04 300 / 34%))
       drop-shadow(0 10px 34px oklch(0.42 0.2 315 / 26%));
   }
@@ -1673,36 +970,8 @@
     border-radius: 0;
     border-inline: 0;
     border-top: 0;
-    box-shadow:
-      inset 0 -1px 0 0 var(--vidro-quina-baixa),
-      0 8px 24px oklch(0 0 0 / 28%);
-  }
-
-  /* Vidro real muda de brilho quando voce o inclina: a quina que pega luz
-     se desloca e a sombra reage ao movimento. E essa reacao ao toque que
-     separa uma superficie viva de um retangulo pintado -- por isso as
-     superficies de vidro INTERATIVAS ganham esta classe: a quina superior
-     clareia e a sombra sobe no hover, como se a peca se inclinasse para o
-     ponteiro; no active ela afunda, quina mais fraca e sombra mais curta,
-     como se a peca fosse pressionada para dentro da mesa. */
-  .vidro-toque {
-    transition:
-      box-shadow 150ms var(--ease-fluid),
-      background-color 150ms var(--ease-fluid);
-  }
-  .vidro-toque:hover {
-    box-shadow:
-      inset 0 1px 0 0 oklch(1 0 0 / 20%),
-      inset 0 -1px 0 0 var(--vidro-quina-baixa),
-      0 2px 4px oklch(0 0 0 / 22%),
-      0 12px 32px oklch(0 0 0 / 32%);
-  }
-  .vidro-toque:active {
-    box-shadow:
-      inset 0 1px 0 0 oklch(1 0 0 / 6%),
-      inset 0 -1px 0 0 var(--vidro-quina-baixa),
-      0 1px 1px oklch(0 0 0 / 18%),
-      0 4px 12px oklch(0 0 0 / 24%);
+    box-shadow: none;
+    backdrop-filter: var(--vidro-filtro-faixa);
   }
 
   /* O realce especular. Posicionado por `--px`/`--py`, que o hook

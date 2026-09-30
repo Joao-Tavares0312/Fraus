@@ -4,6 +4,7 @@ import type { ResumoConversa } from "@/lib/api";
 import { DEFINICAO_SEM_SINAL_AGREGADO, formatarDataHora } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
+import { NotaLED } from "./NotaLED";
 
 /**
  * Os atendimentos com a menor nota inferida no periodo.
@@ -11,6 +12,13 @@ import { EtiquetaCategoria } from "./EtiquetaCategoria";
  * Conversa sem nota NAO aparece aqui e nao e contada como "pior": ordenar os
  * mudos para o topo seria o `?? 0` que o produto combate. Elas continuam
  * visiveis na tabela de Atendimentos, marcadas como "sem sinal".
+ *
+ * A NOTA E LED, e a cabeca vem do slot unico (`EtiquetaCategoria`) COM o motivo
+ * da evidencia fraca impresso: um "detrator" sustentado por uma unica fala do
+ * cliente nao pode parecer tao firme quanto um de quarenta turnos, e "evidencia
+ * fraca" solto nao aciona ninguem -- "uma unica mensagem do cliente" aciona.
+ * `evidencia_fraca` e `motivos_evidencia_fraca` vem do servidor (a regra mora em
+ * `fraus/evidencia.py`); aqui so se desenha.
  *
  * O link preserva o periodo para que voltar nao perca o recorte.
  */
@@ -38,17 +46,16 @@ export function PioresAtendimentos({
   }
 
   return (
-    <ul className="divide-y divide-border">
+    <ul className="divide-y divide-compasso">
       {piores.map((conversa) => (
         <li key={conversa.id}>
           <Link
             href={`/dashboard/atendimentos/${encodeURIComponent(conversa.id)}${sufixoDeQuery}`}
-            className="flex items-center gap-3 px-5 py-2.5 outline-none transition-colors duration-150 ease-fluid hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+            className="group grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 outline-none transition-colors duration-150 ease-fluid hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-5"
           >
-            <span className="num w-8 shrink-0 text-lg font-semibold text-foreground">
-              {conversa.nota}
-            </span>
-            <span className="min-w-0 flex-1">
+            {/* Duas celulas fixas: a coluna de LED nao dança entre 9 e 10. */}
+            <NotaLED nota={conversa.nota} altura={26} />
+            <span className="min-w-0">
               <span className="num block truncate text-xs text-foreground">
                 {conversa.id}
               </span>
@@ -56,13 +63,17 @@ export function PioresAtendimentos({
                 {conversa.canal} · {formatarDataHora(conversa.iniciada_em)}
               </span>
             </span>
-            <EtiquetaCategoria
-              categoria={conversa.categoria}
-              className="shrink-0 text-xs"
-            />
             <ChevronRight
               aria-hidden
-              className="size-4 shrink-0 text-muted-foreground"
+              className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5"
+            />
+            {/* O rotulo (e o motivo) desce para a linha de baixo: ao lado do LED
+                ele empurraria o id para fora da coluna em telas estreitas. */}
+            <EtiquetaCategoria
+              categoria={conversa.categoria}
+              evidenciaFraca={conversa.evidencia_fraca}
+              motivosEvidencia={conversa.motivos_evidencia_fraca}
+              className="col-start-2 col-end-4 min-w-0 flex-wrap text-xs whitespace-normal"
             />
           </Link>
         </li>

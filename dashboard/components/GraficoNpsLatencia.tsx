@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Bar,
   CartesianGrid,
   ComposedChart,
   Line,
@@ -26,6 +27,42 @@ import {
 import { EstadoVazio } from "./EstadoVazio";
 
 /**
+ * O cursor de leitura: um filete dourado TRACEJADO vertical no dia apontado.
+ * O `Tooltip` do Recharts entrega, num grafico com barras, a BANDA do dia
+ * (x, y, width, height); num so de linhas entrega `points`. As duas formas
+ * viram o mesmo filete, para o cursor nao depender de qual serie o grafico
+ * desenha.
+ */
+type CursorProps = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  points?: { x: number; y: number }[];
+};
+
+function CursorDeLeitura({ x, y, width, height, points }: CursorProps) {
+  const linha = points && points.length >= 2 ? points : null;
+  const posX = linha ? linha[0].x : (x ?? 0) + (width ?? 0) / 2;
+  const topo = linha ? Math.min(linha[0].y, linha[1].y) : (y ?? 0);
+  const base = linha
+    ? Math.max(linha[0].y, linha[1].y)
+    : (y ?? 0) + (height ?? 0);
+  return (
+    <line
+      x1={posX}
+      x2={posX}
+      y1={topo}
+      y2={base}
+      stroke="var(--primary)"
+      strokeWidth={1.5}
+      strokeDasharray="3 3"
+      pointerEvents="none"
+    />
+  );
+}
+
+/**
  * O grafico que carrega a tese do trabalho: NPS inferido e latencia mediana
  * SOBREPOSTOS, com eixos Y distintos.
  *
@@ -38,17 +75,31 @@ import { EstadoVazio } from "./EstadoVazio";
  *   1. dominio FIXO em cada eixo -- NPS em [-100, +100], que e o dominio real
  *      do indicador, e latencia a partir de zero. Nenhum dos dois se ajusta ao
  *      dado, que e de onde vem o alinhamento arbitrario;
- *   2. cada eixo rotulado e colorido com a sua serie, e a latencia SEMPRE
- *      tracejada -- cor nao e o unico canal;
+ *   2. cada eixo rotulado com a sua serie, e a FORMA separa as duas: o NPS e
+ *      LINHA, a latencia e BARRA -- cor nao e o unico canal;
  *   3. visao de tabela no mesmo painel: quem precisa do numero exato nao
  *      depende da leitura cruzada.
  *
- * Cor: azul (`--medido`) e o que foi medido/inferido pela maquina; magenta
- * (`--tempo`) e latencia. O ambar (`--dito`) nao aparece aqui -- nao ha fala
- * neste painel -- e o dourado da marca nunca entra em dado.
+ * O INSTRUMENTO (30/09/2026) trocou a segunda linha tracejada magenta por
+ * BARRAS: uma serie em barra e outra em linha nao se confundem nem em tela de
+ * projetor, e a barra e a forma que a latencia tem em todo o produto (espera
+ * como intervalo, nao como curva). As duas continuam medidas -- por isso o
+ * grafico NAO usa a regua dito/medido (DESIGN.md §1.1: regua so onde o dado de
+ * fato se divide).
+ *
+ * Cor: o NPS inferido e a tinta (`--foreground`), a latencia e o azul do
+ * MEDIDO (`--medido`, barra a 30% de opacidade com contorno cheio -- o
+ * preenchimento translucido sozinho nao cruza 3:1 contra o visor; o contorno
+ * carrega o contraste). O ambar (`--dito`) nao aparece -- nao ha fala neste
+ * painel -- e o dourado so aparece como o CURSOR DE LEITURA.
  */
 export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
   const [verTabela, setVerTabela] = useState(false);
+  // Numa tela estreita os dois TITULOS de eixo (rotacionados) comem quase 40% da
+  // largura do grafico e sobra um traco de plotagem. Abaixo de 520px o titulo
+  // vai para a LEGENDA -- onde o dominio de cada eixo continua escrito -- e o
+  // eixo fica so com os numeros. Nada e removido: so muda de lugar.
+  const [estreito, setEstreito] = useState(false);
   const idTabela = useId();
   const roteador = useRouter();
 
@@ -120,10 +171,14 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
               perder legibilidade por causa de um efeito de superficie. */}
           <div className="rounded-md bg-card p-3">
             <div className="h-[300px] sm:h-[340px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                onResize={(largura) => setEstreito(largura < 520)}
+              >
                 <ComposedChart
                   data={serie}
-                  margin={{ top: 8, right: 18, bottom: 22, left: 6 }}
+                  margin={{ top: 8, right: estreito ? 8 : 18, bottom: 22, left: estreito ? 0 : 6 }}
                   onClick={abrirDia}
                   className="cursor-pointer"
                 >
@@ -161,17 +216,17 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                     yAxisId="nps"
                     domain={[-100, 100]}
                     ticks={[-100, -50, 0, 50, 100]}
-                    width={52}
-                    tick={{ fill: "var(--medido-texto)", fontSize: 11 }}
+                    width={estreito ? 34 : 52}
+                    tick={{ fill: "var(--foreground)", fontSize: 11 }}
                     tickLine={false}
                     axisLine={false}
-                    label={{
+                    label={estreito ? undefined : {
                       value: "NPS inferido (−100 a +100)",
                       angle: -90,
                       position: "insideLeft",
                       offset: 14,
                       style: {
-                        fill: "var(--medido-texto)",
+                        fill: "var(--foreground)",
                         fontSize: 11,
                         textAnchor: "middle",
                       },
@@ -181,18 +236,18 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                     yAxisId="latencia"
                     orientation="right"
                     domain={[0, topoLatencia]}
-                    width={58}
-                    tick={{ fill: "var(--tempo-texto)", fontSize: 11 }}
+                    width={estreito ? 40 : 58}
+                    tick={{ fill: "var(--medido-texto)", fontSize: 11 }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(valor: number) => `${Math.round(valor)}s`}
-                    label={{
+                    label={estreito ? undefined : {
                       value: "Latência mediana (a partir de 0 s)",
                       angle: 90,
                       position: "insideRight",
                       offset: 14,
                       style: {
-                        fill: "var(--tempo-texto)",
+                        fill: "var(--medido-texto)",
                         fontSize: 11,
                         textAnchor: "middle",
                       },
@@ -209,32 +264,43 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
                       nenhum: marca ONDE VOCE ESTA na linha do tempo, como a barra
                       de reproducao de um editor de partitura. Nenhuma serie,
                       categoria ou barra usa esta cor. */}
-                  <Tooltip
-                    cursor={{ stroke: "var(--primary)", strokeWidth: 1.5 }}
-                    content={<Dica />}
+                  <Tooltip cursor={<CursorDeLeitura />} content={<Dica />} />
+                  {/* A LATENCIA: BARRA, desenhada ANTES da linha para ficar
+                      atras dela. Preenchimento a 30% mais contorno cheio -- o
+                      contorno e o que cruza 3:1 contra o visor. Dia sem
+                      latencia (`null`) nao gera barra: nunca uma barra de zero. */}
+                  <Bar
+                    yAxisId="latencia"
+                    dataKey="latenciaMediana"
+                    name="Latência mediana"
+                    fill="var(--medido)"
+                    fillOpacity={0.3}
+                    stroke="var(--medido)"
+                    strokeWidth={1}
+                    maxBarSize={22}
+                    isAnimationActive={false}
                   />
+                  {/* O NPS: linha continua na tinta, 2px. Interrompida onde o
+                      dia nao tem nota (`connectNulls={false}`) -- nunca em zero. */}
                   <Line
                     yAxisId="nps"
                     type="monotone"
                     dataKey="nps"
                     name="NPS inferido"
-                    stroke="var(--medido)"
+                    stroke="var(--foreground)"
                     strokeWidth={2}
-                    dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
-                    activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
-                    connectNulls={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    yAxisId="latencia"
-                    type="monotone"
-                    dataKey="latenciaMediana"
-                    name="Latência mediana"
-                    stroke="var(--tempo)"
-                    strokeWidth={2}
-                    strokeDasharray="5 3"
-                    dot={{ r: 3, fill: "var(--card)", strokeWidth: 2 }}
-                    activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--card)" }}
+                    dot={{
+                      r: 3,
+                      fill: "var(--card)",
+                      stroke: "var(--foreground)",
+                      strokeWidth: 2,
+                    }}
+                    activeDot={{
+                      r: 5,
+                      strokeWidth: 2,
+                      stroke: "var(--card)",
+                      fill: "var(--foreground)",
+                    }}
                     connectNulls={false}
                     isAnimationActive={false}
                   />
@@ -242,7 +308,7 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
               </ResponsiveContainer>
             </div>
           </div>
-          <FaixaDePresenca serie={serie} />
+          <FaixaDePresenca serie={serie} estreito={estreito} />
         </div>
       )}
     </div>
@@ -259,27 +325,28 @@ function Legenda() {
             y1="4"
             x2="22"
             y2="4"
-            stroke="var(--medido)"
+            stroke="var(--foreground)"
             strokeWidth="2"
           />
         </svg>
-        <span className="text-medido-texto">NPS inferido</span>
-        <span>(estimativa, linha contínua)</span>
+        <span className="text-foreground">NPS inferido</span>
+        <span>(estimativa, linha contínua, eixo de −100 a +100)</span>
       </li>
       <li className="flex items-center gap-2 text-xs text-muted-foreground">
-        <svg width="22" height="8" aria-hidden>
-          <line
-            x1="0"
-            y1="4"
-            x2="22"
-            y2="4"
-            stroke="var(--tempo)"
-            strokeWidth="2"
-            strokeDasharray="5 3"
+        <svg width="22" height="10" aria-hidden>
+          <rect
+            x="1"
+            y="1"
+            width="20"
+            height="8"
+            fill="var(--medido)"
+            fillOpacity="0.3"
+            stroke="var(--medido)"
+            strokeWidth="1"
           />
         </svg>
-        <span className="text-tempo-texto">Latência mediana</span>
-        <span>(observada, tracejada)</span>
+        <span className="text-medido-texto">Latência mediana</span>
+        <span>(observada, barras, eixo a partir de 0 s)</span>
       </li>
     </ul>
   );
@@ -298,7 +365,7 @@ function Dica({ active, payload }: DicaProps) {
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-popover-foreground">
       <p className="text-xs font-semibold">{ponto.rotulo}</p>
       <dl className="mt-1.5 grid grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs">
-        <dt className="text-medido-texto">NPS inferido</dt>
+        <dt className="text-foreground">NPS inferido</dt>
         <dd className="num text-right font-medium">
           {ponto.nps === null ? (
             <span className="text-muted-foreground">sem sinal</span>
@@ -306,7 +373,7 @@ function Dica({ active, payload }: DicaProps) {
             formatarNps(ponto.nps)
           )}
         </dd>
-        <dt className="text-tempo-texto">Latência mediana</dt>
+        <dt className="text-medido-texto">Latência mediana</dt>
         <dd className="num text-right font-medium">
           {ponto.latenciaMediana === null
             ? "—"
@@ -388,13 +455,27 @@ function TabelaDaSerie({ id, serie }: { id: string; serie: PontoSerie[] }) {
  * Os recuos laterais espelham as larguras dos dois eixos Y do grafico para que
  * cada marcador caia sob o seu dia.
  */
-function FaixaDePresenca({ serie }: { serie: PontoSerie[] }) {
+function FaixaDePresenca({
+  serie,
+  estreito,
+}: {
+  serie: PontoSerie[];
+  estreito: boolean;
+}) {
   if (serie.length === 0) return null;
 
   const semSinal = serie.filter((p) => p.atendimentos > 0 && p.comScore === 0);
 
   return (
-    <div className="mt-1 pl-[58px] pr-[76px]">
+    <div
+      className="mt-1"
+      // Os recuos espelham a largura dos dois eixos (mais a margem), para cada
+      // marcador cair sob o seu dia: 52+6 / 58+18 no largo, 34+0 / 40+8 no estreito.
+      style={{
+        paddingLeft: estreito ? 34 : 58,
+        paddingRight: estreito ? 48 : 76,
+      }}
+    >
       <div className="flex items-center" role="img"
         aria-label={
           semSinal.length === 0

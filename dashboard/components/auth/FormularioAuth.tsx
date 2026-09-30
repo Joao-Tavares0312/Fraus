@@ -153,7 +153,10 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
       )}
 
       {erro && (
-        <p role="alert" className="text-sm text-destructive">
+        <p
+          role="alert"
+          className="border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
           {erro}
         </p>
       )}
@@ -175,7 +178,7 @@ export function FormularioAuth({ modo }: { modo: Modo }) {
               : "Criar conta"}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="border-t border-compasso pt-4 text-center text-sm text-muted-foreground">
         {entrando ? (
           <>
             Ainda sem conta?{" "}

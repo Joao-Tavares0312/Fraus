@@ -66,7 +66,7 @@ export function PesosFeatures({
           <li key={peso.sinal} className="flex items-baseline gap-2 text-xs">
             <span
               aria-hidden
-              className="size-2 shrink-0 translate-y-px rounded-full"
+              className="size-2 shrink-0 translate-y-px"
               style={{ background: COR_DO_SINAL[peso.sinal] }}
             />
             <span className="font-medium text-foreground">
@@ -82,16 +82,16 @@ export function PesosFeatures({
       {grupos.map((grupo) =>
         grupo.features.length === 0 ? null : (
           <section key={grupo.sinal} className="flex flex-col gap-2">
-            <h3 className="flex flex-wrap items-baseline gap-2 text-xs font-semibold text-foreground">
+            <h3 className="rotulo-instrumento flex flex-wrap items-baseline gap-2 text-foreground">
               <span
                 aria-hidden
-                className="size-2 shrink-0 translate-y-px rounded-full"
+                className="size-2 shrink-0 translate-y-px"
                 style={{ background: COR_DO_SINAL[grupo.sinal] }}
               />
               {grupo.sinal === "outros"
                 ? "Fora das sete famílias"
                 : `Sinal de ${ROTULO_SINAL[grupo.sinal].toLowerCase()}`}
-              <span className="font-normal text-muted-foreground">
+              <span className="font-normal tracking-normal text-muted-foreground normal-case">
                 {EXPLICACAO_DO_SINAL[grupo.sinal]}
               </span>
             </h3>

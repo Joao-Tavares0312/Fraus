@@ -64,11 +64,11 @@ export function ReguaDeCamadas({
               aria-pressed={ativa}
               onClick={() => aoFocar(opcao.valor)}
               className={cn(
-                "rounded-md px-2.5 py-1 text-xs whitespace-nowrap transition-colors duration-150 ease-fluid",
+                "border px-3 py-1.5 font-mono text-[0.6875rem] tracking-[0.1em] whitespace-nowrap uppercase transition-colors duration-150 ease-fluid",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 ativa
-                  ? "bg-muted font-medium text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "border-primary bg-primary/10 font-medium text-foreground"
+                  : "border-linha text-muted-foreground hover:border-primary hover:text-foreground",
               )}
             >
               {opcao.rotulo}

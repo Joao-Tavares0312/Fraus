@@ -6,6 +6,7 @@ import { ehFalhaDeConexao } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { mentirSobre, useMentira } from "@/lib/mentira";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { TRANSICAO, itemDaPilha } from "@/lib/movimento";
 
 /**
@@ -43,7 +44,9 @@ function posicao(valor: number, trilho: Trilho): number {
  *   1. `valor: null` e "sem dado", nunca zero. Um agregado sem medicao vira
  *      estado vazio dentro do proprio cartao, com o motivo escrito -- "NPS +0"
  *      sem medicao e mentira com cara de medicao.
- *   2. numero que se compara e MONOESPACADO e tabular (`.num`).
+ *   2. o numero e o DISPLAY DE SETE SEGMENTOS (`SegmentoLED`, azul = medido):
+ *      `valor: null` desenha as celulas APAGADAS -- o instrumento existe e nao
+ *      leu nada --, nunca um `0` aceso.
  *   3. falha isolada: `erro` mostra o problema aqui dentro sem derrubar os
  *      cartoes vizinhos.
  *
@@ -86,27 +89,23 @@ export function CartaoIndicador({
   const exibido = mentindo ? mentirSobre(verdadeiro) : verdadeiro;
 
   return (
-    // Sem cartao: na armadura os indicadores se separam por REGUA e espaco, nao
-    // por caixa. Cartao aqui produzia quatro caixas de altura igualada pelo
-    // flex, com rodape curto sobrando vazio -- bases irregulares.
-    // `motion.div` na PROPRIA raiz, e nao um wrapper por fora: os separadores
-    // desta pilha sao `last:border-b-0 last:pb-0`, e um wrapper faria de cada
-    // cartao filho unico do seu proprio pai -- todos passariam a ser "o
-    // ultimo" e a armadura perderia as reguas internas de uma vez.
-    //
-    // As `variants` sao herdadas do container (`pilha`, na FaixaIndicadores),
-    // por isso aqui nao ha `initial` nem `animate`: quem escalona e o pai.
+    // Uma CELULA da armadura: a `FaixaIndicadores` as separa por hairline (o
+    // truque do `gap-px` sobre fundo de regua), entao aqui nao ha borda nem
+    // fundo proprio -- so o respiro.
+    // `motion.div` na PROPRIA raiz, e nao um wrapper por fora: as `variants` sao
+    // herdadas do container (`pilha`, na FaixaIndicadores), por isso aqui nao ha
+    // `initial` nem `animate`: quem escalona e o pai.
     <motion.div
       variants={itemDaPilha}
-      className="quebra-evitar flex flex-col gap-1.5 border-b border-linha pb-3 last:border-b-0 last:pb-0"
+      className="quebra-evitar flex min-w-0 flex-col gap-2 p-4"
       data-slot="indicador"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-xs font-medium text-muted-foreground">{rotulo}</h3>
+        <h3 className="rotulo-instrumento">{rotulo}</h3>
         {qualificacao ? (
           <Badge
             variant="outline"
-            className="shrink-0 rounded-sm text-[0.6875rem] text-muted-foreground"
+            className="shrink-0 rounded-none border-dashed font-mono text-[0.6875rem] tracking-[0.08em] text-muted-foreground uppercase"
           >
             {qualificacao}
           </Badge>
@@ -116,11 +115,10 @@ export function CartaoIndicador({
       {erro ? (
         ehFalhaDeConexao(erro) ? (
           /* A armadura tem quatro indicadores lado a lado. Com a mensagem
-             inteira, a MESMA url aparecia quatro vezes em vermelho na coluna
-             da esquerda, e o que o olho lia era o endereco, nao a ausencia de
-             dado. Aqui vale o mesmo travessao do resto do sistema: o estado da
-             API e da conexao ja esta na regua do topo e no rodape da
-             navegacao, dito uma vez. */
+             inteira, a MESMA url aparecia quatro vezes em vermelho, e o que o
+             olho lia era o endereco, nao a ausencia de dado. O estado da API e
+             da conexao ja esta na telemetria do topo e no rodape da navegacao,
+             dito uma vez. */
           <p className="text-lg leading-none font-medium text-muted-foreground">
             <span className="num" aria-hidden>
               —
@@ -132,9 +130,11 @@ export function CartaoIndicador({
         )
       ) : valor === null ? (
         <>
-          <p className="text-lg leading-none font-medium text-muted-foreground">
-            sem dado
-          </p>
+          {/* AUSENCIA, desenhada: celulas apagadas, e a palavra ao lado. */}
+          <div className="flex items-end gap-3">
+            <SegmentoLED valor={null} rotulo={rotulo} altura={40} celulas={2} />
+            <p className="rotulo-instrumento pb-1">sem dado</p>
+          </div>
           {explicacaoVazio ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
               {explicacaoVazio}
@@ -143,21 +143,30 @@ export function CartaoIndicador({
         </>
       ) : (
         <>
-          <p className="flex items-baseline gap-1">
+          <div className="flex items-end gap-2">
+            {/* A PROVENIENCIA do numero estimado: o LED e SVG, entao o
+                sublinhado pontilhado do texto (`.estimado`) nao o alcanca --
+                o filete pontilhado embaixo faz o mesmo trabalho, e o Badge
+                "estimativa" ao lado continua sendo o rotulo que manda. */}
             <span
               className={cn(
-                "num text-[1.75rem] leading-none font-semibold tracking-tight text-foreground",
-                estimativa && "estimado",
-                // Mentindo, o numero vai para o vermelho de erro: mesmo quem
-                // nao le o selo percebe que a tela mudou de regime.
-                mentindo && "text-destructive",
+                "inline-flex pb-1.5",
+                estimativa && "border-b border-dotted border-muted-foreground",
               )}
-              // TRAVA 2: o leitor de tela NUNCA recebe o numero falso. Ele fica
-              // `aria-hidden` e a verdade sai no `sr-only` abaixo -- mentir para
-              // quem depende de leitor de tela nao tem piada nenhuma.
+              // TRAVA 2: o leitor de tela NUNCA recebe o numero falso. O LED
+              // falso fica `aria-hidden` (com ele, o `aria-label` dele) e a
+              // verdade sai no `sr-only` abaixo -- mentir para quem depende de
+              // leitor de tela nao tem piada nenhuma.
               aria-hidden={mentindo || undefined}
             >
-              {exibido}
+              <SegmentoLED
+                valor={exibido}
+                rotulo={rotulo}
+                altura={40}
+                // Mentindo, o numero vai para o vermelho de erro: mesmo quem
+                // nao le o selo percebe que a tela mudou de regime.
+                cor={mentindo ? "erro" : "medido"}
+              />
             </span>
             {mentindo ? (
               <span className="sr-only">
@@ -165,9 +174,11 @@ export function CartaoIndicador({
               </span>
             ) : null}
             {unidade ? (
-              <span className="text-sm text-muted-foreground">{unidade}</span>
+              <span className="rotulo-instrumento pb-1.5 tracking-normal normal-case">
+                {unidade}
+              </span>
             ) : null}
-          </p>
+          </div>
           {/* O trilho SOME enquanto o numero mente. O ponteiro dele marca a
               posicao VERDADEIRA, e deixa-lo ao lado de um numero falso nao
               leria como ironia -- leria como bug de render, que e o oposto do
@@ -201,7 +212,7 @@ function TrilhoDeReferencia({
   return (
     <div className="mt-1 flex flex-col gap-1">
       <div
-        className="relative h-1.5 w-full overflow-hidden rounded-sm bg-muted"
+        className="relative h-1.5 w-full overflow-hidden bg-muted"
         role="img"
         aria-label={`Faixas de referência: ${legenda}.`}
       >
@@ -240,7 +251,7 @@ function TrilhoDeReferencia({
             `reducedMotion="user"` do MotionConfig as descarta sozinho. */}
         <motion.span
           aria-hidden
-          className="absolute inset-y-0 w-0.5 origin-center rounded-full bg-foreground"
+          className="absolute inset-y-0 w-0.5 origin-center bg-foreground"
           style={{ left: `calc(${posicao(valor, trilho)}% - 1px)` }}
           initial={{ opacity: 0, scaleY: 0.3 }}
           animate={{ opacity: 1, scaleY: 1 }}

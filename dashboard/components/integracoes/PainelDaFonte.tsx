@@ -33,7 +33,7 @@ function Bloco({
 }) {
   return (
     <section className="min-w-0 border-t border-linha pt-4">
-      <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      <h4 className="rotulo-instrumento">
         {titulo}
       </h4>
       {nota ? (
@@ -159,7 +159,7 @@ export function PainelDaFonte({
                 </Button>
               </div>
             ) : (
-              <h3 className="truncate text-base font-semibold text-foreground">
+              <h3 className="titulo-instrumento truncate text-base text-foreground">
                 {fonte.nome}
               </h3>
             )}

@@ -219,7 +219,7 @@ function lerMistura(bloco, nome) {
 const SELETOR_BASE = /:root\s*,\s*\.dark\s*\{/;
 const corpoBase = recortarBloco(css, SELETOR_BASE) ?? "";
 
-const temas = [{ nome: "espacial (base)", corpo: corpoBase }];
+const temas = [{ nome: "instrumento (base)", corpo: corpoBase }];
 for (const m of css.matchAll(/^(\.tema-[a-z0-9-]+)\s*\{/gim)) {
   const corpo = recortarBloco(css, m[1]);
   if (corpo) temas.push({ nome: m[1].replace(".tema-", ""), corpo });

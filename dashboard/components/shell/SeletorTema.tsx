@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { CloudRain, Orbit, type LucideIcon } from "lucide-react";
+import { CloudRain, Gauge, type LucideIcon } from "lucide-react";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import {
   aplicarTema,
@@ -13,12 +13,12 @@ import {
 } from "@/lib/tema";
 
 const ROTULOS: Record<Tema, string> = {
-  espacial: "Espaço profundo",
+  instrumento: "Instrumento",
   chuva: "Chuva de neon",
 };
 
 const ICONES: Record<Tema, LucideIcon> = {
-  espacial: Orbit,
+  instrumento: Gauge,
   chuva: CloudRain,
 };
 

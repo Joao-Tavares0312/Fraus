@@ -1,3 +1,21 @@
+/**
+ * Valida a vitrine (`/`) do Instrumento contra um servidor ja rodando em
+ * http://localhost:3000 (`npm run dev` ou `npm run start`).
+ *
+ * O QUE ELE GARANTE, e por que cada item existe:
+ *  - resposta 200, zero erro de console e zero `pageerror`;
+ *  - nenhuma rolagem horizontal (o `body` nunca rola na horizontal, e em 390px
+ *    e onde isso quebra primeiro);
+ *  - CLS abaixo de 0,1 -- o orbe e o reveal por rolagem nao podem empurrar layout;
+ *  - orcamento de bytes: a vitrine nao tem canvas, WebGL, three nem imagem
+ *    bitmap, entao o teto e baixo de proposito. Se um dia estourar, alguem
+ *    trouxe de volta o que a reformulacao de 30/09/2026 tirou;
+ *  - o orbe GIRA por padrao e fica PARADO com `prefers-reduced-motion`;
+ *  - o hero tem um unico `h1`, os quatro landmarks e todo `SegmentoLED` com
+ *    `aria-label` (um SVG de poligonos sem rotulo nao diz nada a leitor de tela).
+ *
+ * As capturas vao para uma pasta temporaria e o caminho e impresso.
+ */
 import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -5,84 +23,80 @@ import { tmpdir } from "node:os";
 
 const saida = join(tmpdir(), "fraus-playwright");
 await mkdir(saida, { recursive: true });
-// Valores medidos na build de producao, com uma pequena margem para hashes e
-// metadados do compilador. A cena leve nunca pode baixar o pacote 3D (~1,95 MB).
-const ORCAMENTOS = { desktop: { inicial: 725_000, total: 2_700_000 }, leve: { inicial: 725_000, total: 725_000 } };
+
+// Medidos na build de producao com folga para hash e metadados. Fontes entram
+// (Bricolage, Martian Mono, Inter), e por isso o teto nao e menor.
+const ORCAMENTO_BYTES = 700_000; // medido em build de producao: ~485 KB, com folga para hash e fonte
 const navegador = await chromium.launch({ channel: "chrome", headless: true });
 const resultados = [];
 
-async function validar(nome, viewport, opcoes = {}) {
+async function validar(nome, viewport, { movimentoReduzido = false } = {}) {
   const pagina = await navegador.newPage({ viewport, deviceScaleFactor: 1 });
-  if (opcoes.movimentoReduzido) await pagina.emulateMedia({ reducedMotion: "reduce" });
-  if (opcoes.economizarDados) await pagina.addInitScript(() => {
-    Object.defineProperty(navigator, "connection", { configurable: true, value: { saveData: true, addEventListener() {}, removeEventListener() {} } });
-  });
+  if (movimentoReduzido) await pagina.emulateMedia({ reducedMotion: "reduce" });
   await pagina.addInitScript(() => {
-    window.__metricasFraus = { cls: 0, lcp: 0 };
+    window.__vitais = { cls: 0 };
     new PerformanceObserver((lista) => {
-      for (const entrada of lista.getEntries()) if (!entrada.hadRecentInput) window.__metricasFraus.cls += entrada.value;
+      for (const entrada of lista.getEntries()) if (!entrada.hadRecentInput) window.__vitais.cls += entrada.value;
     }).observe({ type: "layout-shift", buffered: true });
-    new PerformanceObserver((lista) => {
-      window.__metricasFraus.lcp = lista.getEntries().at(-1)?.startTime ?? 0;
-    }).observe({ type: "largest-contentful-paint", buffered: true });
   });
   const erros = [];
-  pagina.on("console", (mensagem) => { if (mensagem.type() === "error") erros.push(`console: ${mensagem.text()}`); });
-  pagina.on("pageerror", (erro) => erros.push(`pageerror: ${erro.message}`));
+  pagina.on("console", (m) => { if (m.type() === "error") erros.push(`console: ${m.text()}`); });
+  pagina.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+
   const resposta = await pagina.goto("http://localhost:3000", { waitUntil: "networkidle", timeout: 60_000 });
-  const medirRecursos = () => pagina.evaluate(() => {
+  await pagina.screenshot({ path: join(saida, `${nome}-hero.png`) });
+
+  // Rola a pagina inteira: dispara os reveals e mede o CLS de verdade.
+  const altura = await pagina.evaluate(() => document.documentElement.scrollHeight);
+  for (let y = 0; y < altura; y += 500) {
+    await pagina.evaluate((yy) => window.scrollTo(0, yy), y);
+    await pagina.waitForTimeout(80);
+  }
+  await pagina.evaluate(() => window.scrollTo(0, 0));
+  await pagina.screenshot({ path: join(saida, `${nome}-pagina.png`), fullPage: true });
+
+  const medidas = await pagina.evaluate(() => {
     const recursos = performance.getEntriesByType("resource");
+    const nomeAnimacao = getComputedStyle(document.querySelector(".vt-orbe__corpo i")).animationName;
     return {
-      recursos: recursos.length,
-      bytes: recursos.reduce((total, recurso) => total + (recurso.transferSize || recurso.encodedBodySize || 0), 0),
-      hdriCarregado: recursos.some((recurso) => recurso.name.includes("studio_small_06_1k.hdr")),
+      bytes: recursos.reduce((t, r) => t + (r.transferSize || r.encodedBodySize || 0), 0),
+      largura: { rolavel: document.documentElement.scrollWidth, janela: document.documentElement.clientWidth },
+      h1: document.querySelectorAll("h1").length,
+      landmarks: ["header", "nav", "main", "footer"].filter((t) => document.querySelector(t)).length,
+      canvas: document.querySelectorAll("canvas").length,
+      ledsSemRotulo: [...document.querySelectorAll('[data-slot="segmento-led"]')].filter((e) => !e.getAttribute("aria-label")).length,
+      leds: document.querySelectorAll('[data-slot="segmento-led"]').length,
+      orbeAnimado: nomeAnimacao !== "none",
+      cls: window.__vitais.cls,
     };
   });
-  const metricasIniciais = await medirRecursos();
-  await pagina.screenshot({ path: join(saida, `${nome}-hero.png`), fullPage: false });
-  const secao = pagina.locator("#sistema");
-  await secao.scrollIntoViewIfNeeded();
-  const canvas3d = pagina.getByLabel(/Sete sinais convergindo/).locator("canvas");
-  if (opcoes.espera3d) await canvas3d.waitFor({ state: "visible", timeout: 30_000 });
-  else await secao.locator('[data-cena="leve"]').waitFor({ state: "visible", timeout: 10_000 });
-  await pagina.waitForTimeout(500);
-  const metricasCom3D = await medirRecursos();
-  const geometria = await secao.evaluate((elemento) => {
-    const caixa = elemento.getBoundingClientRect();
-    return { topo: caixa.top + window.scrollY, altura: caixa.height };
-  });
-  const etapas = [];
-  for (const [indice, progresso] of (opcoes.espera3d ? [0.08, 0.49, 0.86] : [0]).entries()) {
-    await pagina.evaluate(({ y }) => window.scrollTo({ top: y, behavior: "instant" }), { y: geometria.topo + Math.max(0, geometria.altura - viewport.height) * progresso });
-    await pagina.waitForTimeout(opcoes.espera3d ? 900 : 100);
-    const visiveis = await secao.locator("article").evaluateAll((artigos) => artigos.map((artigo) => ({
-      texto: artigo.querySelector("h3")?.textContent?.trim(), opacidade: Number.parseFloat(getComputedStyle(artigo).opacity), visibilidade: getComputedStyle(artigo).visibility,
-    })).filter((item) => item.opacidade > 0.25 && item.visibilidade === "visible"));
-    etapas.push({ indice: indice + 1, visiveis });
-    await pagina.screenshot({ path: join(saida, `${nome}-etapa-${indice + 1}.png`), fullPage: false });
-  }
-  resultados.push({
-    nome, status: resposta?.status(), canvas3d: await canvas3d.count(), metricasIniciais, metricasCom3D,
-    vitais: await pagina.evaluate(() => ({ ...window.__metricasFraus, fcp: performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? 0 })),
-    etapas, erros,
-  });
+  resultados.push({ nome, status: resposta?.status(), altura, ...medidas, erros });
   await pagina.close();
 }
 
-await validar("desktop", { width: 1440, height: 1000 }, { espera3d: true });
+await validar("desktop", { width: 1440, height: 900 });
 await validar("mobile", { width: 390, height: 844 });
-await validar("movimento-reduzido", { width: 1440, height: 1000 }, { movimentoReduzido: true });
-await validar("economia-de-dados", { width: 1440, height: 1000 }, { economizarDados: true });
+await validar("movimento-reduzido", { width: 1440, height: 900 }, { movimentoReduzido: true });
 await navegador.close();
-console.log(JSON.stringify({ saida, orcamentos: ORCAMENTOS, resultados }, null, 2));
+console.log(JSON.stringify({ saida, resultados }, null, 2));
 
-const regressao = resultados.some((resultado) => {
-  const completo = resultado.nome === "desktop";
-  const orcamento = completo ? ORCAMENTOS.desktop : ORCAMENTOS.leve;
-  return resultado.status !== 200 || resultado.erros.length > 0
-    || resultado.metricasIniciais.bytes > orcamento.inicial || resultado.metricasCom3D.bytes > orcamento.total
-    || resultado.vitais.cls > 0.1
-    || (completo && resultado.etapas.some((etapa) => etapa.visiveis.length !== 1))
-    || (!completo && (resultado.canvas3d !== 0 || resultado.metricasCom3D.hdriCarregado || resultado.etapas[0]?.visiveis.length !== 3));
+const falhas = resultados.flatMap((r) => {
+  const f = [];
+  if (r.status !== 200) f.push(`${r.nome}: status ${r.status}`);
+  if (r.erros.length) f.push(`${r.nome}: ${r.erros.length} erro(s) de console`);
+  if (r.largura.rolavel > r.largura.janela) f.push(`${r.nome}: rolagem horizontal (${r.largura.rolavel} > ${r.largura.janela})`);
+  if (r.cls > 0.1) f.push(`${r.nome}: CLS ${r.cls.toFixed(3)} > 0,1`);
+  if (r.bytes > ORCAMENTO_BYTES) f.push(`${r.nome}: ${r.bytes} bytes > ${ORCAMENTO_BYTES}`);
+  if (r.canvas !== 0) f.push(`${r.nome}: a vitrine nao tem canvas, achou ${r.canvas}`);
+  if (r.h1 !== 1) f.push(`${r.nome}: esperava 1 h1, achou ${r.h1}`);
+  if (r.landmarks !== 4) f.push(`${r.nome}: esperava 4 landmarks, achou ${r.landmarks}`);
+  if (r.leds === 0 || r.ledsSemRotulo > 0) f.push(`${r.nome}: ${r.ledsSemRotulo} de ${r.leds} LED sem aria-label`);
+  if (r.nome === "movimento-reduzido" ? r.orbeAnimado : !r.orbeAnimado) {
+    f.push(`${r.nome}: orbe ${r.orbeAnimado ? "animado" : "parado"} onde deveria ${r.nome === "movimento-reduzido" ? "estar parado" : "girar"}`);
+  }
+  return f;
 });
-if (regressao) process.exitCode = 1;
+if (falhas.length) {
+  console.error("\nFALHAS:\n - " + falhas.join("\n - "));
+  process.exitCode = 1;
+}

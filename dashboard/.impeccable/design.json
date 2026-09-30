@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-30T00:00:00-03:00",
+  "title": "Design System: Fraus — Instrumento",
+  "extensions": {
+    "colorMeta": {
+      "background": { "role": "neutral", "displayName": "Quase-preto neutro", "canonical": "oklch(0.14 0.004 285)" },
+      "card": { "role": "neutral", "displayName": "Card", "canonical": "oklch(0.185 0.005 285)" },
+      "linha": { "role": "neutral", "displayName": "Régua (afirma)", "canonical": "oklch(0.96 0.003 285 / 26%)" },
+      "compasso": { "role": "neutral", "displayName": "Filete (agrupa)", "canonical": "oklch(0.96 0.003 285 / 9%)" },
+      "primary": { "role": "primary", "displayName": "Ouro fosco do monograma", "canonical": "oklch(0.83 0.095 84)" },
+      "dito": { "role": "secondary", "displayName": "Âmbar do dito", "canonical": "oklch(0.78 0.14 72)" },
+      "medido": { "role": "secondary", "displayName": "Azul do medido (LED)", "canonical": "oklch(0.74 0.13 250)" },
+      "atelie-halo": { "role": "tertiary", "displayName": "Magenta cenográfico (só orbe e halo)", "canonical": "oklch(0.62 0.2 320)" }
+    },
+    "typographyMeta": {
+      "display-vitrine": { "displayName": "Display da vitrine", "purpose": "Manchete da LP. Só .display-vitrine; Bricolage nunca vaza para rótulo ou dado." },
+      "titulo-vitrine": { "displayName": "Título de seção da vitrine", "purpose": "Só .titulo-vitrine." },
+      "titulo-instrumento": { "displayName": "Título de tela", "purpose": "Mono caixa alta, nunca display." },
+      "rotulo-instrumento": { "displayName": "Rótulo", "purpose": "Campo, painel, telemetria. Piso de 11px." },
+      "prosa": { "displayName": "Prosa", "purpose": "Inter: transcrição, explicação, aparato." },
+      "dado": { "displayName": "Dado", "purpose": "Martian Mono tabular (.num) para todo número comparável." }
+    },
+    "shadows": [
+      { "name": "assentamento", "value": "0 1px 0 oklch(0 0 0 / 30%)", "purpose": "Única sombra do Instrumento (--vidro-sombra). Sem halo." },
+      { "name": "brilho-led", "value": "drop-shadow(0 0 3px currentColor)", "purpose": "Filtro único no grupo aceso do SegmentoLED." },
+      { "name": "orbe-interior", "value": "inset 0 0 90px color-mix(in oklch, black 70%, transparent)", "purpose": "Assenta o orbe da vitrine." }
+    ],
+    "motion": [
+      { "name": "ease-fluid", "value": "cubic-bezier(0.32, 0.72, 0, 1)", "purpose": "Transições de 150ms em hover e cor." },
+      { "name": "orbe", "value": "vt-gira 14s / 18s / 22s linear infinite", "purpose": "Só na vitrine; congela em prefers-reduced-motion." },
+      { "name": "entrada-de-sistema", "value": "8px, whileInView, once", "purpose": "Painel entra em cena uma vez ao rolar." }
+    ],
+    "breakpoints": [
+      { "name": "vitrine-nav", "value": "48rem" },
+      { "name": "vitrine-palco", "value": "64rem" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Telemetria do topo",
+      "kind": "nav",
+      "refersTo": "telemetria-topo",
+      "description": "Faixa de 34px com fatos verdadeiros do produto; valor em dourado.",
+      "html": "<div class=\"ds-telemetria\"><span>02_ATENDIMENTOS · NPS <b>ESTIMATIVA</b></span><span>LLM <b>00</b></span></div>",
+      "css": ".ds-telemetria{display:flex;height:34px;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--linha);background:var(--background);font-family:var(--fonte-mono);font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground);white-space:nowrap}.ds-telemetria b{font-weight:500;color:var(--primary)}"
+    },
+    {
+      "name": "Item de navegação numerado",
+      "kind": "nav",
+      "refersTo": "telemetria-topo",
+      "description": "Mono caixa alta, filete inferior, cursor dourado na tela ativa.",
+      "html": "<a class=\"ds-nav\" aria-current=\"page\"><span>01</span><span>_Visão geral</span><span class=\"ds-cursor\">█</span></a>",
+      "css": ".ds-nav{display:flex;gap:8px;align-items:center;padding:8px;border-bottom:1px solid var(--sidebar-border);font-family:var(--fonte-mono);font-size:.6875rem;letter-spacing:.12em;text-transform:uppercase;color:var(--sidebar-foreground)}.ds-nav span:nth-child(2){flex:1}.ds-cursor{color:var(--primary)}"
+    },
+    {
+      "name": "Painel hairline",
+      "kind": "card",
+      "refersTo": "painel",
+      "description": "Sistema de largura total: rótulo mono, régua embaixo, sem raio.",
+      "html": "<section class=\"ds-painel\"><header><h2>NPS × latência</h2></header><p>conteúdo</p></section>",
+      "css": ".ds-painel{background:color-mix(in oklch,var(--card) 90%,transparent);border:1px solid var(--linha);box-shadow:0 1px 0 oklch(0 0 0/30%);padding:16px 20px}.ds-painel header{border-bottom:1px solid var(--linha);padding-bottom:8px}.ds-painel h2{font-family:var(--fonte-mono);font-size:.6875rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}.ds-painel p{padding-top:16px;color:var(--foreground)}"
+    },
+    {
+      "name": "CTA primário com borda cônica",
+      "kind": "button",
+      "refersTo": "botao-primario-vitrine",
+      "description": "Miolo escuro, borda cônica dourado para magenta. Só na vitrine.",
+      "html": "<a class=\"ds-btn\">Iniciar leitura</a>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;min-height:3rem;padding:0 1.6rem;border:2px solid transparent;background:linear-gradient(var(--background),var(--background)) padding-box,conic-gradient(from 20deg,var(--primary),transparent 30%,var(--atelie-halo) 55%,transparent 72%,var(--primary)) border-box;font-family:var(--fonte-mono);font-size:.75rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--foreground);transition:filter 150ms}.ds-btn:hover{filter:brightness(1.12)}.ds-btn:focus-visible{outline:2px solid var(--ring);outline-offset:3px}"
+    },
+    {
+      "name": "Lâmpada (dito / medido / vazio)",
+      "kind": "chip",
+      "refersTo": "segmento-led",
+      "description": "Marcador com brilho, sempre acompanhado da palavra.",
+      "html": "<span class=\"ds-lampada\"><i></i>medido</span>",
+      "css": ".ds-lampada{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--fonte-mono);font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}.ds-lampada i{width:.5rem;height:.5rem;background:var(--medido);box-shadow:0 0 10px var(--medido)}"
+    },
+    {
+      "name": "Cartão do dito",
+      "kind": "card",
+      "refersTo": "painel",
+      "description": "Fala do cliente: hairline com filete âmbar à esquerda.",
+      "html": "<figure class=\"ds-fala\"><figcaption>dito · atendimento a-0041</figcaption><blockquote>tá. ok, obrigado</blockquote></figure>",
+      "css": ".ds-fala{border:1px solid var(--linha);border-left:2px solid var(--dito);background:color-mix(in oklch,var(--background) 62%,transparent);padding:1rem 1.15rem;font-size:.9375rem;line-height:1.55}.ds-fala figcaption{margin-bottom:.4rem;font-family:var(--fonte-mono);font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dito-texto)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Instrumento de Bancada",
+    "overview": "Painel de laboratório sobre quase-preto neutro. Todo número medido é um display de sete segmentos e o segmento apagado também é desenhado: sem sinal é medidor ligado que não leu nada, nunca zero. Superfície é retângulo de hairline de 1px com raio zero. O dito fica acima da régua (âmbar) e o medido abaixo (azul); o dourado é só ação, foco e marca; o magenta vive só no orbe da vitrine.",
+    "keyCharacteristics": [
+      "Quase-preto neutro; degraus de superfície são passos de claridade.",
+      "Hairline 1px, raio 0; --linha afirma, --compasso agrupa.",
+      "Martian Mono em rótulo e dado, Inter na prosa, Bricolage só no display da vitrine.",
+      "Âmbar dito, azul medido, dourado só em ação e marca, magenta só no orbe.",
+      "Um momento vivo (o orbe), só na vitrine."
+    ],
+    "rules": [
+      { "name": "A Regra do Dito e do Medido", "body": "Âmbar acima da linha, azul abaixo; a régua só entra onde o dado realmente se divide.", "section": "colors" },
+      { "name": "A Regra do Ouro Fora do Dado", "body": "--primary nunca aparece em série, barra, categoria ou célula.", "section": "colors" },
+      { "name": "A Regra do Magenta Cenográfico", "body": "Magenta só no orbe, no halo e na borda cônica do CTA.", "section": "colors" },
+      { "name": "A Regra do Piso", "body": "Todo par de cor que carrega texto cruza AA por cálculo.", "section": "colors" },
+      { "name": "A Regra dos 11px", "body": "Nenhum texto abaixo de 11px; tipografia.test.ts varre TSX e CSS.", "section": "typography" },
+      { "name": "A Regra da Display Contida", "body": "Bricolage só em .display-vitrine e .titulo-vitrine.", "section": "typography" },
+      { "name": "A Regra da Dobra", "body": "Hero conferido a 1280x720 e 390px: CTA visível, sem rolagem horizontal.", "section": "layout" },
+      { "name": "A Regra da Espessura como Opacidade", "body": "Vidro engrossa por opacidade, nunca por luz baixa.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do passar ao SegmentoLED a string já formatada em pt-BR e sempre um rotulo; valor null para ausência.",
+      "Do manter âmbar acima e azul abaixo; use -texto quando a cor carrega tipo.",
+      "Do manter o dourado em ação, foco, cursor e marca, e o magenta no orbe e no halo.",
+      "Do rodar npm run contraste, pisos e build ao tocar token de cor, vidro ou ateliê.",
+      "Do rotular amostras sintéticas como tal em todo lugar em que aparecem.",
+      "Do nomear o que falta em estado vazio, com a etapa ou o endpoint."
+    ],
+    "donts": [
+      "Don't renderizar 0 para ausência.",
+      "Don't usar kickers ou eyebrows acima de título na vitrine.",
+      "Don't usar dourado em dado nem como luz de ambiente.",
+      "Don't usar Bricolage fora das duas classes de vitrine.",
+      "Don't pôr orbe, halo ou coreografia atrás de tabela, gráfico ou rota do Operate.",
+      "Don't escrever texto abaixo de 11px.",
+      "Don't reintroduzir chanfro, raio ou quina iluminada no tema Instrumento.",
+      "Don't pontuar atendentes."
+    ]
+  }
+}

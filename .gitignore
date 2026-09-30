@@ -6,6 +6,7 @@ __pycache__/
 modelos/
 dados_brutos/
 *.db
+!dados_demo/*.db
 node_modules/
 .next/
 .superpowers/
@@ -46,3 +47,7 @@ node_modules/
 # repositorio que proibe justamente isso.
 /modelos-onnx*/
 /modelos-vercel*.zip
+
+# capturas de revisao do Impeccable: evidencia da sessao, nao codigo
+/dashboard/.impeccable/review/
+/dashboard/.impeccable/build/

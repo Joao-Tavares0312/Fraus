@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { NoDoGrafo, TipoDeNo } from "@/lib/api";
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { ROTULO_SEM_SINAL, formatarNumero } from "@/lib/formato";
 
 /**
@@ -50,7 +51,7 @@ export function FichaDoNo({ no }: { no: NoDoGrafo | null }) {
       ) : (
         <dl className="flex min-w-0 flex-col gap-3">
           <div className="min-w-0">
-            <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+            <dt className="rotulo-instrumento">
               {ROTULO_TIPO[no.tipo]} · {ROTULO_CAMADA[no.camada]}
             </dt>
             <dd className="mt-0.5 text-sm font-medium break-words text-foreground">
@@ -59,7 +60,7 @@ export function FichaDoNo({ no }: { no: NoDoGrafo | null }) {
           </div>
 
           <div>
-            <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+            <dt className="rotulo-instrumento">
               Conexões
             </dt>
             {/* O grau e o que dita o raio do ponto la no canvas: escrever o
@@ -70,24 +71,34 @@ export function FichaDoNo({ no }: { no: NoDoGrafo | null }) {
           {no.tipo === "conversa" ? (
             <>
               <div>
-                <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                <dt className="rotulo-instrumento">
                   Nota
                 </dt>
-                <dd className="mt-0.5 flex items-baseline gap-2">
+                <dd className="mt-1 flex items-end gap-2">
                   {no.sem_sinal || no.nota === null || no.nota === undefined ? (
-                    <span className="text-sm text-muted-foreground">
-                      {ROTULO_SEM_SINAL}
-                    </span>
+                    <>
+                      <SegmentoLED
+                        valor={null}
+                        celulas={2}
+                        altura={28}
+                        rotulo="nota do atendimento"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {ROTULO_SEM_SINAL}
+                      </span>
+                    </>
                   ) : (
-                    <span className="num text-sm text-foreground">
-                      {formatarNumero(no.nota)}
-                    </span>
+                    <SegmentoLED
+                      valor={formatarNumero(no.nota)}
+                      altura={28}
+                      rotulo="nota estimada do atendimento"
+                    />
                   )}
                 </dd>
               </div>
 
               <div>
-                <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                <dt className="rotulo-instrumento">
                   Categoria
                 </dt>
                 <dd className="mt-0.5">

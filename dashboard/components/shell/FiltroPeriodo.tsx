@@ -75,7 +75,7 @@ export function FiltroPeriodo({
 
   return (
     <div
-      className="flex flex-wrap items-end gap-x-3 gap-y-2"
+      className="flex min-w-0 max-w-full flex-wrap items-end gap-x-3 gap-y-2"
       data-pendente={pendente || undefined}
     >
       {/*
@@ -84,7 +84,11 @@ export function FiltroPeriodo({
         vocabularios de controle no mesmo lugar. Inline, o filtro vira uma
         banda horizontal so, na altura dos botoes.
       */}
-      <fieldset className="flex flex-wrap items-center gap-x-2 gap-y-2">
+      {/* Os dois campos de data NAO quebram de linha no celular: a 390px o
+          "de ... ate ..." tem que caber numa fileira so, entao a fieldset vira
+          nowrap com os campos flexiveis (`min-w-0 flex-1`) ate o breakpoint
+          `sm`, onde voltam ao tamanho nativo. */}
+      <fieldset className="flex w-full min-w-0 flex-nowrap items-center gap-x-2 sm:w-auto sm:flex-wrap sm:gap-y-2">
         <legend className="sr-only">Período dos atendimentos</legend>
 
         <Label
@@ -103,7 +107,7 @@ export function FiltroPeriodo({
           onChange={(evento) =>
             aplicar({ ...periodo, de: evento.target.value || null })
           }
-          className="campo-data"
+          className="campo-data min-w-0 flex-1 sm:flex-none"
         />
 
         <Label
@@ -122,11 +126,14 @@ export function FiltroPeriodo({
           onChange={(evento) =>
             aplicar({ ...periodo, ate: evento.target.value || null })
           }
-          className="campo-data"
+          className="campo-data min-w-0 flex-1 sm:flex-none"
         />
       </fieldset>
 
-      <span aria-hidden className="h-5 w-px bg-compasso" />
+      {/* O filete so existe onde os atalhos ficam NA MESMA linha dos campos
+          (lg+). Abaixo disso eles descem, e o filete ficava solto ao lado da
+          data. */}
+      <span aria-hidden className="hidden h-5 w-px bg-compasso lg:block" />
 
       <div className="flex flex-wrap items-center gap-1.5">
         {atalhos.map((atalho) => {

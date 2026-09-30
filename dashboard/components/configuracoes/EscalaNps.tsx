@@ -1,3 +1,4 @@
+import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { cn } from "@/lib/utils";
 
 export type Faixas = Record<string, [number, number]>;
@@ -54,8 +55,14 @@ export function EscalaNps({
 }) {
   return (
     <div className={cn("min-w-0", className)}>
+      {/* No celular a escala REFLUI em duas fileiras (6 + 5) em vez de rolar na
+          horizontal: onze celulas com o nome da categoria embaixo nao cabem em
+          390px numa fileira so, e a rolagem escondia a celula 6 em diante sem
+          nenhum indicio de que havia mais. Cortar a palavra deixaria a
+          categoria so na cor, entao o nome fica inteiro e a grade quebra de
+          linha. A partir de `sm` sao onze colunas, como sempre foram. */}
       <ol
-        className="grid grid-cols-11 gap-px overflow-hidden rounded-md border border-border bg-border"
+        className="grid grid-cols-6 gap-px overflow-hidden border border-border bg-border sm:grid-cols-11"
         aria-label="Escala de notas de 0 a 10 e a categoria de cada nota"
       >
         {NOTAS.map((nota) => {
@@ -80,16 +87,16 @@ export function EscalaNps({
                   : undefined
               }
             >
-              <span
-                className={cn(
-                  "num text-sm font-medium tabular-nums",
-                  orfa || conflito
-                    ? "text-muted-foreground"
-                    : "text-foreground",
-                )}
-              >
-                {nota}
-              </span>
+              {/* A nota da escala em LED: e o indice 0-10, nao um valor
+                  medido, entao a cor e `tinta` e nao o azul do medido. A nota
+                  sem faixa ou em conflito apaga o brilho -- ela nao tem dona. */}
+              <SegmentoLED
+                valor={String(nota)}
+                altura={18}
+                cor="tinta"
+                rotulo={`nota ${nota}`}
+                className={orfa || conflito ? "opacity-50" : undefined}
+              />
               <span
                 aria-hidden
                 className="h-1 w-full rounded-xs"
@@ -120,6 +127,9 @@ export function EscalaNps({
             </li>
           );
         })}
+        {/* A sexta coluna da segunda fileira fica vazia no celular: um miolo
+            do proprio fundo, para o hairline nao pintar um bloco cheio. */}
+        <li aria-hidden className="bg-card sm:hidden" />
       </ol>
     </div>
   );

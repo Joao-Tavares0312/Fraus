@@ -188,11 +188,42 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
    * alguem mexesse num ponto, desfazendo o zoom que a pessoa deu.
    */
   const jaEnquadrou = useRef(false);
+
+  /**
+   * Quem entra na conta do enquadramento: so nos LIGADOS. Um no solto (sem
+   * aresta) e empurrado para longe pela repulsao e, se entrasse na conta, a
+   * camera afastaria ate cobrir o ponto perdido -- e o miolo do grafo, que e
+   * onde a pessoa vai olhar, ficava pequeno no canvas.
+   */
+  const soLigados = useCallback(
+    (no: NoDaSimulacao) => (vizinhos.get(String(no.id))?.size ?? 0) > 0,
+    [vizinhos],
+  );
+
   const aoParar = useCallback(() => {
     if (jaEnquadrou.current) return;
     jaEnquadrou.current = true;
-    refGrafo.current?.zoomToFit(400, 40);
-  }, []);
+    refGrafo.current?.zoomToFit(400, 40, soLigados);
+  }, [soLigados]);
+
+  /**
+   * REENQUADRA quando o canvas muda de medida. O `zoomToFit` de cima roda uma
+   * vez, quando a fisica assenta -- e nesse instante a caixa ainda pode estar
+   * numa largura que nao e a final (a barra lateral abrindo, a coluna da ficha
+   * se ajustando, a janela sendo redimensionada). Medido: o grafo ocupava ~330px
+   * de um canvas de 860px, e no celular o canvas o cortava a direita. Depois do
+   * primeiro enquadramento a camera nunca mais se recalculava sozinha.
+   *
+   * So depois do primeiro enquadramento (antes dele o `onEngineStop` ainda vai
+   * fazer o trabalho) e com um respiro de 150ms para o layout parar de mexer.
+   */
+  useEffect(() => {
+    if (medida.largura === 0 || !jaEnquadrou.current) return;
+    const espera = setTimeout(() => {
+      refGrafo.current?.zoomToFit(0, 40, soLigados);
+    }, 150);
+    return () => clearTimeout(espera);
+  }, [medida.largura, medida.altura, soLigados]);
 
   const corDaAresta = useCallback(
     (aresta: ArestaDaSimulacao) => {
@@ -247,7 +278,7 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
           <div
             ref={refCaixa}
             aria-hidden
-            className="h-[70vh] min-h-[26rem] w-full overflow-hidden rounded-md border border-linha bg-background"
+            className="h-[70vh] min-h-[26rem] w-full overflow-hidden border border-linha bg-background bg-[radial-gradient(var(--compasso)_1px,transparent_1px)] bg-[size:24px_24px]"
           >
             {medida.largura > 0 ? (
               <ForceGraph2D

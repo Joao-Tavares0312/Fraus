@@ -167,7 +167,7 @@ export function LimiaresLatencia({
                 className="size-2 shrink-0 translate-y-px rounded-full"
                 style={{ background: COR_DA_SEVERIDADE[severidade] }}
               />
-              <dt className="text-xs font-medium text-foreground">
+              <dt className="rotulo-instrumento text-foreground">
                 {rotulos[severidade].titulo}
               </dt>
               <dd className="num text-xs text-muted-foreground">

@@ -47,7 +47,7 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
               className="size-2 shrink-0 -translate-y-px rounded-full"
               style={{ background: COR[classe.categoria] }}
             />
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className="titulo-instrumento text-sm text-foreground">
               {ROTULO_CATEGORIA[classe.categoria]}
             </h3>
             <span className="num text-xs text-muted-foreground">
@@ -57,9 +57,7 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
           </div>
 
           <div>
-            <h4 className="mb-1 text-[0.6875rem] font-medium text-muted-foreground">
-              Palavras
-            </h4>
+            <h4 className="rotulo-instrumento mb-1">Palavras</h4>
             {classe.palavras.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 nenhuma palavra distintiva
@@ -84,9 +82,7 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
           </div>
 
           <div>
-            <h4 className="mb-1 text-[0.6875rem] font-medium text-muted-foreground">
-              Emojis
-            </h4>
+            <h4 className="rotulo-instrumento mb-1">Emojis</h4>
             {classe.emojis.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 nenhum emoji nesta classe

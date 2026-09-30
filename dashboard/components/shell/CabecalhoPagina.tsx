@@ -20,6 +20,7 @@ export function CabecalhoPagina({
   periodo,
   extensao,
   acoes,
+  escopo = "indicadores, série, tabela e export",
 }: {
   titulo: string;
   /** Opcional: tela cuja tarefa e obvia pelo titulo nao paga um paragrafo. */
@@ -27,9 +28,18 @@ export function CabecalhoPagina({
   periodo?: Periodo;
   extensao?: Extensao;
   acoes?: ReactNode;
+  /**
+   * O QUE nesta tela obedece ao periodo, em uma frase curta. O padrao descreve
+   * a Visao geral; toda tela cujo conteudo e outro (o Grafo tem nos e arestas,
+   * nao serie nem export) passa o seu -- dizer "serie" onde nao ha serie e o
+   * tipo de promessa vazia que este cabecalho veio evitar.
+   */
+  escopo?: string;
 }) {
   return (
-    <header className="vidro-fino vidro-faixa sticky top-0 z-20">
+    // `top-[34px]`: cola logo abaixo da faixa de telemetria (34px, sticky no
+    // topo em `TelemetriaDaRota`), e nao sobre ela.
+    <header className="vidro-fino vidro-faixa sticky top-[34px] z-20">
       <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <SidebarTrigger className="sem-impressao -ml-1 mt-0.5 shrink-0" />
@@ -38,7 +48,7 @@ export function CabecalhoPagina({
               de uma ou duas palavras ao lado de "Todos os atendimentos". Com
               base, quando os dois nao cabem, as acoes quebram para baixo. */}
           <div className="min-w-0 flex-1 basis-64">
-            <h1 className="text-lg leading-tight font-semibold tracking-tight text-foreground">
+            <h1 className="titulo-instrumento text-lg leading-tight text-foreground">
               {titulo}
             </h1>
             {subtitulo ? (
@@ -61,7 +71,7 @@ export function CabecalhoPagina({
             <div className="sem-impressao flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <FiltroPeriodo periodo={periodo} extensao={extensao ?? null} />
               <p className="text-xs text-muted-foreground">
-                Tudo nesta tela — indicadores, série, tabela e export — fala de{" "}
+                Tudo nesta tela — {escopo} — fala de{" "}
                 <strong className="font-medium text-foreground">
                   {rotuloPeriodo(periodo, extensao ?? null)}
                 </strong>

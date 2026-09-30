@@ -40,7 +40,11 @@ export function LegendaDeCores({ tipos }: { tipos: Set<TipoDeNo> }) {
 function Familia({ titulo, tipos }: { titulo: string; tipos: TipoDeNo[] }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span className="tracking-wide uppercase">{titulo}</span>
+      <span
+        className={`font-mono tracking-[0.14em] uppercase ${titulo === "dito" ? "text-dito-texto" : "text-medido-texto"}`}
+      >
+        {titulo}
+      </span>
       {tipos.map((tipo) => (
         <span key={tipo} className="flex items-center gap-1.5">
           {/*

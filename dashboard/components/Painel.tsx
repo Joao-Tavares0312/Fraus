@@ -110,8 +110,9 @@ export function Painel({
         <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-linha pb-2">
           <h2
             className={cn(
-              "font-semibold tracking-tight text-foreground",
-              nivel === "dominante" ? "text-base" : "text-sm",
+              // Titulo de painel e ROTULO de instrumento: mono, caixa alta.
+              "rotulo-instrumento font-medium",
+              nivel === "dominante" ? "text-xs text-foreground" : "text-[0.6875rem]",
             )}
           >
             {titulo}
