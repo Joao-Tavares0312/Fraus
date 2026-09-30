@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Inter, Martian_Mono } from "next/font/google";
 import "./globals.css";
 import { Atelier } from "@/components/shell/Atelier";
@@ -52,8 +52,37 @@ export const metadata: Metadata = {
     description: DESCRICAO,
     type: "website",
     locale: "pt_BR",
-    images: [{ url: "/fraus-logo.png", width: 640, height: 640, alt: "Fraus" }],
+    // 1200x630, o formato que os cartoes de link esperam. Gerada por
+    // `docs/assets/fonte/gerar-assets-instrumento.mjs` (proveniencia em
+    // `public/PROVENIENCIA.md`); o monograma quadrado de 640px que estava aqui
+    // era cortado pelos cartoes de preview.
+    images: [
+      {
+        url: "/og-fraus.png",
+        width: 1200,
+        height: 630,
+        alt: "Fraus — leia o que ficou nas entrelinhas",
+      },
+    ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fraus — satisfação em atendimentos por chatbot",
+    description: DESCRICAO,
+    images: ["/og-fraus.png"],
+  },
+  // Os icones (app/icon.svg, app/apple-icon.png, app/favicon.ico) entram por
+  // convencao de arquivo do Next -- nao ha `icons` aqui de proposito, ou o
+  // `<head>` sairia com cada um declarado duas vezes.
+};
+
+/**
+ * O navegador pinta a barra do sistema com o fundo do Instrumento em vez do
+ * branco padrao. `colorScheme: "dark"` porque os dois temas sao escuros.
+ */
+export const viewport: Viewport = {
+  themeColor: "#09090b",
+  colorScheme: "dark",
 };
 
 /**
