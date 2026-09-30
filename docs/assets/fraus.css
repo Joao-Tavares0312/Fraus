@@ -1,174 +1,602 @@
 /* ---------------------------------------------------------------------------
-   O SITE DE DOCUMENTACAO VESTIDO COM A IDENTIDADE DO PRODUTO.
+   O SITE DE DOCUMENTACAO NO IDIOMA "INSTRUMENTO".
 
-   Os valores sao OS MESMOS de `dashboard/app/globals.css` -- o Instrumento
-   (tema de fabrica), em OKLCH. Eles estao COPIADOS aqui, e nao importados, por
-   um motivo que vale registrar antes de alguem tentar "consertar":
+   Os valores sao OS MESMOS do `:root` de `dashboard/app/globals.css`, em OKLCH.
+   Eles estao COPIADOS aqui, e nao importados: o globals.css e um arquivo do
+   Tailwind v4 (`@theme`, `@custom-variant`) que o MkDocs nao processa, e o que
+   se aproveita dele sao doze variaveis. A paleta e decisao fechada e
+   documentada em `dashboard/DESIGN.md`; se ela mudar, este arquivo muda junto.
 
-   o `globals.css` do dashboard e um arquivo do Tailwind v4, com `@theme`,
-   `@custom-variant` e camadas que o MkDocs nao processa. Importa-lo no site
-   traria 900 linhas de diretiva que o navegador ignora, para aproveitar doze
-   variaveis. O que se copia aqui e a PALETA, que e decisao fechada e
-   documentada (`DESIGN.md` 3.1 e 8), nao codigo vivo.
+   O que atravessa do produto: quase-preto NEUTRO (nunca #000), hairline de 1px,
+   raio zero, Martian Mono em rotulo/dado/titulo curto, Inter na prosa,
+   Bricolage so no display do H1. Dourado so em acao e foco; ambar e o "dito"
+   (citacao); azul e o "medido" (referencia de codigo). O que NAO atravessa: a
+   regua dito/medido como estrutura -- aqui nao ha dado, ha prosa.
 
-   O QUE ISSO NAO E. Nao e uma tentativa de fazer o site parecer a dashboard.
-   Os dois sao superficies diferentes -- uma opera, a outra explica -- e o que
-   eles compartilham e a identidade, nao a composicao. A regra mestra da
-   dashboard (acima da linha e o DITO, abaixo e o MEDIDO) nao se aplica a
-   documentacao, porque aqui nao ha dado: ha prosa.
-
-   Se a paleta do produto mudar, este arquivo muda junto. Ele e pequeno de
-   proposito, e a divergencia aparece na primeira olhada lado a lado.
+   RISCO DO PDF (`mkdocs-pdf.yml`, WeasyPrint, so roda no Linux do CI): tudo que
+   e efeito (animacao, orbe, sticky, backdrop) mora em `@media screen`, e o
+   bloco `@media print` no fim garante uma pagina de papel legivel sem depender
+   de fonte da rede. Nada aqui usa `color-mix()`, `:has()` novo nem `@property`.
    --------------------------------------------------------------------------- */
 
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600&family=Martian+Mono:wght@400;500;700&display=swap");
+
 [data-md-color-scheme="slate"] {
-  /* Instrumento. Quase-preto NEUTRO (matiz 285, croma 0.004), nunca #000: o
-     fundo e a folha de um painel de laboratorio, e a regua de hairline precisa
-     de uma superficie para ser lida. Mesmos valores do `:root` do dashboard. */
-  --md-default-bg-color: oklch(0.14 0.004 285);
-  --md-default-bg-color--light: oklch(0.185 0.005 285);
-  --md-default-bg-color--lighter: oklch(0.245 0.006 285);
-  --md-default-fg-color: oklch(0.96 0.003 285);
-  --md-default-fg-color--light: oklch(0.845 0.006 285);
-  --md-default-fg-color--lighter: oklch(0.74 0.01 285);
-  --md-default-fg-color--lightest: oklch(0.4 0.01 285);
+  --fx-bg: oklch(0.14 0.004 285);
+  --fx-card: oklch(0.185 0.005 285);
+  --fx-card-2: oklch(0.225 0.006 285);
+  --fx-ink: oklch(0.96 0.003 285);
+  --fx-mut: oklch(0.74 0.01 285);
+  --fx-linha: oklch(0.96 0.003 285 / 26%);
+  --fx-filete: oklch(0.96 0.003 285 / 10%);
+  --fx-ouro: oklch(0.83 0.095 84);
+  --fx-dito: oklch(0.78 0.14 72);
+  --fx-medido: oklch(0.74 0.13 250);
+  --fx-magenta: oklch(0.66 0.2 320);
 
-  /* O DOURADO DO MONOGRAMA, lido das paradas do gradiente do SVG da logo.
-     Ele e a cor de ACAO e de FOCO -- link, marcador, estado ativo -- e nunca
-     cor de dado. No site nao ha dado, entao ele reina sozinho. */
-  --md-primary-fg-color: oklch(0.83 0.095 84);
-  --md-primary-fg-color--light: oklch(0.88 0.075 82);
-  --md-primary-fg-color--dark: oklch(0.642 0.084 76);
-  --md-primary-bg-color: oklch(0.15 0.02 84);
-  --md-accent-fg-color: oklch(0.88 0.075 82);
+  --fx-mono: "Martian Mono", ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  --fx-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fx-display: "Bricolage Grotesque", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --md-typeset-a-color: oklch(0.83 0.095 84);
+  --md-default-bg-color: var(--fx-bg);
+  --md-default-bg-color--light: var(--fx-card);
+  --md-default-bg-color--lighter: var(--fx-card-2);
+  --md-default-fg-color: var(--fx-ink);
+  --md-default-fg-color--light: oklch(0.86 0.006 285);
+  --md-default-fg-color--lighter: var(--fx-mut);
+  --md-default-fg-color--lightest: var(--fx-linha);
 
-  /* O AMBAR DO "DITO" so aparece em um lugar aqui: citacao. Um bloco de
-     citacao E fala -- e o unico elemento da documentacao que carrega o mesmo
-     significado que o ambar carrega na dashboard. */
-  --fraus-dito: oklch(0.78 0.14 72);
-  --fraus-medido: oklch(0.74 0.13 250);
-  --fraus-linha: oklch(0.96 0.003 285 / 26%);
-  --fraus-card: oklch(0.185 0.005 285);
+  --md-primary-fg-color: var(--fx-bg);
+  --md-primary-bg-color: var(--fx-ink);
+  --md-accent-fg-color: var(--fx-ouro);
+  --md-typeset-color: oklch(0.9 0.004 285);
+  --md-typeset-a-color: var(--fx-ouro);
 
-  --md-code-bg-color: oklch(0.175 0.005 285);
+  --md-code-bg-color: var(--fx-card);
   --md-code-fg-color: oklch(0.93 0.004 285);
-  --md-code-hl-string-color: oklch(0.78 0.14 72);
-  --md-code-hl-number-color: oklch(0.74 0.13 250);
-  --md-code-hl-keyword-color: oklch(0.83 0.095 84);
-  --md-code-hl-comment-color: oklch(0.62 0.01 285);
+  --md-code-hl-string-color: var(--fx-dito);
+  --md-code-hl-number-color: var(--fx-medido);
+  --md-code-hl-keyword-color: var(--fx-ouro);
+  --md-code-hl-comment-color: oklch(0.66 0.01 285);
+  --md-code-hl-name-color: oklch(0.93 0.004 285);
+  --md-code-hl-function-color: var(--fx-medido);
 
-  --md-footer-bg-color: oklch(0.11 0.004 285);
-  --md-footer-bg-color--dark: oklch(0.1 0.004 285);
+  --md-footer-bg-color: var(--fx-bg);
+  --md-footer-bg-color--dark: var(--fx-bg);
+  --md-footer-fg-color: var(--fx-mut);
+  --md-footer-fg-color--light: var(--fx-mut);
+  --md-footer-fg-color--lighter: var(--fx-mut);
+
+  --md-text-font: "Inter";
+  --md-code-font: "Martian Mono";
 }
-
-/* A tipografia e a MESMA do produto: Inter no texto, Martian Mono no dado.
-   Nao ha `next/font` aqui para baixar no build, entao elas vem da fonte
-   publica -- e a pilha de fallback existe porque um site de documentacao tem
-   que ser legivel mesmo com a rede do auditorio caindo. */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Martian+Mono:wght@400;500&display=swap");
 
 body,
 .md-typeset {
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: var(--fx-sans);
+  background: var(--fx-bg);
 }
-
+.md-typeset {
+  font-size: 0.78rem;
+  line-height: 1.75;
+}
 .md-typeset code,
 .md-typeset pre,
 .md-typeset kbd {
-  font-family: "Martian Mono", ui-monospace, "SFMono-Regular", monospace;
+  font-family: var(--fx-mono);
+}
+.md-typeset code {
+  font-size: 0.78em;
+  background: var(--fx-card);
+  border: 1px solid var(--fx-filete);
+  border-radius: 0;
+  padding: 0.05em 0.35em;
 }
 
-/* A LINHA. Na dashboard ela e a regua que afirma dito/medido; aqui ela e so
-   separacao -- mesmo token, papel mais modesto, e vale dizer isso em vez de
-   fingir que a metafora atravessa. */
-.md-typeset hr {
-  border-bottom-color: var(--fraus-linha);
+/* ---- telemetria (override `announce`) ------------------------------------ */
+.md-banner {
+  background: var(--fx-bg);
+  color: var(--fx-mut);
+  border-bottom: 1px solid var(--fx-linha);
+}
+.fx-tele {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.2rem 1.2rem;
+  max-width: 61rem;
+  margin: 0 auto;
+  padding: 0.5rem 0.8rem;
+  font: 500 0.6875rem/1.2 var(--fx-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fx-mut);
+}
+.fx-tele b {
+  color: var(--fx-ouro);
+  font-weight: 500;
+}
+@media (max-width: 44.9375em) {
+  .fx-tele span:first-child {
+    display: none;
+  }
 }
 
+/* ---- cabecalho e abas ----------------------------------------------------- */
+.md-header,
+.md-tabs {
+  background: var(--fx-bg);
+  color: var(--fx-ink);
+  box-shadow: none;
+  border-bottom: 1px solid var(--fx-linha);
+}
+.md-header__inner { align-items: center; }
+.md-header__title {
+  line-height: 2.4rem;
+  font: 500 0.75rem/2.4rem var(--fx-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.5rem;
+}
+.md-search__form {
+  border-radius: 0;
+  background: var(--fx-card);
+  border: 1px solid var(--fx-filete);
+}
+.md-search__input {
+  font-family: var(--fx-mono);
+  font-size: 0.7rem;
+}
+.md-search__output {
+  border-radius: 0;
+}
+
+/* ---- menu lateral: mono, numerado, cursor de bloco ------------------------ */
+.md-nav {
+  font-family: var(--fx-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+}
+.md-nav--primary > .md-nav__list {
+  counter-reset: fxnav;
+}
+.md-nav--primary > .md-nav__list > .md-nav__item:not(.md-nav__item--section) {
+  counter-increment: fxnav;
+}
+.md-nav--primary > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link::before {
+  content: counter(fxnav, decimal-leading-zero) "_";
+  color: var(--fx-mut);
+  margin-right: 0.25rem;
+}
+.md-nav__link {
+  color: var(--fx-mut);
+  padding: 0.28rem 0;
+  border-bottom: 1px solid var(--fx-filete);
+  text-transform: uppercase;
+  transition: color 150ms;
+}
+.md-nav__link:hover,
+.md-nav__link:focus {
+  color: var(--fx-ink);
+}
+.md-nav__link--active,
+.md-nav__item--active > .md-nav__link {
+  color: var(--fx-ink);
+}
+.md-nav__link--active::after {
+  content: "\2588";
+  color: var(--fx-ouro);
+  margin-left: 0.4rem;
+  font-size: 0.6rem;
+}
+.md-nav__item--section > .md-nav__link {
+  color: var(--fx-mut);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  border-bottom-color: var(--fx-linha);
+}
+.md-nav--secondary .md-nav__link {
+  text-transform: none;
+  border-bottom: 0;
+  letter-spacing: 0;
+}
+.md-sidebar__scrollbar,
+.md-sidebar__scrollwrap {
+  scrollbar-color: var(--fx-linha) transparent;
+}
+
+/* ---- tipografia do corpo -------------------------------------------------- */
+.md-typeset h1 {
+  font: 800 clamp(2rem, 4.4vw, 2.9rem) / 0.98 var(--fx-display);
+  letter-spacing: -0.04em;
+  color: var(--fx-ink);
+  margin: 0 0 1.6rem;
+  text-wrap: balance;
+}
 .md-typeset h2 {
-  border-bottom: 1px solid var(--fraus-linha);
-  padding-bottom: 0.3rem;
+  font: 500 0.86rem/1.3 var(--fx-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fx-ink);
+  margin: 2.6rem 0 1rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--fx-linha);
 }
-
-/* CITACAO = FALA. E o unico elemento onde o ambar do "dito" tem o mesmo
-   significado que tem na dashboard, entao e o unico que o recebe. */
-.md-typeset blockquote {
-  border-left: 2px solid var(--fraus-dito);
-  color: var(--md-default-fg-color--light);
+/* Sem numeracao automatica: o conteudo ja numera os proprios titulos ("1. Sem
+   LLM em runtime"), e um contador por cima duplicava ("01 - 1."). O marcador
+   dourado e so um bloco, o mesmo cursor do menu. */
+.md-typeset h2:not(.doc-heading)::before {
+  content: "\2588";
+  color: var(--fx-ouro);
+  font-size: 0.6rem;
+  margin-right: 0.55rem;
+  vertical-align: 0.08em;
 }
-
-/* TABELA. A regra do produto: agrupa-se por espaco e regua, nao por caixa.
-   Entao a tabela perde a borda externa e mantem so a linha que separa. */
-.md-typeset table:not([class]) {
-  background: transparent;
-  border: none;
-  font-size: 0.76rem;
+.md-typeset h3 {
+  font: 500 0.78rem/1.35 var(--fx-mono);
+  letter-spacing: 0.06em;
+  color: var(--fx-ink);
+  margin: 1.8rem 0 0.6rem;
 }
-
-.md-typeset table:not([class]) th {
-  background: transparent;
-  border-bottom: 1px solid var(--fraus-linha);
-  color: var(--md-default-fg-color);
+.md-typeset h4 {
+  font: 500 0.72rem/1.35 var(--fx-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fx-mut);
+}
+.md-typeset a {
+  text-decoration: underline;
+  text-decoration-color: var(--fx-linha);
+  text-underline-offset: 0.22em;
+}
+.md-typeset a:hover {
+  text-decoration-color: var(--fx-ouro);
+}
+.md-typeset hr {
+  border-bottom: 1px solid var(--fx-linha);
+}
+.md-typeset .headerlink {
+  color: var(--fx-mut);
+}
+.md-typeset strong {
+  color: var(--fx-ink);
   font-weight: 600;
 }
 
-.md-typeset table:not([class]) td {
-  border-top: 1px solid var(--fraus-linha);
+/* CITACAO = FALA: o ambar do "dito" */
+.md-typeset blockquote {
+  border-left: 2px solid var(--fx-dito);
+  background: var(--fx-card);
+  color: oklch(0.86 0.006 285);
+  margin: 1.2rem 0;
+  padding: 0.7rem 1rem;
 }
 
-/* NUMERO E TABULAR. A dashboard inteira usa `tabular-nums` em dado, e uma
-   tabela de medicao na documentacao tem exatamente o mesmo problema: digito de
-   largura variavel faz coluna de numero dancar entre as linhas. */
-.md-typeset table:not([class]) td:has(> code),
-.md-typeset table:not([class]) code {
+/* ---- tabelas: hairline, cabecalho mono ------------------------------------ */
+.md-typeset__table {
+  display: block;
+}
+.md-typeset table:not([class]) {
+  background: transparent;
+  border: 1px solid var(--fx-linha);
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 0.72rem;
+  display: table;
+}
+.md-typeset table:not([class]) th {
+  background: var(--fx-card);
+  border-bottom: 1px solid var(--fx-linha);
+  color: var(--fx-mut);
+  font: 500 0.64rem/1.3 var(--fx-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.6rem 0.8rem;
+}
+.md-typeset table:not([class]) td {
+  border-top: 1px solid var(--fx-filete);
+  padding: 0.6rem 0.8rem;
   font-variant-numeric: tabular-nums;
 }
+.md-typeset table:not([class]) tr:hover td {
+  background: var(--fx-card);
+}
 
-/* ADMONITION sem caixa pesada: filete a esquerda, fundo quase nada. */
+/* ---- admonitions: filete lateral, rotulo mono ----------------------------- */
 .md-typeset .admonition,
 .md-typeset details {
-  background: var(--fraus-card);
-  border: none;
-  border-left: 2px solid var(--md-primary-fg-color);
-  border-radius: 0.25rem;
+  background: var(--fx-card);
+  border: 1px solid var(--fx-filete);
+  border-left: 2px solid var(--fx-ouro);
+  border-radius: 0;
   box-shadow: none;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
-
+.md-typeset .admonition-title,
+.md-typeset summary {
+  background: transparent;
+  font: 500 0.64rem/1.3 var(--fx-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fx-mut);
+}
+.md-typeset .admonition-title::before,
+.md-typeset summary::before {
+  background-color: var(--fx-ouro);
+}
 .md-typeset .admonition.warning,
-.md-typeset details.warning {
-  border-left-color: var(--fraus-dito);
+.md-typeset details.warning,
+.md-typeset .admonition.danger,
+.md-typeset details.danger {
+  border-left-color: var(--fx-dito);
+}
+.md-typeset .admonition.warning .admonition-title::before,
+.md-typeset .admonition.danger .admonition-title::before {
+  background-color: var(--fx-dito);
+}
+.md-typeset .admonition.info,
+.md-typeset .admonition.note,
+.md-typeset .admonition.tip {
+  border-left-color: var(--fx-medido);
+}
+.md-typeset .admonition.info .admonition-title::before,
+.md-typeset .admonition.note .admonition-title::before,
+.md-typeset .admonition.tip .admonition-title::before {
+  background-color: var(--fx-medido);
 }
 
-/* A REFERENCIA DE CODIGO gerada pelo mkdocstrings. Cada simbolo ganha o
-   filete do "medido": ali o texto descreve o que o sistema MEDE, e e o unico
-   lugar do site em que esse azul significa o mesmo que na dashboard. */
+/* ---- codigo e diagramas --------------------------------------------------- */
+.md-typeset pre > code,
+.md-typeset .highlight code {
+  background: var(--fx-card);
+  border: 0;
+  font-size: 0.72rem;
+}
+.md-typeset .highlight,
+.md-typeset pre {
+  border: 1px solid var(--fx-linha);
+  border-radius: 0;
+  background: var(--fx-card);
+}
+.md-typeset .mermaid,
+.md-typeset pre.mermaid {
+  border: 1px solid var(--fx-linha);
+  background: var(--fx-card);
+  padding: 1rem;
+  text-align: center;
+}
+.md-clipboard {
+  color: var(--fx-mut);
+}
+
+/* referencia gerada pelo mkdocstrings: filete azul = "medido" */
 .md-typeset .doc-heading {
-  border-left: 2px solid var(--fraus-medido);
+  border-left: 2px solid var(--fx-medido);
   padding-left: 0.6rem;
+  font-family: var(--fx-mono);
+  letter-spacing: 0;
+  text-transform: none;
 }
-
 .md-typeset .doc-object {
   margin-bottom: 1.6rem;
 }
 
-/* O cabecalho nao usa o dourado como FUNDO. O DESIGN.md e explicito: o
-   dourado e cor de acao e foco, e uma barra inteira dele transformaria a cor
-   de acao em cor de cromo -- ela para de sinalizar o que e clicavel. */
-.md-header,
-.md-tabs {
-  background-color: oklch(0.11 0.02 264);
-  box-shadow: 0 0 0 1px var(--fraus-linha);
+/* ---- rodape --------------------------------------------------------------- */
+.md-footer {
+  border-top: 1px solid var(--fx-linha);
+}
+.md-footer-meta {
+  background: var(--fx-bg);
+}
+.md-footer__link {
+  font-family: var(--fx-mono);
+  font-size: 0.7rem;
+}
+.fx-rodape {
+  max-width: 61rem;
+  margin: 0 auto;
+  padding: 0.9rem 0.8rem 1.2rem;
+  font: 500 0.6875rem/1.5 var(--fx-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fx-mut);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
 }
 
-.md-header__title {
-  font-weight: 600;
+/* ---- botoes --------------------------------------------------------------- */
+.md-typeset .md-button {
+  border-radius: 0;
+  border: 1px solid var(--fx-linha);
+  color: var(--fx-ink);
+  font: 700 0.68rem/1 var(--fx-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.85em 1.4em;
+  background: transparent;
+  text-decoration: none;
+}
+.md-typeset .md-button:hover {
+  border-color: var(--fx-ouro);
+  color: var(--fx-ouro);
+  background: transparent;
+}
+.md-typeset .md-button--primary {
+  background: var(--fx-ouro);
+  border-color: var(--fx-ouro);
+  color: oklch(0.15 0.02 84);
+}
+.md-typeset .md-button--primary:hover {
+  background: oklch(0.88 0.095 84);
+  color: oklch(0.15 0.02 84);
 }
 
-/* O botao "voltar para a dashboard" no cabecalho. Ele e a unica ACAO do site,
-   entao e o unico elemento que recebe o dourado preenchido. */
-.md-header__source .md-source {
-  font-size: 0.66rem;
+/* ---- HOME ----------------------------------------------------------------- */
+.fx-hero {
+  position: relative;
+  isolation: isolate;
+  padding: 1.6rem 0 2.2rem;
+  border-bottom: 1px solid var(--fx-linha);
+  margin-bottom: 1.6rem;
+}
+.fx-hero__rotulo {
+  font: 500 0.66rem/1 var(--fx-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fx-mut);
+  margin: 0 0 1rem;
+}
+.md-typeset .fx-hero h1 {
+  font-size: clamp(2.3rem, 6vw, 3.9rem);
+  max-width: 13ch;
+  margin-bottom: 1.1rem;
+}
+.md-typeset .fx-hero h1 em {
+  font-style: normal;
+  color: var(--fx-dito);
+}
+.md-typeset .fx-hero h1 span {
+  color: var(--fx-medido);
+}
+.fx-hero__sub {
+  max-width: 34rem;
+  font-size: 0.9rem;
+  color: var(--fx-mut);
+}
+.fx-hero__acoes {
+  margin-top: 1.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.fx-hero__acoes p { display: contents; }
+
+.fx-orbe {
+  display: none;
+}
+@media screen and (min-width: 60em) {
+  .fx-orbe {
+    display: block;
+    position: absolute;
+    right: 0.5rem;
+    top: 0.6rem;
+    width: 11rem;
+    height: 11rem;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .fx-orbe i {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    animation: fx-gira 16s linear infinite;
+  }
+  .fx-orbe i:nth-child(1) { background: radial-gradient(circle at 26% 28%, var(--fx-dito), transparent 52%); }
+  .fx-orbe i:nth-child(2) { background: radial-gradient(circle at 76% 34%, var(--fx-medido), transparent 52%); animation-duration: 21s; animation-direction: reverse; }
+  .fx-orbe i:nth-child(3) { background: radial-gradient(circle at 50% 84%, var(--fx-magenta), transparent 54%); animation-duration: 27s; }
+  .fx-orbe {
+    filter: saturate(1.6);
+    border-radius: 50%;
+    box-shadow: 0 0 60px oklch(0.66 0.2 320 / 30%), inset 0 0 0 1px var(--fx-linha);
+  }
+}
+@keyframes fx-gira {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-orbe i { animation: none; }
+}
+
+.fx-fatos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--fx-linha);
+  margin: 0 0 2rem;
+}
+.fx-fato {
+  padding: 0.8rem 0.9rem 0.9rem;
+  border-right: 1px solid var(--fx-linha);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.fx-fato:last-child { border-right: 0; }
+.fx-fato small {
+  font: 500 0.6rem/1.4 var(--fx-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fx-mut);
+}
+.fx-fato svg {
+  height: 2.4rem;
+  width: auto;
+  align-self: flex-start;
+  color: var(--fx-ink);
+}
+@media (max-width: 44.9375em) {
+  .fx-fatos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fx-fato:nth-child(2) { border-right: 0; }
+  .fx-fato:nth-child(-n+2) { border-bottom: 1px solid var(--fx-linha); }
+}
+
+/* cards de entrada: a lista vira grade hairline */
+.md-typeset .fx-cards > ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--fx-linha);
+  border: 1px solid var(--fx-linha);
+  list-style: none;
+  margin: 1rem 0 2rem;
+  padding: 0;
+}
+.md-typeset .fx-cards > ul > li {
+  background: var(--fx-bg);
+  margin: 0;
+  padding: 1rem 1.1rem 1.1rem;
+  transition: background-color 150ms;
+}
+.md-typeset .fx-cards > ul > li:hover {
+  background: var(--fx-card);
+}
+.md-typeset .fx-cards > ul > li > p:first-child {
+  font: 500 0.74rem/1.3 var(--fx-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+}
+.md-typeset .fx-cards > ul > li > p {
+  margin: 0.2rem 0;
+  color: var(--fx-mut);
+  font-size: 0.74rem;
+}
+@media (max-width: 59.9375em) {
+  .md-typeset .fx-cards > ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 34.9375em) {
+  .md-typeset .fx-cards > ul { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* a home nao numera os H2 e nao tem coluna de navegacao/TOC */
+.md-content__inner:has(.fx-hero) h2:not(.doc-heading)::before { content: none; }
+
+/* ---- responsivo ----------------------------------------------------------- */
+@media (max-width: 34.9375em) {
+  .md-typeset { font-size: 0.8rem; }
+  .md-typeset h1 { font-size: 2rem; }
+  .md-content__inner { margin-left: 0.8rem; margin-right: 0.8rem; }
+}
+
+/* ---- impressao / PDF ------------------------------------------------------ */
+@media print {
+  .fx-tele, .fx-orbe, .md-banner { display: none !important; }
+  .md-typeset h1 { font-family: "Inter", sans-serif; letter-spacing: 0; }
+  .md-typeset .fx-cards > ul { display: block; border: 0; background: none; }
+  .md-typeset .fx-cards > ul > li { border: 1px solid #999; margin-bottom: 0.4rem; }
 }
