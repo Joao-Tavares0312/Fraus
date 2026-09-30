@@ -169,9 +169,25 @@ deriva mesmo para e-mail inexistente).
 ### Como subir
 
 ```bash
-uv run uvicorn fraus.api.main:app --port 8001   # a API REAL, carrega os 3 modelos
+uv run uvicorn fraus.api.main:app --port 8001 --reload --reload-dir fraus
 cd dashboard && npm run dev
 ```
+
+O `--reload` acima é para desenvolvimento local. A dashboard atualiza seus
+componentes durante a edição, mas uma API iniciada sem recarga mantém as rotas
+antigas em memória. Isso ocorreu nesta sessão: `/operacao/equipes` respondia
+sem `integrantes` e `meu_papel`, enquanto edição e convites devolviam 404.
+Reiniciar a API preservando o ambiente e o banco resolveu o problema em
+`localhost:3001`; as sete abas e salvar equipe foram conferidos na interface.
+No Windows, use `python.exe`/`uv run` para a recarga, com a janela oculta se
+iniciada em segundo plano. O launcher `pythonw.exe` não iniciou o worker de
+recarga nesta validação.
+
+Aceitar convites exige uma sessão de usuário. Sem `FRAUS_JWT_SEGREDO`, o modo
+local aberto permite administrar pela credencial técnica, mas não habilita
+login/cadastro nem o aceite. Em produção, o merge da dashboard precisa ser
+acompanhado pela publicação da API atualizada; o fluxo manual está em
+`.github/workflows/api-deploy.yml`.
 
 **Não suba `scripts/api_demo.py` achando que é a API de produção.** Ele usa
 banco temporário sem autenticação, e cai no **motor dublê** se os pesos não
