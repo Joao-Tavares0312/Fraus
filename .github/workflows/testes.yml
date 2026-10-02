@@ -69,6 +69,11 @@ jobs:
           cache-dependency-path: dashboard/package-lock.json
       - name: Instalar dependencias
         run: npm ci
+      # `PageProps` e `LayoutProps` sao tipos globais que o Next GERA em
+      # `.next/types`. Na maquina de quem ja rodou `dev` ou `build` eles
+      # existem; num checkout limpo o `tsc` falha sem este passo.
+      - name: Tipos de rota do Next
+        run: npx next typegen
       - name: Tipos
         run: npx tsc --noEmit
       - name: vitest
