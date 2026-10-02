@@ -124,17 +124,17 @@ do corpus de ironia) e #81 (trava da migração no Postgres, emoção pelo Laya
 sem treino) entraram na `main`. A API foi publicada da `main` pela CLI no mesmo
 dia (deploy `fraus-ajbdtr0gh`), com `/saude/prontidao` em 200. CI da `main`:
 1.162 passed em SQLite e 1.163 em PostgreSQL; front com 195 testes em 23
-arquivos. **A dashboard ainda não tem job de CI**: `tsc` e `vitest` só rodam na
-máquina de quem lembra. O job está pronto no ramo local `ci/dashboard-no-ci`,
-mas enviá-lo exige credencial do GitHub com escopo `workflow`
-(`gh auth refresh -s workflow`).
+arquivos. **O job de CI da dashboard entrou logo depois do PR #82** (`tsc` e `vitest` em
+`.github/workflows/testes.yml`); antes dele só o pytest rodava. Mexer em
+workflow exige credencial do GitHub com escopo `workflow`
+(`gh auth refresh -h github.com -s workflow`, em terminal interativo).
 
 **Qual cabeça lê ironia em produção:** o Laya **sem treino**, exportado para
 ONNX (`FRAUS_IRONIA_BACKEND=laya-onnx` no projeto `fraus-api`). O BERTimbau de
 ironia vai no pacote e não é carregado. Emoção e satisfação são BERTimbau. O
 Laya treinado em 02/10 não foi promovido (§2.0).
 
-**Regras que entraram com a auditoria de 02/10/2026 (PR #82)** — cada uma
+**Regras que entraram com a auditoria de 02/10/2026 (PR #82, mesclado)** — cada uma
 parece detalhe até alguém desfazer:
 
 - **O dia de uma conversa é o dia de Brasília**, fixo em −03:00, na API
