@@ -194,6 +194,7 @@ def test_os_vereditos_possiveis_estao_declarados_num_lugar_so(tmp_path):
     assert VEREDITOS == (
         "aceita", "assinatura", "fora_da_janela", "duplicada",
         "corpo_invalido", "fonte_inativa", "sem_segredo", "tipo_incompativel",
+        "vazao", "erro",
     )
 
 

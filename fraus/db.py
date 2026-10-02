@@ -252,6 +252,14 @@ CREATE TABLE IF NOT EXISTS auditoria_eventos (
 # `tipo_incompativel` e a fonte que existe mas nao e do tipo `webhook`. Ele
 # existe para que a recusa apareca no historico: o `tipo` ramificava so na tela,
 # e uma fonte `csv` com variavel de segredo aceitava entrega assinada.
+#
+# `vazao` e o 429 do teto por fonte. A rota ja gravava esse veredito e ele nao
+# estava aqui (auditoria de 02/10/2026) -- exatamente a segunda lista que o
+# paragrafo acima diz que nao pode existir, so que dentro da propria rota.
+#
+# `erro` e a falha INTERNA: excecao que nao e recusa do porteiro. A resposta e
+# 500 e a culpa nao e de quem chamou. Ate 02/10/2026 ela nao deixava linha
+# nenhuma, e "nao chegou nada" e "chegou e a API quebrou" eram a mesma tela.
 VEREDITOS = (
     "aceita",
     "assinatura",
@@ -261,6 +269,8 @@ VEREDITOS = (
     "fonte_inativa",
     "sem_segredo",
     "tipo_incompativel",
+    "vazao",
+    "erro",
 )
 
 
@@ -406,11 +416,18 @@ class _ConexaoPostgres:
         # `with` do sqlite3, que todo metodo daqui ja assumia. Devolver a
         # conexao ao pool e o extra: sem isso, cada chamada abriria um TLS novo
         # contra o Supabase e o pool secaria em poucas requisicoes.
-        if tipo is None:
-            self._conexao.commit()
-        else:
-            self._conexao.rollback()
-        self._devolver()
+        #
+        # O `finally` e de 02/10/2026 e emparelha com o do SQLite: o commit e o
+        # rollback tambem falham -- e falham justamente quando a conexao caiu
+        # no meio. Sem ele a conexao morta ficava emprestada para sempre, e o
+        # teto do pool por instancia e dois.
+        try:
+            if tipo is None:
+                self._conexao.commit()
+            else:
+                self._conexao.rollback()
+        finally:
+            self._devolver()
 
     def _devolver(self) -> None:
         self._contexto.__exit__(None, None, None)
@@ -729,6 +746,47 @@ class Banco:
                 ),
             )
 
+    def atualizar_pontuacao(
+        self,
+        conversa: Conversa,
+        score: float | None,
+        categoria: str | None,
+        lexico_versao: int | None = None,
+        regua: str | None = None,
+    ) -> bool:
+        """Regrava SO o veredito, e so se a conversa ainda for a que foi pontuada.
+
+        Existe para a repontuacao, que le o banco inteiro UMA vez e pontua em
+        segundo plano por minutos. `salvar` grava a linha inteira, `payload`
+        junto: se a fonte reenviasse o atendimento com mais mensagens nesse
+        meio tempo, a thread devolvia a conversa ao instantaneo e a fala nova
+        sumia sem erro (auditoria de 02/10/2026).
+
+        `False` quando a linha sumiu ou mudou. Nao e falha: quem reenviou ja
+        pontuou com a regua vigente, e o score calculado aqui e de uma conversa
+        que nao existe mais.
+
+        A COMPARACAO E ENTRE CONVERSAS, NAO ENTRE TEXTOS. `model_dump_json()` de
+        uma conversa relida so e byte a byte o payload gravado se a linha nasceu
+        com o modelo de hoje: `feedback_declarado` e `comentario_feedback`
+        entraram em 28/09/2026, e toda linha anterior nao os tem. Comparar com a
+        reserializacao pularia essas linhas para sempre, com a repontuacao
+        dizendo "concluido". O `AND payload = ?` do UPDATE usa o texto LIDO
+        nesta transacao, e e ele que fecha a janela entre o SELECT e o UPDATE.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT payload FROM conversas WHERE id = ?", (conversa.id,)
+            ).fetchone()
+            if linha is None or Conversa(**json.loads(linha["payload"])) != conversa:
+                return False
+            cursor = conexao.execute(
+                "UPDATE conversas SET score = ?, categoria = ?, lexico_versao = ?, "
+                "regua = ? WHERE id = ? AND payload = ?",
+                (score, categoria, lexico_versao, regua, conversa.id, linha["payload"]),
+            )
+            return cursor.rowcount > 0
+
     def salvar_lote(self, registros: list, lexico_versao: int, regua: str | None) -> None:
         """Publica o lote completo em UMA transacao, nos dois dialetos."""
         with self._conectar() as conexao:
@@ -755,6 +813,12 @@ class Banco:
             self._travar_operacao(conexao)
             conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
                 (tipo, identificador, json.dumps(valor, ensure_ascii=False, sort_keys=True), datetime.now(timezone.utc).isoformat()))
+            # Equipe CRIADA ja com membros muda o escopo de quem entrou por
+            # convite tanto quanto equipe editada. So `alterar_documento`
+            # recalculava, e o membro ficava sem os canais ate alguem editar
+            # qualquer equipe (auditoria de 02/10/2026).
+            if tipo == "equipe":
+                self._atualizar_escopos_de_equipes(conexao)
 
     def listar_usuarios(self) -> list[dict]:
         with self._conectar() as conexao:
@@ -1611,8 +1675,16 @@ class Banco:
                     emojis[linha["termo"]] = float(linha["peso"])
         return Curadoria(palavras=palavras, emojis=emojis, versao=self.lexico_versao())
 
-    def contar_defasadas(self, regua_vigente: str | None = None) -> tuple[int, int]:
+    def contar_defasadas(
+        self, regua_vigente: str | None = None, canais=None
+    ) -> tuple[int, int]:
         """(pontuadas com lexico anterior, total). Do banco INTEIRO.
+
+        `canais` restringe a contagem a quem tem escopo (`BancoComEscopo`), e
+        mora AQUI para que a regra abaixo seja uma so: a versao com escopo
+        tinha a propria, sem o `COALESCE`, e mostrava o banco inteiro em alarme
+        a quem tinha escopo enquanto o dev via zero (auditoria de 02/10/2026).
+        `None` e sem restricao; lista vazia e escopo sem canal nenhum.
 
         `lexico_versao IS NULL` e linha de banco anterior a este mecanismo, e
         vale ZERO: nao ha diferenca entre "pontuada antes da coluna existir" e
@@ -1631,19 +1703,28 @@ class Banco:
         entao toda linha sem regua foi, de fato, pontuada pela anterior. Sem regua
         vigente (motor duble, que nao tem modelo) so o lexico conta.
         """
+        if canais is not None:
+            canais = sorted(set(canais))
+            if not canais:
+                # `IN ()` nao e SQL valido, e sem canal nao ha o que contar.
+                return 0, 0
         vigente = self.lexico_versao()
         # A string do SQL e montada so com trechos FIXOS deste metodo; o que vem
-        # de fora (versao, regua) entra sempre por parametro.
+        # de fora (versao, regua, canais) entra sempre por parametro.
         regra_lexico = "COALESCE(lexico_versao, 0) <> ?"
         parametros: tuple = (vigente,)
         if regua_vigente is not None:
             regra_lexico += " OR regua IS NULL OR regua <> ?"
             parametros = (vigente, regua_vigente)
+        onde = ""
+        if canais is not None:
+            onde = f" WHERE canal IN ({', '.join('?' for _ in canais)})"
+            parametros = (*parametros, *canais)
         with self._conectar() as conexao:
             linha = conexao.execute(
                 "SELECT COUNT(*) AS total, "
                 f"SUM(CASE WHEN {regra_lexico} THEN 1 ELSE 0 END) AS defasadas "
-                "FROM conversas",
+                "FROM conversas" + onde,
                 parametros,
             ).fetchone()
         return int(linha["defasadas"] or 0), int(linha["total"] or 0)

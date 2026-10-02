@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from fraus import assinatura
 from fraus.api.contexto import Contexto, obter_contexto
@@ -111,8 +112,14 @@ async def receber(
     para conferir muda a assinatura por reordenacao de chave ou por um espaco
     de diferenca. A validacao Pydantic acontece depois, sobre os MESMOS bytes,
     e so depois de a assinatura passar.
+
+    A ROTA E `async` SO PARA LER O CORPO CRU. Todo o resto -- banco, HMAC e os
+    tres BERTimbau -- e sincrono e vai para a threadpool, como o FastAPI ja
+    faz sozinho com `/ingestao`, que e `def`. Rodando aqui dentro, uma entrega
+    parava o event loop pelo tempo da inferencia e ate o `/saude` esperava
+    (auditoria de 02/10/2026).
     """
-    fonte = ctx.banco.buscar_fonte(fonte_id)
+    fonte = await run_in_threadpool(ctx.banco.buscar_fonte, fonte_id)
     if fonte is None:
         # Passo 1. Sem fonte nao ha de quem registrar a entrega -- e uma linha
         # com fonte_id invalido nao teria onde ser lida.
@@ -127,6 +134,24 @@ async def receber(
         raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
     corpo = await request.body()
+    return await run_in_threadpool(
+        _receber_em_thread, ctx, fonte, fonte_id, corpo,
+        webhook_id, webhook_timestamp, webhook_signature,
+        request.app.state.limitador_de_webhook,
+    )
+
+
+def _receber_em_thread(
+    ctx: Contexto,
+    fonte: dict,
+    fonte_id: int,
+    corpo: bytes,
+    webhook_id: str | None,
+    webhook_timestamp: str | None,
+    webhook_signature: str | None,
+    limitador: LimitadorDeVazao,
+) -> JSONResponse:
+    """O porteiro e o registro da entrega -- a parte sincrona de `receber`."""
     recebida_em = datetime.now(timezone.utc).isoformat()
 
     def registrar(veredito: str, motivo: str | None = None,
@@ -140,7 +165,7 @@ async def receber(
         resultado = _passar_pelo_porteiro(
             ctx, fonte, fonte_id, corpo,
             webhook_id, webhook_timestamp, webhook_signature,
-            request.app.state.limitador_de_webhook,
+            limitador,
         )
     except Recusa as recusa:
         # O DETALHE vai para a tabela; a REDE recebe a versao publica. Ver a
@@ -151,6 +176,22 @@ async def receber(
             detail=recusa.publico,
             headers=recusa.cabecalhos,
         ) from recusa
+    except Exception as falha:
+        # O que NAO e recusa e defeito nosso, e continua 500 -- mas deixa
+        # linha. Ate 02/10/2026 nao deixava, e no historico da fonte "nao
+        # chegou nada" e "chegou e a API quebrou" eram a mesma tela vazia.
+        #
+        # SO O TIPO da excecao vai para o motivo, nunca `str(falha)`: o texto
+        # pode carregar o que veio no corpo, pelo mesmo motivo do passo 9.
+        #
+        # O registro e tentado e pode falhar tambem -- banco fora do ar e a
+        # causa mais provavel de se chegar aqui. A excecao que sobe e a
+        # ORIGINAL: a do registro esconderia a que explica o 500.
+        try:
+            registrar("erro", f"falha interna da API ({type(falha).__name__})")
+        except Exception:  # noqa: BLE001 - ver o comentario acima
+            pass
+        raise
 
     if resultado is None:
         # Passo 7: reentrega. 200, NAO erro -- o Standard Webhooks manda a

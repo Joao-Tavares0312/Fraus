@@ -444,10 +444,25 @@ def extrair(nome: str, dados: bytes, opcoes: OpcoesDeLeitura | None = None) -> E
         # Export de Windows costuma sair em cp1252/latin-1, e o Excel pt-BR
         # separa por `;`. Os dois sao resolvidos no leitor, nao recusados.
         texto, _ = leitores.decodificar(dados)
-        (cabecalho, corpo), _ = leitores.tabela_de_csv(texto)
-        if not cabecalho:
-            raise ArquivoIlegivelError("o CSV esta vazio")
-        return _de_tabela([cabecalho, *corpo], "CSV", opcoes)
+        try:
+            (cabecalho, corpo), _ = leitores.tabela_de_csv(texto)
+            if not cabecalho:
+                raise ArquivoIlegivelError("o CSV esta vazio")
+            return _de_tabela([cabecalho, *corpo], "CSV", opcoes)
+        except csv.Error as erro:
+            # O modulo `csv` desiste do ARQUIVO, nao de uma linha: aspas que
+            # abrem e nao fecham engolem o resto do texto num campo so, e ele
+            # estoura o teto de 131072 caracteres por campo. Ate 02/10/2026
+            # isso subia cru -- nem as rotas nem `extrair_ou_400` conhecem
+            # `csv.Error` -- e um export plausivel virava 500. O `try` cobre os
+            # tres pontos que leem CSV: a deteccao de delimitador e a tabela
+            # (`leitores`) e a releitura no layout canonico (`csv_driver`).
+            raise ArquivoIlegivelError(
+                f"CSV ilegível: o leitor desistiu do arquivo ({erro}). Quase "
+                "sempre são aspas que abrem e não fecham no texto de uma "
+                "mensagem, e o resto do arquivo vira um campo só. Aspas dentro "
+                'do texto se escrevem dobradas ("").'
+            ) from erro
 
     if formato == "json":
         texto, _ = leitores.decodificar(dados)

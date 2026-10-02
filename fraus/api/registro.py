@@ -92,7 +92,12 @@ def registrar_conversa(ctx: Contexto, pedido: PedidoIngestao, fonte: dict) -> di
                 else pedido.id
             ),
             canal=fonte["canal"],
-            iniciada_em=pedido.mensagens[0].enviada_em,
+            # A MAIS ANTIGA, nao a primeira do corpo: a ordem em que a fonte
+            # serializa nao e contrato, e as mensagens so sao ordenadas logo
+            # abaixo. Com `mensagens[0]`, um corpo fora de ordem gravava o
+            # inicio depois da primeira fala e a duracao saia errada
+            # (auditoria de 02/10/2026).
+            iniciada_em=min(m.enviada_em for m in pedido.mensagens),
             encerrada_em=pedido.encerrada_em,
             escalou_para_humano=pedido.escalou_para_humano,
             feedback_declarado=pedido.feedback_declarado,

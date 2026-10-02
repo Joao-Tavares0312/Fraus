@@ -116,13 +116,23 @@ def confere(
     indisponibilidade, que e o motivo de a especificacao permitir. Basta uma
     bater. Todas sao comparadas mesmo depois de uma bater, para que o tempo de
     resposta nao conte QUAL delas era a boa.
+
+    A comparacao e em BYTES (02/10/2026). `compare_digest` so aceita `str`
+    ASCII e levanta TypeError com qualquer outro caractere -- e o cabecalho
+    vem de um anonimo. Um acento na assinatura virava 500 sem registro, em vez
+    do 401 que toda assinatura errada recebe. Candidata que nem em UTF-8 cabe
+    (surrogate solto) e so mais uma que nao confere.
     """
     if not recebida:
         return False
-    esperada = assinar(webhook_id, timestamp, corpo, segredo)
+    esperada = assinar(webhook_id, timestamp, corpo, segredo).encode("utf-8")
     achou = False
     for candidata in recebida.split(" "):
-        if hmac.compare_digest(candidata.strip(), esperada):
+        try:
+            em_bytes = candidata.strip().encode("utf-8")
+        except UnicodeEncodeError:
+            continue
+        if hmac.compare_digest(em_bytes, esperada):
             achou = True
     return achou
 

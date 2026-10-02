@@ -92,7 +92,11 @@ class Repontuacao:
         try:
             for feitas, conversa in enumerate(conversas, start=1):
                 score = ctx.motor.pontuar_conversa(conversa, curadoria)
-                ctx.banco.salvar(
+                # So o veredito, e so se a conversa ainda for a do instantaneo:
+                # `salvar` regravaria o payload antigo por cima de um reenvio
+                # que chegou enquanto esta thread rodava (02/10/2026). A linha
+                # que mudou conta como feita -- quem reenviou ja a pontuou.
+                ctx.banco.atualizar_pontuacao(
                     conversa,
                     score,
                     ctx.categoria_de(score, faixas),

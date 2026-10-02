@@ -11,6 +11,11 @@ from fraus.indicadores import calcular_nps, nps_com_intervalo
 
 TETO_RADAR = 1500
 PARADAS = "a o as os de da do das dos e em na no nas nos um uma para por com que se me eu voce voces meu minha seu sua foi ser esta estou isso isto esse essa ao aos mas ja muito mais como nao sim bom dia obrigado obrigada favor atendimento cliente bot humano".split()
+# As formas ACENTUADAS das de cima. O vetorizador nao tira acento (e nao deve:
+# os termos do tema sao mostrados como o cliente escreveu), entao "nao" na
+# lista nao barrava "não" -- e "não", "já", "você" e "está" viravam nome de
+# tema (auditoria de 02/10/2026).
+PARADAS += "à às você vocês está já não é".split()
 
 
 def descobrir_temas(registros, faixas):
