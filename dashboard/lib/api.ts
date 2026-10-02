@@ -12,9 +12,10 @@
 
 /**
  * O caminho do proxy no servidor Next. E o destino das chamadas feitas PELO
- * NAVEGADOR: o proxy anexa a chave de acesso (FRAUS_CHAVE_ACESSO, env
- * server-side) e repassa para FRAUS_API_URL, de modo que a chave nunca chega
- * ao bundle.
+ * NAVEGADOR: o proxy anexa a credencial -- a sessao de quem esta logado ou,
+ * so em instalacao SEM login, a chave de acesso do deploy (FRAUS_CHAVE_ACESSO,
+ * env server-side) -- e repassa para FRAUS_API_URL, de modo que nenhuma das
+ * duas chega ao bundle. Ver lib/credencial-do-servidor.ts.
  */
 const PROXY = "/api/fraus";
 

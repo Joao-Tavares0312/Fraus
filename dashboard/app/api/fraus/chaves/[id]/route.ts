@@ -26,7 +26,7 @@ export async function DELETE(
     return Response.json({ detail: "identificador inválido" }, { status: 400 });
   }
 
-  const autorizacao = autorizacaoParaLigar(requisicao);
+  const autorizacao = await autorizacaoParaLigar(requisicao);
 
   let resposta: Response;
   try {

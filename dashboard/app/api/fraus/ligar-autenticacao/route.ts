@@ -28,7 +28,7 @@ export async function POST(requisicao: Request): Promise<Response> {
 
   // Repassada para a ROTACAO: a API exige a mestra atual para trocar a chave.
   // No primeiro uso nao ha credencial nenhuma, e e assim que deve ser.
-  const autorizacao = autorizacaoParaLigar(requisicao);
+  const autorizacao = await autorizacaoParaLigar(requisicao);
 
   let resposta: Response;
   try {

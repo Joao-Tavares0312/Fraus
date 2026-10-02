@@ -34,7 +34,7 @@ async function repassar(
   // que ele carrega e a credencial, e ela sai no Authorization abaixo.
   cabecalhos.delete("cookie");
 
-  const autorizacao = autorizacaoDoServidor(requisicao);
+  const autorizacao = await autorizacaoDoServidor(requisicao);
   if (autorizacao) cabecalhos.set("authorization", autorizacao);
 
   let resposta: Response;
