@@ -19,8 +19,14 @@ EstadoDoMotor = Literal["frio", "carregando", "pronto", "erro"]
 class ProvedorDeMotor:
     """Constroi exatamente um ``Motor``, inclusive com chamadas concorrentes."""
 
-    def __init__(self, construir: Callable[[], Motor]) -> None:
+    def __init__(
+        self,
+        construir: Callable[[], Motor],
+        regua: Callable[[], str | None] | None = None,
+    ) -> None:
         self._construir = construir
+        self._regua_barata = regua
+        self._regua_lida: tuple[str | None] | None = None
         self._motor: Motor | None = None
         self._erro: Exception | None = None
         self._estado: EstadoDoMotor = "frio"
@@ -82,6 +88,30 @@ class ProvedorDeMotor:
             self._estado = "pronto"
             self._condicao.notify_all()
             return motor
+
+    def regua(self) -> str | None:
+        """A regua vigente, sem carregar os modelos quando ha como.
+
+        Rota de LEITURA pergunta a regua: `/indicadores` conta quem ficou na
+        regua antiga a cada abertura da Visao geral. Pelo `__getattr__` a
+        pergunta esperava as tres sessoes ONNX -- 10 a 12 s numa instancia nova
+        (producao, 02/10/2026), a dashboard desistia e caia no agregado de
+        reserva. A regua so depende do fusor, que e um arquivo pequeno.
+
+        Sem o atalho (provedor montado so com `construir`), vale o de sempre.
+        """
+        with self._condicao:
+            if self._estado == "pronto":
+                assert self._motor is not None
+                return self._motor.regua()
+            if self._regua_lida is not None:
+                return self._regua_lida[0]
+        if self._regua_barata is None:
+            return self.carregar().regua()
+        lida = self._regua_barata()
+        with self._condicao:
+            self._regua_lida = (lida,)
+        return lida
 
     def __getattr__(self, nome: str):
         """Mantem o contrato existente das rotas sem esconder a carga."""
