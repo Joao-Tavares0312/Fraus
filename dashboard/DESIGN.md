@@ -170,9 +170,9 @@ Todas por `next/font/google` no `app/layout.tsx`, baixadas no build e servidas d
 
 **Dashboard.** Pilha de "sistemas" (`Painel`), não grade de cartões: quem agrupa é espaço mais régua. Cada tela abre com a telemetria de 34px, depois a **armadura horizontal** (quatro células lado a lado, largura total, mesma altura curta, separadas por régua), depois o painel dominante. Um dominante por tela (`lib/hierarquia.ts`, `DOMINANTE_POR_TELA`); `apoio` é o padrão para ninguém virar dominante por omissão. Padding: dominante `p-4 sm:p-6`, apoio `p-4 sm:p-5`. Nav lateral colapsável para 32px (só o número sobrevive).
 
-**Vitrine.** `.vt-wrap` máx. 80rem com gutter `clamp(1rem, 4vw, 3rem)`; seções com `padding-block: clamp(4.5rem, 9vw, 8rem)` separadas por hairline. Hero em grade de três colunas (`1fr 27.5rem 1fr`) a partir de 64rem: cartão do dito à esquerda, orbe ao centro, painel LED à direita, headline sobreposta ao orbe, CTA abaixo, faixa 07/39/03/00 no rodapé da dobra. Abaixo de 64rem empilha e o orbe vai a 17rem.
+**Vitrine (01/10/2026).** `.vt-wrap` máx. 82rem com gutter `clamp(1rem, 4vw, 3rem)`; seções com `padding-block: clamp(4.5rem, 9vw, 8rem)` separadas por hairline `--compasso`. Ordem: hero (manchete à esquerda, orbe à direita), constelação fixada, sem sinal, sistema em linhas, fecho. Abaixo de 900px a constelação empilha (palco em cima, texto embaixo) e os rótulos das famílias saem do palco — a contagem segue no texto.
 
-**A dobra por altura.** O diâmetro do orbe é `--orbe: clamp(15rem, 48svh, 27.5rem)` em tela larga: a 1280×720 o CTA precisa ficar acima da dobra, e um orbe fixo de 440px empurrava titulo, sub e CTA para fora. O `body` nunca rola na horizontal (`overflow-x: hidden`; `.vt` usa `overflow-x: clip`); conteúdo largo rola no próprio container. Mobile 390 sem corte.
+**A dobra por altura.** A manchete do hero usa `clamp(3rem, min(9.2vw, 13.5vh), 8.75rem)`: a 1280×720 o CTA fica acima da dobra. No celular o orbe ocupa o topo e o hero abre com `padding-top: 74vw` para o título começar abaixo dele (orbe atrás de manchete derruba o contraste). O `body` nunca rola na horizontal (`.vt` usa `overflow-x: clip`, que não quebra o `sticky`). Mobile 390 sem corte.
 
 **Ritmo.** Pauta de 13px, peso 1px, opacidade 0,03 (papel de ensaio virou ruído de instrumento). Grade de 1px da seção Sistema: `gap: 1px` sobre fundo `--linha`.
 
@@ -226,13 +226,13 @@ Três formas, nesta ordem de honestidade, num só componente que tabela, piores 
 Um componente irmão daria três formas em quatro lugares, e o que ninguém lembrasse de trocar continuaria mentindo confiança.
 
 ### Vitrine (`vt-*`)
-- **Nav de pílula** (`.vt-nav`): vidro `blur(14px)`, hairline de 16%, mono 11px; "Acessar" em pílula dourada.
-- **Orbe** (`components/lp/Orbe.tsx`): ver Motion. Três manchas radiais em `screen` (âmbar, azul, magenta do ateliê), `saturate(1.7)`, sombra interna que o assenta.
-- **CTA primário** (`.vt-botao--feixe`): miolo `--background`, borda cônica dourado → magenta (`padding-box` + `border-box`, porque pseudo em z-index negativo pintaria por cima). Secundário `--contorno`: hairline, hover dourado. O `--ouro` é o botão preenchido do fecho.
-- **Cartão do dito** (`.vt-fala`): hairline com filete esquerdo âmbar de 2px; fala do bot em tracejado cinza. Destaque `mark` com sublinhado âmbar.
-- **Painel LED** (`.vt-leitura`): nota 2,9, latência 4:12 e um "sem sinal" apagado com "○ sem sinal · não é zero". Amostra **rotulada como sintética** em todo lugar.
-- **Régua da leitura** (`.vt-regua`): a linha de 1px `foreground` com barras de compasso; dito acima, pausa **tracejada** azul e chips abaixo. **Lâmpada** (`.vt-lampada`): quadrado com brilho **sempre com a palavra** (dito/medido/vazio).
-- **Grade de 1px** (`.vt-grade`), **faixa de fatos** 07/39/03/00 em LED `tinta`, **fecho** com gradiente dourado a 16% na base.
+Direção aprovada pelo dono em 01/10/2026 sobre uma mescla de protótipos: hero e orbe da v0, fósforo de osciloscópio da v1, máscara da v6 virando a constelação da v4.
+- **Cena** (`components/lp/CenaVitrine.tsx` + `lib/vitrine/motor.ts`): UM canvas fixo, UM contexto WebGL escrito à mão, quatro programas — fósforo (retícula, traço âmbar do dito e azul do medido, scanline, vinheta) com o orbe por cima, pontos da constelação, fios até o fusor, aglomerado do sem sinal. Sem three.js e sem GSAP: a seção fixada é `position: sticky` com progresso medido pelo motor (o pin do GSAP injeta wrapper no DOM e briga com o React). Lenis faz a rolagem suave.
+- **Orbe**: um objeto só que atravessa a página por quadros de rolagem (`lib/vitrine/coreografia.ts`, parte pura e testada). **A cor é canal**: o peso de cada mancha muda por seção — âmbar (dito) domina na entrada da conversa e no fecho, azul (medido) domina no fusor, magenta só oscila. No sem sinal, saturação 0 e giro parado.
+- **Constelação** (`components/lp/Constelacao.tsx`): as falas sintéticas viram pontos, os pontos montam a máscara (metade âmbar, metade azul), a máscara se desfaz em **um nó por feature agrupado na contagem real** (`FAMILIAS_DO_VETOR`, guardada contra `NOMES_FEATURES` por `tests/test_derivacoes_dashboard.py`) e os nós caem no orbe-fusor; aí aparece a nota 2,9 e "quem puxou a nota". Quatro passos de texto trocam em fade; sem JS ou com movimento reduzido aparecem empilhados.
+- **Cartões minimalistas** (pedido do dono): nada de caixa com fundo, chip ou painel com cabeçalho na vitrine. Fala é citação tipográfica com rótulo mono; o Sistema é lista de linhas com hairline.
+- **LED fino**: `SegmentoLED traco="fino"` — mesma célula e alfabeto, segmento de 4 em vez de 12, sem brilho, apagado a 8%. Só na vitrine; a ferramenta segue no traço cheio.
+- **CTA primário** (`.vt-botao--feixe`): miolo `--background`, borda cônica dourado → magenta. Secundário `--contorno`: hairline, hover dourado.
 
 ### Estados (coreografia)
 Todo componente interativo tem padrão, hover, foco, ativo, desabilitado, carregando, erro e vazio.
@@ -248,8 +248,8 @@ Com o painel do easter egg aberto, os indicadores da visão geral exibem número
 ### Motion
 Vocabulário em `lib/movimento.ts` (150–250 ms, curva `--ease-fluid` `cubic-bezier(0.32, 0.72, 0, 1)`). Na **ferramenta**, dois momentos autorados: o cursor de leitura na linha do tempo e a entrada dos sistemas (8px, uma vez, escalonada em 40 ms na armadura). Resposta a gesto (hover, a marca `MarcaFraus` que responde a cinco cliques) é outra categoria e não conta.
 
-**A exceção da vitrine (orbe).** O orbe é o único elemento vivo: três manchas em períodos primos (14/18/22 s) girando, CSS puro, sem canvas nem `requestAnimationFrame`. Mora **só** na vitrine (`coreografiaValeEm`, `lib/cena.ts`, hoje só `"/"`): a ferramenta é lida por horas e não pode ter GPU girando atrás de tabela e gráfico; a vitrine é visita curta. A `Atelier` vive no layout raiz, e estar no layout raiz não é estar só na LP: o listener de rolagem nem é registrado fora da rota permitida.
-**`prefers-reduced-motion` congela, não desacelera:** `.vt-orbe i:nth-child(n) { animation: none }` (o `:nth-child(n)` iguala a especificidade das regras que ligam a animação; sem isso o orbe seguia girando, medido em Playwright), o bloco global zera transições, e o `<Movimento>` passa `reducedMotion="user"` ao Motion.
+**A exceção da vitrine (cena WebGL).** Desde 01/10/2026 a vitrine tem um canvas WebGL com laço de quadros — decisão do dono, que inverte a de 30/09 (orbe em CSS puro, sem canvas). A regra que sobrevive é onde ele mora: **só em `app/page.tsx`**, nunca no layout raiz, porque a ferramenta é lida por horas e não pode ter GPU girando atrás de tabela e gráfico. Contexto WebGL é liberado ao desmontar (`WEBGL_lose_context`). Sem WebGL, o canvas some e a página segue legível. `scripts/validar-lp-playwright.mjs` cobra exatamente um canvas e o regime certo.
+**`prefers-reduced-motion` congela, não desacelera:** na vitrine o motor entra no regime `vt-estatico` — nenhum laço, um quadro redesenhado só quando a página rola, orbe parado, constelação no estágio dos nós, seção não fixa. As animações CSS da vitrine (entrada da manchete, borda do CTA, seta) também param. Na ferramenta, o bloco global zera transições e o `<Movimento>` passa `reducedMotion="user"` ao Motion.
 
 ## Do's and Don'ts
 
