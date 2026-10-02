@@ -639,6 +639,23 @@ A aba **Modelo → Ironia · Laya** chama somente essa cabeça e não persiste n
 altera notas. O tipo de pergunta usado é `choice` com chaves neutras, não
 `noul`, por causa do viés de rótulo documentado pelos próprios autores.
 
+#### Fine-tuning do Laya — notebook 07 (02/10/2026, ainda não executado)
+
+O candidato acima responde a frio. `notebooks/07_treino_laya.ipynb` treina o
+mesmo checkpoint nas duas perguntas do Fraus — emoção (`PERGUNTA_EMOCAO`, em
+`fraus/treino_laya.py`) e ironia (`PERGUNTA_IRONIA`) — com o script oficial de
+GPU única do Laya, e o compara com os BERTimbau dos notebooks 03 e 04 nos
+mesmos exemplos de teste: McNemar exato e IC por bootstrap da diferença de
+F1-macro (`fraus/comparacao_modelos.py`), mais o XED-pt e a régua de domínio.
+
+Ele não promete 100% de acerto, e número perto disso seria sintoma (invariante
+10). No fim, poda o vocabulário de 256 mil tokens para o que o português usa,
+exporta para ONNX e só adota INT8 se no máximo 1% das decisões mudar.
+
+Rode primeiro com `MODO_FUMACA = True`. O que foi pesquisado, o que foi medido
+localmente e o que ainda falta está na nota interna
+`docs/notas/2026-10-02-treino-laya.md`.
+
 ### Alternativas ao IDPT — levantamento de 14/08/2026
 
 Registrado para ninguem repetir a busca. O que **nao serve**, e por que:
