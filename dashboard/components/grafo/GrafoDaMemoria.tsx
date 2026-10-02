@@ -10,6 +10,7 @@ import type {
   NodeObject,
 } from "react-force-graph-2d";
 import type { ArestaDoGrafo, Camada, Grafo, NoDoGrafo } from "@/lib/api";
+import { escaparHtml } from "@/lib/escaparHtml";
 import { ListaDeNos } from "./ListaDeNos";
 import { FichaDoNo } from "./FichaDoNo";
 import { ReguaDeCamadas } from "./ReguaDeCamadas";
@@ -287,7 +288,9 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
                 height={medida.altura}
                 graphData={dados}
                 backgroundColor="transparent"
-                nodeLabel={(no: NoDaSimulacao) => no.rotulo}
+                // O force-graph escreve este valor com innerHTML: sem escapar, o
+                // id de uma conversa vira marcação viva (ver lib/escaparHtml).
+                nodeLabel={(no: NoDaSimulacao) => escaparHtml(String(no.rotulo ?? ""))}
                 nodeCanvasObject={(no, ctx, escala) =>
                   desenharNo(
                     no,
