@@ -144,6 +144,18 @@ describe("SegmentoLED", () => {
     expect(m.match(/aria-hidden="true"/g)!.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("o traco fino (vitrine) apaga o brilho mas continua desenhando o apagado", () => {
+    const fino = html({ valor: "2,9", rotulo: "nota", traco: "fino" });
+    expect(fino).not.toContain("drop-shadow");
+    expect(fino).toContain('data-traco="fino"');
+    // 2 acende 5, 9 acende 6: os mesmos segmentos do traco cheio
+    expect(acesos(fino)).toBe(11);
+    const vazio = html({ valor: null, rotulo: "nota", traco: "fino" });
+    expect(acesos(vazio)).toBe(0);
+    expect(vazio).toContain("sem sinal");
+    expect(vazio.match(/<polygon/g)!.length).toBe(21);
+  });
+
   it("a cor vem de token, nunca de literal", () => {
     expect(html({ valor: "1", rotulo: "x" })).toContain("var(--medido)");
     expect(html({ valor: "1", rotulo: "x", cor: "marca" })).toContain("var(--primary)");

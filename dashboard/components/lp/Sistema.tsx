@@ -1,148 +1,63 @@
 import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
-import { FATOS_DO_MODELO } from "./fatos";
-import { Revelar } from "./Revelar";
+import { FAMILIAS_DO_VETOR, FATOS_DO_MODELO, emDuasCasas } from "./fatos";
 
-/**
- * As SETE FAMILIAS do vetor, com a descricao que o CLAUDE.md faz de cada uma.
- * Nao ha claim novo aqui: cada linha e o que o codigo ja faz.
- *
- * `voz` diz de que lado da regua a familia mora -- `dito` (o que o cliente
- * articulou) ou `medido` (o que se mediu sobre a conversa). A lampada carrega a
- * palavra junto com a cor, sempre: cor nunca e o unico portador de sentido.
- */
-const FAMILIAS = [
-  {
-    no: "01",
-    nome: "Texto",
-    texto: "BERTimbau fine-tunado em português. A probabilidade é por mensagem, não por conversa.",
-    voz: "dito",
-  },
-  {
-    no: "02",
-    nome: "Emoji",
-    texto: "Léxico com 969 entradas do Emoji Sentiment Ranking e a posição relativa na mensagem.",
-    voz: "dito",
-  },
-  {
-    no: "03",
-    nome: "Tempo",
-    texto: "Latência, escalação e abandono. Treinado em conversas sintéticas — limitação declarada.",
-    voz: "medido",
-  },
-  {
-    no: "04",
-    nome: "Emoção",
-    texto: "Sete classes de Ekman. O desprezo é derivado da díade raiva + nojo.",
-    voz: "medido",
-  },
-  {
-    no: "05",
-    nome: "Léxico",
-    texto: "SentiLex-PT02 com escopo de negação: “não gostei” não conta como “gostei”.",
-    voz: "dito",
-  },
-  {
-    no: "06",
-    nome: "Estilo",
-    texto: "Caixa alta, pontuação, alongamento, palavrão e censura na forma da escrita.",
-    voz: "dito",
-  },
-  {
-    no: "07",
-    nome: "Incongruência",
-    texto: "Polaridade emoji × texto, marcador de contraste, hipérbole e aspas irônicas.",
-    voz: "medido",
-  },
+const FATOS = [
+  ["famílias no vetor", FATOS_DO_MODELO.familias],
+  ["features no fusor", FATOS_DO_MODELO.features],
+  ["BERTimbau fine-tunados", FATOS_DO_MODELO.bertimbau],
+  ["LLMs na inferência", FATOS_DO_MODELO.llms],
 ] as const;
 
-function Lampada({ voz }: { voz: "dito" | "medido" | "vazio" }) {
-  const rotulos = { dito: "dito", medido: "medido", vazio: "sem sinal" } as const;
-  return (
-    <span className={`vt-lampada is-${voz}`}>
-      <i aria-hidden />
-      {rotulos[voz]}
-    </span>
-  );
-}
-
+/**
+ * O SISTEMA, em linhas e nao em cartoes (pedido do Joao: cartao detalhado
+ * puxa atencao demais). Cada familia com o que le e quantas features entrega
+ * -- a contagem vem de `FAMILIAS_DO_VETOR`, guardada contra `NOMES_FEATURES`.
+ */
 export function Sistema() {
   return (
     <section id="sistema" aria-labelledby="titulo-sistema" className="vt-sec">
       <div className="vt-wrap">
-        <Revelar className="mb-12 grid gap-8 lg:mb-16 lg:grid-cols-[1fr_1fr] lg:items-end">
-          <div>
-            <h2 id="titulo-sistema" className="titulo-vitrine max-w-[14ch]">
-              Sete sinais, um fusor, uma nota.
-            </h2>
-          </div>
-          <p className="vt-prosa lg:justify-self-end">
-            Cada sinal enxerga uma coisa e nenhum decide sozinho. As famílias
-            entram num mesmo vetor e um fusor aprende quanto cada uma pesa.
+        <div className="vt-sistema__cab">
+          <h2 id="titulo-sistema" className="titulo-vitrine">
+            Sete famílias no vetor. Nenhuma chamada de rede.
+          </h2>
+          <p className="vt-prosa">
+            Cada família lê um aspecto da conversa e entrega features a um fusor
+            treinado. Tudo roda local, em CPU: o atendimento não sai da máquina
+            para ser pontuado.
           </p>
-        </Revelar>
-
-        <Revelar>
-          <div className="vt-grade">
-            <div className="vt-cel vt-cel--fusor">
-              <h3>Regressão logística sobre {FATOS_DO_MODELO.features} features</h3>
-              <p className="max-w-[24rem]">
-                As sete famílias viram um vetor de {FATOS_DO_MODELO.features} números. A nota sai de 0 a
-                100, vira 0–10 e ganha a categoria de NPS — sempre no servidor,
-                nunca no navegador.
-              </p>
-              <SegmentoLED
-                className="vt-fusor__led"
-                valor={String(FATOS_DO_MODELO.features)}
-                altura={72}
-                cor="tinta"
-                rotulo="features no fusor"
-              />
-              <p className="vt-fusor__formula">
-                score 0–100 → nota 0–10 → categoria NPS
-                <br />a ironia é lida por mensagem e fica fora do vetor
-              </p>
+        </div>
+        <ul className="vt-linhas">
+          {FAMILIAS_DO_VETOR.map((f) => (
+            <li key={f.chave}>
+              <span className="vt-linhas__nome">{f.rotulo}</span>
+              <span className="vt-linhas__desc">{f.leitura}</span>
+              <span className="vt-linhas__qtd">{f.qtd} features</span>
+            </li>
+          ))}
+          <li className="vt-linhas__fusor">
+            <span className="vt-linhas__nome">Fusor</span>
+            <span className="vt-linhas__desc">
+              Regressão logística sobre as {FATOS_DO_MODELO.features}. Score 0–100,
+              nota 0–10 e categoria de NPS derivados no servidor.
+            </span>
+            <span className="vt-linhas__qtd">{FATOS_DO_MODELO.features} → 1</span>
+          </li>
+        </ul>
+        <div className="vt-fatos" role="list" aria-label="Fatos do modelo">
+          {FATOS.map(([rotulo, valor]) => (
+            <div key={rotulo} role="listitem">
+              <span className="vt-rotulo">{rotulo}</span>
+              <SegmentoLED valor={emDuasCasas(valor)} rotulo={rotulo} altura={34} cor="tinta" traco="fino" />
             </div>
-
-            {FAMILIAS.map((f) => (
-              <div key={f.no} className="vt-cel">
-                <span className="vt-cel__no">{f.no}</span>
-                <h3>{f.nome}</h3>
-                <p>{f.texto}</p>
-                <span className="vt-cel__rodape">
-                  {f.nome === "Tempo" ? (
-                    <SegmentoLED
-                      valor="4:12"
-                      altura={16}
-                      rotulo="exemplo de latência, quatro minutos e doze segundos"
-                      className="mr-2 align-middle"
-                    />
-                  ) : null}
-                  <Lampada voz={f.voz} />
-                </span>
-              </div>
-            ))}
-
-            <div className="vt-cel">
-              <span className="vt-cel__no">—</span>
-              <h3>Sem sinal</h3>
-              <p>
-                Sem fala do cliente, não há o que pontuar: o atendimento não
-                entra na média e nunca vira zero.
-              </p>
-              <span className="vt-cel__rodape">
-                <SegmentoLED
-                  valor={null}
-                  altura={16}
-                  cor="tinta"
-                  celulas={2}
-                  rotulo="atendimento sem fala do cliente"
-                  className="mr-2 align-middle"
-                />
-                <Lampada voz="vazio" />
-              </span>
-            </div>
-          </div>
-        </Revelar>
+          ))}
+        </div>
+        <p className="vt-ressalva">
+          A cabeça de ironia continua lida por mensagem, mas saiu do vetor em
+          04/09/2026: no corpus de treino ela media sentimento positivo, não
+          ironia. O Fraus reconhece emoção no texto do cliente — e não pontua
+          atendentes.
+        </p>
       </div>
     </section>
   );

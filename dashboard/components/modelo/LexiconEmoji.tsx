@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 const POR_PAGINA = 20;
 
@@ -107,7 +108,7 @@ export function LexiconEmoji({ total }: { total: number }) {
             className="h-9 w-40"
           />
         </div>
-        <Button type="submit" size="sm" variant="outline" className="mb-0.5">
+        <Button type="submit" size="sm" variant="outline" className="mb-0.5"><IconeDeAcao acao="buscar" />
           Buscar
         </Button>
         {busca ? (
@@ -121,7 +122,7 @@ export function LexiconEmoji({ total }: { total: number }) {
               setBusca("");
               setPagina(0);
             }}
-          >
+          ><IconeDeAcao acao="cancelar" />
             Limpar
           </Button>
         ) : null}
@@ -238,7 +239,7 @@ export function LexiconEmoji({ total }: { total: number }) {
                 variant="outline"
                 disabled={pagina === 0}
                 onClick={() => setPagina((atual) => Math.max(0, atual - 1))}
-              >
+              ><IconeDeAcao acao="anterior" />
                 Anterior
               </Button>
               <Button
@@ -249,7 +250,7 @@ export function LexiconEmoji({ total }: { total: number }) {
                 onClick={() => setPagina((atual) => atual + 1)}
               >
                 Próxima
-              </Button>
+              <IconeDeAcao acao="proxima" /></Button>
             </div>
           </nav>
         </>

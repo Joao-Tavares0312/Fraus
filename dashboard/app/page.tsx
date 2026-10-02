@@ -1,35 +1,34 @@
 import "./vitrine.css";
 import { CabecalhoVitrine } from "@/components/lp/CabecalhoVitrine";
+import { CenaVitrine } from "@/components/lp/CenaVitrine";
+import { Constelacao } from "@/components/lp/Constelacao";
 import { Fecho, Rodape } from "@/components/lp/Fecho";
 import { Hero } from "@/components/lp/Hero";
-import { Leitura } from "@/components/lp/Leitura";
-import { Metodo } from "@/components/lp/Metodo";
+import { SemSinal } from "@/components/lp/SemSinal";
 import { Sistema } from "@/components/lp/Sistema";
 
 /**
- * A VITRINE (rota `/`) -- modo Persuade, e a unica superficie do produto onde a
- * expressao pode ser alta. O Instrumento (spec 2026-09-30): telemetria e
- * hairline da Regua, numeros em LED do Segmento e o hero de orbe da Aurora.
+ * A VITRINE (rota `/`) -- modo Persuade, a unica superficie onde a expressao
+ * pode ser alta. Direcao aprovada em 01/10/2026 sobre a mescla de prototipos:
+ * hero e orbe da v0, fosforo de osciloscopio da v1, mascara da v6 virando a
+ * constelacao da v4, e o orbe atravessando a pagina como fusor.
  *
- * Server Component: a pagina inteira e estatica. So `Revelar` (o reveal por
- * rolagem) e `MarcaFraus` (o gesto dos cinco cliques) sao de cliente.
- *
- * Toda amostra de conversa e nota e SINTETICA e diz isso onde aparece; os
- * numeros-fato (07 familias, 39 features, 03 BERTimbau, 00 LLMs) sao os do
- * CLAUDE.md. Nao ha depoimento, cliente nem metrica de uso inventados.
+ * As secoes sao Server Components; so a `CenaVitrine` (canvas + motor) e de
+ * cliente. Toda amostra de conversa e nota e SINTETICA e diz isso onde
+ * aparece; os numeros-fato vem de `components/lp/fatos.ts`.
  */
 export default function PaginaInicial() {
   return (
-    <div className="vt">
+    <CenaVitrine>
       <CabecalhoVitrine />
       <main>
         <Hero />
-        <Leitura />
+        <Constelacao />
+        <SemSinal />
         <Sistema />
-        <Metodo />
         <Fecho />
       </main>
       <Rodape />
-    </div>
+    </CenaVitrine>
   );
 }

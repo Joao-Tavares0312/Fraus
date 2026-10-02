@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatarData } from "@/lib/formato";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 type TermoCurado = {
   id: number;
@@ -322,7 +323,7 @@ export function LexicoCurado() {
                       className="h-6 px-2"
                       onClick={() => void revogar(curado.id)}
                       disabled={ocupado}
-                    >
+                    ><IconeDeAcao acao="remover" />
                       Sim
                     </Button>
                     <Button
@@ -331,7 +332,7 @@ export function LexicoCurado() {
                       variant="ghost"
                       className="h-6 px-2"
                       onClick={() => setConfirmando(null)}
-                    >
+                    ><IconeDeAcao acao="cancelar" />
                       Não
                     </Button>
                   </span>

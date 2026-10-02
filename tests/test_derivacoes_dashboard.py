@@ -128,6 +128,48 @@ def test_a_vitrine_anuncia_o_numero_real_de_features():
     )
 
 
+def _familia_de(nome: str) -> str:
+    """A familia de uma feature, com o mesmo mapa de `SINAL_POR_PREFIXO`.
+
+    Tempo e a unica familia com varios prefixos (latencia_, duracao_, qtd_ e
+    os nomes inteiros escalou/abandonou); as outras sao o proprio prefixo.
+    """
+    prefixo = _prefixo_de(nome)
+    if prefixo in ("latencia_", "duracao_", "qtd_", "escalou", "abandonou"):
+        return "tempo"
+    return prefixo.rstrip("_")
+
+
+def test_a_vitrine_divide_as_features_por_familia_como_o_fusor():
+    """A constelacao da vitrine desenha um no por feature, agrupado por familia.
+
+    Se a divisao for desenho e nao contagem, quem contar os pontos de uma
+    familia le um numero falso -- foi o defeito do prototipo v4 (6/5/6/6/6/5/5,
+    inventado). A divisao mora em `FAMILIAS_DO_VETOR`, em `fatos.ts`, e tem de
+    bater, familia a familia e na ordem, com `NOMES_FEATURES`.
+    """
+    fonte = CAMINHO_FATOS_DA_VITRINE.read_text(encoding="utf-8")
+    anunciadas = [
+        (achado.group(1), int(achado.group(2)))
+        for achado in re.finditer(r'chave:\s*"(\w+)"[^}]*?\bqtd:\s*(\d+)', fonte)
+    ]
+    assert anunciadas, (
+        "nao encontrei `FAMILIAS_DO_VETOR` (`chave: \"...\"` e `qtd: N`) em "
+        "dashboard/components/lp/fatos.ts. Se o formato mudou, atualize esta busca."
+    )
+
+    reais: dict[str, int] = {}
+    for nome in NOMES_FEATURES:
+        familia = _familia_de(nome)
+        reais[familia] = reais.get(familia, 0) + 1
+
+    assert anunciadas == list(reais.items()), (
+        f"a vitrine divide as features como {anunciadas}, mas NOMES_FEATURES "
+        f"divide como {list(reais.items())}. Atualize FAMILIAS_DO_VETOR em "
+        "dashboard/components/lp/fatos.ts."
+    )
+
+
 def test_sem_sinal_e_notacao_e_nao_so_texto():
     """A §1.1 do DESIGN.md promete cabeca vazada para o sem sinal.
 

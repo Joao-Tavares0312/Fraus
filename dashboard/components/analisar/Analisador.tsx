@@ -39,6 +39,7 @@ import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { TextoComPesos } from "./TextoComPesos";
 import { formatarProbabilidade } from "@/lib/partitura";
 import { ConferenciaDeColunas } from "./ConferenciaDeColunas";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
 const TETO_BYTES = 200_000;
@@ -179,7 +180,7 @@ export function Analisador() {
                   <option value="csv">CSV com cabeçalho e horários</option><option value="json">JSON do Fraus</option><option value="txt">Transcrição / WhatsApp</option>
                 </select>
               </label>
-              <Button type="button" size="sm" disabled={ocupado || !texto.trim()} onClick={() => analisar(new File([texto], `conversa.${formatoTexto}`, { type: formatoTexto === "csv" ? "text/csv" : formatoTexto === "json" ? "application/json" : "text/plain" }))}>Analisar conversa</Button>
+              <Button type="button" size="sm" disabled={ocupado || !texto.trim()} onClick={() => analisar(new File([texto], `conversa.${formatoTexto}`, { type: formatoTexto === "csv" ? "text/csv" : formatoTexto === "json" ? "application/json" : "text/plain" }))}><IconeDeAcao acao="executar" />Analisar conversa</Button>
               <p className="text-xs text-muted-foreground">Para salvar, a conversa precisa trazer horários reais. Para transcrições sem horário, desmarque a opção de salvar.</p>
             </div>
           </details>
@@ -234,11 +235,17 @@ export function Analisador() {
             }}
             className="group flex flex-col items-center gap-2 rounded-md border border-dashed border-input px-6 py-8 text-center transition-colors duration-200 ease-fluid data-[arrastando]:border-primary data-[arrastando]:bg-primary/5"
           >
+            {/* O controle de verdade é o botão abaixo. Este input só existe para
+                abrir o seletor do sistema: fora da ordem de tabulação e da
+                árvore de acessibilidade, senão o teclado para num campo
+                invisível e o leitor de tela anuncia um "arquivo" sem nome. */}
             <input
               ref={entrada}
               type="file"
               accept={ACEITOS}
               className="sr-only"
+              tabIndex={-1}
+              aria-hidden
               onChange={aoEscolher}
             />
             <Upload
@@ -253,7 +260,7 @@ export function Analisador() {
               size="sm"
               onClick={() => entrada.current?.click()}
               disabled={ocupado}
-            >
+            ><IconeDeAcao acao="arquivo" />
               {ocupado ? "Analisando…" : "Escolher arquivo"}
             </Button>
             {arquivo ? (
@@ -545,7 +552,7 @@ function Analise({
             size="xs"
             variant="ghost"
             onClick={() => setTudoAberto((atual) => !atual)}
-          >
+          ><IconeDeAcao acao="expandir" />
             {tudoAberto ? "Recolher os sinais" : "Abrir todos os sinais"}
           </Button>
         </div>

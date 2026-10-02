@@ -18,6 +18,15 @@
  * 4. O arquivo que a API escreveu na PRIMEIRA subida dela. E o degrau que faz
  *    um clone novo funcionar sem configuracao nenhuma, agora que a API nasce
  *    fechada.
+ *
+ * OS DEGRAUS 2 E 4 SO VALEM SEM LOGIN, e isto e conserto de 02/10/2026. Eles
+ * sao a credencial do SERVIDOR, e o servidor a entregava a quem chegasse: com
+ * login de usuario existindo, um visitante sem sessao passava pelo proxy como
+ * a chave tecnica do deploy, enquanto as paginas redirecionavam para `/entrar`.
+ * O layout se dizia portao "oportunista" porque quem negaria o dado era a API;
+ * so que o proxy apresentava a ela uma credencial que passa por tudo, inclusive
+ * pelo portao de papel. Agora, onde ha login, quem nao tem sessao nao tem
+ * credencial, e a recusa volta a ser da API. Ver `loginExiste`.
  */
 
 import { readFileSync } from "node:fs";
@@ -75,6 +84,90 @@ function chaveDoArquivo(): string | undefined {
   }
 }
 
+const API = process.env.FRAUS_API_URL ?? "http://localhost:8000";
+
+// Um minuto: `/auth/estado` so muda quando alguem define ou remove
+// FRAUS_JWT_SEGREDO e reinicia a API, e a pergunta roda a cada requisicao
+// ANONIMA do proxy.
+//
+// A FALTA de resposta tambem e lembrada, mas so por cinco segundos. Sem isso,
+// cada chamada sem sessao a uma API degradada levava uma segunda chamada de
+// carona -- dobrar o trafego de quem ja esta lento e exatamente a tempestade
+// que o teto do plano B (`obterDetalhes`) existe para evitar. Cinco segundos
+// porque a duvida fecha a credencial: lembrar mais que isso manteria a
+// dashboard do modo local sem dado depois de a API voltar.
+const VALIDADE_DO_ESTADO_MS = 60_000;
+const VALIDADE_DA_DUVIDA_MS = 5_000;
+const ESPERA_ESTADO_MS = 15_000;
+let estadoDoLogin: { existe: boolean | null; ate: number } | null = null;
+// Uma pergunta por vez: as chamadas que chegam juntas esperam a mesma resposta.
+let perguntaEmCurso: Promise<boolean | null> | null = null;
+
+/** Para os testes: cada caso comeca sem resposta lembrada. */
+export function esquecerEstadoDoLogin(): void {
+  estadoDoLogin = null;
+  perguntaEmCurso = null;
+}
+
+/**
+ * Se esta instalacao TEM login de usuario -- ou `null` quando nao deu para
+ * perguntar.
+ *
+ * E a pergunta que decide se o servidor empresta a propria credencial a quem
+ * chega sem sessao. Sem login (o modo local do README) emprestar e o desenho:
+ * a dashboard e de quem a abriu. Com login, emprestar e entregar os dados a
+ * qualquer visitante.
+ *
+ * `null` NAO e `false`. `loginDisponivel`, em lib/sessao.ts, resolve a duvida
+ * abrindo a tela, e esta certo ali: tela aberta sem dado e so uma tela. Aqui a
+ * duvida fecha, porque o que se abre e a credencial.
+ */
+async function loginExiste(): Promise<boolean | null> {
+  if (estadoDoLogin && Date.now() < estadoDoLogin.ate) return estadoDoLogin.existe;
+  perguntaEmCurso ??= perguntarSeHaLogin().finally(() => {
+    perguntaEmCurso = null;
+  });
+  return perguntaEmCurso;
+}
+
+async function perguntarSeHaLogin(): Promise<boolean | null> {
+  let existe: boolean | null = null;
+  try {
+    const resposta = await fetch(`${API}/auth/estado`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(ESPERA_ESTADO_MS),
+    });
+    if (resposta.ok) {
+      const corpo = (await resposta.json()) as { disponivel?: unknown };
+      if (typeof corpo.disponivel === "boolean") existe = corpo.disponivel;
+    }
+  } catch {
+    // API fora do ar ou tempo esgotado: fica a duvida.
+  }
+  estadoDoLogin = {
+    existe,
+    ate: Date.now() + (existe === null ? VALIDADE_DA_DUVIDA_MS : VALIDADE_DO_ESTADO_MS),
+  };
+  return existe;
+}
+
+/**
+ * Os degraus que NAO sao sessao de usuario, na ordem de sempre: ambiente,
+ * cookie de quem ligou a autenticacao pela tela, arquivo da primeira subida.
+ *
+ * A credencial do proprio servidor (ambiente e arquivo) so entra onde nao ha
+ * login. O cookie `fraus_acesso` continua valendo nos dois modos: ele nao e do
+ * servidor, e a chave que AQUELE navegador recebeu ao ligar a autenticacao.
+ */
+async function credencialSemSessao(doCookie: string | undefined): Promise<string | undefined> {
+  const servidorEmpresta = (await loginExiste()) === false;
+  const doAmbiente = servidorEmpresta ? process.env.FRAUS_CHAVE_ACESSO : undefined;
+  if (doAmbiente) return `Bearer ${doAmbiente}`;
+  if (doCookie) return `Bearer ${doCookie}`;
+  const doArquivo = servidorEmpresta ? chaveDoArquivo() : undefined;
+  return doArquivo ? `Bearer ${doArquivo}` : undefined;
+}
+
 export function chaveDoCookie(
   requisicao: Request,
   procurado: string = COOKIE,
@@ -98,7 +191,9 @@ export function chaveDoCookie(
  * mandar. Um cliente que pudesse escolher o proprio header transformaria o
  * proxy em oraculo para testar chaves.
  */
-export function autorizacaoDoServidor(requisicao: Request): string | undefined {
+export async function autorizacaoDoServidor(
+  requisicao: Request,
+): Promise<string | undefined> {
   // Degrau 0 (31/08/2026): a SESSAO DE USUARIO, quando existe. Ela precisa
   // vencer a chave do deploy, ou o portao de papel da API nunca veria o
   // papel: toda chamada chegaria como a credencial tecnica `fra_`, que passa
@@ -108,17 +203,10 @@ export function autorizacaoDoServidor(requisicao: Request): string | undefined {
   const daSessao = chaveDoCookie(requisicao, COOKIE_SESSAO);
   if (daSessao) return `Bearer ${daSessao}`;
 
-  const doAmbiente = process.env.FRAUS_CHAVE_ACESSO;
-  if (doAmbiente) return `Bearer ${doAmbiente}`;
-
-  const doCookie = chaveDoCookie(requisicao);
-  if (doCookie) return `Bearer ${doCookie}`;
-
-  // Último degrau: a chave que a própria API gerou na primeira subida. Vem
-  // depois do cookie porque quem clicou em ligar nesta sessão declarou uma
-  // credencial mais recente que a do primeiro boot.
-  const doArquivo = chaveDoArquivo();
-  return doArquivo ? `Bearer ${doArquivo}` : undefined;
+  // Sem sessão: a credencial do servidor só é emprestada onde não há login.
+  // O arquivo vem depois do cookie porque quem clicou em ligar nesta sessão
+  // declarou uma credencial mais recente que a do primeiro boot.
+  return credencialSemSessao(chaveDoCookie(requisicao));
 }
 
 /**
@@ -161,13 +249,7 @@ export async function autorizacaoDoServidorAtual(): Promise<string | undefined> 
   }
   if (daSessao) return `Bearer ${daSessao}`;
 
-  const doAmbiente = process.env.FRAUS_CHAVE_ACESSO;
-  if (doAmbiente) return `Bearer ${doAmbiente}`;
-
-  if (doCookie) return `Bearer ${doCookie}`;
-
-  const doArquivo = chaveDoArquivo();
-  return doArquivo ? `Bearer ${doArquivo}` : undefined;
+  return credencialSemSessao(doCookie);
 }
 
 /**
@@ -183,9 +265,11 @@ export async function autorizacaoDoServidorAtual(): Promise<string | undefined> 
  * credencial nenhuma, a chamada de rotacao morre no middleware com "informe a
  * chave de acesso" em vez do 409 que explica que falta a mestra atual.
  */
-export function autorizacaoParaLigar(requisicao: Request): string | undefined {
+export async function autorizacaoParaLigar(
+  requisicao: Request,
+): Promise<string | undefined> {
   return (
-    requisicao.headers.get("authorization") ?? autorizacaoDoServidor(requisicao)
+    requisicao.headers.get("authorization") ?? (await autorizacaoDoServidor(requisicao))
   );
 }
 

@@ -48,6 +48,7 @@ import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
 import { NotaLED } from "./NotaLED";
 import { ausenciaNoFim } from "@/lib/ordenacao";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 export type LinhaConversa = {
   id: string;
@@ -620,7 +621,7 @@ export function TabelaConversas({
             variant="outline"
             onClick={() => tabela.previousPage()}
             disabled={!tabela.getCanPreviousPage()}
-          >
+          ><IconeDeAcao acao="anterior" />
             Anterior
           </Button>
           <Button
@@ -631,7 +632,7 @@ export function TabelaConversas({
             disabled={!tabela.getCanNextPage()}
           >
             Próxima
-          </Button>
+          <IconeDeAcao acao="proxima" /></Button>
         </div>
       </nav>
     </div>

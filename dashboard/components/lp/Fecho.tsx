@@ -1,37 +1,30 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { Revelar } from "./Revelar";
 
 /**
- * O FECHO e o RODAPE. A manchete do fecho e a frase da vitrine anterior -- "o
- * que foi dito nao e tudo que foi sentido" --, com o encoding de sempre: o
- * dito em ambar, o sentido em azul. O hero abre com "entrelinhas"; este fecho
- * devolve a tese que o nome da marca carrega (o cliente mente, o texto nao).
+ * O FECHO: a tese que o nome carrega. Fraus e a divindade romana da fraude;
+ * o cliente mente por cortesia, o texto entrega. O "o texto nao" vai em
+ * ambar porque e sobre o dito -- e o orbe, atras, volta a pender para o ambar.
  */
 export function Fecho() {
   return (
-    <section aria-labelledby="titulo-fecho" className="vt-sec vt-fecho">
-      <Revelar className="vt-wrap">
-        <h2
-          id="titulo-fecho"
-          className="display-vitrine mx-auto max-w-[14ch]"
-        >
-          O que foi <span className="text-dito-texto">dito</span> não é tudo que
-          foi <span className="text-medido-texto">sentido.</span>
+    <section id="fecho" aria-labelledby="titulo-fecho" className="vt-fecho">
+      <div className="vt-wrap">
+        <h2 id="titulo-fecho" className="display-vitrine vt-fecho__titulo">
+          O cliente mente. <span className="vt-dito">O texto não.</span>
         </h2>
-        <p className="vt-prosa mx-auto mt-8 text-lg">
-          Transforme atendimentos em evidência operacional sem perguntar ao
-          cliente o que ele já demonstrou.
+        <p className="vt-prosa vt-fecho__prosa">
+          NPS inferido do texto, sempre com a etiqueta de estimativa. Onde falta
+          dado, a tela diz o que falta.
         </p>
-        <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <Link href="/entrar" className="vt-botao vt-botao--ouro">
-            Entrar <ArrowRight aria-hidden />
+        <div className="vt-botoes">
+          <Link href="/entrar" className="vt-botao vt-botao--feixe">
+            Iniciar leitura →
           </Link>
           <Link href="/cadastrar" className="vt-botao vt-botao--contorno">
             Criar acesso
           </Link>
         </div>
-      </Revelar>
+      </div>
     </section>
   );
 }
@@ -40,8 +33,8 @@ export function Rodape() {
   return (
     <footer className="vt-rodape">
       <div className="vt-wrap">
-        <span>Fraus · análise de satisfação em português</span>
-        <span>modelos locais · sem LLM em runtime</span>
+        <span className="vt-rotulo">Fraus · trabalho acadêmico · modelos locais, sem LLM em runtime</span>
+        <span className="vt-rotulo">reconhece emoção no texto · não pontua atendentes</span>
       </div>
     </footer>
   );

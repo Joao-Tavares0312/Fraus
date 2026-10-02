@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { destinoAuth } from "@/lib/destino-auth";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 type Modo = "entrar" | "cadastrar";
 
@@ -164,6 +165,7 @@ export function FormularioAuth({ modo, convite = null }: { modo: Modo; convite?:
       )}
 
       <Button type="submit" disabled={ocupado}>
+        <IconeDeAcao acao={entrando ? "entrar" : "criar"} />
         {/* Tres rotulos para tres estados, e o do meio e o que faltava: depois
             da credencial aceita a espera continua, e chama-la de "Entrando…"
             de novo esconderia que o login JA deu certo e o que resta e abrir a

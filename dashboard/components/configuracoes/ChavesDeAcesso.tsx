@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatarData } from "@/lib/formato";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 type ChaveAcesso = {
   id: number;
@@ -184,7 +185,7 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
                   setEmitida(null);
                   void carregar();
                 }}
-              >
+              ><IconeDeAcao acao="confirmar" />
                 Já copiei
               </Button>
             </div>
@@ -272,7 +273,7 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
                           className="h-6 px-2"
                           onClick={() => void revogar(chave.id)}
                           disabled={ocupado}
-                        >
+                        ><IconeDeAcao acao="remover" />
                           Sim
                         </Button>
                         <Button
@@ -281,7 +282,7 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
                           variant="ghost"
                           className="h-6 px-2"
                           onClick={() => setConfirmando(null)}
-                        >
+                        ><IconeDeAcao acao="cancelar" />
                           Não
                         </Button>
                       </span>

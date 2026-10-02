@@ -668,6 +668,17 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  /* O TRACO DO ICONE E O DO INSTRUMENTO. Os icones vem do lucide, desenhados
+     com ponta e junta redondas a 2px -- o desenho de app amigavel, em cima de
+     uma superficie de hairline de 1px e raio zero. Ponta reta, junta viva e
+     traco de 1,5px poem o icone na mesma mao que tracou a regua. A regra vale
+     para todo icone da ferramenta (a vitrine nao usa lucide), e por CSS: a
+     propriedade vence o atributo que o SVG traz, sem passar prop por icone. */
+  .lucide {
+    stroke-width: 1.5;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
   body {
     @apply bg-background text-foreground;
     /* O `body` NUNCA rola na horizontal: conteudo largo rola no proprio container. */
