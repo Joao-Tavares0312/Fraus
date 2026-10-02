@@ -50,3 +50,26 @@ jobs:
         env:
           FRAUS_TESTE_POSTGRES_URL: ${{ matrix.dialeto == 'postgres' && 'postgresql://postgres:teste@localhost:5432/postgres' || '' }}
         run: uv run pytest -q
+
+  # A dashboard tem logica comportamental testada (lib/ e componentes puros) e
+  # ate 02/10/2026 nada disso rodava aqui: um teste do front ficou quebrado na
+  # `main` entre os PRs #79 e #80 com o CI verde. O `next build` do preview da
+  # Vercel compila, mas nao roda teste.
+  dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Tipos
+        run: npx tsc --noEmit
+      - name: vitest
+        run: npx vitest run
