@@ -290,9 +290,14 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
         # configurou a URL com barra final para o 401 daqui em vez da
         # credencial de fonte.
         caminho = request.url.path.rstrip("/")
+        if request.method == "GET" and caminho.startswith("/operacao/convites/") and len(caminho.split("/")) == 4:
+            # Publica: quem recebeu o link ainda nao tem conta. Mas a sessao, se
+            # veio, e lida -- quem criou a conta por este link ocupa a vaga, e
+            # so reconhecendo a pessoa a rota responde que o convite e dela.
+            request.state.sessao = sessao_do_jwt(ctx, chave_bearer(request.headers.get("authorization")))
+            return await call_next(request)
         if (
             caminho in ISENTAS
-            or (request.method == "GET" and caminho.startswith("/operacao/convites/") and len(caminho.split("/")) == 4)
             or caminho.startswith(f"{PREFIXO_WEBHOOK}/")
             or request.method == "OPTIONS"
         ):

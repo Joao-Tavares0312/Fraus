@@ -239,7 +239,7 @@ def listar_convites(identificador: str, ctx: Contexto = Depends(obter_contexto))
     if equipe is None:
         raise HTTPException(404, "equipe inexistente")
     exigir_gestao(ctx, equipe)
-    return {"convites": [{"id": c["id"], "papel": c["papel"], "expira_em": c["expira_em"], "limite": c["limite"], "usos": len(c["aceitos"]), "revogado": c["revogado"]} for c in ctx.banco.documentos("convite") if c["equipe_id"] == identificador]}
+    return {"convites": [{"id": c["id"], "papel": c["papel"], "expira_em": c["expira_em"], "limite": c["limite"], "usos": len(set(c["aceitos"]) | set(c.get("reservas", []))), "revogado": c["revogado"]} for c in ctx.banco.documentos("convite") if c["equipe_id"] == identificador]}
 
 
 @router.post("/equipes/{identificador}/convites/{chave}/revogar")
@@ -259,7 +259,9 @@ def revogar_convite(identificador: str, chave: str, ctx: Contexto = Depends(obte
 
 @router.get("/convites/{token}")
 def ver_convite(token: str, ctx: Contexto = Depends(obter_contexto)):
-    convite = ctx.banco.convite_valido(token)
+    # Com sessao, quem criou a conta por este link ainda ve o convite: a vaga
+    # que ele ocupa e a dela, e a tela de aceite comeca por esta leitura.
+    convite = ctx.banco.convite_valido(token, ctx.usuario_id)
     equipe = ctx.banco.documento("equipe", convite["equipe_id"]) if convite else None
     if not equipe:
         raise HTTPException(410, "convite invalido, expirado ou esgotado")

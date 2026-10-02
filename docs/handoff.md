@@ -134,6 +134,43 @@ ONNX (`FRAUS_IRONIA_BACKEND=laya-onnx` no projeto `fraus-api`). O BERTimbau de
 ironia vai no pacote e não é carregado. Emoção e satisfação são BERTimbau. O
 Laya treinado em 02/10 não foi promovido (§2.0).
 
+**Regras que entraram com a auditoria de 02/10/2026 (PR #82)** — cada uma
+parece detalhe até alguém desfazer:
+
+- **O dia de uma conversa é o dia de Brasília**, fixo em −03:00, na API
+  (`fraus/fuso.py`) e na dashboard (`dashboard/lib/fuso.ts`). Antes a API
+  agrupava pelo offset em que o instante foi gravado e a tela pelo fuso do
+  navegador: a mesma conversa das 22:30 caía em dias diferentes no gráfico e na
+  tabela. A coluna `iniciada_em` é gravada já em −03:00, porque o recorte por
+  período corta os dez primeiros caracteres dela; `migrar()` reescreve as
+  linhas antigas (`_normalizar_inicios`). Offset fixo, e não
+  `America/Sao_Paulo`: o fuso nomeado devolve −02:00 nos verões anteriores a
+  2019 e a tela discordaria da API.
+- **Arquivo que não traz id de conversa não grava com o id do leitor**
+  (`fraus/api/identidade.py`). Arquivo sem coluna de conversa virava a conversa
+  `conversa`, e o segundo arquivo importado apagava o primeiro. Na importação
+  da pasta o id é `arquivo:<nome>:<resumo do caminho>` — reimportar o mesmo
+  arquivo corrige, outro arquivo é outra conversa. No upload de Analisar segue
+  `analise:<resumo do conteúdo>`.
+- **Transcrição em prosa traz a hora e não o dia** (`Extracao.tem_data`
+  falso). A hora é lida como relógio de Brasília; o dia é o do envio e fica
+  **fora do id**, senão o mesmo arquivo reenviado amanhã contaria duas vezes no
+  NPS. O reenvio conserva o dia já gravado. A resposta avisa que o dia é o do
+  envio. **Decisão em aberto, do João:** aceitar essas transcrições nos
+  indicadores com o dia do envio (como está) ou pedir o dia a quem envia.
+- **Convite de equipe é consumido no cadastro, não só no aceite.** A conta
+  criada pelo link reserva um uso (`reservas` no documento do convite) na mesma
+  transação; antes, um link de limite 1 criava contas sem fim numa instalação
+  fechada por código. A reserva não filia: entrar na equipe continua sendo o
+  aceite com JWT. Quem tem a reserva ainda vê o convite aberto — por isso a
+  prévia pública lê a sessão quando ela vem.
+- **Repontuar retoma, não recomeça.** Havendo conversa na régua anterior, só
+  elas são percorridas. **Limite conhecido:** na Vercel a thread pode parar
+  quando a instância é suspensa, e ninguém retoma sozinho — a execução parada
+  segura o lock até o heartbeat vencer (15 min) e alguém precisa pedir de
+  novo. Resolver de vez pede um executor fora da requisição (cron ou fila), e
+  isso é decisão de infraestrutura.
+
 O texto abaixo é o registro de 30/09 e continua valendo no que não foi citado
 acima.
 
@@ -344,7 +381,7 @@ você lança o uvicorn não decide mais o motor — mas confira mesmo assim.
 ### Comandos de verificação
 
 ```bash
-uv run pytest -q                 # 1163 passed, 6 skipped, 1 deselected (02/10/2026)
+uv run pytest -q                 # 1213 passed, 6 skipped, 1 deselected (02/10/2026, ramo da auditoria)
 uv run pytest -m lento           # o de minutos, obrigatório ao mexer no gerador
 cd dashboard && npx tsc --noEmit # tipos
 cd dashboard && npm run contraste # WCAG AA, por cálculo
@@ -912,6 +949,13 @@ o visual do site foi alinhado ao Instrumento.
 classe e de tempo mediano de resposta.
 
 ### P2 — Decisões do João
+
+O repositório ficou **público** em 02/10/2026 e a documentação ainda o
+descreve como privado (`CLAUDE.md`, `mkdocs-publico.yml`, `tests/test_documentacao.py`):
+reescrever os textos ou voltar a privado. Com ele público, ligar no GitHub
+*secret scanning*, *push protection* e proteção do ramo `main`. Fixar as
+versões de `requirements.txt` (hoje com `>=`), que é o que a Vercel instala.
+Dia das transcrições sem data e executor da repontuação: ver §2.
 
 Empresa fictícia (não definida) e tema claro (dark-only hoje). O pin do
 `scikit-learn==1.6.1` e a remoção de `content/fraus` já foram feitos.

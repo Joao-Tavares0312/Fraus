@@ -15,6 +15,13 @@ O estado e o lock moram no BANCO. Isso impede duas replicas de iniciarem o
 mesmo trabalho e faz o progresso continuar visivel quando o GET cai em outro
 processo. Uma execucao sem heartbeat por 15 minutos e considerada abandonada e
 pode ser retomada; as linhas ja atualizadas continuam marcadas com a regua nova.
+
+A RETOMADA NAO RECOMECA (02/10/2026): `iniciar` percorre so o que ainda esta na
+regua anterior. Isso importa onde a thread nao tem garantia de terminar -- numa
+funcao serverless a instancia pode ser suspensa depois da resposta, e o
+trabalho para onde estava. LIMITE CONHECIDO: nesse ambiente ninguem retoma
+sozinho; a execucao parada segura o lock ate o heartbeat vencer, e alguem
+precisa pedir de novo. Cada pedido avanca; nenhum se perde.
 """
 
 import threading
@@ -59,6 +66,15 @@ class Repontuacao:
             # Ordem por id: deterministica nos dois dialetos (sem ORDER BY o
             # Postgres nao promete ordem), e quem retoma sabe onde parou.
             conversas = sorted((c for c, _ in ctx.banco.todas()), key=lambda c: c.id)
+            # RETOMADA: havendo conversa na regua anterior, so elas entram. O
+            # que uma execucao interrompida ja regravou esta marcado com a
+            # regua nova e nao e refeito -- senao, num servidor que derruba a
+            # thread no meio, cada tentativa refaria o comeco e nenhuma
+            # chegaria ao fim. Com o banco em dia o pedido continua valendo
+            # para tudo: quem pediu quer refazer.
+            defasadas = ctx.banco.ids_defasadas(curadoria.versao, regua)
+            pendentes = [c for c in conversas if c.id in defasadas]
+            conversas = pendentes or conversas
             iniciado_em = _agora()
             expirado_antes_de = (
                 datetime.now(timezone.utc) - timedelta(minutes=15)

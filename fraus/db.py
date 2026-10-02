@@ -903,11 +903,61 @@ class Banco:
         else:
             conexao.execute("BEGIN IMMEDIATE")
 
-    def convite_valido(self, token: str) -> dict | None:
+    @staticmethod
+    def _convite_aberto(convite: dict | None, usuario_id: int | None = None) -> bool:
+        """Existe, nao foi revogado, nao expirou e ainda tem vaga para esta pessoa.
+
+        A vaga e ocupada por quem aceitou E por quem criou conta pelo link
+        (`reservas`). Ate 02/10/2026 so o aceite contava, e o cadastro nao
+        aceita: um link de limite 1 criava contas sem fim. Quem tem reserva
+        continua vendo o convite aberto -- a vaga e dela.
+        """
+        if not convite or convite.get("revogado"):
+            return False
+        if datetime.fromisoformat(convite["expira_em"]) <= datetime.now(timezone.utc):
+            return False
+        reservas = convite.get("reservas", [])
+        if usuario_id is not None and usuario_id in reservas:
+            return True
+        return len(set(convite["aceitos"]) | set(reservas)) < convite["limite"]
+
+    def convite_valido(self, token: str, usuario_id: int | None = None) -> dict | None:
         convite = self.documento("convite", hashlib.sha256(token.encode()).hexdigest())
-        if not convite or convite.get("revogado") or datetime.fromisoformat(convite["expira_em"]) <= datetime.now(timezone.utc) or len(convite["aceitos"]) >= convite["limite"]:
-            return None
-        return convite
+        return convite if self._convite_aberto(convite, usuario_id) else None
+
+    def criar_usuario_por_convite(
+        self, nome: str, email: str, senha_hash: str, criado_em: str, token: str
+    ) -> dict | None:
+        """Cria a conta e reserva um uso do convite na MESMA transacao.
+
+        None se o convite nao tem mais vaga -- e a conta nao nasce. A reserva
+        nao filia ninguem: a pessoa entra na equipe no aceite, com sessao. A
+        conta nasce sem canal nenhum (`origem_convite`).
+        """
+        chave = hashlib.sha256(token.encode()).hexdigest()
+        with self._conectar() as conexao:
+            self._travar_operacao(conexao)
+            linha = conexao.execute(
+                "SELECT payload FROM operacao_registros WHERE tipo = ? AND id = ?", ("convite", chave)
+            ).fetchone()
+            convite = json.loads(linha["payload"]) if linha else None
+            if not self._convite_aberto(convite):
+                return None
+            identificador = self._inserir(
+                conexao,
+                "INSERT INTO usuarios (nome, email, senha_hash, papel, criado_em) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (nome, email, senha_hash, "usuario", criado_em),
+            )
+            convite.setdefault("reservas", []).append(identificador)
+            politica = {"canais": [], "exporta_ate": None, "origem_convite": True}
+            conexao.executemany(
+                self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                [(tipo, i, json.dumps(valor, ensure_ascii=False, sort_keys=True), criado_em)
+                 for tipo, i, valor in (("permissao", str(identificador), politica), ("convite", chave, convite))],
+            )
+        return {"id": identificador, "nome": nome, "email": email, "papel": "usuario",
+                "ativo": True, "criado_em": criado_em}
 
     def aceitar_convite(self, token: str, usuario_id: int) -> dict | None:
         """Consome uso, filia membro e aplica escopo inicial atomicamente."""
@@ -925,13 +975,14 @@ class Banco:
                 return None
             if usuario_id in equipe["membros"]:
                 return {"equipe_id": c["equipe_id"], "nome": equipe["nome"], "papel": equipe.get("papeis", {}).get(str(usuario_id), "membro"), "ja_membro": True}
-            if len(c["aceitos"]) >= c["limite"]:
+            if not self._convite_aberto(c, usuario_id):
                 return None
             if len(equipe["membros"]) >= 100:
                 return None
             equipe["membros"].append(usuario_id)
             equipe.setdefault("papeis", {})[str(usuario_id)] = c["papel"]
             c["aceitos"].append(usuario_id)
+            c["reservas"] = [i for i in c.get("reservas", []) if i != usuario_id]
             registros = [("equipe", c["equipe_id"], equipe), ("convite", chave, c)]
             politica = ler("permissao", str(usuario_id))
             if politica and politica.get("origem_convite"):
@@ -1471,11 +1522,14 @@ class Banco:
         return registro
 
     def criar_usuario(
-        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str, escopo_convite: bool = False
+        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str
     ) -> dict:
         """E-mail duplicado deixa o IntegrityError propagar: a unicidade e
         garantia do banco, e a borda HTTP traduz em 409 -- o mesmo desenho da
-        coluna ausente no driver de CSV."""
+        coluna ausente no driver de CSV.
+
+        Conta que nasce de convite de equipe usa `criar_usuario_por_convite`.
+        """
         with self._conectar() as conexao:
             identificador = self._inserir(
                 conexao,
@@ -1483,9 +1537,6 @@ class Banco:
                 "VALUES (?, ?, ?, ?, ?)",
                 (nome, email, senha_hash, papel, criado_em),
             )
-            if escopo_convite:
-                conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
-                    ("permissao", str(identificador), json.dumps({"canais": [], "exporta_ate": None, "origem_convite": True}), criado_em))
         return {
             "id": identificador,
             "nome": nome,
@@ -1718,6 +1769,33 @@ class Banco:
                     emojis[linha["termo"]] = float(linha["peso"])
         return Curadoria(palavras=palavras, emojis=emojis, versao=self.lexico_versao())
 
+    @staticmethod
+    def _regra_de_defasagem(lexico_vigente: int, regua_vigente: str | None) -> tuple[str, tuple]:
+        """O predicado SQL de "pontuada com outra regua", e os parametros dele.
+
+        Uma regra so para a contagem que a tela mostra e para a lista que a
+        repontuacao percorre -- ver `contar_defasadas` para o porque de cada
+        termo. A string e montada so com trechos FIXOS; o que vem de fora entra
+        por parametro.
+        """
+        if regua_vigente is None:
+            return "COALESCE(lexico_versao, 0) <> ?", (lexico_vigente,)
+        return (
+            "COALESCE(lexico_versao, 0) <> ? OR regua IS NULL OR regua <> ?",
+            (lexico_vigente, regua_vigente),
+        )
+
+    def ids_defasadas(self, lexico_vigente: int, regua_vigente: str | None) -> set[str]:
+        """Quais conversas ainda estao na regua anterior. A versao do lexico
+        chega por parametro: a repontuacao le a curadoria UMA vez, e perguntar
+        a versao de novo aqui poderia responder outra."""
+        regra, parametros = self._regra_de_defasagem(lexico_vigente, regua_vigente)
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                f"SELECT id FROM conversas WHERE {regra}", parametros
+            ).fetchall()
+        return {linha["id"] for linha in linhas}
+
     def contar_defasadas(
         self, regua_vigente: str | None = None, canais=None
     ) -> tuple[int, int]:
@@ -1751,14 +1829,7 @@ class Banco:
             if not canais:
                 # `IN ()` nao e SQL valido, e sem canal nao ha o que contar.
                 return 0, 0
-        vigente = self.lexico_versao()
-        # A string do SQL e montada so com trechos FIXOS deste metodo; o que vem
-        # de fora (versao, regua, canais) entra sempre por parametro.
-        regra_lexico = "COALESCE(lexico_versao, 0) <> ?"
-        parametros: tuple = (vigente,)
-        if regua_vigente is not None:
-            regra_lexico += " OR regua IS NULL OR regua <> ?"
-            parametros = (vigente, regua_vigente)
+        regra_lexico, parametros = self._regra_de_defasagem(self.lexico_versao(), regua_vigente)
         onde = ""
         if canais is not None:
             onde = f" WHERE canal IN ({', '.join('?' for _ in canais)})"
