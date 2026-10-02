@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fraus.api.caminhos import resolver_dentro_da_raiz
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoImportacao, PedidoPreviaImportacao
+from fraus.api.identidade import id_pelo_caminho, no_dia_ja_gravado
 from fraus.api.rotas.analise import resumo_da_previa
 from fraus.api.periodo import no_recorte, recorte_ou_400
 from fraus.api.repontuacao import RepontuacaoEmAndamento
@@ -143,13 +144,25 @@ def importar(
             ),
         )
 
+    conversas = resultado.conversas
+    if resultado.id_do_arquivo:
+        # O arquivo nao trouxe id: o leitor devolveu "conversa" (ou o nome do
+        # arquivo), e gravar assim faria o proximo arquivo apagar este.
+        identificador = id_pelo_caminho(caminho.relative_to(ctx.raiz.resolve()))
+        gravada = None if resultado.tem_data else ctx.banco.buscar(identificador)
+        conversas = [
+            no_dia_ja_gravado(c, gravada[0] if gravada else None).model_copy(
+                update={"id": identificador})
+            for c in conversas
+        ]
+
     faixas = ctx.faixas_vigentes()
     # UMA leitura de curadoria por importacao, e e a MESMA que grava a versao:
     # reler abriria janela para a conversa ser pontuada com um lexico e marcada
     # com a versao de outro -- o defeito exato que a versao existe para impedir.
     curadoria = ctx.curadoria_vigente()
     regua = ctx.regua_vigente()
-    for conversa in resultado.conversas:
+    for conversa in conversas:
         score = ctx.motor.pontuar_conversa(conversa, curadoria)
         # A coluna `categoria` e o retrato do instante da importacao; quem
         # le nao a consome (ver `categoria_de`), mas gravar com a faixa
