@@ -19,6 +19,26 @@ export const FATOS_DO_MODELO = {
   llms: 0,
 } as const;
 
+/**
+ * AS SETE FAMILIAS DO VETOR, com a contagem REAL de features de cada uma, na
+ * ordem de `NOMES_FEATURES`. A constelacao da vitrine desenha um no por
+ * feature agrupado por familia, e a lista do Sistema escreve a contagem: se
+ * ela fosse desenho, quem contasse os pontos leria numero falso.
+ *
+ * `tests/test_derivacoes_dashboard.py` le estes pares `chave`/`qtd` como
+ * texto e compara com o agrupamento de `NOMES_FEATURES`. A soma bate com
+ * `FATOS_DO_MODELO.features` por `lib/vitrine/coreografia.test.ts`.
+ */
+export const FAMILIAS_DO_VETOR = [
+  { chave: "texto", rotulo: "Texto", qtd: 4, leitura: "BERTimbau fine-tunado, probabilidade por mensagem — por isso a nota aponta a fala que a puxou." },
+  { chave: "emoji", rotulo: "Emoji", qtd: 5, leitura: "Emoji Sentiment Ranking, com a posição do emoji na mensagem." },
+  { chave: "tempo", rotulo: "Tempo", qtd: 7, leitura: "Latência, duração, turnos, escalação e abandono — derivados dos horários, nunca gravados." },
+  { chave: "emocao", rotulo: "Emoção", qtd: 8, leitura: "Sete classes, com desprezo derivado da díade raiva + nojo." },
+  { chave: "lexico", rotulo: "Léxico", qtd: 3, leitura: "SentiLex-PT02 com escopo de negação: “não está bom” não é “bom”." },
+  { chave: "estilo", rotulo: "Estilo", qtd: 6, leitura: "Caixa alta, pontuação, alongamento, palavrão e censura." },
+  { chave: "incongruencia", rotulo: "Incongruência", qtd: 6, leitura: "Emoji contra texto, contraste, hipérbole, aspas e elogio contra situação negativa." },
+] as const;
+
 /** Em duas casas ("07", "00"), como o LED e a telemetria os mostram. */
 export function emDuasCasas(n: number): string {
   return String(n).padStart(2, "0");
