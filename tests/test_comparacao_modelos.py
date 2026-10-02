@@ -212,3 +212,20 @@ def test_modelo_pode_prever_classe_que_o_conjunto_nao_tem():
 def test_classe_fora_da_matriz_e_erro_nomeado():
     with pytest.raises(ValueError, match="classe 6"):
         matriz_de_confusao([0, 1], [0, 6], classes=[0, 1])
+
+
+# --- ressalvas: o que se soube sobre a medicao DEPOIS de ela ser feita --------
+
+def test_ressalva_do_laudo_aparece_no_relatorio():
+    laudo = {**_laudo(), "ressalvas": ["A divisão do corpus de ironia estava errada."]}
+    validar_laudo(laudo)
+    texto = relatorio_markdown(laudo)
+    assert "## Ressalvas" in texto
+    assert "A divisão do corpus de ironia estava errada." in texto
+    assert "## Ressalvas" not in relatorio_markdown(_laudo())
+
+
+@pytest.mark.parametrize("ressalvas", ["texto solto", [""], [3], [None]])
+def test_ressalva_malformada_e_recusada(ressalvas):
+    with pytest.raises(ValueError):
+        validar_laudo({**_laudo(), "ressalvas": ressalvas})

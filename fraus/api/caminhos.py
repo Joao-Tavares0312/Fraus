@@ -124,6 +124,11 @@ CAMINHO_METRICAS_IRONIA = artefato(
 CAMINHO_COMPARACAO = artefato(
     "FRAUS_CAMINHO_COMPARACAO", "modelos/comparacao_modelos.json"
 )
+# O laudo versionado com o codigo. `modelos/` fica fora do git e, na Vercel, e
+# trocada inteira pelo ZIP dos pesos: um laudo so ali nunca chegaria a
+# producao. Este e medicao, nao peso -- 31 KB de JSON que a banca pode auditar
+# no repositorio. O laudo local, quando existe, vence este.
+CAMINHO_COMPARACAO_PUBLICADA = RAIZ_PROJETO / "fraus" / "dados" / "comparacao_modelos.json"
 
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
 # (uso local, ver README) -- entao ele nao pode aceitar caminho arbitrario do

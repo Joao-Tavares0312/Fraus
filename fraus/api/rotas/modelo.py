@@ -16,7 +16,8 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 
-from fraus.api.caminhos import (CAMINHO_COMPARACAO, CAMINHO_METRICAS,
+from fraus.api.caminhos import (CAMINHO_COMPARACAO,
+                                CAMINHO_COMPARACAO_PUBLICADA, CAMINHO_METRICAS,
                                 CAMINHO_METRICAS_EMOCAO,
                                 CAMINHO_METRICAS_IRONIA, CAMINHO_ONNX_LAYA,
                                 backend_declarado, backend_ironia_declarado,
@@ -224,7 +225,10 @@ LIMIAR_IRONIA_COMPARACAO = 0.5
 
 def _laudo_de_comparacao() -> dict | None:
     try:
+        # O laudo local (recem-saido do notebook) vence o versionado com o codigo.
         laudo = metricas_de(CAMINHO_COMPARACAO)
+        if laudo is None:
+            laudo = metricas_de(CAMINHO_COMPARACAO_PUBLICADA)
         if laudo is not None:
             validar_laudo(laudo)
     except ValueError as erro:  # inclui JSON invalido
@@ -247,8 +251,8 @@ def relatorio_comparacao() -> PlainTextResponse:
     if laudo is None:
         raise HTTPException(
             status_code=404,
-            detail="não há laudo de comparação: o notebook 07 ainda não gravou "
-                   "modelos/comparacao_modelos.json",
+            detail="não há laudo de comparação: nem modelos/comparacao_modelos.json "
+                   "nem o laudo versionado em fraus/dados/",
         )
     return PlainTextResponse(
         relatorio_markdown(laudo),

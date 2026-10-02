@@ -1,0 +1,1300 @@
+{
+  "schema": 1,
+  "gerado_em": "2026-10-02T15:50:28+00:00",
+  "rodada_de_fumaca": false,
+  "nomes_modelos": {
+    "bertimbau": "BERTimbau fine-tunado",
+    "laya_sem_treino": "Laya sem treino",
+    "laya_treinado": "Laya treinado"
+  },
+  "conjuntos": [
+    {
+      "id": "emocao_interno",
+      "tarefa": "emocao",
+      "nome": "Emoção — teste interno",
+      "independente": false,
+      "exemplos": 7421,
+      "classes": [
+        "alegria",
+        "tristeza",
+        "raiva",
+        "medo",
+        "nojo",
+        "surpresa",
+        "neutro"
+      ],
+      "modelos": {
+        "bertimbau": {
+          "acuracia": 0.655033014418542,
+          "f1_macro": 0.5844618565131768,
+          "matriz": [
+            [
+              2231,
+              75,
+              133,
+              15,
+              7,
+              108,
+              284
+            ],
+            [
+              15,
+              303,
+              40,
+              11,
+              16,
+              22,
+              24
+            ],
+            [
+              30,
+              52,
+              517,
+              15,
+              33,
+              61,
+              105
+            ],
+            [
+              1,
+              6,
+              1,
+              82,
+              6,
+              4,
+              4
+            ],
+            [
+              2,
+              9,
+              16,
+              8,
+              51,
+              2,
+              7
+            ],
+            [
+              43,
+              28,
+              53,
+              5,
+              6,
+              526,
+              60
+            ],
+            [
+              303,
+              142,
+              403,
+              30,
+              37,
+              338,
+              1151
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 2853,
+              "vp": 2231,
+              "fp": 394,
+              "fn": 622,
+              "vn": 4174,
+              "precisao": 0.8499047619047619,
+              "recall": 0.7819838766211006,
+              "f1": 0.8145308506754291
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 431,
+              "vp": 303,
+              "fp": 312,
+              "fn": 128,
+              "vn": 6678,
+              "precisao": 0.4926829268292683,
+              "recall": 0.703016241299304,
+              "f1": 0.5793499043977055
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 813,
+              "vp": 517,
+              "fp": 646,
+              "fn": 296,
+              "vn": 5962,
+              "precisao": 0.4445399828030954,
+              "recall": 0.6359163591635917,
+              "f1": 0.5232793522267207
+            },
+            {
+              "classe": "medo",
+              "exemplos": 104,
+              "vp": 82,
+              "fp": 84,
+              "fn": 22,
+              "vn": 7233,
+              "precisao": 0.4939759036144578,
+              "recall": 0.7884615384615384,
+              "f1": 0.6074074074074073
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 95,
+              "vp": 51,
+              "fp": 105,
+              "fn": 44,
+              "vn": 7221,
+              "precisao": 0.3269230769230769,
+              "recall": 0.5368421052631579,
+              "f1": 0.40637450199203184
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 721,
+              "vp": 526,
+              "fp": 535,
+              "fn": 195,
+              "vn": 6165,
+              "precisao": 0.4957587181903864,
+              "recall": 0.7295423023578363,
+              "f1": 0.5903479236812571
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 2404,
+              "vp": 1151,
+              "fp": 484,
+              "fn": 1253,
+              "vn": 4533,
+              "precisao": 0.7039755351681957,
+              "recall": 0.47878535773710484,
+              "f1": 0.5699430552116861
+            }
+          ]
+        },
+        "laya_sem_treino": {
+          "acuracia": 0.3290661635898127,
+          "f1_macro": 0.2963714542263695,
+          "matriz": [
+            [
+              794,
+              150,
+              68,
+              71,
+              504,
+              309,
+              957
+            ],
+            [
+              9,
+              217,
+              26,
+              16,
+              77,
+              26,
+              60
+            ],
+            [
+              19,
+              63,
+              126,
+              22,
+              306,
+              50,
+              227
+            ],
+            [
+              0,
+              12,
+              0,
+              62,
+              13,
+              10,
+              7
+            ],
+            [
+              1,
+              19,
+              12,
+              5,
+              46,
+              5,
+              7
+            ],
+            [
+              23,
+              47,
+              15,
+              18,
+              122,
+              228,
+              268
+            ],
+            [
+              109,
+              175,
+              127,
+              66,
+              601,
+              357,
+              969
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 2853,
+              "vp": 794,
+              "fp": 161,
+              "fn": 2059,
+              "vn": 4407,
+              "precisao": 0.831413612565445,
+              "recall": 0.27830354013319314,
+              "f1": 0.41701680672268915
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 431,
+              "vp": 217,
+              "fp": 466,
+              "fn": 214,
+              "vn": 6524,
+              "precisao": 0.31771595900439237,
+              "recall": 0.5034802784222738,
+              "f1": 0.3895870736086176
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 813,
+              "vp": 126,
+              "fp": 248,
+              "fn": 687,
+              "vn": 6360,
+              "precisao": 0.33689839572192515,
+              "recall": 0.15498154981549817,
+              "f1": 0.2122999157540017
+            },
+            {
+              "classe": "medo",
+              "exemplos": 104,
+              "vp": 62,
+              "fp": 198,
+              "fn": 42,
+              "vn": 7119,
+              "precisao": 0.23846153846153847,
+              "recall": 0.5961538461538461,
+              "f1": 0.34065934065934067
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 95,
+              "vp": 46,
+              "fp": 1623,
+              "fn": 49,
+              "vn": 5703,
+              "precisao": 0.02756141402037148,
+              "recall": 0.4842105263157895,
+              "f1": 0.05215419501133788
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 721,
+              "vp": 228,
+              "fp": 757,
+              "fn": 493,
+              "vn": 5943,
+              "precisao": 0.23147208121827412,
+              "recall": 0.31622746185852985,
+              "f1": 0.2672919109026964
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 2404,
+              "vp": 969,
+              "fp": 1526,
+              "fn": 1435,
+              "vn": 3491,
+              "precisao": 0.388376753507014,
+              "recall": 0.4030782029950083,
+              "f1": 0.3955909369259032
+            }
+          ]
+        },
+        "laya_treinado": {
+          "acuracia": 0.6884516911467458,
+          "f1_macro": 0.6023212229454006,
+          "matriz": [
+            [
+              2399,
+              43,
+              67,
+              10,
+              4,
+              55,
+              275
+            ],
+            [
+              26,
+              282,
+              44,
+              10,
+              6,
+              19,
+              44
+            ],
+            [
+              73,
+              37,
+              467,
+              7,
+              14,
+              49,
+              166
+            ],
+            [
+              6,
+              5,
+              5,
+              74,
+              3,
+              4,
+              7
+            ],
+            [
+              7,
+              7,
+              31,
+              5,
+              31,
+              3,
+              11
+            ],
+            [
+              66,
+              23,
+              39,
+              3,
+              3,
+              484,
+              103
+            ],
+            [
+              394,
+              75,
+              290,
+              20,
+              17,
+              236,
+              1372
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 2853,
+              "vp": 2399,
+              "fp": 572,
+              "fn": 454,
+              "vn": 3996,
+              "precisao": 0.8074722315718613,
+              "recall": 0.84086926042762,
+              "f1": 0.8238324175824175
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 431,
+              "vp": 282,
+              "fp": 190,
+              "fn": 149,
+              "vn": 6800,
+              "precisao": 0.597457627118644,
+              "recall": 0.654292343387471,
+              "f1": 0.6245847176079734
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 813,
+              "vp": 467,
+              "fp": 476,
+              "fn": 346,
+              "vn": 6132,
+              "precisao": 0.49522799575821846,
+              "recall": 0.5744157441574416,
+              "f1": 0.5318906605922552
+            },
+            {
+              "classe": "medo",
+              "exemplos": 104,
+              "vp": 74,
+              "fp": 55,
+              "fn": 30,
+              "vn": 7262,
+              "precisao": 0.5736434108527132,
+              "recall": 0.7115384615384616,
+              "f1": 0.6351931330472104
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 95,
+              "vp": 31,
+              "fp": 47,
+              "fn": 64,
+              "vn": 7279,
+              "precisao": 0.3974358974358974,
+              "recall": 0.3263157894736842,
+              "f1": 0.3583815028901734
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 721,
+              "vp": 484,
+              "fp": 366,
+              "fn": 237,
+              "vn": 6334,
+              "precisao": 0.5694117647058824,
+              "recall": 0.6712898751733704,
+              "f1": 0.6161680458306812
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 2404,
+              "vp": 1372,
+              "fp": 606,
+              "fn": 1032,
+              "vn": 4411,
+              "precisao": 0.6936299292214358,
+              "recall": 0.5707154742096506,
+              "f1": 0.6261980830670928
+            }
+          ]
+        }
+      },
+      "comparacao": {
+        "candidato": "laya_treinado",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": 0.017859366432223744,
+        "ic95": [
+          0.0020571752403730106,
+          0.033296189386902944
+        ],
+        "mcnemar": {
+          "so_candidato": 742,
+          "so_referencia": 494,
+          "p_valor": 1.8032028194350526e-12
+        },
+        "diferenca_demonstrada": true
+      }
+    },
+    {
+      "id": "emocao_xed_pt",
+      "tarefa": "emocao",
+      "nome": "Emoção — XED-pt",
+      "independente": true,
+      "exemplos": 4286,
+      "classes": [
+        "alegria",
+        "tristeza",
+        "raiva",
+        "medo",
+        "nojo",
+        "surpresa",
+        "neutro"
+      ],
+      "modelos": {
+        "bertimbau": {
+          "acuracia": 0.28581427904806345,
+          "f1_macro": 0.28046462788509513,
+          "matriz": [
+            [
+              450,
+              17,
+              32,
+              5,
+              6,
+              111,
+              377
+            ],
+            [
+              38,
+              133,
+              111,
+              14,
+              8,
+              87,
+              189
+            ],
+            [
+              61,
+              51,
+              320,
+              7,
+              1,
+              251,
+              403
+            ],
+            [
+              57,
+              48,
+              105,
+              33,
+              1,
+              165,
+              227
+            ],
+            [
+              23,
+              22,
+              89,
+              5,
+              8,
+              54,
+              126
+            ],
+            [
+              59,
+              21,
+              55,
+              5,
+              7,
+              281,
+              223
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 998,
+              "vp": 450,
+              "fp": 238,
+              "fn": 548,
+              "vn": 3050,
+              "precisao": 0.6540697674418605,
+              "recall": 0.45090180360721444,
+              "f1": 0.5338078291814946
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 580,
+              "vp": 133,
+              "fp": 159,
+              "fn": 447,
+              "vn": 3547,
+              "precisao": 0.4554794520547945,
+              "recall": 0.2293103448275862,
+              "f1": 0.305045871559633
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 1094,
+              "vp": 320,
+              "fp": 392,
+              "fn": 774,
+              "vn": 2800,
+              "precisao": 0.449438202247191,
+              "recall": 0.29250457038391225,
+              "f1": 0.35437430786268
+            },
+            {
+              "classe": "medo",
+              "exemplos": 636,
+              "vp": 33,
+              "fp": 36,
+              "fn": 603,
+              "vn": 3614,
+              "precisao": 0.4782608695652174,
+              "recall": 0.05188679245283019,
+              "f1": 0.09361702127659574
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 327,
+              "vp": 8,
+              "fp": 23,
+              "fn": 319,
+              "vn": 3936,
+              "precisao": 0.25806451612903225,
+              "recall": 0.024464831804281346,
+              "f1": 0.0446927374301676
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 651,
+              "vp": 281,
+              "fp": 668,
+              "fn": 370,
+              "vn": 2967,
+              "precisao": 0.29610115911485774,
+              "recall": 0.43164362519201227,
+              "f1": 0.35125
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 0,
+              "vp": 0,
+              "fp": 1545,
+              "fn": 0,
+              "vn": 2741,
+              "precisao": 0.0,
+              "recall": null,
+              "f1": null
+            }
+          ]
+        },
+        "laya_sem_treino": {
+          "acuracia": 0.19342043863742417,
+          "f1_macro": 0.23369884937572408,
+          "matriz": [
+            [
+              245,
+              53,
+              15,
+              15,
+              124,
+              128,
+              418
+            ],
+            [
+              17,
+              173,
+              29,
+              19,
+              72,
+              68,
+              202
+            ],
+            [
+              37,
+              117,
+              68,
+              30,
+              243,
+              147,
+              452
+            ],
+            [
+              13,
+              70,
+              18,
+              59,
+              110,
+              117,
+              249
+            ],
+            [
+              13,
+              35,
+              25,
+              4,
+              83,
+              37,
+              130
+            ],
+            [
+              34,
+              39,
+              7,
+              11,
+              91,
+              201,
+              268
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 998,
+              "vp": 245,
+              "fp": 114,
+              "fn": 753,
+              "vn": 3174,
+              "precisao": 0.6824512534818942,
+              "recall": 0.24549098196392785,
+              "f1": 0.3610906411201179
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 580,
+              "vp": 173,
+              "fp": 314,
+              "fn": 407,
+              "vn": 3392,
+              "precisao": 0.35523613963039014,
+              "recall": 0.2982758620689655,
+              "f1": 0.32427366447985007
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 1094,
+              "vp": 68,
+              "fp": 94,
+              "fn": 1026,
+              "vn": 3098,
+              "precisao": 0.41975308641975306,
+              "recall": 0.062157221206581355,
+              "f1": 0.10828025477707007
+            },
+            {
+              "classe": "medo",
+              "exemplos": 636,
+              "vp": 59,
+              "fp": 79,
+              "fn": 577,
+              "vn": 3571,
+              "precisao": 0.427536231884058,
+              "recall": 0.09276729559748427,
+              "f1": 0.1524547803617571
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 327,
+              "vp": 83,
+              "fp": 640,
+              "fn": 244,
+              "vn": 3319,
+              "precisao": 0.11479944674965421,
+              "recall": 0.25382262996941896,
+              "f1": 0.1580952380952381
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 651,
+              "vp": 201,
+              "fp": 497,
+              "fn": 450,
+              "vn": 3138,
+              "precisao": 0.28796561604584525,
+              "recall": 0.3087557603686636,
+              "f1": 0.2979985174203113
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 0,
+              "vp": 0,
+              "fp": 1719,
+              "fn": 0,
+              "vn": 2567,
+              "precisao": 0.0,
+              "recall": null,
+              "f1": null
+            }
+          ]
+        },
+        "laya_treinado": {
+          "acuracia": 0.24545030331311246,
+          "f1_macro": 0.2471202547759986,
+          "matriz": [
+            [
+              465,
+              11,
+              18,
+              4,
+              3,
+              97,
+              400
+            ],
+            [
+              51,
+              106,
+              76,
+              9,
+              4,
+              78,
+              256
+            ],
+            [
+              90,
+              26,
+              210,
+              4,
+              2,
+              219,
+              543
+            ],
+            [
+              71,
+              30,
+              64,
+              26,
+              0,
+              142,
+              303
+            ],
+            [
+              36,
+              9,
+              58,
+              3,
+              3,
+              47,
+              171
+            ],
+            [
+              71,
+              22,
+              41,
+              3,
+              3,
+              242,
+              269
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 998,
+              "vp": 465,
+              "fp": 319,
+              "fn": 533,
+              "vn": 2969,
+              "precisao": 0.5931122448979592,
+              "recall": 0.46593186372745493,
+              "f1": 0.521885521885522
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 580,
+              "vp": 106,
+              "fp": 98,
+              "fn": 474,
+              "vn": 3608,
+              "precisao": 0.5196078431372549,
+              "recall": 0.18275862068965518,
+              "f1": 0.27040816326530615
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 1094,
+              "vp": 210,
+              "fp": 257,
+              "fn": 884,
+              "vn": 2935,
+              "precisao": 0.44967880085653106,
+              "recall": 0.19195612431444242,
+              "f1": 0.2690582959641256
+            },
+            {
+              "classe": "medo",
+              "exemplos": 636,
+              "vp": 26,
+              "fp": 23,
+              "fn": 610,
+              "vn": 3627,
+              "precisao": 0.5306122448979592,
+              "recall": 0.040880503144654086,
+              "f1": 0.07591240875912408
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 327,
+              "vp": 3,
+              "fp": 12,
+              "fn": 324,
+              "vn": 3947,
+              "precisao": 0.2,
+              "recall": 0.009174311926605505,
+              "f1": 0.017543859649122806
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 651,
+              "vp": 242,
+              "fp": 583,
+              "fn": 409,
+              "vn": 3052,
+              "precisao": 0.29333333333333333,
+              "recall": 0.3717357910906298,
+              "f1": 0.32791327913279134
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 0,
+              "vp": 0,
+              "fp": 1942,
+              "fn": 0,
+              "vn": 2344,
+              "precisao": 0.0,
+              "recall": null,
+              "f1": null
+            }
+          ]
+        }
+      },
+      "comparacao": {
+        "candidato": "laya_treinado",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": -0.03334437310909652,
+        "ic95": [
+          -0.0433304298400508,
+          -0.02300045434014543
+        ],
+        "mcnemar": {
+          "so_candidato": 120,
+          "so_referencia": 293,
+          "p_valor": 8.51207094216932e-18
+        },
+        "diferenca_demonstrada": true
+      }
+    },
+    {
+      "id": "ironia_interno",
+      "tarefa": "ironia",
+      "nome": "Ironia — teste interno",
+      "independente": false,
+      "exemplos": 20872,
+      "classes": [
+        "nao-ironico",
+        "ironico"
+      ],
+      "modelos": {
+        "bertimbau": {
+          "acuracia": 0.5921809122269068,
+          "f1_macro": 0.510501209722476,
+          "matriz": [
+            [
+              10443,
+              1435
+            ],
+            [
+              7077,
+              1917
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "nao-ironico",
+              "exemplos": 11878,
+              "vp": 10443,
+              "fp": 7077,
+              "fn": 1435,
+              "vn": 1917,
+              "precisao": 0.5960616438356164,
+              "recall": 0.8791884155581747,
+              "f1": 0.7104564936390231
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 8994,
+              "vp": 1917,
+              "fp": 1435,
+              "fn": 7077,
+              "vn": 10443,
+              "precisao": 0.5718973747016707,
+              "recall": 0.21314209472981988,
+              "f1": 0.310545925805929
+            }
+          ]
+        },
+        "laya_sem_treino": {
+          "acuracia": 0.5950076657723266,
+          "f1_macro": 0.554255135731056,
+          "matriz": [
+            [
+              9365,
+              2513
+            ],
+            [
+              5940,
+              3054
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "nao-ironico",
+              "exemplos": 11878,
+              "vp": 9365,
+              "fp": 5940,
+              "fn": 2513,
+              "vn": 3054,
+              "precisao": 0.611891538712839,
+              "recall": 0.788432396026267,
+              "f1": 0.6890335871684509
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 8994,
+              "vp": 3054,
+              "fp": 2513,
+              "fn": 5940,
+              "vn": 9365,
+              "precisao": 0.54858990479612,
+              "recall": 0.33955970647098066,
+              "f1": 0.4194766842936612
+            }
+          ]
+        },
+        "laya_treinado": {
+          "acuracia": 0.4749425067075508,
+          "f1_macro": 0.38825516500472235,
+          "matriz": [
+            [
+              1028,
+              10850
+            ],
+            [
+              109,
+              8885
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "nao-ironico",
+              "exemplos": 11878,
+              "vp": 1028,
+              "fp": 109,
+              "fn": 10850,
+              "vn": 8885,
+              "precisao": 0.9041336851363236,
+              "recall": 0.08654655665937026,
+              "f1": 0.15797157126392622
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 8994,
+              "vp": 8885,
+              "fp": 10850,
+              "fn": 109,
+              "vn": 1028,
+              "precisao": 0.4502153534329871,
+              "recall": 0.9878808094285079,
+              "f1": 0.6185387587455184
+            }
+          ]
+        }
+      },
+      "comparacao": {
+        "candidato": "laya_treinado",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": -0.12224604471775369,
+        "ic95": [
+          -0.1321118807145072,
+          -0.11256573106014
+        ],
+        "mcnemar": {
+          "so_candidato": 7164,
+          "so_referencia": 9611,
+          "p_valor": 7.957901679570624e-80
+        },
+        "diferenca_demonstrada": true
+      }
+    },
+    {
+      "id": "ironia_regua",
+      "tarefa": "ironia",
+      "nome": "Ironia — régua de domínio",
+      "independente": true,
+      "exemplos": 20,
+      "classes": [
+        "nao-ironico",
+        "ironico"
+      ],
+      "modelos": {
+        "bertimbau": {
+          "acuracia": 0.4,
+          "f1_macro": 0.3939393939393939,
+          "matriz": [
+            [
+              3,
+              7
+            ],
+            [
+              5,
+              5
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "nao-ironico",
+              "exemplos": 10,
+              "vp": 3,
+              "fp": 5,
+              "fn": 7,
+              "vn": 5,
+              "precisao": 0.375,
+              "recall": 0.3,
+              "f1": 0.33333333333333326
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 10,
+              "vp": 5,
+              "fp": 7,
+              "fn": 5,
+              "vn": 3,
+              "precisao": 0.4166666666666667,
+              "recall": 0.5,
+              "f1": 0.45454545454545453
+            }
+          ]
+        },
+        "laya_sem_treino": {
+          "acuracia": 0.6,
+          "f1_macro": 0.5238095238095238,
+          "matriz": [
+            [
+              10,
+              0
+            ],
+            [
+              8,
+              2
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "nao-ironico",
+              "exemplos": 10,
+              "vp": 10,
+              "fp": 8,
+              "fn": 0,
+              "vn": 2,
+              "precisao": 0.5555555555555556,
+              "recall": 1.0,
+              "f1": 0.7142857142857143
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 10,
+              "vp": 2,
+              "fp": 0,
+              "fn": 8,
+              "vn": 10,
+              "precisao": 1.0,
+              "recall": 0.2,
+              "f1": 0.33333333333333337
+            }
+          ]
+        },
+        "laya_treinado": {
+          "acuracia": 0.5,
+          "f1_macro": 0.3333333333333333,
+          "matriz": [
+            [
+              0,
+              10
+            ],
+            [
+              0,
+              10
+            ]
+          ],
+          "por_classe": [
+            {
+              "classe": "nao-ironico",
+              "exemplos": 10,
+              "vp": 0,
+              "fp": 0,
+              "fn": 10,
+              "vn": 10,
+              "precisao": null,
+              "recall": 0.0,
+              "f1": null
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 10,
+              "vp": 10,
+              "fp": 10,
+              "fn": 0,
+              "vn": 0,
+              "precisao": 0.5,
+              "recall": 1.0,
+              "f1": 0.6666666666666666
+            }
+          ]
+        }
+      },
+      "comparacao": {
+        "candidato": "laya_treinado",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": -0.06060606060606061,
+        "ic95": [
+          -0.28047018695995685,
+          0.16666666666666666
+        ],
+        "mcnemar": {
+          "so_candidato": 5,
+          "so_referencia": 3,
+          "p_valor": 0.7265625
+        },
+        "diferenca_demonstrada": false
+      }
+    }
+  ],
+  "latencia": {
+    "hardware": "CPU do Colab (2 núcleos, x86_64)",
+    "amostra": 50,
+    "medidas": [
+      {
+        "modelo": "bertimbau",
+        "tarefa": "emocao",
+        "executor": "torch",
+        "mediana_ms": 126.3527110004361,
+        "p95_ms": 164.43137699934596
+      },
+      {
+        "modelo": "laya_treinado",
+        "tarefa": "emocao",
+        "executor": "onnx-fp32",
+        "mediana_ms": 360.471324500395,
+        "p95_ms": 541.7233440002747
+      },
+      {
+        "modelo": "bertimbau",
+        "tarefa": "ironia",
+        "executor": "torch",
+        "mediana_ms": 273.24892049909977,
+        "p95_ms": 540.7909419991483
+      },
+      {
+        "modelo": "laya_treinado",
+        "tarefa": "ironia",
+        "executor": "onnx-fp32",
+        "mediana_ms": 459.043379499235,
+        "p95_ms": 1240.911591999975
+      }
+    ]
+  },
+  "procedencia": {
+    "rodada_de_fumaca": false,
+    "checkpoint_base": "convaiinnovations/laya@55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851 (multilingual)",
+    "script_treino": "NandhaKishorM/laya@d8a2e59781ca135169a36095056132e273cd9938 finetune_single_device.py",
+    "laya": "0.3.21",
+    "fraus_commit": "3ffe14f",
+    "epocas": 2,
+    "alvo_emocao": "votos",
+    "suavizacao_ironia": 0.05,
+    "casos_treino": 71102,
+    "corpus_emocao": "go_emotions_ptbr (traducao automatica), Ekman, >= 2 anotadores",
+    "corpus_ironia": "fontes publicas do treino IDPT, divisao por autor"
+  },
+  "ressalvas": [
+    "As linhas de ironia deste laudo usam uma divisão treino/teste com defeito, encontrado em 02/10/2026, depois da medição: as notícias, que não têm autor, caíram todas no teste. Os dois modelos treinaram ironia só com tweets (86% irônicos) e foram testados num conjunto com 88% de notícias. Esses números medem mudança de domínio, não a tarefa, e serão refeitos com a divisão corrigida. As linhas de emoção não são afetadas."
+  ]
+}

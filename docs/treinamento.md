@@ -693,6 +693,14 @@ laudo em Markdown. Copiado para `modelos/`, ele aparece na aba **Modelo →
 Comparação** da dashboard (`GET /modelo/comparacao`), que também lê uma fala
 com as cabeças carregadas no servidor, lado a lado.
 
+**Para o laudo chegar à produção** ele é versionado com o código, em
+`fraus/dados/comparacao_modelos.json`: `modelos/` fica fora do git e, na
+Vercel, é trocada inteira pelo ZIP dos pesos. A rota serve o laudo de
+`modelos/` quando ele existe e, na falta, o versionado. O campo opcional
+`ressalvas` (lista de textos) registra o que se soube sobre a medição depois de
+feita; ele aparece no topo da aba e do relatório. Os números do laudo nunca são
+editados à mão — laudo novo é notebook rodado de novo.
+
 Rode primeiro com `MODO_FUMACA = True`. O que foi pesquisado, o que foi medido
 localmente e o que ainda falta está na nota interna
 `docs/notas/2026-10-02-treino-laya.md`.

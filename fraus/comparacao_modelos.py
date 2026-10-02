@@ -250,6 +250,12 @@ def validar_laudo(laudo: object) -> None:
         for chave in ("id", "tarefa", "nome", "exemplos", "classes", "modelos", "comparacao"):
             if chave not in conjunto:
                 raise ValueError(f"conjunto sem {chave!r}")
+    # `ressalvas` e opcional: o que se soube sobre a medicao depois de feita.
+    ressalvas = laudo.get("ressalvas", [])
+    if not isinstance(ressalvas, list) or not all(
+        isinstance(r, str) and r.strip() for r in ressalvas
+    ):
+        raise ValueError("ressalvas do laudo devem ser uma lista de textos")
 
 
 def _numero(valor: float | None, casas: int = 3) -> str:
@@ -271,6 +277,10 @@ def relatorio_markdown(laudo: dict) -> str:
             "> caminho funciona. Os números abaixo não são resultado.",
             "",
         ]
+    if laudo.get("ressalvas"):
+        linhas += ["## Ressalvas", ""]
+        linhas += [f"- {ressalva}" for ressalva in laudo["ressalvas"]]
+        linhas += [""]
     linhas += [
         "Os modelos leram exatamente os mesmos exemplos em cada conjunto. A comparação",
         "é sempre do candidato contra a referência: diferença de F1-macro com intervalo",

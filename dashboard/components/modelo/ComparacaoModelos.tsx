@@ -41,6 +41,18 @@ export function LaudoDaComparacao({ laudo }: { laudo: LaudoComparacao }) {
           </strong>
         ) : null}
       </p>
+      {laudo.ressalvas?.length ? (
+        <div className="border border-warning px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-warning">
+            Ressalva sobre esta medição
+          </p>
+          {laudo.ressalvas.map((ressalva) => (
+            <p key={ressalva} className="mt-2 max-w-[75ch] text-sm leading-relaxed">
+              {ressalva}
+            </p>
+          ))}
+        </div>
+      ) : null}
       {laudo.conjuntos.map((conjunto) => (
         <Conjunto key={conjunto.id} conjunto={conjunto} nomes={nomes} />
       ))}

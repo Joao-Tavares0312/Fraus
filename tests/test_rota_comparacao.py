@@ -24,6 +24,8 @@ def _laudo():
 
 def test_sem_laudo_a_rota_diz_que_nao_ha_e_nao_inventa(tmp_path, monkeypatch):
     monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO", tmp_path / "comparacao_modelos.json")
+    monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO_PUBLICADA", tmp_path / "publicado.json",
+                        raising=False)
     assert modelo.comparacao() == {"laudo": None}
 
 
@@ -56,6 +58,8 @@ def test_relatorio_sai_em_markdown_para_baixar(tmp_path, monkeypatch):
 
 def test_relatorio_sem_laudo_e_404(tmp_path, monkeypatch):
     monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO", tmp_path / "nao-existe.json")
+    monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO_PUBLICADA", tmp_path / "publicado.json",
+                        raising=False)
     with pytest.raises(HTTPException) as erro:
         modelo.relatorio_comparacao()
     assert erro.value.status_code == 404
@@ -168,3 +172,33 @@ def test_frase_ao_vivo_recusa_texto_vazio_e_motor_sem_cabecas():
     with pytest.raises(HTTPException) as erro:
         modelo.simular_comparacao(PedidoSimulacao(texto="oi"), SimpleNamespace(motor=object()))
     assert erro.value.status_code == 409
+
+
+# --- laudo publicado com o codigo ---------------------------------------------
+
+def test_sem_laudo_local_a_rota_serve_o_publicado_com_o_codigo(tmp_path, monkeypatch):
+    publicado = tmp_path / "publicado.json"
+    publicado.write_text(json.dumps(_laudo()), encoding="utf-8")
+    monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO", tmp_path / "nao-existe.json")
+    monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO_PUBLICADA", publicado)
+    assert modelo.comparacao()["laudo"] == _laudo()
+
+
+def test_laudo_local_vence_o_publicado(tmp_path, monkeypatch):
+    local, publicado = tmp_path / "local.json", tmp_path / "publicado.json"
+    local.write_text(json.dumps({**_laudo(), "gerado_em": "2026-10-03T00:00:00+00:00"}),
+                     encoding="utf-8")
+    publicado.write_text(json.dumps(_laudo()), encoding="utf-8")
+    monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO", local)
+    monkeypatch.setattr(modelo, "CAMINHO_COMPARACAO_PUBLICADA", publicado)
+    assert modelo.comparacao()["laudo"]["gerado_em"] == "2026-10-03T00:00:00+00:00"
+
+
+def test_o_laudo_publicado_no_repositorio_e_valido():
+    from fraus.api.caminhos import CAMINHO_COMPARACAO_PUBLICADA
+    from fraus.comparacao_modelos import relatorio_markdown, validar_laudo
+
+    laudo = json.loads(CAMINHO_COMPARACAO_PUBLICADA.read_text(encoding="utf-8"))
+    validar_laudo(laudo)
+    assert laudo["rodada_de_fumaca"] is False
+    assert relatorio_markdown(laudo)

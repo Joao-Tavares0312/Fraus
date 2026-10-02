@@ -521,6 +521,8 @@ export type LaudoComparacao = {
   /** `null` quando o tempo não foi medido — nunca zero. */
   latencia: { hardware: string; amostra: number; medidas: MedidaDeLatencia[] } | null;
   procedencia: Record<string, unknown>;
+  /** O que se soube sobre a medição depois de feita. Ausente em laudo sem ressalva. */
+  ressalvas?: string[];
 };
 
 /** Uma cabeça lendo UMA fala agora — ou o motivo de ela não estar carregada. */
