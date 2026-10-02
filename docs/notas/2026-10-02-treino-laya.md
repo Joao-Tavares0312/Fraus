@@ -155,12 +155,22 @@ ganhar no XED-pt e na régua.
   emoção 126 ms no BERTimbau contra 361 ms no Laya; ironia 273 ms contra
   459 ms. O Laya foi medido em ONNX FP32 e o BERTimbau em PyTorch.
 
-Hipótese para a ironia, **não medida**: a divisão "por autor" trata todas as
-linhas sem autor como um grupo só, e esse grupo inteiro cai de um lado. O
-treino ficou com 12.270 casos e o teste com 20.872, numa divisão que pedia 15%
-para teste; treino e teste podem ter proporções de classe opostas. A regra vem
-do notebook 04, então vale também para a cabeça de ironia do BERTimbau. Falta
-ver a contagem de classes que a célula 5 imprime.
+**Por que a ironia desandou: a divisão do corpus.** A célula 5 imprimiu treino
+com 12.271 linhas e teste com 20.872, numa divisão que pedia 15% para teste. No
+treino, 10.523 linhas são irônicas e 1.748 não (86% contra 14%); no teste, 8.994
+são irônicas e 11.878 não (43% contra 57%). O Laya aprendeu a proporção do
+treino e responde "irônico".
+
+A causa provável, lida no código e não medida no dado: a divisão "por autor"
+trata todas as linhas sem autor como um grupo só, e esse bloco inteiro cai no
+teste. A regra vem do notebook 04, então a cabeça de ironia do BERTimbau foi
+treinada na mesma divisão. Consertar só o notebook 07 não serve: frases do
+treino do BERTimbau cairiam no teste novo. O conserto é nos dois notebooks, com
+os dois modelos treinados de novo.
+
+A ironia não entra no vetor do Fusor desde 04/09/2026, então a nota das
+conversas não depende disto; o que depende é a leitura de ironia por mensagem
+que a dashboard mostra.
 
 ## Encolhimento: o que foi medido
 
@@ -200,9 +210,10 @@ abre, e o tempo de cold start ainda não foi medido na Vercel.
 
 ## O que falta
 
-- **Conferir a divisão do corpus de ironia** (hipótese acima). Se ela se
-  confirmar, o teste interno de ironia mede mudança de distribuição, e a
-  correção vale para o notebook 04 também.
+- **Consertar a divisão do corpus de ironia** nos notebooks 04 e 07 (linha sem
+  autor vira grupo próprio, com estratificação por classe) e treinar de novo a
+  cabeça de ironia do BERTimbau. Só depois disso uma comparação de ironia entre
+  os dois modelos quer dizer alguma coisa.
 - **Emoção pelo Laya em produção não existe no código**, e com este resultado
   não há motivo para escrever. O ZIP do notebook
   tem o desenho do notebook 06 e a cabeça de ironia o lê sem mudança; ler
