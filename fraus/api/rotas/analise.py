@@ -16,6 +16,8 @@ from starlette.concurrency import run_in_threadpool
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.motor_preguicoso import motor_e_real
 from fraus.api.esquemas import PedidoAnalise
+from fraus.api.identidade import id_pelo_conteudo, no_dia_ja_gravado
+from fraus.fuso import dia_do_produto
 from fraus.indicadores import nota_0_10
 from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
 from fraus.ingest.mapeador import ORDENS_DE_DATA
@@ -87,9 +89,14 @@ def _analisar_e_registrar(ctx: Contexto, nome: str, dados: bytes, opcoes) -> dic
         raise HTTPException(409, "Confirme as colunas antes de salvar a conversa.")
     # Canonico a partir da conversa censurada, nunca do nome local do arquivo.
     # IDs de uploads nao podem sobrescrever IDs de integracoes ou da demo.
-    extracao.conversas = [c.model_copy(update={"id": "analise:" + hashlib.sha256(
-        json.dumps(c.model_dump(mode="json"), sort_keys=True, ensure_ascii=False).encode()
-    ).hexdigest()[:32]}) for c in extracao.conversas]
+    conversas = []
+    for conversa in extracao.conversas:
+        identificador = id_pelo_conteudo(conversa, tem_data=extracao.tem_data)
+        if not extracao.tem_data:
+            gravada = ctx.banco.buscar(identificador)
+            conversa = no_dia_ja_gravado(conversa, gravada[0] if gravada else None)
+        conversas.append(conversa.model_copy(update={"id": identificador}))
+    extracao.conversas = conversas
     curadoria = ctx.curadoria_vigente()
     resposta = montar_analise(ctx, extracao, curadoria=curadoria)
     por_id = {c.id: c for c in extracao.conversas}
@@ -97,7 +104,7 @@ def _analisar_e_registrar(ctx: Contexto, nome: str, dados: bytes, opcoes) -> dic
                  for a in resposta["analises"]]
     ctx.banco.salvar_lote(registros, curadoria.versao, ctx.regua_vigente())
     ctx.banco.auditar(str(ctx.usuario_id) if ctx.usuario_id is not None else "credencial-tecnica-ou-local", "registrar_analise", str(len(registros)))
-    datas = sorted(c.iniciada_em.date().isoformat() for c, _, _ in registros)
+    datas = sorted(dia_do_produto(c.iniciada_em).isoformat() for c, _, _ in registros)
     return {**resposta, "gravacao": {"salvas": len(registros),
         "ids": [c.id for c, _, _ in registros], "banco": ctx.banco.dialeto,
         "de": datas[0], "ate": datas[-1]}}

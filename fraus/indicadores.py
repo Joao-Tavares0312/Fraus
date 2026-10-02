@@ -12,6 +12,7 @@ from math import sqrt
 from statistics import median
 from typing import Literal
 
+from fraus.fuso import dia_do_produto
 from fraus.modelos import Conversa
 from fraus.sinais.tempo import latencias_da_conversa
 
@@ -221,7 +222,8 @@ def serie_diaria(
 ) -> list[dict]:
     """NPS inferido e latencia mediana por dia, ordenados do mais antigo.
 
-    O dia sai de `iniciada_em` da conversa. A latencia do dia e a mediana das
+    O dia sai de `iniciada_em` da conversa, lido no fuso do produto
+    (`fraus.fuso`) -- nao no offset em que a fonte o mandou. A latencia do dia e a mediana das
     MEDIANAS de cada atendimento, nao a mediana de todas as esperas juntas: um
     unico atendimento com trinta idas e vindas dominaria o dia inteiro se as
     esperas fossem jogadas num balde so.
@@ -234,7 +236,7 @@ def serie_diaria(
     por_dia: dict[str, dict] = {}
 
     for conversa, score in registros:
-        dia = conversa.iniciada_em.date().isoformat()
+        dia = dia_do_produto(conversa.iniciada_em).isoformat()
         balde = por_dia.setdefault(
             dia, {"scores": [], "latencias": [], "atendimentos": 0}
         )

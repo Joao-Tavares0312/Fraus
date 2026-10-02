@@ -48,7 +48,10 @@ import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
 import { NotaLED } from "./NotaLED";
 import { ausenciaNoFim } from "@/lib/ordenacao";
+import { limitarPagina } from "@/lib/paginacao";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
+
+const LINHAS_POR_PAGINA = 12;
 
 export type LinhaConversa = {
   id: string;
@@ -161,6 +164,14 @@ export function TabelaConversas({
   const [categoria, setCategoria] = useState<string>("todas");
   const [desfecho, setDesfecho] = useState<string>("todos");
   const [ordenacao, setOrdenacao] = useState([{ id: "data", desc: true }]);
+  // A PAGINA E DESTE COMPONENTE, nao do reset automatico da tabela. O reset
+  // padrao volta a pagina 1 toda vez que `linhas` troca de identidade, e a
+  // sincronizacao por foco (`SincronizarDados`) rele a lista a cada volta a
+  // aba: quem estava na pagina 7 conferindo um atendimento em outra janela
+  // voltava para a 1 sem ter pedido nada. Com `autoResetPageIndex: false` o
+  // reset some para TUDO, entao quem volta a pagina 1 passa a ser o gesto de
+  // quem filtra ou reordena (`irParaAPrimeira`), que e quando faz sentido.
+  const [pagina, setPagina] = useState(0);
 
   /*
    * O comparador precisa saber o SENTIDO, e o motor nao o passa: `sortFn`
@@ -316,9 +327,27 @@ export function TabelaConversas({
   const tabela = useLegacyTable<LinhaConversa>({
     data: visiveisPorRecorte,
     columns: definicoes,
-    state: { sorting: ordenacao, globalFilter: filtro },
-    onSortingChange: setOrdenacao,
-    onGlobalFilterChange: setFiltro,
+    state: {
+      sorting: ordenacao,
+      globalFilter: filtro,
+      pagination: { pageIndex: pagina, pageSize: LINHAS_POR_PAGINA },
+    },
+    autoResetPageIndex: false,
+    onPaginationChange: (atualizador) =>
+      setPagina((atual) => {
+        const anterior = { pageIndex: atual, pageSize: LINHAS_POR_PAGINA };
+        return (
+          typeof atualizador === "function" ? atualizador(anterior) : atualizador
+        ).pageIndex;
+      }),
+    onSortingChange: (atualizador) => {
+      setOrdenacao(atualizador);
+      setPagina(0);
+    },
+    onGlobalFilterChange: (atualizador) => {
+      setFiltro(atualizador);
+      setPagina(0);
+    },
     globalFilterFn: (linha, _coluna, valor: string) => {
       const alvo = String(valor).toLowerCase();
       const original = linha.original;
@@ -332,12 +361,18 @@ export function TabelaConversas({
           : ROTULO_SEM_SINAL.includes(alvo))
       );
     },
-    initialState: { pagination: { pageIndex: 0, pageSize: 12 } },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
+
+  // A lista pode ENCOLHER entre uma leitura e outra (ou por um filtro), e sem o
+  // reset automatico a pagina atual pode deixar de existir. Ajuste durante o
+  // render, e nao em efeito: o React descarta este render e refaz ja na pagina
+  // certa, sem pintar "Página 5 de 2" sobre uma tabela vazia.
+  const paginaQueExiste = limitarPagina(pagina, tabela.getPageCount());
+  if (paginaQueExiste !== pagina) setPagina(paginaQueExiste);
 
   const filtradas = tabela
     .getFilteredRowModel()
@@ -445,7 +480,10 @@ export function TabelaConversas({
             id="filtro-atendimentos"
             type="search"
             value={filtro}
-            onChange={(evento) => setFiltro(evento.target.value)}
+            onChange={(evento) => {
+              setFiltro(evento.target.value);
+              setPagina(0);
+            }}
             placeholder="id, canal, desfecho ou categoria"
             className="h-9 w-full placeholder:text-xs sm:w-56"
           />
@@ -462,7 +500,10 @@ export function TabelaConversas({
               aqui isso significa "todas", nao "nenhuma categoria". */}
           <Select
             value={categoria}
-            onValueChange={(valor) => setCategoria(valor ?? "todas")}
+            onValueChange={(valor) => {
+              setCategoria(valor ?? "todas");
+              setPagina(0);
+            }}
           >
             <SelectTrigger id="filtro-categoria" className="h-9 w-40">
               <SelectValue />
@@ -486,7 +527,10 @@ export function TabelaConversas({
           </Label>
           <Select
             value={desfecho}
-            onValueChange={(valor) => setDesfecho(valor ?? "todos")}
+            onValueChange={(valor) => {
+              setDesfecho(valor ?? "todos");
+              setPagina(0);
+            }}
           >
             <SelectTrigger id="filtro-desfecho" className="h-9 w-40">
               <SelectValue />

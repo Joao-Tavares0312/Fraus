@@ -17,6 +17,7 @@
  * cada mensagem do cliente ate a proxima resposta (bot ou humano).
  */
 
+import { diaDoProduto } from "./fuso";
 import lexicoEmoji from "./lexicoEmoji.json";
 import type {
   Categoria,
@@ -88,6 +89,38 @@ export function categoriaDaNota(
   }
   const fabrica = FAIXAS_NPS.find(({ de, ate }) => nota >= de && nota <= ate);
   return fabrica?.categoria ?? "detrator";
+}
+
+/**
+ * A legenda das tres faixas, escrita a partir das FAIXAS VIGENTES.
+ *
+ * A legenda da distribuicao era uma constante local "0–6 detrator · 7–8 neutro
+ * · 9–10 promotor" embaixo de barras coloridas pelas faixas vigentes: bastava
+ * o operador mover um corte em Configuracoes para o grafico pintar a nota 7 de
+ * detrator e a legenda logo abaixo dizer que 7 e neutro. Invariante 4: a faixa
+ * nunca e digitada de novo.
+ *
+ * Sem faixas (`GET /configuracoes` falhou) sobra o padrao de fabrica DECLARADO
+ * -- o mesmo criterio de `categoriaDaNota`, que e quem pinta as barras, entao
+ * legenda e cor continuam dizendo a mesma coisa tambem na falha. Categoria que
+ * a resposta nao trouxe fica sem numero: escrever o corte de fabrica ali seria
+ * inventar uma faixa que ninguem confirmou.
+ */
+export function legendaDasFaixas(
+  faixas?: Record<string, [number, number]>,
+): { categoria: Categoria; rotulo: string }[] {
+  if (!faixas) {
+    return FAIXAS_NPS.map(({ categoria, rotulo }) => ({ categoria, rotulo }));
+  }
+  return FAIXAS_NPS.map(({ categoria }) => {
+    const faixa = faixas[categoria];
+    if (!faixa) return { categoria, rotulo: categoria };
+    const [de, ate] = faixa;
+    return {
+      categoria,
+      rotulo: `${de === ate ? de : `${de}–${ate}`} ${categoria}`,
+    };
+  });
 }
 
 export function npsDeCategorias(categorias: Categoria[]): number | null {
@@ -263,13 +296,6 @@ export type PontoSerie = {
   comScore: number;
 };
 
-function chaveDoDia(iso: string): string {
-  const data = new Date(iso);
-  const mes = `${data.getMonth() + 1}`.padStart(2, "0");
-  const dia = `${data.getDate()}`.padStart(2, "0");
-  return `${data.getFullYear()}-${mes}-${dia}`;
-}
-
 /**
  * Da forma de grafico ao que `GET /serie-temporal` ja agregou.
  *
@@ -304,7 +330,7 @@ export function serieDiaria(detalhes: DetalheConversa[]): PontoSerie[] {
   >();
 
   for (const conversa of detalhes) {
-    const dia = chaveDoDia(conversa.iniciada_em);
+    const dia = diaDoProduto(conversa.iniciada_em);
     const balde =
       porDia.get(dia) ?? { categorias: [], latencias: [], atendimentos: 0 };
     balde.atendimentos += 1;
@@ -422,9 +448,15 @@ export function emojisDoTexto(texto: string): string[] {
  *
  * Isto e exibicao de uma tabela publicada, nao atribuicao: quem diz o que
  * puxou a nota de um atendimento e `GET /conversas/{id}/atribuicao`.
+ *
+ * `null` quando o emoji NAO ESTA na tabela -- e ela e de 2015, entao isso e
+ * comum (todo emoji mais novo que ela). Ate 02/10/2026 a falta virava 0, e a
+ * tela escrevia "polaridade 0.00 no Emoji Sentiment Ranking": afirmava uma
+ * neutralidade medida para um emoji que o ranking nunca viu. Ausencia nao e
+ * zero (invariante 2); o zero de verdade existe na tabela e continua zero.
  */
-export function polaridadeDoEmoji(emoji: string): number {
-  return POLARIDADE[emoji] ?? 0;
+export function polaridadeDoEmoji(emoji: string): number | null {
+  return Object.hasOwn(POLARIDADE, emoji) ? POLARIDADE[emoji] : null;
 }
 
 export type TermoDaClasse = {
@@ -700,10 +732,19 @@ export type PesoDoSinal = {
  * "outros" so aparece se `sinalDaFeature` devolver um prefixo desconhecido --
  * nao esperado num fusor treinado sobre `NOMES_FEATURES`, mas visivel em vez
  * de mudo se o contrato do backend mudar de novo sem o front acompanhar.
+ *
+ * FAMILIA SEM NENHUMA FEATURE NO VETOR E OMITIDA, nao listada com 0. A ironia
+ * saiu do vetor em 04/09/2026 e a legenda continuou dizendo "Ironia · 0% do
+ * peso total": zero e uma medida, e ela nao foi medida -- nao esta la. O
+ * criterio e PRESENCA, nao soma: a familia que esta no vetor e cujos
+ * coeficientes deram zero continua na legenda com 0%, porque esse zero o
+ * modelo de fato aprendeu.
  */
 export function pesoPorSinal(
   importancias: Record<string, number>,
 ): PesoDoSinal[] {
+  // A chave so existe no mapa se a familia tem feature no vetor: e o `has`
+  // dele que separa "pesou zero" de "nao esta la".
   const soma = new Map<SinalDaFeature, number>();
   let total = 0;
 
@@ -714,9 +755,7 @@ export function pesoPorSinal(
     total += absoluto;
   }
 
-  return ORDEM_SINAIS.filter(
-    (sinal) => sinal !== "outros" || (soma.get(sinal) ?? 0) > 0,
-  ).map((sinal) => ({
+  return ORDEM_SINAIS.filter((sinal) => soma.has(sinal)).map((sinal) => ({
     sinal,
     fracao: total === 0 ? 0 : (soma.get(sinal) ?? 0) / total,
   }));

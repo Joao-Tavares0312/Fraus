@@ -100,23 +100,34 @@ def papel_do_cadastro(ctx: Contexto, codigo: str | None) -> str:
 
 @router.post("/auth/registrar", status_code=201)
 def registrar(pedido: PedidoCadastro, ctx: Contexto = Depends(obter_contexto)) -> dict:
+    # As recusas vem ANTES do hash da senha: ele e caro de proposito, e a rota
+    # e publica -- pagar o hash para depois responder 403 seria dar ao anonimo
+    # um jeito barato de ocupar a CPU.
     if pedido.convite_equipe:
-        if ctx.banco.convite_valido(pedido.convite_equipe) is None:
-            raise HTTPException(410, "convite invalido, expirado ou esgotado")
         if pedido.codigo_dev:
             raise HTTPException(400, "o convite de equipe cria uma conta usuario; nao combine com codigo administrativo")
+        if ctx.banco.convite_valido(pedido.convite_equipe) is None:
+            raise HTTPException(410, "convite invalido, expirado ou esgotado")
         papel = "usuario"
     else:
         papel = papel_do_cadastro(ctx, pedido.codigo_dev)
     agora = datetime.now(timezone.utc).isoformat()
+    senha_hash = usuarios.gerar_hash(pedido.senha)
     try:
+        if pedido.convite_equipe:
+            # Conta e uso do convite na MESMA transacao. A conferencia acima so
+            # poupa o hash; conferir antes e criar depois deixava o link de um
+            # uso criar quantas contas se quisesse.
+            criada = ctx.banco.criar_usuario_por_convite(
+                nome=pedido.nome, email=pedido.email, senha_hash=senha_hash,
+                criado_em=agora, token=pedido.convite_equipe,
+            )
+            if criada is None:
+                raise HTTPException(410, "convite invalido, expirado ou esgotado")
+            return criada
         return ctx.banco.criar_usuario(
-            nome=pedido.nome,
-            email=pedido.email,
-            senha_hash=usuarios.gerar_hash(pedido.senha),
-            papel=papel,
-            criado_em=agora,
-            escopo_convite=bool(pedido.convite_equipe),
+            nome=pedido.nome, email=pedido.email, senha_hash=senha_hash,
+            papel=papel, criado_em=agora,
         )
     except ErroDeIntegridade:
         # A unicidade e garantia do banco; aqui ela vira 409. Dizer que o

@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
-import type { BarraDistribuicao } from "@/lib/derivacoes";
+import { legendaDasFaixas, type BarraDistribuicao } from "@/lib/derivacoes";
 import { DEFINICAO_SEM_SINAL_AGREGADO, ROTULO_CATEGORIA } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
@@ -25,12 +25,6 @@ const COR_DA_CATEGORIA: Record<string, string> = {
   promotor: "var(--promotor)",
 };
 
-const FAIXAS = [
-  { categoria: "detrator", rotulo: "0–6 detrator" },
-  { categoria: "neutro", rotulo: "7–8 neutro" },
-  { categoria: "promotor", rotulo: "9–10 promotor" },
-] as const;
-
 /**
  * Distribuicao das notas 0-10 inferidas, com as tres faixas de NPS marcadas.
  *
@@ -41,9 +35,17 @@ const FAIXAS = [
 export function DistribuicaoScores({
   barras,
   semSinal,
+  faixas,
 }: {
   barras: BarraDistribuicao[];
   semSinal: number;
+  /**
+   * As faixas VIGENTES, as mesmas que coloriram `barras`. `undefined` quando
+   * `GET /configuracoes` nao respondeu -- ai a legenda cai no padrao de
+   * fabrica, que e tambem o que `categoriaDaNota` usou para pintar. A legenda
+   * nunca digita os cortes de novo (invariante 4).
+   */
+  faixas: Record<string, [number, number]> | undefined;
 }) {
   const total = barras.reduce((soma, barra) => soma + barra.quantidade, 0);
 
@@ -120,7 +122,7 @@ export function DistribuicaoScores({
         )}
 
         <ul className="flex flex-wrap gap-x-5 gap-y-1.5 px-3 pt-2">
-          {FAIXAS.map((faixa) => (
+          {legendaDasFaixas(faixas).map((faixa) => (
             <li
               key={faixa.categoria}
               className="flex items-center gap-2 text-xs text-muted-foreground"

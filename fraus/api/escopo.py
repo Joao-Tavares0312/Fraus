@@ -41,14 +41,8 @@ class BancoComEscopo:
         return len(registros), digest
 
     def contar_defasadas(self, regua_vigente=None):
-        registros = self.todas()
-        versao = self._banco.lexico_versao()
-        defasadas = 0
-        for c, _ in registros:
-            anterior, regua = self._banco.regua_da_conversa(c.id)
-            if anterior != versao or (regua_vigente is not None and regua != regua_vigente):
-                defasadas += 1
-        return defasadas, len(registros)
+        # A regra e a do Banco, restrita aos canais -- nunca uma copia dela.
+        return self._banco.contar_defasadas(regua_vigente, canais=self._canais)
 
     def salvar_lote(self, registros, lexico_versao, regua):
         if any(c.canal not in self._canais for c, _, _ in registros):

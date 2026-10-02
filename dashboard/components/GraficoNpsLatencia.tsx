@@ -15,7 +15,11 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import type { PontoSerie } from "@/lib/derivacoes";
-import { formatarNps, formatarSegundos } from "@/lib/formato";
+import {
+  DEFINICAO_SEM_SINAL_AGREGADO,
+  formatarNps,
+  formatarSegundos,
+} from "@/lib/formato";
 import {
   Table,
   TableBody,
@@ -123,7 +127,7 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
       <EstadoVazio
         className="m-5"
         titulo="Sem série temporal para desenhar"
-        explicacao="Nenhum atendimento no período selecionado, então não há dias para agregar. A série é montada no cliente, agrupando as conversas por data de início."
+        explicacao="Nenhum atendimento no período selecionado, então não há dias para agregar. A série vem agregada do servidor, por data de início do atendimento."
         endpoint="GET /serie-temporal?de=&ate="
       />
     );
@@ -496,7 +500,7 @@ function FaixaDePresenca({
                   ? `${ponto.rotulo}: nenhum atendimento`
                   : pontuado
                     ? `${ponto.rotulo}: ${ponto.comScore} de ${ponto.atendimentos} atendimento(s) pontuado(s)`
-                    : `${ponto.rotulo}: ${ponto.atendimentos} atendimento(s), nenhum com fala do cliente — sem sinal`
+                    : `${ponto.rotulo}: ${ponto.atendimentos} atendimento(s), nenhum pontuado (${DEFINICAO_SEM_SINAL_AGREGADO}) — sem sinal`
               }
             >
               {vazio ? (
@@ -520,8 +524,8 @@ function FaixaDePresenca({
         <span className="inline-block size-[7px] translate-y-px rounded-full bg-medido" />{" "}
         pontuado ·{" "}
         <span className="inline-block size-[7px] translate-y-px rounded-full border border-muted-foreground" />{" "}
-        houve atendimento, nenhum com fala do cliente — não entra na escala e
-        nunca como zero.
+        houve atendimento, nenhum pontuado ({DEFINICAO_SEM_SINAL_AGREGADO}) —
+        não entra na escala e nunca como zero.
       </p>
     </div>
   );

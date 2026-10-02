@@ -7,10 +7,22 @@ from collections import Counter, defaultdict
 from datetime import timedelta
 from statistics import median
 
+from fraus.fuso import no_fuso_do_produto
 from fraus.indicadores import calcular_nps, nps_com_intervalo
 
 TETO_RADAR = 1500
+
+
+def _inicio(conversa):
+    """O inicio da conversa no relogio do produto: dia, hora e dia da semana
+    sao de calendario, e calendario tem um fuso so (ver fraus/fuso.py)."""
+    return no_fuso_do_produto(conversa.iniciada_em)
 PARADAS = "a o as os de da do das dos e em na no nas nos um uma para por com que se me eu voce voces meu minha seu sua foi ser esta estou isso isto esse essa ao aos mas ja muito mais como nao sim bom dia obrigado obrigada favor atendimento cliente bot humano".split()
+# As formas ACENTUADAS das de cima. O vetorizador nao tira acento (e nao deve:
+# os termos do tema sao mostrados como o cliente escreveu), entao "nao" na
+# lista nao barrava "não" -- e "não", "já", "você" e "está" viravam nome de
+# tema (auditoria de 02/10/2026).
+PARADAS += "à às você vocês está já não é".split()
 
 
 def descobrir_temas(registros, faixas):
@@ -36,11 +48,11 @@ def descobrir_temas(registros, faixas):
             raise
         return {"temas": [], "amostra": len(registros), "truncadas": truncadas, "janela": None}
     classes = DBSCAN(eps=0.65, min_samples=2, metric="cosine").fit_predict(matriz)
-    fim = max(c.iniciada_em.date() for c, _ in registros)
+    fim = max(_inicio(c).date() for c, _ in registros)
     inicio = fim - timedelta(days=6)
     anterior = inicio - timedelta(days=7)
-    n_atual = sum(inicio <= c.iniciada_em.date() <= fim for c, _ in registros)
-    n_anterior = sum(anterior <= c.iniciada_em.date() < inicio for c, _ in registros)
+    n_atual = sum(inicio <= _inicio(c).date() <= fim for c, _ in registros)
+    n_anterior = sum(anterior <= _inicio(c).date() < inicio for c, _ in registros)
     grupos = defaultdict(list)
     for i, classe in enumerate(classes):
         if classe >= 0:
@@ -50,8 +62,8 @@ def descobrir_temas(registros, faixas):
     for indices in grupos.values():
         pesos = np.asarray(matriz[indices].mean(axis=0)).ravel()
         termos = [str(nomes[i]) for i in pesos.argsort()[::-1][:4] if pesos[i] > 0]
-        recentes = sum(inicio <= registros[i][0].iniciada_em.date() <= fim for i in indices)
-        anteriores = sum(anterior <= registros[i][0].iniciada_em.date() < inicio for i in indices)
+        recentes = sum(inicio <= _inicio(registros[i][0]).date() <= fim for i in indices)
+        anteriores = sum(anterior <= _inicio(registros[i][0]).date() < inicio for i in indices)
         taxa_atual = recentes / n_atual if n_atual else None
         taxa_anterior = anteriores / n_anterior if n_anterior else None
         scores = [registros[i][1] for i in indices if registros[i][1] is not None]
@@ -77,7 +89,7 @@ def simular_escala(registros, turnos, duracao_s, custo_hora):
     por_dia = defaultdict(list)
     for c, _ in registros:
         if c.escalou_para_humano or any(m.autor == "humano" for m in c.mensagens):
-            por_dia[c.iniciada_em.date()].append(c)
+            por_dia[_inicio(c).date()].append(c)
     esperas = []
     dias = []
     pendentes = 0
@@ -90,7 +102,7 @@ def simular_escala(registros, turnos, duracao_s, custo_hora):
         esperas_dia = []
         nao_atendidas = 0
         for c in sorted(conversas, key=lambda c: (c.iniciada_em, c.id)):
-            chegada = c.iniciada_em.hour * 3600 + c.iniciada_em.minute * 60 + c.iniciada_em.second
+            chegada = _inicio(c).hour * 3600 + _inicio(c).minute * 60 + _inicio(c).second
             disponiveis = [(max(p["livre"], chegada), i) for i, p in enumerate(postos)
                 if (not p["canais"] or c.canal in p["canais"]) and max(p["livre"], chegada) + duracao_s <= p["fim"]]
             if not disponiveis:
@@ -103,15 +115,15 @@ def simular_escala(registros, turnos, duracao_s, custo_hora):
         esperas.extend(esperas_dia)
         dias.append({"dia": dia.isoformat(), "demanda": len(conversas), "atendidas": len(esperas_dia),
             "pendentes": nao_atendidas, "espera_mediana_s": median(esperas_dia) if esperas_dia else None})
-    dias_no_recorte = (max(c.iniciada_em.date() for c, _ in registros) - min(c.iniciada_em.date() for c, _ in registros)).days + 1 if registros else 0
+    dias_no_recorte = (max(_inicio(c).date() for c, _ in registros) - min(_inicio(c).date() for c, _ in registros)).days + 1 if registros else 0
     horas_por_dia = sum((t["fim"] - t["inicio"]) * t["pessoas"] for t in turnos)
     p95 = sorted(esperas)[max(0, __import__("math").ceil(0.95 * len(esperas)) - 1)] if esperas else None
     dias_base = defaultdict(set)
     contatos = Counter()
     for c, _ in registros:
-        dias_base[c.iniciada_em.weekday()].add(c.iniciada_em.date())
+        dias_base[_inicio(c).weekday()].add(_inicio(c).date())
         if c.escalou_para_humano or any(m.autor == "humano" for m in c.mensagens):
-            contatos[c.iniciada_em.weekday()] += 1
+            contatos[_inicio(c).weekday()] += 1
     previsao = [{"dia_semana": d, "dias_observados": len(datas), "contatos_medios": contatos[d] / len(datas)} for d, datas in sorted(dias_base.items())]
     return {"demanda": sum(d["demanda"] for d in dias), "atendidas": len(esperas), "pendentes": pendentes,
         "espera_mediana_s": median(esperas) if esperas else None, "espera_p95_s": p95,

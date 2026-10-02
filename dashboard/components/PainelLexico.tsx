@@ -32,7 +32,7 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
         className="m-5"
         titulo="Sem vocabulário suficiente para comparar as classes"
         explicacao="Nenhum atendimento pontuado do período trouxe fala do cliente com palavras fora da lista de parada. O ranking é por distinção entre classes, então precisa de pelo menos duas classes povoadas."
-        endpoint="GET /palavras-chave?de=&ate="
+        endpoint="GET /lexico?de=&ate="
       />
     );
   }
@@ -94,17 +94,27 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
                   return (
                     <li
                       key={termo.termo}
-                      title={`polaridade ${polaridade > 0 ? "+" : ""}${polaridade.toFixed(2)} no Emoji Sentiment Ranking`}
+                      // Emoji fora do ranking NAO e "polaridade 0.00": a
+                      // tabela e de 2015 e simplesmente nao o conhece.
+                      title={
+                        polaridade === null
+                          ? "este emoji não está no Emoji Sentiment Ranking — sem polaridade publicada"
+                          : `polaridade ${polaridade > 0 ? "+" : ""}${polaridade.toFixed(2)} no Emoji Sentiment Ranking`
+                      }
                       className="inline-flex items-center gap-1.5 rounded-sm border border-border px-2 py-1 text-xs text-muted-foreground"
                     >
                       <span aria-hidden className="text-base leading-none">
                         {termo.termo}
                       </span>
                       <span className="num">{termo.ocorrencias}×</span>
-                      <span className="num text-[0.6875rem]">
-                        {polaridade > 0 ? "+" : ""}
-                        {polaridade.toFixed(2)}
-                      </span>
+                      {polaridade === null ? (
+                        <span className="text-[0.6875rem]">fora do ranking</span>
+                      ) : (
+                        <span className="num text-[0.6875rem]">
+                          {polaridade > 0 ? "+" : ""}
+                          {polaridade.toFixed(2)}
+                        </span>
+                      )}
                     </li>
                   );
                 })}

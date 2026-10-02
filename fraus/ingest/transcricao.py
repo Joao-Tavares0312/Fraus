@@ -40,6 +40,26 @@ LINHA = re.compile(
 )
 
 
+def _horario_de(marcador: str | None) -> str | None:
+    """O marcador, se for um horario de relogio; senao None.
+
+    `LINHA` casa a FORMA `d{1,2}:dd`, e a forma nao basta: `24:00` e `75:30`
+    (minuto:segundo de uma gravacao) casam e nao sao hora do dia. Ate
+    02/10/2026 eles chegavam a `inicio.replace(hour=75)` e um .txt plausivel
+    virava 500.
+
+    None, e nao um ajuste para a faixa: marcador que nao e horario e linha SEM
+    horario. Inventar a hora daria latencia a uma conversa que nao a tem -- o
+    mesmo numero melhor do que a verdade que a docstring do modulo recusa.
+    """
+    if marcador is None:
+        return None
+    hora, minuto, *resto = (int(parte) for parte in marcador.split(":"))
+    if hora > 23 or minuto > 59 or (resto and resto[0] > 59):
+        return None
+    return marcador
+
+
 @dataclass
 class Transcricao:
     mensagens: list[Mensagem]
@@ -117,7 +137,7 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
         mensagens.append(
             Mensagem(autor=autor, texto=censurar_pii(conteudo), enviada_em=inicio)
         )
-        horas.append(achado.group("hora"))
+        horas.append(_horario_de(achado.group("hora")))
 
     tem_tempo = any(hora is not None for hora in horas)
 

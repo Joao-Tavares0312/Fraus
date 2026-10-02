@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fraus.api.caminhos import resolver_dentro_da_raiz
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoImportacao, PedidoPreviaImportacao
+from fraus.api.identidade import id_pelo_caminho, no_dia_ja_gravado
 from fraus.api.rotas.analise import resumo_da_previa
 from fraus.api.periodo import no_recorte, recorte_ou_400
 from fraus.api.repontuacao import RepontuacaoEmAndamento
@@ -143,13 +144,25 @@ def importar(
             ),
         )
 
+    conversas = resultado.conversas
+    if resultado.id_do_arquivo:
+        # O arquivo nao trouxe id: o leitor devolveu "conversa" (ou o nome do
+        # arquivo), e gravar assim faria o proximo arquivo apagar este.
+        identificador = id_pelo_caminho(caminho.relative_to(ctx.raiz.resolve()))
+        gravada = None if resultado.tem_data else ctx.banco.buscar(identificador)
+        conversas = [
+            no_dia_ja_gravado(c, gravada[0] if gravada else None).model_copy(
+                update={"id": identificador})
+            for c in conversas
+        ]
+
     faixas = ctx.faixas_vigentes()
     # UMA leitura de curadoria por importacao, e e a MESMA que grava a versao:
     # reler abriria janela para a conversa ser pontuada com um lexico e marcada
     # com a versao de outro -- o defeito exato que a versao existe para impedir.
     curadoria = ctx.curadoria_vigente()
     regua = ctx.regua_vigente()
-    for conversa in resultado.conversas:
+    for conversa in conversas:
         score = ctx.motor.pontuar_conversa(conversa, curadoria)
         # A coluna `categoria` e o retrato do instante da importacao; quem
         # le nao a consome (ver `categoria_de`), mas gravar com a faixa
@@ -277,27 +290,23 @@ def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
     }
 
 
-@router.get("/conversas/{conversa_id}")
-def detalhar(
-    conversa_id: str, ctx: Contexto = Depends(obter_contexto)
-) -> dict:
-    achado = ctx.banco.buscar(conversa_id)
-    if achado is None:
-        raise HTTPException(status_code=404, detail="conversa nao encontrada")
-    conversa, score, _categoria_gravada = achado
-    # A MESMA ficha derivada de `/conversas`, pela mesma funcao. A lista e o
-    # detalhe nao podem calcular tempo de resposta -- nem contestacao -- por
-    # caminhos diferentes: seria a divergencia que a nota derivada no servidor
-    # ja existe para evitar, repetida na coluna do lado.
-    return _com_derivacoes(
-        score,
-        ctx.categoria_de(score, ctx.faixas_vigentes()),
-        {**conversa.model_dump(mode="json"), "score": score},
-        conversa,
-    )
-
-
-@router.get("/conversas/{conversa_id}/atribuicao")
+# AS DUAS ROTAS POR ID USAM `:path`, E A ORDEM DELAS E CONTRATO (02/10/2026).
+#
+# O id de uma conversa ingerida e `fonte:<n>:<id externo>`, e o id externo e
+# do sistema de origem: protocolo com barra (`2026/000123`) e comum. Com
+# `{conversa_id}` simples a barra nao casava, e a conversa aparecia na lista
+# sem detalhe nem atribuicao -- 404 nas duas.
+#
+# `:path` casa QUALQUER resto do caminho, entao:
+#
+# - `/atribuicao` vem ANTES do detalhe. Na ordem inversa o detalhe engoliria
+#   `c1/atribuicao` como se fosse um id.
+# - as irmas de caminho fixo (`/conversas/repontuar`) continuam declaradas
+#   ACIMA destas duas. Rota GET nova sob `/conversas/` entra la em cima tambem.
+#
+# O que sobra e declarado: o DETALHE de um id externo que termine em
+# `/atribuicao` cai na rota de atribuicao.
+@router.get("/conversas/{conversa_id:path}/atribuicao")
 def atribuir(
     conversa_id: str, ctx: Contexto = Depends(obter_contexto)
 ) -> dict:
@@ -340,3 +349,23 @@ def atribuir(
         # painel que ela nao tem dado para preencher.
         "sinais_fora_do_score": atribuicao.get("sinais_fora_do_score", []),
     }
+
+
+@router.get("/conversas/{conversa_id:path}")
+def detalhar(
+    conversa_id: str, ctx: Contexto = Depends(obter_contexto)
+) -> dict:
+    achado = ctx.banco.buscar(conversa_id)
+    if achado is None:
+        raise HTTPException(status_code=404, detail="conversa nao encontrada")
+    conversa, score, _categoria_gravada = achado
+    # A MESMA ficha derivada de `/conversas`, pela mesma funcao. A lista e o
+    # detalhe nao podem calcular tempo de resposta -- nem contestacao -- por
+    # caminhos diferentes: seria a divergencia que a nota derivada no servidor
+    # ja existe para evitar, repetida na coluna do lado.
+    return _com_derivacoes(
+        score,
+        ctx.categoria_de(score, ctx.faixas_vigentes()),
+        {**conversa.model_dump(mode="json"), "score": score},
+        conversa,
+    )

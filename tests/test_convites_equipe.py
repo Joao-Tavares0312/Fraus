@@ -102,14 +102,97 @@ def test_convite_indisponivel_nao_cadastra_nem_aceita(ambiente, modo):
     assert cli.post("/auth/registrar", json={"nome": "Teste", "email": "a@empresa.com", "senha": "senha-convidada-123", "convite_equipe": c["token"]}).status_code == 410
 
 
+def entrar_sem_convite(cli, email):
+    corpo = {"nome": "Ja tinha conta", "email": email, "senha": "senha-convidada-123"}
+    assert cli.post("/auth/registrar", json=corpo).status_code == 201
+    entrada = cli.post("/auth/entrar", json={"email": email, "senha": corpo["senha"]})
+    return {"Authorization": "Bearer " + entrada.json()["token"]}
+
+
 def test_ultimo_uso_nao_e_consumido_por_duas_pessoas_ao_mesmo_tempo(ambiente):
     cli, banco, h, u = ambiente
     eid = criar_equipe(cli, h)
     c = convidar(cli, h["dev"], eid)
-    nova, hn = registrar(cli, c["token"])
-    outra, ho = registrar(cli, c["token"], "outra@empresa.com")
+    ho = entrar_sem_convite(cli, "outra@empresa.com")
     with ThreadPoolExecutor(max_workers=2) as pool:
-        respostas = list(pool.map(lambda cab: cli.post(f"/operacao/convites/{c['token']}/aceitar", headers=cab).status_code, [hn, ho]))
+        respostas = list(pool.map(lambda cab: cli.post(f"/operacao/convites/{c['token']}/aceitar", headers=cab).status_code, [h["usuario"], ho]))
     assert sorted(respostas) == [200, 410]
     assert len(banco.documento("convite", c["id"])["aceitos"]) == 1
     assert len(banco.documento("equipe", eid)["membros"]) == 2
+
+
+def cadastro_por_convite(cli, token, email):
+    return cli.post("/auth/registrar", json={"nome": "Pessoa convidada", "email": email, "senha": "senha-convidada-123", "convite_equipe": token})
+
+
+def test_convite_de_um_uso_cria_uma_conta_so(ambiente):
+    """Ate 02/10/2026 o uso so era contado no aceite: o link de limite 1 criava
+    quantas contas alguem quisesse, numa instalacao fechada por codigo."""
+    cli, banco, h, u = ambiente
+    cli.app.state.contexto = replace(cli.app.state.contexto, codigo_convite="instalacao-fechada")
+    eid = criar_equipe(cli, h)
+    c = convidar(cli, h["dev"], eid)
+    assert cadastro_por_convite(cli, c["token"], "primeira@empresa.com").status_code == 201
+    segunda = cadastro_por_convite(cli, c["token"], "segunda@empresa.com")
+    assert segunda.status_code == 410
+    assert banco.buscar_usuario_por_email("segunda@empresa.com") is None
+    assert cli.get(f"/operacao/convites/{c['token']}").status_code == 410
+    usos = cli.get(f"/operacao/equipes/{eid}/convites", headers=h["dev"]).json()["convites"][0]["usos"]
+    assert usos == 1
+
+
+def test_quem_se_cadastrou_pelo_convite_ainda_ve_e_aceita_o_convite(ambiente):
+    cli, banco, h, u = ambiente
+    eid = criar_equipe(cli, h)
+    c = convidar(cli, h["dev"], eid)
+    nova, hn = registrar(cli, c["token"])
+    # A vaga e de quem se cadastrou: outra conta nao entra no lugar dela.
+    assert cli.post(f"/operacao/convites/{c['token']}/aceitar", headers=h["usuario"]).status_code == 410
+    # O cadastro reserva; quem filia e o aceite, com sessao (contrato de 30/09).
+    assert cli.get("/conversas", headers=hn).json() == []
+    assert cli.get(f"/operacao/convites/{c['token']}", headers=hn).status_code == 200
+    aceite = cli.post(f"/operacao/convites/{c['token']}/aceitar", headers=hn)
+    assert aceite.status_code == 200 and aceite.json()["ja_membro"] is False
+    convite = banco.documento("convite", c["id"])
+    assert convite["aceitos"] == [nova["id"]] and convite["reservas"] == []
+    assert cli.get(f"/operacao/equipes/{eid}/convites", headers=h["dev"]).json()["convites"][0]["usos"] == 1
+
+
+def test_dois_cadastros_ao_mesmo_tempo_nao_dividem_o_ultimo_uso(ambiente):
+    cli, banco, h, u = ambiente
+    eid = criar_equipe(cli, h)
+    c = convidar(cli, h["dev"], eid)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        respostas = list(pool.map(lambda email: cadastro_por_convite(cli, c["token"], email).status_code, ["a@empresa.com", "b@empresa.com"]))
+    assert sorted(respostas) == [201, 410]
+    assert len(banco.documento("convite", c["id"])["reservas"]) == 1
+
+
+def test_limite_maior_conta_cadastros_e_aceites_juntos(ambiente):
+    cli, banco, h, u = ambiente
+    eid = criar_equipe(cli, h)
+    c = convidar(cli, h["dev"], eid, limite=2)
+    assert cli.post(f"/operacao/convites/{c['token']}/aceitar", headers=h["usuario"]).status_code == 200
+    assert cadastro_por_convite(cli, c["token"], "a@empresa.com").status_code == 201
+    assert cadastro_por_convite(cli, c["token"], "b@empresa.com").status_code == 410
+
+
+def test_email_repetido_nao_gasta_o_uso_do_convite(ambiente):
+    cli, banco, h, u = ambiente
+    eid = criar_equipe(cli, h)
+    c = convidar(cli, h["dev"], eid)
+    assert cadastro_por_convite(cli, c["token"], "usuario@empresa.com").status_code == 409
+    assert banco.documento("convite", c["id"]).get("reservas", []) == []
+    assert cadastro_por_convite(cli, c["token"], "nova@empresa.com").status_code == 201
+
+
+def test_convite_gravado_antes_das_reservas_continua_valendo(ambiente):
+    cli, banco, h, u = ambiente
+    eid = criar_equipe(cli, h)
+    c = convidar(cli, h["dev"], eid)
+    antigo = banco.documento("convite", c["id"])
+    antigo.pop("reservas", None)
+    banco.guardar_documento("convite", c["id"], antigo)
+    assert cli.get(f"/operacao/convites/{c['token']}").status_code == 200
+    assert cadastro_por_convite(cli, c["token"], "nova@empresa.com").status_code == 201
+    assert cadastro_por_convite(cli, c["token"], "outra@empresa.com").status_code == 410

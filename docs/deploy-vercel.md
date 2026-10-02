@@ -23,6 +23,11 @@ aplicado e pacote Python de **1,95 GB** em `iad1`. O tamanho é do pacote, não
 da memória em execução. Contratos e evidências estão em
 [Operação e produção](notas/2026-09-30-operacao-producao.md).
 
+**Atualização de 02/10/2026:** a `main` com os PRs #78 a #81 foi publicada na
+API pela CLI (deploy `fraus-ajbdtr0gh`, `Ready`, alias de produção aplicado).
+Entraram as rotas `/modelo/comparacao*` e a trava de migração do Postgres. O
+build levou 10 minutos.
+
 **Os deploys são independentes.** O merge atualizou a dashboard, mas a API
 antiga ainda devolvia 404 nas novas rotas. Publicar `fraus-api` resolveu o
 descompasso. O workflow de API é manual e ainda depende da configuração de
@@ -53,7 +58,9 @@ estado persistente. A solução separou também **código, artefato e estado**.
 
 - satisfação: ONNX fp32;
 - emoção: ONNX fp32;
-- ironia: ONNX int8;
+- ironia: ONNX int8 no pacote; **em produção quem lê ironia é o Laya sem
+  treino em ONNX** (`FRAUS_IRONIA_BACKEND=laya-onnx`), e o BERTimbau de ironia
+  não é carregado;
 - fusor: `joblib`.
 
 A quantização ficou restrita à cabeça de ironia porque ela não pontua o score e
@@ -129,6 +136,8 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 | `FRAUS_CHAVE_ACESSO` | acesso usado pela dashboard |
 | `FRAUS_JWT_SEGREDO` | assinatura das sessões |
 | `FRAUS_CODIGO_CONVITE` | controla cadastro |
+| `FRAUS_CODIGO_DEV` | código que o cadastro exige para criar conta com papel `dev` |
+| `FRAUS_MODELOS_TOKEN`, `FRAUS_LAYA_MODELO_TOKEN` | opcionais: `Bearer` para baixar os ZIPs quando o objeto é privado por token e não por URL assinada |
 | `FRAUS_ORIGENS` | origens públicas permitidas |
 | `FRAUS_FUSOR_CANDIDATO` | opcional: caminho de `.joblib` compatível para comparar fusores; não promove o candidato |
 
@@ -166,7 +175,10 @@ O que foi feito, em três camadas:
    uma instância fria começar a carregar. `/saude/prontidao` continua sendo a
    afirmação forte: 503 até o motor estar pronto.
 2. **Manter quente.** `.github/workflows/api-aquecer.yml` sonda `/saude` e
-   espera `/saude/prontidao` a cada 5 minutos. Roda só a partir da branch padrão
+   espera `/saude/prontidao` a cada 5 minutos **no pedido**: o agendador do
+   GitHub não garante o intervalo e, medido em 02/10/2026, entregou 10
+   execuções em 45 horas. Antes de uma demonstração, aqueça à mão (`/saude` e
+   depois `/saude/prontidao` até 200). Roda só a partir da branch padrão
    e usa o secret `FRAUS_API_PUBLIC_URL` (ou `https://fraus-api.vercel.app`).
 3. **Não oscilar no dashboard.** `suavizarSaude` não deixa "no ar" ser
    rebaixado por uma instância fria; enquanto a API não está pronta o polling é

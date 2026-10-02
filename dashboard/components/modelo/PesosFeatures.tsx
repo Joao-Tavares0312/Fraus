@@ -11,6 +11,7 @@ const COR_DO_SINAL: Record<string, string> = {
   lexico: "var(--lexico)",
   ironia: "var(--ironia)",
   estilo: "var(--estilo)",
+  incongruencia: "var(--incongruencia)",
   outros: "var(--outros-sinal)",
 };
 
@@ -22,6 +23,10 @@ const EXPLICACAO_DO_SINAL: Record<string, string> = {
   lexico: "SentiLex-PT02, com escopo de negação",
   ironia: "cabeça binária, indício e não veredito",
   estilo: "caixa alta, pontuação, alongamento, palavrão e censura",
+  // O CONFLITO dentro da fala, nao a polaridade dela -- e o que a familia mede
+  // (`fraus/sinais/incongruencia.py`): lexico e regex, sem modelo treinado.
+  incongruencia:
+    "a fala do cliente contra ela mesma: emoji contra texto, polaridades opostas, marcador de contraste, hipérbole, aspas irônicas e elogio contra situação negativa",
   outros: "prefixo de feature não reconhecido por nenhuma das sete famílias",
 };
 

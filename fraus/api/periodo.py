@@ -12,6 +12,8 @@ from datetime import date, datetime
 
 from fastapi import HTTPException
 
+from fraus.fuso import dia_do_produto
+
 
 def dia_ou_400(valor: str | None, nome: str) -> date | None:
     """AAAA-MM-DD, ou 400 nomeando o parametro -- nunca ignorado em silencio.
@@ -43,5 +45,6 @@ def recorte_ou_400(de: str | None, ate: str | None) -> tuple[date | None, date |
 
 
 def no_recorte(iniciada_em: datetime, inicio: date | None, fim: date | None) -> bool:
-    dia = iniciada_em.date()
+    # O dia do PRODUTO, nao o do offset de origem (ver fraus/fuso.py).
+    dia = dia_do_produto(iniciada_em)
     return (inicio is None or dia >= inicio) and (fim is None or dia <= fim)

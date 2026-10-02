@@ -5,6 +5,9 @@ import {
   distribuicaoDeNotas,
   FAIXAS_NPS,
   indicadoresDoPeriodo,
+  legendaDasFaixas,
+  pesoPorSinal,
+  polaridadeDoEmoji,
 } from "./derivacoes";
 import type { DetalheConversa, ResumoConversa } from "./api";
 
@@ -126,5 +129,87 @@ describe("falso containment do plano B", () => {
     expect(
       indicadoresDoPeriodo([], [detalhe(null, false)]).falsoContainment,
     ).toBeNull();
+  });
+});
+
+describe("pesoPorSinal omite a familia que nao esta no vetor", () => {
+  /**
+   * A ironia saiu do vetor em 04/09/2026 e a legenda da tela Modelo continuava
+   * listando "Ironia · 0% do peso total". Zero e uma MEDIDA; a familia que nao
+   * tem feature nenhuma nao foi medida, e ausencia nao e zero (invariante 2).
+   */
+  const IMPORTANCIAS = {
+    texto_prob_satisfeito_media: 3,
+    emoji_score_medio: 1,
+    incongruencia_polaridade: 1,
+    // Presente no vetor com peso ZERO: isto e medida, e fica na legenda.
+    estilo_frac_caixa_alta: 0,
+  };
+
+  it("nao lista ironia quando nenhuma feature `ironia_*` veio", () => {
+    const sinais = pesoPorSinal(IMPORTANCIAS).map((peso) => peso.sinal);
+    expect(sinais).not.toContain("ironia");
+    expect(sinais).not.toContain("tempo");
+    expect(sinais).not.toContain("outros");
+  });
+
+  it("lista a incongruencia, que esta no vetor", () => {
+    const incongruencia = pesoPorSinal(IMPORTANCIAS).find(
+      (peso) => peso.sinal === "incongruencia",
+    );
+    expect(incongruencia?.fracao).toBeCloseTo(0.2);
+  });
+
+  it("familia presente com peso zero continua na legenda, com 0", () => {
+    const estilo = pesoPorSinal(IMPORTANCIAS).find(
+      (peso) => peso.sinal === "estilo",
+    );
+    expect(estilo?.fracao).toBe(0);
+  });
+
+  it("mantem a ordem canonica das familias", () => {
+    expect(pesoPorSinal(IMPORTANCIAS).map((peso) => peso.sinal)).toEqual([
+      "texto",
+      "emoji",
+      "estilo",
+      "incongruencia",
+    ]);
+  });
+});
+
+describe("polaridadeDoEmoji", () => {
+  it("emoji do ranking devolve a polaridade publicada", () => {
+    expect(polaridadeDoEmoji("😂")).toBeCloseTo(0.221);
+  });
+
+  it("emoji FORA do ranking e null, nunca 0", () => {
+    // 🫠 e de 2021; o Emoji Sentiment Ranking foi anotado em 2015. "0.00 no
+    // ranking" afirmava uma neutralidade que ninguem mediu.
+    expect(polaridadeDoEmoji("🫠")).toBeNull();
+  });
+});
+
+describe("legendaDasFaixas sai das faixas vigentes", () => {
+  it("escreve os cortes que o operador configurou, nao os de fabrica", () => {
+    expect(legendaDasFaixas(FAIXAS_APERTADAS).map((f) => f.rotulo)).toEqual([
+      "0–7 detrator",
+      "8–9 neutro",
+      "10 promotor",
+    ]);
+  });
+
+  it("sem faixas vigentes, degrada para o padrao de fabrica declarado", () => {
+    expect(legendaDasFaixas(undefined).map((f) => f.rotulo)).toEqual(
+      FAIXAS_NPS.map((f) => f.rotulo),
+    );
+  });
+
+  it("categoria sem faixa na resposta nao ganha numero inventado", () => {
+    const legenda = legendaDasFaixas({ detrator: [0, 6] });
+    expect(legenda.map((f) => f.rotulo)).toEqual([
+      "0–6 detrator",
+      "neutro",
+      "promotor",
+    ]);
   });
 });

@@ -47,7 +47,11 @@ export default async function PaginaDoAtendimento(
   );
 
   if (!resultado.ok) {
-    if (/404/.test(resultado.erro)) notFound();
+    // Pelo STATUS, nunca pelo texto: a frase do erro carrega a rota, a rota
+    // carrega o id, e `/404/.test(...)` fazia um 500 em `/conversas/c-1404`
+    // abrir a pagina de "nao encontrado" -- afirmando que o atendimento nao
+    // existe quando quem falhou foi o servidor.
+    if (resultado.status === 404) notFound();
     // COM flex-1: mesmo padrao de app/dashboard/configuracoes/page.tsx e
     // app/dashboard/grafo/page.tsx -- EstadoVazio so centraliza verticalmente
     // se o pai estiver esticado. Aqui o sintoma era mais fraco (tem titulo e

@@ -1,4 +1,5 @@
 import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { DEFINICAO_SEM_SINAL_AGREGADO } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 
 /**
@@ -45,7 +46,7 @@ export function DiscordanciaContida({
 
       {percentual === null ? (
         <p className="text-sm text-muted-foreground">
-          Nenhum atendimento contido tem fala do cliente no período — sem sinal
+          Nenhum atendimento contido tem nota no período ({DEFINICAO_SEM_SINAL_AGREGADO}) — sem sinal
           não há como saber se a contenção foi boa notícia.
         </p>
       ) : (

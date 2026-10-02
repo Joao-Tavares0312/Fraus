@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { KeyRound, Trash2 } from "lucide-react";
 import { gerarChave, revogarChave, type FonteIntegracao } from "@/lib/api";
 import { formatarDataHora } from "@/lib/formato";
@@ -21,11 +20,22 @@ import { Button } from "@/components/ui/button";
 export function ChaveDaFonte({
   fonte,
   base,
+  aoMudarChave,
 }: {
   fonte: FonteIntegracao;
   base: string;
+  /**
+   * Recarrega a lista do PAI depois de gerar ou revogar.
+   *
+   * Obrigatorio, e nao um `router.refresh()` aqui dentro: a lista de fontes e
+   * estado do pai, semeado uma vez, e o refresh do servidor nao a reescreve.
+   * Sem isto, gerar a chave da fonte A, abrir a B e voltar para a A remontava
+   * este componente (o `key` do painel) com a `fonte` de antes -- "Sem chave" e
+   * o botao "Gerar chave" sobre uma chave ATIVA no servidor, e um clique ali
+   * invalidava a credencial ja entregue ao integrador.
+   */
+  aoMudarChave: () => void | Promise<void>;
 }) {
-  const router = useRouter();
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [chave, setChave] = useState<string | null>(null);
@@ -34,12 +44,12 @@ export function ChaveDaFonte({
    * Dica da chave vigente, com o que ACABOU de acontecer tendo precedencia.
    *
    * `undefined` significa "ainda nao mexi, vale o que veio do servidor";
-   * `null` significa "revoguei agora". A distincao e necessaria porque a lista
-   * de fontes vive em estado do componente pai, semeado uma vez: `router.
-   * refresh()` revalida o servidor mas nao reescreve esse estado, entao a prop
-   * `fonte` continua a de antes. Sem isto, a tela exibia "Sem chave: esta
+   * `null` significa "revoguei agora". A distincao cobre o intervalo ate o
+   * pai terminar de recarregar a lista (`aoMudarChave`): nesse meio tempo a
+   * prop `fonte` ainda e a de antes, e sem isto a tela exibia "Sem chave: esta
    * fonte ainda nao recebe atendimento pela rede" logo abaixo da chave recem
-   * gerada -- duas afirmacoes contrarias na mesma linha.
+   * gerada -- duas afirmacoes contrarias na mesma linha. Ela NAO sobrevive a
+   * remontagem; quem sobrevive e a lista do pai, e por isso o pai e avisado.
    */
   const [dicaLocal, setDicaLocal] = useState<string | null | undefined>(
     undefined,
@@ -57,7 +67,7 @@ export function ChaveDaFonte({
     }
     setChave(resposta.dado.chave);
     setDicaLocal(resposta.dado.fonte.chave_dica);
-    router.refresh();
+    void aoMudarChave();
   }
 
   async function revogar() {
@@ -71,7 +81,7 @@ export function ChaveDaFonte({
     }
     setChave(null);
     setDicaLocal(null);
-    router.refresh();
+    void aoMudarChave();
   }
 
   const exemplo = [

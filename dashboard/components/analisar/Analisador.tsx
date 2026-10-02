@@ -458,6 +458,14 @@ function Analise({
   // frase nos dois casos mandaria procurar problema no lugar errado.
   const [tudoAberto, setTudoAberto] = useState(false);
   const semNota = analise.score === null;
+  // SEM HORARIO, o servidor fabrica `inicio + 1 s por mensagem` so para a ordem
+  // existir e o modelo canonico aceitar a conversa -- e anula a nota. Os
+  // TEMPOS derivados desse relogio inventado (duracao, esperas, hora de cada
+  // fala) continuam vindo na resposta, e a tela os exibia ao lado de "o
+  // arquivo nao traz horario": "Duração 7 s" de uma conversa cujo tempo
+  // ninguem mediu. Aqui eles viram ausencia nomeada, nunca zero e nunca o
+  // numero fabricado.
+  const SEM_HORARIO = "sem horário";
   const motivoSemNota = !temTempo
     ? "o arquivo não traz horário"
     : analise.motivo_sem_sinal === "so_cortesia"
@@ -505,19 +513,31 @@ function Analise({
           />
           <Medida
             rotulo="Duração"
-            valor={formatarSegundos(analise.duracao_s)}
+            valor={temTempo ? formatarSegundos(analise.duracao_s) : SEM_HORARIO}
           />
           <Medida
             rotulo="1ª resposta"
-            valor={formatarEsperaOuTraco(analise.latencia_primeira_resposta_s)}
+            valor={
+              temTempo
+                ? formatarEsperaOuTraco(analise.latencia_primeira_resposta_s)
+                : SEM_HORARIO
+            }
           />
           <Medida
             rotulo="Resposta do bot (mediana)"
-            valor={formatarEsperaOuTraco(analise.latencia_mediana_bot_s)}
+            valor={
+              temTempo
+                ? formatarEsperaOuTraco(analise.latencia_mediana_bot_s)
+                : SEM_HORARIO
+            }
           />
           <Medida
             rotulo="Resposta humana (mediana)"
-            valor={formatarEsperaOuTraco(analise.latencia_mediana_humano_s)}
+            valor={
+              temTempo
+                ? formatarEsperaOuTraco(analise.latencia_mediana_humano_s)
+                : SEM_HORARIO
+            }
           />
           <Medida rotulo="Canal" valor={analise.conversa.canal} />
         </dl>
@@ -528,12 +548,25 @@ function Analise({
         legenda="Com sinal, ordenadas por magnitude. Isto é `contribuicoes` — o que pesou NESTA conversa —, não `importancias`, que é o peso global do modelo."
         semPadding
       >
-        <PainelContribuicoes
-          contribuicoes={analise.contribuicoes}
-          sinaisForaDoScore={analise.sinais_fora_do_score}
-          totalDeFeatures={Object.keys(analise.importancias).length}
-          motivoSemSinal={temTempo ? analise.motivo_sem_sinal : null}
-        />
+        {temTempo ? (
+          <PainelContribuicoes
+            contribuicoes={analise.contribuicoes}
+            sinaisForaDoScore={analise.sinais_fora_do_score}
+            totalDeFeatures={Object.keys(analise.importancias).length}
+            motivoSemSinal={analise.motivo_sem_sinal}
+          />
+        ) : (
+          // O servidor anula a nota mas ainda manda `contribuicoes`, calculadas
+          // sobre o relogio fabricado. Desenha-las seria decompor uma nota que
+          // nao existe -- e com as features de tempo lidas como "respondeu em
+          // 1 s", que e exatamente o motivo de a nota ter sido anulada.
+          <EstadoVazio
+            className="m-5"
+            titulo="Sem contribuições para esta conversa"
+            explicacao="O arquivo não traz horário. Sem horário não há latência, a latência é feature do fusor, e por isso esta conversa não recebe nota — então não há nota para decompor. A leitura por mensagem, logo abaixo, não depende de tempo e continua valendo."
+            etapa="enviar o arquivo com uma coluna de data e hora por mensagem"
+          />
+        )}
       </Painel>
 
       <Painel
@@ -571,11 +604,15 @@ function Analise({
                   >
                     {ROTULO_AUTOR[mensagem.autor]}
                   </span>
-                  <span className="num text-xs text-muted-foreground">
-                    {formatarHora(
-                      analise.conversa.mensagens[mensagem.indice].enviada_em,
-                    )}
-                  </span>
+                  {/* Sem horario no arquivo, o `enviada_em` e ordem fabricada
+                      pelo servidor (um segundo por fala), nao hora. */}
+                  {temTempo ? (
+                    <span className="num text-xs text-muted-foreground">
+                      {formatarHora(
+                        analise.conversa.mensagens[mensagem.indice].enviada_em,
+                      )}
+                    </span>
+                  ) : null}
                   {doCliente && mensagem.prob_satisfeito !== null ? (
                     <span className="num text-xs text-muted-foreground">
                       satisfeito {mensagem.prob_satisfeito.toFixed(2)} ·

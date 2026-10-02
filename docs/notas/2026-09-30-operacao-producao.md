@@ -92,6 +92,10 @@ administração global conserva seus poderes; aceitar convite nunca concede `dev
   em desenvolvimento. A credencial técnica não substitui a sessão.
 - Cadastro com convite válido pode dispensar o código geral, nasce `usuario`
   e recebe política de canais vazia na mesma transação.
+  Desde 02/10/2026 o cadastro também **reserva um uso do convite** nessa
+  transação: sem vaga, a conta não nasce (410). Antes o uso só era contado no
+  aceite, e um link de limite 1 criava contas sem limite. A reserva não filia;
+  `usos` na listagem soma aceites e reservas.
 - Aceite valida expiração, revogação, limite, vínculo e concessão de canais
   atomicamente. Quem já integra a equipe não consome outro uso.
 - Aceite libera apenas canais explícitos da equipe. Equipe sem canais não

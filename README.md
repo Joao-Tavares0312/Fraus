@@ -262,7 +262,7 @@ Variáveis de ambiente reconhecidas:
 |---|---|---|
 | `FRAUS_CAMINHO_MODELO_TEXTO` | `modelos/bertimbau-satisfacao` | modelo de texto |
 | `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
-| `FRAUS_IRONIA_BACKEND` | `padrao` | `laya` troca somente a cabeça de ironia pelo Laya multilíngue; exige `uv sync --extra laya` |
+| `FRAUS_IRONIA_BACKEND` | `padrao` | `laya` troca somente a cabeça de ironia pelo Laya multilíngue (PyTorch; exige `uv sync --extra laya`); `laya-onnx` usa o Laya exportado para ONNX, que é o valor de produção |
 | `FRAUS_LAYA_REVISAO` | `55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851` | revisão imutável do checkpoint Laya |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
 | `FRAUS_POSTGRES_MIN_CONEXOES` | `0` | mínimo do pool por instância; zero evita reservar conexão em função fria |
@@ -678,25 +678,28 @@ A dashboard não fala com a API direto: toda chamada de `lib/api.ts` sai por um
 proxy no servidor Next (`app/api/fraus/[...caminho]/route.ts`), que repassa
 método, corpo, query string e status para `FRAUS_API_URL` (padrão
 `http://127.0.0.1:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
-quando essa variável existe. A chave de acesso nunca toca o navegador.
+quando a instalação não tem login. A chave de acesso nunca toca o navegador.
 
 ```bash
 FRAUS_API_URL=http://127.0.0.1:8000 FRAUS_CHAVE_ACESSO=fra_... npm run dev
 ```
 
-O proxy monta o header com `FRAUS_CHAVE_ACESSO` **ou**, na falta dela, com a
-chave guardada no cookie `httpOnly` de quem ligou a autenticação pela tela — o
-ambiente vence, e o `Authorization` que vier do navegador continua sendo
-**descartado** (a credencial da API é a do deploy, não a que o cliente mandar).
+De onde sai a credencial que o proxy apresenta à API, em ordem
+(`dashboard/lib/credencial-do-servidor.ts`):
 
-Com `FRAUS_CHAVE_ACESSO` no ambiente, a dashboard publicada continua **sem
-login**: quem alcança a URL dela lê os dados pelo proxy, e para publicar com dado
-real você ainda precisa proteger o deploy (por exemplo, Vercel Deployment
-Protection). Sem a variável, o cookie passa a ser a credencial da sessão — e
-então um navegador que não clicou em ligar cai em **401** nas telas de dados, com
-o painel de Autenticação explicando o que falta. É meio caminho de um login, não
-um login: o cookie não expira por conta própria além da sessão do navegador, e
-não há usuários nem senha.
+1. a **sessão do usuário** (JWT no cookie `httpOnly` `fraus_sessao`), quando há
+   login;
+2. `FRAUS_CHAVE_ACESSO`, a credencial declarada do deploy;
+3. o cookie `httpOnly` de quem ligou a autenticação pela tela;
+4. o arquivo de chaves que a API grava na primeira subida.
+
+**Os degraus 2 e 4 só valem em instalação sem login.** Onde a API tem usuários
+(`GET /auth/estado` com `disponivel: true`), visitante sem sessão não recebe
+credencial nenhuma e a API responde **401**. Até 02/10/2026 não era assim: o
+proxy emprestava a chave do deploy a quem chegasse, e a dashboard publicada
+entregava dado a visitante anônimo enquanto as páginas redirecionavam para
+`/entrar`. O `Authorization` que vier do navegador continua sendo descartado,
+exceto na tela de rotação da chave mestra.
 
 Sem nenhuma das duas, o proxy repassa sem header — desenvolvimento local
 contra uma API aberta continua funcionando com zero configuração. Como são
@@ -773,7 +776,9 @@ função Python. Durante o build, `scripts/preparar_modelos_vercel.py` baixa um
 ZIP privado, confere o SHA-256, recusa *path traversal*, valida os três grafos
 ONNX, tokenizadores e fusor, e só então permite o deploy.
 
-O runtime usa satisfação e emoção em ONNX fp32 e ironia quantizada em int8. O
+O runtime usa satisfação e emoção em ONNX fp32. A ironia BERTimbau vai
+quantizada em int8 no pacote, mas em produção quem lê ironia é o Laya sem
+treino em ONNX (`FRAUS_IRONIA_BACKEND=laya-onnx`). O
 pacote publicado em **30/09/2026 tem 1,95 GB** (1,46 GB na entrega de 17/09),
 aceito por Large Functions. Isso é tamanho do pacote, não memória consumida.
 Importar a função é barato; o provedor aquece os modelos em segundo plano no
@@ -1496,7 +1501,7 @@ Resolvidas: o **pin do `scikit-learn`** existe (`scikit-learn==1.6.1` no
 ### Onde mora a API
 
 Nenhuma rota é definida em `fraus/api/main.py`: ele só monta o app — o
-`Contexto`, os middlewares na ordem certa e os oito routers. Cada domínio tem
+`Contexto`, os middlewares na ordem certa e os routers de `fraus/api/rotas/`. Cada domínio tem
 o seu arquivo, e é nele que se mexe:
 
 | Arquivo | O que tem |

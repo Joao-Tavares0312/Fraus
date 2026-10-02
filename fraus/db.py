@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 
+from fraus.fuso import FUSO_DO_PRODUTO, no_fuso_do_produto
 from fraus.modelos import Conversa
 from fraus.sinais.curadoria import Curadoria
 
@@ -252,6 +253,14 @@ CREATE TABLE IF NOT EXISTS auditoria_eventos (
 # `tipo_incompativel` e a fonte que existe mas nao e do tipo `webhook`. Ele
 # existe para que a recusa apareca no historico: o `tipo` ramificava so na tela,
 # e uma fonte `csv` com variavel de segredo aceitava entrega assinada.
+#
+# `vazao` e o 429 do teto por fonte. A rota ja gravava esse veredito e ele nao
+# estava aqui (auditoria de 02/10/2026) -- exatamente a segunda lista que o
+# paragrafo acima diz que nao pode existir, so que dentro da propria rota.
+#
+# `erro` e a falha INTERNA: excecao que nao e recusa do porteiro. A resposta e
+# 500 e a culpa nao e de quem chamou. Ate 02/10/2026 ela nao deixava linha
+# nenhuma, e "nao chegou nada" e "chegou e a API quebrou" eram a mesma tela.
 VEREDITOS = (
     "aceita",
     "assinatura",
@@ -261,6 +270,8 @@ VEREDITOS = (
     "fonte_inativa",
     "sem_segredo",
     "tipo_incompativel",
+    "vazao",
+    "erro",
 )
 
 
@@ -406,11 +417,18 @@ class _ConexaoPostgres:
         # `with` do sqlite3, que todo metodo daqui ja assumia. Devolver a
         # conexao ao pool e o extra: sem isso, cada chamada abriria um TLS novo
         # contra o Supabase e o pool secaria em poucas requisicoes.
-        if tipo is None:
-            self._conexao.commit()
-        else:
-            self._conexao.rollback()
-        self._devolver()
+        #
+        # O `finally` e de 02/10/2026 e emparelha com o do SQLite: o commit e o
+        # rollback tambem falham -- e falham justamente quando a conexao caiu
+        # no meio. Sem ele a conexao morta ficava emprestada para sempre, e o
+        # teto do pool por instancia e dois.
+        try:
+            if tipo is None:
+                self._conexao.commit()
+            else:
+                self._conexao.rollback()
+        finally:
+            self._devolver()
 
     def _devolver(self) -> None:
         self._contexto.__exit__(None, None, None)
@@ -452,6 +470,20 @@ def _numero_do_ambiente(
     if not minimo <= valor <= maximo:
         raise RuntimeError(f"{nome} precisa estar entre {minimo} e {maximo}")
     return valor
+
+
+def _inicio_no_produto(conversa: Conversa) -> str:
+    """O valor da COLUNA `iniciada_em`: o inicio no fuso do produto.
+
+    A coluna existe para recortar por dia (`SUBSTR(iniciada_em, 1, 10)`) e para
+    ordenar, e as duas coisas sao feitas sobre o TEXTO. Gravada no offset de
+    origem, uma conversa em UTC caia no dia seguinte e "10:00-03:00" (13h UTC)
+    ordenava antes de "11:00+00:00" (auditoria de 02/10/2026). Com um fuso so,
+    os dez primeiros caracteres sao o dia e a ordem do texto e a do instante.
+
+    O `payload` nao muda: ele guarda o que a fonte mandou.
+    """
+    return no_fuso_do_produto(conversa.iniciada_em).isoformat()
 
 
 class Banco:
@@ -694,6 +726,31 @@ class Banco:
                 }
                 if coluna not in existentes:
                     conexao.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
+            self._normalizar_inicios(conexao)
+
+    @staticmethod
+    def _normalizar_inicios(conexao) -> None:
+        """Reescreve a coluna `iniciada_em` das linhas gravadas em outro offset.
+
+        Ver `_inicio_no_produto`. So a COLUNA muda, e ela e derivada: o instante
+        e o mesmo e o `payload` fica intacto. Idempotente -- na segunda vez nao
+        ha linha fora do padrao -- e roda dentro da transacao da migracao.
+        """
+        # O offset como o `isoformat` o escreve ("-03:00"), tirado de um
+        # instante qualquer em vez de digitado: quem mudar o fuso muda so la.
+        sufixo = datetime.now(FUSO_DO_PRODUTO).isoformat()[-6:]
+        linhas = conexao.execute(
+            "SELECT id, iniciada_em FROM conversas WHERE iniciada_em NOT LIKE ?",
+            (f"%{sufixo}",),
+        ).fetchall()
+        for linha in linhas:
+            normalizado = no_fuso_do_produto(
+                datetime.fromisoformat(linha["iniciada_em"])
+            ).isoformat()
+            conexao.execute(
+                "UPDATE conversas SET iniciada_em = ? WHERE id = ?",
+                (normalizado, linha["id"]),
+            )
 
     def salvar(
         self,
@@ -720,7 +777,7 @@ class Banco:
                 (
                     conversa.id,
                     conversa.canal,
-                    conversa.iniciada_em.isoformat(),
+                    _inicio_no_produto(conversa),
                     score,
                     categoria,
                     conversa.model_dump_json(),
@@ -729,13 +786,54 @@ class Banco:
                 ),
             )
 
+    def atualizar_pontuacao(
+        self,
+        conversa: Conversa,
+        score: float | None,
+        categoria: str | None,
+        lexico_versao: int | None = None,
+        regua: str | None = None,
+    ) -> bool:
+        """Regrava SO o veredito, e so se a conversa ainda for a que foi pontuada.
+
+        Existe para a repontuacao, que le o banco inteiro UMA vez e pontua em
+        segundo plano por minutos. `salvar` grava a linha inteira, `payload`
+        junto: se a fonte reenviasse o atendimento com mais mensagens nesse
+        meio tempo, a thread devolvia a conversa ao instantaneo e a fala nova
+        sumia sem erro (auditoria de 02/10/2026).
+
+        `False` quando a linha sumiu ou mudou. Nao e falha: quem reenviou ja
+        pontuou com a regua vigente, e o score calculado aqui e de uma conversa
+        que nao existe mais.
+
+        A COMPARACAO E ENTRE CONVERSAS, NAO ENTRE TEXTOS. `model_dump_json()` de
+        uma conversa relida so e byte a byte o payload gravado se a linha nasceu
+        com o modelo de hoje: `feedback_declarado` e `comentario_feedback`
+        entraram em 28/09/2026, e toda linha anterior nao os tem. Comparar com a
+        reserializacao pularia essas linhas para sempre, com a repontuacao
+        dizendo "concluido". O `AND payload = ?` do UPDATE usa o texto LIDO
+        nesta transacao, e e ele que fecha a janela entre o SELECT e o UPDATE.
+        """
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT payload FROM conversas WHERE id = ?", (conversa.id,)
+            ).fetchone()
+            if linha is None or Conversa(**json.loads(linha["payload"])) != conversa:
+                return False
+            cursor = conexao.execute(
+                "UPDATE conversas SET score = ?, categoria = ?, lexico_versao = ?, "
+                "regua = ? WHERE id = ? AND payload = ?",
+                (score, categoria, lexico_versao, regua, conversa.id, linha["payload"]),
+            )
+            return cursor.rowcount > 0
+
     def salvar_lote(self, registros: list, lexico_versao: int, regua: str | None) -> None:
         """Publica o lote completo em UMA transacao, nos dois dialetos."""
         with self._conectar() as conexao:
             conexao.executemany(
                 self._upsert("conversas", ("id", "canal", "iniciada_em", "score",
                     "categoria", "payload", "lexico_versao", "regua"), ("id",)),
-                [(c.id, c.canal, c.iniciada_em.isoformat(), score, categoria,
+                [(c.id, c.canal, _inicio_no_produto(c), score, categoria,
                   c.model_dump_json(), lexico_versao, regua)
                  for c, score, categoria in registros],
             )
@@ -755,6 +853,12 @@ class Banco:
             self._travar_operacao(conexao)
             conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
                 (tipo, identificador, json.dumps(valor, ensure_ascii=False, sort_keys=True), datetime.now(timezone.utc).isoformat()))
+            # Equipe CRIADA ja com membros muda o escopo de quem entrou por
+            # convite tanto quanto equipe editada. So `alterar_documento`
+            # recalculava, e o membro ficava sem os canais ate alguem editar
+            # qualquer equipe (auditoria de 02/10/2026).
+            if tipo == "equipe":
+                self._atualizar_escopos_de_equipes(conexao)
 
     def listar_usuarios(self) -> list[dict]:
         with self._conectar() as conexao:
@@ -799,11 +903,61 @@ class Banco:
         else:
             conexao.execute("BEGIN IMMEDIATE")
 
-    def convite_valido(self, token: str) -> dict | None:
+    @staticmethod
+    def _convite_aberto(convite: dict | None, usuario_id: int | None = None) -> bool:
+        """Existe, nao foi revogado, nao expirou e ainda tem vaga para esta pessoa.
+
+        A vaga e ocupada por quem aceitou E por quem criou conta pelo link
+        (`reservas`). Ate 02/10/2026 so o aceite contava, e o cadastro nao
+        aceita: um link de limite 1 criava contas sem fim. Quem tem reserva
+        continua vendo o convite aberto -- a vaga e dela.
+        """
+        if not convite or convite.get("revogado"):
+            return False
+        if datetime.fromisoformat(convite["expira_em"]) <= datetime.now(timezone.utc):
+            return False
+        reservas = convite.get("reservas", [])
+        if usuario_id is not None and usuario_id in reservas:
+            return True
+        return len(set(convite["aceitos"]) | set(reservas)) < convite["limite"]
+
+    def convite_valido(self, token: str, usuario_id: int | None = None) -> dict | None:
         convite = self.documento("convite", hashlib.sha256(token.encode()).hexdigest())
-        if not convite or convite.get("revogado") or datetime.fromisoformat(convite["expira_em"]) <= datetime.now(timezone.utc) or len(convite["aceitos"]) >= convite["limite"]:
-            return None
-        return convite
+        return convite if self._convite_aberto(convite, usuario_id) else None
+
+    def criar_usuario_por_convite(
+        self, nome: str, email: str, senha_hash: str, criado_em: str, token: str
+    ) -> dict | None:
+        """Cria a conta e reserva um uso do convite na MESMA transacao.
+
+        None se o convite nao tem mais vaga -- e a conta nao nasce. A reserva
+        nao filia ninguem: a pessoa entra na equipe no aceite, com sessao. A
+        conta nasce sem canal nenhum (`origem_convite`).
+        """
+        chave = hashlib.sha256(token.encode()).hexdigest()
+        with self._conectar() as conexao:
+            self._travar_operacao(conexao)
+            linha = conexao.execute(
+                "SELECT payload FROM operacao_registros WHERE tipo = ? AND id = ?", ("convite", chave)
+            ).fetchone()
+            convite = json.loads(linha["payload"]) if linha else None
+            if not self._convite_aberto(convite):
+                return None
+            identificador = self._inserir(
+                conexao,
+                "INSERT INTO usuarios (nome, email, senha_hash, papel, criado_em) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (nome, email, senha_hash, "usuario", criado_em),
+            )
+            convite.setdefault("reservas", []).append(identificador)
+            politica = {"canais": [], "exporta_ate": None, "origem_convite": True}
+            conexao.executemany(
+                self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
+                [(tipo, i, json.dumps(valor, ensure_ascii=False, sort_keys=True), criado_em)
+                 for tipo, i, valor in (("permissao", str(identificador), politica), ("convite", chave, convite))],
+            )
+        return {"id": identificador, "nome": nome, "email": email, "papel": "usuario",
+                "ativo": True, "criado_em": criado_em}
 
     def aceitar_convite(self, token: str, usuario_id: int) -> dict | None:
         """Consome uso, filia membro e aplica escopo inicial atomicamente."""
@@ -821,13 +975,14 @@ class Banco:
                 return None
             if usuario_id in equipe["membros"]:
                 return {"equipe_id": c["equipe_id"], "nome": equipe["nome"], "papel": equipe.get("papeis", {}).get(str(usuario_id), "membro"), "ja_membro": True}
-            if len(c["aceitos"]) >= c["limite"]:
+            if not self._convite_aberto(c, usuario_id):
                 return None
             if len(equipe["membros"]) >= 100:
                 return None
             equipe["membros"].append(usuario_id)
             equipe.setdefault("papeis", {})[str(usuario_id)] = c["papel"]
             c["aceitos"].append(usuario_id)
+            c["reservas"] = [i for i in c.get("reservas", []) if i != usuario_id]
             registros = [("equipe", c["equipe_id"], equipe), ("convite", chave, c)]
             politica = ler("permissao", str(usuario_id))
             if politica and politica.get("origem_convite"):
@@ -910,7 +1065,10 @@ class Banco:
         filtros: list[str] = []
         parametros: list[object] = []
         # O recorte e por DIA, como a API. SUBSTR funciona igual nos dois
-        # dialetos e evita comparar offsets ISO como texto completo.
+        # dialetos e evita comparar offsets ISO como texto completo. Os dez
+        # primeiros caracteres SAO o dia do produto porque a coluna e gravada
+        # no fuso do produto (`_inicio_no_produto`), e `migrar` normaliza as
+        # linhas anteriores a isso.
         if de is not None:
             filtros.append("SUBSTR(iniciada_em, 1, 10) >= ?")
             parametros.append(de)
@@ -1364,11 +1522,14 @@ class Banco:
         return registro
 
     def criar_usuario(
-        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str, escopo_convite: bool = False
+        self, nome: str, email: str, senha_hash: str, papel: str, criado_em: str
     ) -> dict:
         """E-mail duplicado deixa o IntegrityError propagar: a unicidade e
         garantia do banco, e a borda HTTP traduz em 409 -- o mesmo desenho da
-        coluna ausente no driver de CSV."""
+        coluna ausente no driver de CSV.
+
+        Conta que nasce de convite de equipe usa `criar_usuario_por_convite`.
+        """
         with self._conectar() as conexao:
             identificador = self._inserir(
                 conexao,
@@ -1376,9 +1537,6 @@ class Banco:
                 "VALUES (?, ?, ?, ?, ?)",
                 (nome, email, senha_hash, papel, criado_em),
             )
-            if escopo_convite:
-                conexao.execute(self._upsert("operacao_registros", ("tipo", "id", "payload", "atualizado_em"), ("tipo", "id")),
-                    ("permissao", str(identificador), json.dumps({"canais": [], "exporta_ate": None, "origem_convite": True}), criado_em))
         return {
             "id": identificador,
             "nome": nome,
@@ -1611,8 +1769,43 @@ class Banco:
                     emojis[linha["termo"]] = float(linha["peso"])
         return Curadoria(palavras=palavras, emojis=emojis, versao=self.lexico_versao())
 
-    def contar_defasadas(self, regua_vigente: str | None = None) -> tuple[int, int]:
+    @staticmethod
+    def _regra_de_defasagem(lexico_vigente: int, regua_vigente: str | None) -> tuple[str, tuple]:
+        """O predicado SQL de "pontuada com outra regua", e os parametros dele.
+
+        Uma regra so para a contagem que a tela mostra e para a lista que a
+        repontuacao percorre -- ver `contar_defasadas` para o porque de cada
+        termo. A string e montada so com trechos FIXOS; o que vem de fora entra
+        por parametro.
+        """
+        if regua_vigente is None:
+            return "COALESCE(lexico_versao, 0) <> ?", (lexico_vigente,)
+        return (
+            "COALESCE(lexico_versao, 0) <> ? OR regua IS NULL OR regua <> ?",
+            (lexico_vigente, regua_vigente),
+        )
+
+    def ids_defasadas(self, lexico_vigente: int, regua_vigente: str | None) -> set[str]:
+        """Quais conversas ainda estao na regua anterior. A versao do lexico
+        chega por parametro: a repontuacao le a curadoria UMA vez, e perguntar
+        a versao de novo aqui poderia responder outra."""
+        regra, parametros = self._regra_de_defasagem(lexico_vigente, regua_vigente)
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                f"SELECT id FROM conversas WHERE {regra}", parametros
+            ).fetchall()
+        return {linha["id"] for linha in linhas}
+
+    def contar_defasadas(
+        self, regua_vigente: str | None = None, canais=None
+    ) -> tuple[int, int]:
         """(pontuadas com lexico anterior, total). Do banco INTEIRO.
+
+        `canais` restringe a contagem a quem tem escopo (`BancoComEscopo`), e
+        mora AQUI para que a regra abaixo seja uma so: a versao com escopo
+        tinha a propria, sem o `COALESCE`, e mostrava o banco inteiro em alarme
+        a quem tinha escopo enquanto o dev via zero (auditoria de 02/10/2026).
+        `None` e sem restricao; lista vazia e escopo sem canal nenhum.
 
         `lexico_versao IS NULL` e linha de banco anterior a este mecanismo, e
         vale ZERO: nao ha diferenca entre "pontuada antes da coluna existir" e
@@ -1631,19 +1824,21 @@ class Banco:
         entao toda linha sem regua foi, de fato, pontuada pela anterior. Sem regua
         vigente (motor duble, que nao tem modelo) so o lexico conta.
         """
-        vigente = self.lexico_versao()
-        # A string do SQL e montada so com trechos FIXOS deste metodo; o que vem
-        # de fora (versao, regua) entra sempre por parametro.
-        regra_lexico = "COALESCE(lexico_versao, 0) <> ?"
-        parametros: tuple = (vigente,)
-        if regua_vigente is not None:
-            regra_lexico += " OR regua IS NULL OR regua <> ?"
-            parametros = (vigente, regua_vigente)
+        if canais is not None:
+            canais = sorted(set(canais))
+            if not canais:
+                # `IN ()` nao e SQL valido, e sem canal nao ha o que contar.
+                return 0, 0
+        regra_lexico, parametros = self._regra_de_defasagem(self.lexico_versao(), regua_vigente)
+        onde = ""
+        if canais is not None:
+            onde = f" WHERE canal IN ({', '.join('?' for _ in canais)})"
+            parametros = (*parametros, *canais)
         with self._conectar() as conexao:
             linha = conexao.execute(
                 "SELECT COUNT(*) AS total, "
                 f"SUM(CASE WHEN {regra_lexico} THEN 1 ELSE 0 END) AS defasadas "
-                "FROM conversas",
+                "FROM conversas" + onde,
                 parametros,
             ).fetchone()
         return int(linha["defasadas"] or 0), int(linha["total"] or 0)

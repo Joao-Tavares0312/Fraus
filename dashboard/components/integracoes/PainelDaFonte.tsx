@@ -69,6 +69,7 @@ export function PainelDaFonte({
   aoTrocarVariavel,
   aoAlternarAtiva,
   aoRemover,
+  aoMudarChave,
 }: {
   fonte: FonteIntegracao;
   tipos: TipoDeFonte[];
@@ -85,6 +86,8 @@ export function PainelDaFonte({
   aoAlternarAtiva: (fonte: FonteIntegracao) => void;
   /** Devolve se o servidor aceitou; ver `aoRenomear`. */
   aoRemover: (fonte: FonteIntegracao) => Promise<boolean>;
+  /** Recarrega a lista do pai depois de gerar/revogar a chave; ver `ChaveDaFonte`. */
+  aoMudarChave: () => void | Promise<void>;
 }) {
   const identificador = useId();
   const [renomeando, setRenomeando] = useState(false);
@@ -301,7 +304,11 @@ export function PainelDaFonte({
         titulo="Chave de API"
         nota="Credencial do envio direto para POST /ingestao. Ela aparece uma única vez: o servidor guarda só o hash, e não há rota para reler."
       >
-        <ChaveDaFonte fonte={fonte} base={baseDaApi} />
+        <ChaveDaFonte
+          fonte={fonte}
+          base={baseDaApi}
+          aoMudarChave={aoMudarChave}
+        />
       </Bloco>
 
       {/* O CONDICIONAL. Fonte csv nao ganha bloco de webhook -- e o primeiro

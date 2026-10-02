@@ -26,6 +26,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from fraus.fuso import no_fuso_do_produto
+
 from fraus.ingest import leitores, mapeador, totalk
 from fraus.ingest.csv_driver import carregar_linhas
 from fraus.ingest.transcricao import ler as ler_transcricao
@@ -101,6 +103,13 @@ class Extracao:
     """Primeiras linhas, JA censuradas -- a previa mostra dado de cliente real."""
     perfil: dict | None = None
     """O perfil salvo que decidiu o mapeamento, quando houve um."""
+    tem_data: bool = True
+    """Falso quando o arquivo traz a hora e nao o dia (transcricao em prosa): o
+    dia das conversas e o do envio. Quem grava nao pode por esse dia no id."""
+    id_do_arquivo: bool = False
+    """Verdadeiro quando o id nao veio do dado: arquivo sem coluna de conversa,
+    ou transcricao. O id e um nome de enfeite e quem grava precisa trocar --
+    ver `fraus/api/identidade.py`."""
 
 
 @dataclass
@@ -367,6 +376,7 @@ def _mapeada(
         conversas=resultado.conversas,
         formato=f"{origem} com colunas inferidas",
         tem_tempo=resultado.tem_tempo,
+        id_do_arquivo="conversa_id" not in mapa.papeis,
         avisos=avisos,
         rejeitadas=resultado.rejeitadas,
         mapeamento={
@@ -387,8 +397,15 @@ def _mapeada(
     )
 
 
+def _agora() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _de_prosa(texto: str, nome: str, origem: str) -> Extracao:
-    inicio = datetime.now(timezone.utc).replace(microsecond=0)
+    # A transcricao traz, no maximo, a hora. O dia e o do envio, e os dois sao
+    # do relogio de quem enviou: ate 02/10/2026 "22:30" era lido como UTC e a
+    # conversa aparecia tres horas antes, as vezes no dia anterior.
+    inicio = no_fuso_do_produto(_agora()).replace(microsecond=0)
     transcricao = ler_transcricao(texto, inicio)
 
     if not transcricao.mensagens:
@@ -414,6 +431,12 @@ def _de_prosa(texto: str, nome: str, origem: str) -> Extracao:
             "que a verdade. A leitura por mensagem (classificação, emoção, ironia "
             "e peso das palavras) vale normalmente."
         )
+    else:
+        avisos.append(
+            "O arquivo traz a hora de cada fala, mas não o dia: a conversa fica "
+            "registrada no dia do envio. A latência e a nota não dependem disso; "
+            "a posição na série diária, sim."
+        )
     if transcricao.rotulos_ignorados:
         avisos.append(
             "Rótulos não reconhecidos, tratados como continuação da fala anterior: "
@@ -433,6 +456,8 @@ def _de_prosa(texto: str, nome: str, origem: str) -> Extracao:
         formato=f"transcrição em {origem}",
         tem_tempo=transcricao.tem_tempo,
         avisos=avisos,
+        tem_data=False,
+        id_do_arquivo=True,
     )
 
 
@@ -444,10 +469,25 @@ def extrair(nome: str, dados: bytes, opcoes: OpcoesDeLeitura | None = None) -> E
         # Export de Windows costuma sair em cp1252/latin-1, e o Excel pt-BR
         # separa por `;`. Os dois sao resolvidos no leitor, nao recusados.
         texto, _ = leitores.decodificar(dados)
-        (cabecalho, corpo), _ = leitores.tabela_de_csv(texto)
-        if not cabecalho:
-            raise ArquivoIlegivelError("o CSV esta vazio")
-        return _de_tabela([cabecalho, *corpo], "CSV", opcoes)
+        try:
+            (cabecalho, corpo), _ = leitores.tabela_de_csv(texto)
+            if not cabecalho:
+                raise ArquivoIlegivelError("o CSV esta vazio")
+            return _de_tabela([cabecalho, *corpo], "CSV", opcoes)
+        except csv.Error as erro:
+            # O modulo `csv` desiste do ARQUIVO, nao de uma linha: aspas que
+            # abrem e nao fecham engolem o resto do texto num campo so, e ele
+            # estoura o teto de 131072 caracteres por campo. Ate 02/10/2026
+            # isso subia cru -- nem as rotas nem `extrair_ou_400` conhecem
+            # `csv.Error` -- e um export plausivel virava 500. O `try` cobre os
+            # tres pontos que leem CSV: a deteccao de delimitador e a tabela
+            # (`leitores`) e a releitura no layout canonico (`csv_driver`).
+            raise ArquivoIlegivelError(
+                f"CSV ilegível: o leitor desistiu do arquivo ({erro}). Quase "
+                "sempre são aspas que abrem e não fecham no texto de uma "
+                "mensagem, e o resto do arquivo vira um campo só. Aspas dentro "
+                'do texto se escrevem dobradas ("").'
+            ) from erro
 
     if formato == "json":
         texto, _ = leitores.decodificar(dados)

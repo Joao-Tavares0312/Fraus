@@ -121,6 +121,9 @@
   --color-estilo: var(--estilo);
   --color-estilo-fraco: var(--estilo-fraco);
   --color-estilo-texto: var(--estilo-texto);
+  --color-incongruencia: var(--incongruencia);
+  --color-incongruencia-fraco: var(--incongruencia-fraco);
+  --color-incongruencia-texto: var(--incongruencia-texto);
   --color-tempo: var(--tempo);
   --color-tempo-fraco: var(--tempo-fraco);
   --color-tempo-texto: var(--tempo-texto);
@@ -324,6 +327,17 @@
   --estilo: oklch(0.79 0.19 170); /* teal: forma da escrita */
   --estilo-fraco: color-mix(in oklch, var(--estilo) 18%, transparent);
   --estilo-texto: oklch(0.85 0.17 170);
+
+  /* A setima familia do vetor (entrou em 03/09/2026) ficou SEM cor ate
+     02/10/2026: o mapa de prefixo ja a reconhecia, mas o token nao existia e
+     as seis barras saiam com trilho vazio. Violeta 290 e o vao que sobrava
+     entre o azul do medido (250) e o magenta do tempo (320) -- matiz de
+     nenhuma familia e reciclado. Croma 0.15 e nao 0.19 como as vizinhas: o
+     gamut sRGB estreita nesse matiz. So na base: o segundo tema nao toca a
+     camada de dado e herda este token pela cascata. */
+  --incongruencia: oklch(0.74 0.15 290); /* violeta: o texto contra ele mesmo */
+  --incongruencia-fraco: color-mix(in oklch, var(--incongruencia) 18%, transparent);
+  --incongruencia-texto: oklch(0.83 0.11 290);
 
   /* --- os tipos de no do GRAFO DA MEMORIA -------------------------------------
      Nove tipos, duas familias: matiz quente (30-95) = DITO, frio (150-340) =

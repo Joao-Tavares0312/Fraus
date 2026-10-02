@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatarData } from "@/lib/formato";
+import { lerListaDaResposta } from "@/lib/resposta";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 type ChaveAcesso = {
@@ -64,14 +65,14 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
         cache: "no-store",
         headers: autorizacao(),
       });
-      const corpo = await resposta.json().catch(() => null);
-      if (!resposta.ok) {
+      const leitura = await lerListaDaResposta<ChaveAcesso>(resposta);
+      if (!leitura.ok) {
         // A frase da API é a instrução ("esta rota exige a chave mestra").
-        setErro(corpo?.detail ?? `a API respondeu ${resposta.status}`);
+        setErro(leitura.erro);
         setAutenticado(false);
         return;
       }
-      setChaves(Array.isArray(corpo) ? corpo : []);
+      setChaves(leitura.itens);
       setAutenticado(true);
     } catch {
       setErro("não foi possível falar com a dashboard");
@@ -87,14 +88,22 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
   // com um `setOcupado(true)` SÍNCRONO, e escrever estado durante o efeito é o
   // que a regra do React proíbe. Numa cadeia de `.then` toda escrita já
   // aconteceu depois -- é o mesmo idioma do resto do shell.
+  //
+  // FALHA NÃO É LISTA VAZIA: a cadeia olhava só o corpo, e o `{detail}` de um
+  // erro caía em `[]` -- "Nenhuma chave de acesso emitida" com a API fora do
+  // ar. Ver `lib/resposta.ts`.
   useEffect(() => {
     if (precisaDeMestra) return;
     let vivo = true;
     fetch("/api/fraus/chaves", { cache: "no-store" })
-      .then((resposta) => resposta.json())
-      .then((corpo) => {
+      .then((resposta) => lerListaDaResposta<ChaveAcesso>(resposta))
+      .then((leitura) => {
         if (!vivo) return;
-        setChaves(Array.isArray(corpo) ? corpo : []);
+        if (!leitura.ok) {
+          setErro(leitura.erro);
+          return;
+        }
+        setChaves(leitura.itens);
         setAutenticado(true);
       })
       .catch(() => {
@@ -237,7 +246,12 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
         {autenticado ? (
           <>
             {chaves === null ? (
-              <p className="text-xs text-muted-foreground">carregando…</p>
+              <p className="text-xs text-muted-foreground">
+                {/* Com a leitura falhada, "carregando" ficaria ali para sempre. */}
+                {erro
+                  ? "A lista de chaves não pôde ser lida — o motivo está acima."
+                  : "carregando…"}
+              </p>
             ) : chaves.length === 0 ? (
               <p className="text-xs leading-relaxed text-muted-foreground">
                 Nenhuma chave de acesso emitida. Enquanto a API estiver aberta

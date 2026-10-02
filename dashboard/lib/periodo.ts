@@ -18,6 +18,7 @@
  * banco inteiro para descartar a maior parte -- esta anotado no relatorio.
  */
 
+import { diaDoProduto } from "./fuso";
 import type { ResumoConversa } from "./api";
 
 export type Periodo = {
@@ -54,16 +55,13 @@ export function periodoEstaAtivo(periodo: Periodo): boolean {
 }
 
 /**
- * Dia local (AAAA-MM-DD) de um timestamp ISO.
+ * Dia (AAAA-MM-DD) de um timestamp ISO, no fuso do produto.
  *
- * Local de proposito: quem opera o produto pensa em "dia 12", nao em UTC, e a
- * serie temporal da visao geral ja agrupa pelo mesmo criterio.
+ * O nome ficou de quando era o dia do navegador. Quem opera pensa em "dia 12"
+ * de Brasilia, e a API recorta e agrupa pelo mesmo dia (`fraus/fuso.py`).
  */
 export function diaLocal(iso: string): string {
-  const data = new Date(iso);
-  const mes = `${data.getMonth() + 1}`.padStart(2, "0");
-  const dia = `${data.getDate()}`.padStart(2, "0");
-  return `${data.getFullYear()}-${mes}-${dia}`;
+  return diaDoProduto(iso);
 }
 
 export function dentroDoPeriodo(iso: string, periodo: Periodo): boolean {
