@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EstadoVazio } from "./EstadoVazio";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 /**
  * O cursor de leitura: um filete dourado TRACEJADO vertical no dia apontado.
@@ -154,7 +155,7 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
           aria-expanded={verTabela}
           aria-controls={idTabela}
           className="sem-impressao"
-        >
+        ><IconeDeAcao acao="alternar" />
           {verTabela ? "Ver gráfico" : "Ver tabela"}
         </Button>
       </div>

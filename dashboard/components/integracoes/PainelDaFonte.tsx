@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 /**
  * Uma faixa do detalhe: titulo curto, a ressalva que explica ESTE controle
@@ -146,7 +147,7 @@ export function PainelDaFonte({
                   size="xs"
                   onClick={salvarRenome}
                   disabled={ocupada || nomeEmEdicao.trim() === ""}
-                >
+                ><IconeDeAcao acao="salvar" />
                   {ocupada ? "Salvando…" : "Salvar"}
                 </Button>
                 <Button
@@ -154,7 +155,7 @@ export function PainelDaFonte({
                   size="xs"
                   variant="ghost"
                   onClick={() => setRenomeando(false)}
-                >
+                ><IconeDeAcao acao="cancelar" />
                   Cancelar
                 </Button>
               </div>
@@ -195,7 +196,7 @@ export function PainelDaFonte({
               variant="outline"
               onClick={() => aoAlternarAtiva(fonte)}
               disabled={ocupada}
-            >
+            ><IconeDeAcao acao="ligar" />
               {fonte.ativa ? "Desativar" : "Ativar"}
             </Button>
             <Button
@@ -280,7 +281,7 @@ export function PainelDaFonte({
                 variant="destructive"
                 onClick={confirmarRemocao}
                 disabled={ocupada}
-              >
+              ><IconeDeAcao acao="remover" />
                 {ocupada ? "Removendo…" : "Remover o cadastro"}
               </Button>
               <Button
@@ -288,7 +289,7 @@ export function PainelDaFonte({
                 size="xs"
                 variant="ghost"
                 onClick={() => setConfirmandoRemocao(false)}
-              >
+              ><IconeDeAcao acao="cancelar" />
                 Manter
               </Button>
             </div>

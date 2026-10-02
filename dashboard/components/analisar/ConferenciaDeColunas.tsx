@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 const ROTULO_PAPEL: Record<Papel, string> = {
   texto: "Fala",
@@ -361,7 +362,7 @@ export function ConferenciaDeColunas({
                 ? "Analisando…"
                 : "Analisar com estas colunas"}
           </Button>
-          <Button type="button" variant="outline" onClick={aoCancelar} disabled={ocupado}>
+          <Button type="button" variant="outline" onClick={aoCancelar} disabled={ocupado}><IconeDeAcao acao="arquivo" />
             {importando ? "Cancelar" : "Escolher outro arquivo"}
           </Button>
         </div>

@@ -17,6 +17,7 @@ import {
   ROTULO_DA_CATEGORIA,
   type Faixas,
 } from "./EscalaNps";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 type Rascunho = Record<string, { de: string; ate: string }>;
 
@@ -315,7 +316,7 @@ export function FaixasNps({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" onClick={salvar} disabled={salvando || !mudou}>
+        <Button type="button" onClick={salvar} disabled={salvando || !mudou}><IconeDeAcao acao="salvar" />
           {salvando ? "Salvando…" : "Salvar faixas"}
         </Button>
         <Button
