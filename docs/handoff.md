@@ -836,6 +836,18 @@ Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
 
 ## 8. Armadilhas já pagas — não repita
 
+00. **O proxy emprestava a credencial do deploy a quem não tinha sessão —
+   conserto de 02/10/2026.** As páginas redirecionavam o visitante para
+   `/entrar`, e por isso parecia fechado; `/api/fraus/*` respondia mesmo assim,
+   porque sem cookie de sessão `autorizacaoDoServidor` caía para
+   `FRAUS_CHAVE_ACESSO`. Redirect de página não é controle de acesso: quem nega
+   dado é a API, e a API recebia do proxy uma credencial que passa por tudo.
+   Agora a credencial do servidor só é emprestada em instalação **sem** login
+   (`/auth/estado` com `disponivel: false`), e a dúvida fecha. Conferir depois
+   de qualquer mudança nesse módulo, sem cookie nenhum:
+   `curl -s -o /dev/null -w "%{http_code}" https://<dashboard>/api/fraus/conversas`
+   tem de dar **401** onde há login.
+
 0. **CORRIGIDO em 14/09/2026 — a vitrine ROLAVA sim, e o texto abaixo media
    errado.** `overflow-x: hidden` no body barra o arraste, **não** a rolagem
    programática: re-medido, `scrollTo(9999, 0)` a 390px andava **96px**. O

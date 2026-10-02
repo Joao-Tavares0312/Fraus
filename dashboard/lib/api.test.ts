@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { obterDetalhes, TETO_DETALHES_PLANO_B } from "./api";
+import { esquecerEstadoDoLogin } from "./credencial-do-servidor";
 
 /**
  * O PLANO B (`app/dashboard/page.tsx`) baixa transcricao por transcricao
@@ -21,11 +22,24 @@ const IDS_ALEM_DO_TETO = Array.from(
   (_, indice) => `conversa-${indice}`,
 );
 
+/**
+ * Sem sessao, o servidor pergunta a API se ha login antes de emprestar a
+ * propria credencial (`lib/credencial-do-servidor.ts`). Essa pergunta nao e
+ * transcricao: os testes daqui a respondem a parte e contam so o resto.
+ */
+function respostaDoEstadoDoLogin(url: unknown): Response | null {
+  return String(url).endsWith("/auth/estado")
+    ? Response.json({ disponivel: false, cadastro_exige_codigo: false })
+    : null;
+}
+
 function mockarFetchQueRespondeQualquerId() {
   const chamadas: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
+      const estado = respostaDoEstadoDoLogin(url);
+      if (estado) return estado;
       chamadas.push(url);
       return new Response(JSON.stringify({ id: "x", mensagens: [] }), {
         status: 200,
@@ -38,6 +52,7 @@ function mockarFetchQueRespondeQualquerId() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  esquecerEstadoDoLogin();
 });
 
 describe("obterDetalhes tem teto para o plano B", () => {
@@ -71,7 +86,9 @@ describe("obterDetalhes tem teto para o plano B", () => {
     let chamada = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
+      vi.fn(async (url: string) => {
+        const estado = respostaDoEstadoDoLogin(url);
+        if (estado) return estado;
         chamada += 1;
         if (chamada === 1) return new Response("erro", { status: 500 });
         return new Response(JSON.stringify({ id: "x", mensagens: [] }), {

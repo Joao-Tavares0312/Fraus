@@ -27,7 +27,7 @@ async function repassar(
   metodo: "GET" | "POST",
   corpo?: string,
 ): Promise<Response> {
-  const autorizacao = autorizacaoParaLigar(requisicao);
+  const autorizacao = await autorizacaoParaLigar(requisicao);
 
   let resposta: Response;
   try {
