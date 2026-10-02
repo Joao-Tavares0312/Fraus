@@ -26,9 +26,10 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 
 ## 2.0 Para retomar — Laya e ironia, 02/10/2026
 
-**Onde parou:** o código está pronto e publicado no ramo `feat/treino-laya`
-(PR #80). Falta rodar dois notebooks no Colab, e isso parou porque a cota
-gratuita de GPU da conta acabou na tarde de 02/10/2026.
+**Onde parou:** o código está na `main` (PRs #80 e #81, mesclados em
+02/10/2026) e a API foi publicada da `main` no mesmo dia. Falta rodar dois
+notebooks no Colab, e isso parou porque a cota gratuita de GPU da conta acabou
+na tarde de 02/10/2026.
 
 ### O que foi feito e o que se concluiu
 
@@ -50,12 +51,12 @@ Regra da divisão e o antes/depois: `docs/treinamento.md`, notebook 04.
 
 ### Passo a passo para terminar
 
-Quem roda o Colab é o João, na conta `joao.tavaresvicente@alunos.unis.edu.br`.
+Quem roda o Colab é o João, na conta institucional dele (a da Unis).
 O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em
 02/10/2026 ele rodou célula na conta errada. Não use o MCP para isso.
 
 1. **Notebook 04** — cabeça de ironia do BERTimbau, 3 épocas, GPU obrigatória:
-   <https://colab.research.google.com/github/Joao-Tavares0312/Fraus/blob/feat/treino-laya/notebooks/04_treino_ironia.ipynb>
+   <https://colab.research.google.com/github/Joao-Tavares0312/Fraus/blob/main/notebooks/04_treino_ironia.ipynb>
    - Ele grava por cima de `fraus/modelos/bertimbau-ironia` no Drive. Para
      guardar o modelo anterior, renomeie a pasta antes.
    - A célula 5 tem de imprimir perto de **28.365 linhas no treino e 4.778 no
@@ -63,8 +64,8 @@ O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em
      medidos fora do Colab com a regra nova. Se a divisão sair diferente do
      pedido, `conferir_divisao` para o notebook com erro — é o comportamento
      certo, não contorne.
-2. **Notebook 07** — Laya, abrindo pelo link para pegar a versão do ramo:
-   <https://colab.research.google.com/github/Joao-Tavares0312/Fraus/blob/feat/treino-laya/notebooks/07_treino_laya.ipynb>
+2. **Notebook 07** — Laya, abrindo pelo link para pegar a versão da `main`:
+   <https://colab.research.google.com/github/Joao-Tavares0312/Fraus/blob/main/notebooks/07_treino_laya.ipynb>
    - Na célula 7: `MODO_FUMACA = False` e `EPOCAS = 2`. Estimativa de 1h50 na
      T4 (são mais casos de ironia que no primeiro treino); não há checkpoint
      por época, então sessão que cai recomeça.
@@ -90,9 +91,9 @@ O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em
      `scripts/validar_candidato_ironia.py` (ver `docs/treinamento.md`, "Portão
      de promoção do artefato"). Promover exige exportar para ONNX e republicar
      o ZIP de modelos da API (`docs/deploy-vercel.md`).
-7. **Depois do merge do PR #80:** troque `RAMO` de `'feat/treino-laya'` para
-   `'main'` na célula 2 dos notebooks 04 e 07. Até lá, **não apague o ramo** —
-   os notebooks o clonam.
+7. Os dois notebooks clonam a `main` (`RAMO = 'main'` na célula 2). O ramo
+   `feat/treino-laya` não é mais necessário. Como o repositório é público, o
+   clone não precisa de `TOKEN_GITHUB`.
 
 ### Se a GPU não estiver disponível
 
@@ -115,7 +116,24 @@ Drive e download do Colab e teriam de ser adaptados antes.
 
 ---
 
-## 2. Estado atual — 30/09/2026
+## 2. Estado em 30/09/2026, com o que mudou em 02/10/2026
+
+**Em 02/10/2026:** PRs #78 (proxy só empresta a credencial do deploy onde não
+há login), #79 (ícones de ação), #80 (treino do Laya, aba Comparação, divisão
+do corpus de ironia) e #81 (trava da migração no Postgres, emoção pelo Laya
+sem treino) entraram na `main`. A API foi publicada da `main` pela CLI no mesmo
+dia (deploy `fraus-ajbdtr0gh`), com `/saude/prontidao` em 200. CI da `main`:
+1.162 passed em SQLite e 1.163 em PostgreSQL; front com 195 testes em 23
+arquivos. A dashboard ganhou job de CI próprio (`tsc` e `vitest`) nesta data;
+antes, isso só rodava na máquina de quem lembrava.
+
+**Qual cabeça lê ironia em produção:** o Laya **sem treino**, exportado para
+ONNX (`FRAUS_IRONIA_BACKEND=laya-onnx` no projeto `fraus-api`). O BERTimbau de
+ironia vai no pacote e não é carregado. Emoção e satisfação são BERTimbau. O
+Laya treinado em 02/10 não foi promovido (§2.0).
+
+O texto abaixo é o registro de 30/09 e continua valendo no que não foi citado
+acima.
 
 ### Análise persistida e Operação — mescladas e publicadas
 
@@ -193,7 +211,10 @@ artefato compatível; sua presença em produção não foi confirmada.
 >    Postgres e ZIP de modelos no Oracle Object Storage
 >    ([deploy-vercel.md](deploy-vercel.md)). A API esfria: o motor agora
 >    aquece em segundo plano (boot e `GET /saude`) e o workflow `api-aquecer`
->    sonda a cada 5 min. Reduz o cold start, não o elimina; o Render gratuito
+>    pede sonda a cada 5 min — mas o agendador do GitHub entregou 10 execuções
+>    em 45 horas (medido em 02/10/2026), então **não conte com ele**: antes de
+>    demonstrar, abra `/saude` e espere `/saude/prontidao` dar 200. Reduz o
+>    cold start, não o elimina; o Render gratuito
 >    não serve (512 MB contra ~1,06 GB medidos).
 > 4. Os números da vitrine moram em `dashboard/components/lp/fatos.ts`.
 >
@@ -321,7 +342,7 @@ você lança o uvicorn não decide mais o motor — mas confira mesmo assim.
 ### Comandos de verificação
 
 ```bash
-uv run pytest -q                 # 1057 passed, 1 deselected (30/09/2026)
+uv run pytest -q                 # 1163 passed, 6 skipped, 1 deselected (02/10/2026)
 uv run pytest -m lento           # o de minutos, obrigatório ao mexer no gerador
 cd dashboard && npx tsc --noEmit # tipos
 cd dashboard && npm run contraste # WCAG AA, por cálculo
@@ -445,7 +466,7 @@ lista, ela para de ser lida.
 | `api/rotas/perfis.py` | `/perfis-mapeamento` — o mapeamento de colunas que o analista confirmou, chaveado pela assinatura das colunas |
 | `ingest/arquivos.py` | decide o formato e traduz erro em mensagem útil |
 | `ingest/gerador_ironia.py` | corpus sintético blindado contra vazamento |
-| `api/main.py` | ~1200 linhas. `criar_app(banco, motor, raiz)` recebe tudo por parâmetro |
+| `api/main.py` | só a montagem (~420 linhas; as rotas moram em `api/rotas/`). `criar_app(banco, motor, raiz)` recebe tudo por parâmetro |
 | `assinatura.py` | HMAC de webhook (Standard Webhooks): `whsec_<base64>`, chave = base64 **decodificado**, assina `{id}.{timestamp}.{corpo}`, janela de 5 min |
 | `api/registro.py` | o miolo de `montar → pontuar → derivar → gravar`, compartilhado por `/ingestao` e `/integracoes/webhook/{id}`; é onde mora `resumo_validacao` |
 | `api/rotas/webhook.py` | `POST /integracoes/webhook/{fonte_id}` — o porteiro na ordem identidade→autoridade→parse, com registro de entrega em `entregas_webhook` |
@@ -512,7 +533,7 @@ Instaladas em `~/.claude/skills/`. As que servem a este projeto:
 | **impeccable** | qualquer trabalho de UI. Modo **Operate** (é ferramenta de dados, não landing page). `PRODUCT.md` e `DESIGN.md` já existem — ela os lê |
 | **taste-skill** | auditoria de frontend, antes de propor redesenho |
 | **redesign-skill** | auditoria de execução: ritmo tipográfico, densidade, estados |
-| **security-audit** | **relevante de verdade aqui** — API sem autenticação nas rotas de leitura + PII de cliente real |
+| **security-audit** | **relevante de verdade aqui** — chaves, sessão de usuário, proxy e escopo por canal guardam dado de cliente |
 | **superpowers:brainstorming** | antes de planejar feature nova |
 | **superpowers:systematic-debugging** | antes de caçar bug |
 
@@ -640,8 +661,8 @@ Resolvida em `feat/autenticacao` (300 testes, `tests/test_autenticacao.py`).
 exclusivo da mestra — chave de acesso tentando recebe 403. A dashboard não fala
 mais com a API direto: passa pelo proxy `app/api/fraus/[...caminho]/route.ts`,
 que anexa a chave de acesso no servidor Next e nunca a deixa chegar ao
-navegador. Ver `README.md` e `docs/hospedagem.md`. Falta só mesclar a branch em
-`main`.
+navegador. Ver `README.md` e `docs/hospedagem.md`. A branch `feat/autenticacao` já está
+na `main`.
 
 ### Feita — A porta destrancada e o teto de `/ingestao` — 08/09/2026
 
@@ -739,43 +760,6 @@ distribuição no corpus, e o corpus não tem latência de três horas.
 
 **MEDIDO em 08/09/2026** com `uv run python scripts/medir_dominio_do_tempo.py`
 (instrumento novo, roda em segundos e não carrega BERTimbau nenhum):
-
-| latência | contrib. tempo | contrib. texto | razão |
-|---:|---:|---:|---:|
-| 60 s | +0,48 | +4,57 | 0,1× |
-| 300 s | −2,97 | +4,57 | 0,7× |
-| **411 s** | **−4,57** | **+4,57** | **1,0× — o empate** |
-| 600 s | −7,29 | +4,57 | 1,6× |
-| 1800 s | −24,54 | +4,57 | 5,4× |
-| 10800 s | −153,96 | +4,57 | 33,7× |
-
-**O relógio empata com o texto em 411 s (6,9 min) e manda a partir dali.** Isso
-é **4,0 desvios** acima da média de `latencia_mediana_s` no treino (67,0 s,
-sigma 85,9 s) — ou seja, o ponto em que o relógio toma a nota está **fora** do
-que o corpus mostrou ao modelo. Cada segundo de espera vale 0,0144 de
-contribuição, **sem teto**.
-
-O laudo bate com a varredura contra a API real: em 600 s o score já tinha caído
-para 93,25, e em 300 s ainda estava em 99,21.
-
-**Três saídas, e a terceira não é obviamente errada:**
-
-1. **Escala log** (`log1p`) nas quatro features de tempo. É a mais defensável
-   tecnicamente: o simulador gera latência **log-normal** de propósito
-   (`docs/treinamento.md`), então a feature é de cauda pesada por construção e
-   o `StandardScaler` — que pressupõe algo próximo de normal — é a ferramenta
-   errada para ela. Custo: retreino, e os nomes `latencia_*_s` passariam a
-   mentir sobre a unidade, então o contrato de 39 chaves mudaria de nome junto.
-2. **Clipar num teto** (algo perto de 600 s). Mais barato de explicar e mantém
-   os nomes. Custo: perde a distinção entre 10 min e 3 h — o que talvez não
-   seja perda, porque acima de certo ponto "muito lento" é só "muito lento".
-   Também exige retreino.
-3. **Aceitar e declarar** como limitação. Custo zero em código, e o preço é
-   defender numa banca um modelo em que o relógio vence o texto a partir de
-   sete minutos — num produto cuja tese é justamente que o texto revela o que o
-   relógio não mostra.
-
-Decisão do dono do projeto — **não tomada**.
 
 | latência | contrib. tempo | contrib. texto | razão |
 |---:|---:|---:|---:|
@@ -927,8 +911,8 @@ classe e de tempo mediano de resposta.
 
 ### P2 — Decisões do João
 
-Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
-`scikit-learn==1.6.1` no `pyproject.toml`, e remover `content/fraus` da raiz.
+Empresa fictícia (não definida) e tema claro (dark-only hoje). O pin do
+`scikit-learn==1.6.1` e a remoção de `content/fraus` já foram feitos.
 
 ---
 
