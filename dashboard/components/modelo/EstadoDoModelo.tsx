@@ -118,7 +118,13 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
                   : "rotulo-instrumento border border-linha px-2 py-0.5"
               }
             >
-              {f1Suspeito ? "suspeito" : "abaixo do limiar"}
+              {/* F1 ausente NAO e "abaixo do limiar": abaixo e uma medida, e
+                  aqui nao houve medida nenhuma para comparar. */}
+              {f1Suspeito
+                ? "suspeito"
+                : f1Fracao === null
+                  ? "não medido"
+                  : "abaixo do limiar"}
             </span>
             <span className="text-sm font-medium text-foreground">
               O F1 da ironia é medido em corpus sintético

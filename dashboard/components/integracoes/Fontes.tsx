@@ -367,6 +367,9 @@ export function Fontes({
               aoTrocarVariavel={trocarVariavel}
               aoAlternarAtiva={alternarAtiva}
               aoRemover={remover}
+              // Sem argumento: a fonte aberta continua a mesma, so o
+              // `chave_dica` dela e que mudou no servidor.
+              aoMudarChave={() => recarregar()}
             />
           ) : fontes.length === 0 ? (
             <EstadoVazio

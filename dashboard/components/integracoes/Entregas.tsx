@@ -2,116 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { listarEntregas, type Entrega, type Veredito } from "@/lib/api";
+import { listarEntregas, type Entrega } from "@/lib/api";
+import { descreverVeredito, ordemDoVeredito } from "@/lib/vereditos";
 import { formatarDataHora } from "@/lib/formato";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-
-/**
- * A ordem canonica dos vereditos, a mesma do tipo `Veredito` e a mesma de
- * `VEREDITOS` no Python.
- *
- * Existe para o cabecalho de contagem NAO dancar: derivada da ordem de
- * aparicao na lista, ela se reorganizava a cada carregamento conforme o que
- * tinha chegado por ultimo. Esta e a tela que o operador fica olhando enquanto
- * depura -- ela nao pode trocar de forma sozinha.
- *
- * E um `Record<Veredito, number>`, e nao um array, pelo mesmo motivo de o
- * `switch` abaixo nao ter `default`: o `Record` exige TODAS as chaves, entao
- * veredito novo no tipo que nao entre aqui vira erro de tipo. Um array de
- * `Veredito[]` aceitaria a lista incompleta em silencio, e o veredito faltante
- * sumiria do cabecalho sem nunca sumir da lista.
- */
-const ORDEM_DOS_VEREDITOS: Record<Veredito, number> = {
-  aceita: 0,
-  assinatura: 1,
-  fora_da_janela: 2,
-  duplicada: 3,
-  corpo_invalido: 4,
-  fonte_inativa: 5,
-  sem_segredo: 6,
-  tipo_incompativel: 7,
-};
-
-/**
- * O rotulo e a cor de um veredito de entrega.
- *
- * O `switch` e EXAUSTIVO e nao tem `default`, de proposito: o retorno declarado
- * obriga todo caminho a devolver, entao um veredito novo entrando em
- * `VEREDITOS` no Python e no tipo `Veredito` sem passar por aqui vira erro de
- * tipo no `npx tsc --noEmit`. Um `default` engoliria exatamente a divergencia
- * que o tipo existe para pegar -- e o sintoma seria um rotulo em branco na
- * tela, que ninguem le como bug.
- *
- * SAO DOIS ROTULOS porque sao duas frases diferentes. Na linha da lista o
- * veredito qualifica UMA entrega e o singular esta certo ("assinatura
- * invalida"); no cabecalho ele vem depois de uma contagem, e "18 aceita" e
- * agramatical. Concordar no cabecalho sem estragar a linha exige os dois.
- *
- * A cor segue a §3.3 do DESIGN.md: nada de `--primary` aqui, porque o dourado e
- * acao e foco e NUNCA dado. `sem_segredo` e o unico em vermelho porque e o
- * unico defeito da MAQUINA que hospeda -- a variavel de ambiente nao esta la, a
- * rota responde 503, e nenhuma plataforma do outro lado consegue consertar.
- */
-function descreverVeredito(veredito: Veredito): {
-  /** Uma entrega, na linha da lista. */
-  rotulo: string;
-  /** Varias entregas, depois da contagem no cabecalho. */
-  plural: string;
-  cor: string;
-} {
-  switch (veredito) {
-    case "aceita":
-      return {
-        rotulo: "aceita",
-        plural: "aceitas",
-        cor: "text-promotor-texto",
-      };
-    case "assinatura":
-      return {
-        rotulo: "assinatura inválida",
-        plural: "com assinatura inválida",
-        cor: "text-muted-foreground",
-      };
-    case "fora_da_janela":
-      return {
-        rotulo: "fora da janela de tempo",
-        plural: "fora da janela de tempo",
-        cor: "text-muted-foreground",
-      };
-    case "duplicada":
-      return {
-        rotulo: "reentrega",
-        plural: "reentregas",
-        cor: "text-muted-foreground",
-      };
-    case "corpo_invalido":
-      return {
-        rotulo: "corpo fora do contrato",
-        plural: "com corpo fora do contrato",
-        cor: "text-muted-foreground",
-      };
-    case "fonte_inativa":
-      return {
-        rotulo: "fonte desativada",
-        plural: "recusadas por fonte desativada",
-        cor: "text-muted-foreground",
-      };
-    case "sem_segredo":
-      return {
-        rotulo: "segredo ausente no ambiente da API",
-        plural: "sem segredo no ambiente da API",
-        cor: "text-detrator-texto",
-      };
-    case "tipo_incompativel":
-      return {
-        rotulo: "fonte não é do tipo webhook",
-        plural: "recusadas por a fonte não ser do tipo webhook",
-        cor: "text-muted-foreground",
-      };
-  }
-}
 
 /**
  * O historico de entregas de webhook de uma fonte.
@@ -232,13 +128,16 @@ export function Entregas({ fonteId }: { fonteId: number }) {
   // A contagem sai da propria lista, nunca de um contador a parte: contador
   // separado e a forma mais barata de o cabecalho dizer 18 com 17 linhas
   // abaixo dele.
-  const contagem = new Map<Veredito, number>();
+  // Chave `string`, nao `Veredito`: o valor vem de outro deploy e pode ser um
+  // que este front ainda nao conhece -- `descreverVeredito` o mostra cru em vez
+  // de derrubar o painel (ver `lib/vereditos.ts`).
+  const contagem = new Map<string, number>();
   for (const entrega of entregas) {
     contagem.set(entrega.veredito, (contagem.get(entrega.veredito) ?? 0) + 1);
   }
-  // A ordem e a do tipo, nao a da chegada -- ver ORDEM_DOS_VEREDITOS.
+  // A ordem e a do tipo, nao a da chegada -- ver `ordemDoVeredito`.
   const resumo = [...contagem.entries()].sort(
-    ([a], [b]) => ORDEM_DOS_VEREDITOS[a] - ORDEM_DOS_VEREDITOS[b],
+    ([a], [b]) => ordemDoVeredito(a) - ordemDoVeredito(b),
   );
 
   return (

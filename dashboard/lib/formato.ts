@@ -48,15 +48,25 @@ export function formatarPercentual(valor: number): string {
 
 /** NPS vive em [-100, 100]: o sinal e informacao, entao sempre aparece. */
 export function formatarNps(valor: number): string {
-  const arredondado = Math.round(valor * 10) / 10;
+  // `Math.round(-0.4) / 10` e ZERO NEGATIVO, e o Intl escreve "-0": um NPS com
+  // sinal de negativo que nao e negativo em casa decimal nenhuma da tela. A
+  // comparacao abaixo e verdadeira para os dois zeros e devolve o positivo.
+  const bruto = Math.round(valor * 10) / 10;
+  const arredondado = bruto === 0 ? 0 : bruto;
   const sinal = arredondado > 0 ? "+" : "";
   return `${sinal}${NUMERO.format(arredondado)}`;
 }
 
 export function formatarSegundos(segundos: number): string {
-  if (segundos < 60) return `${NUMERO.format(segundos)} s`;
-  const minutos = Math.floor(segundos / 60);
-  const resto = Math.round(segundos % 60);
+  // A fronteira e decidida DEPOIS de arredondar, nao antes: 59,96 s escreve
+  // "60 s" e 119,6 s escrevia "1 min 60 s" (o resto arredondava sozinho, sem
+  // levar o minuto junto). Acima de um minuto arredonda-se o TOTAL uma vez e
+  // so entao se divide -- mesma ordem de `formatarSegundosLED`, para a forma
+  // por extenso e o display nunca discordarem do mesmo numero.
+  if (Math.round(segundos * 10) / 10 < 60) return `${NUMERO.format(segundos)} s`;
+  const total = Math.round(segundos);
+  const minutos = Math.floor(total / 60);
+  const resto = total % 60;
   if (minutos < 60) return resto === 0 ? `${minutos} min` : `${minutos} min ${resto} s`;
   const horas = Math.floor(minutos / 60);
   return `${horas} h ${minutos % 60} min`;

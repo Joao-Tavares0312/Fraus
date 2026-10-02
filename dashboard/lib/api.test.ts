@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { obterDetalhes, TETO_DETALHES_PLANO_B } from "./api";
+import { obterConversa, obterDetalhes, TETO_DETALHES_PLANO_B } from "./api";
 import { esquecerEstadoDoLogin } from "./credencial-do-servidor";
 
 /**
@@ -103,5 +103,62 @@ describe("obterDetalhes tem teto para o plano B", () => {
     expect(resultado.falhas).toBe(1);
     expect(resultado.detalhes).toHaveLength(2);
     expect(resultado.truncadas).toBe(0);
+  });
+});
+
+/**
+ * A tela do atendimento decidia "nao encontrado" com `/404/.test(erro)`, e a
+ * mensagem de erro carrega a ROTA -- que carrega o id. Um 500 em
+ * `/conversas/c-1404` virava pagina de 404: a tela afirmava que o atendimento
+ * nao existe quando o que falhou foi o servidor.
+ */
+describe("a falha de leitura carrega o STATUS, nao so o texto", () => {
+  function mockarStatus(status: number) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const estado = respostaDoEstadoDoLogin(url);
+        if (estado) return estado;
+        return new Response("{}", { status });
+      }),
+    );
+  }
+
+  it("500 num id que contem 404 nao e 404", async () => {
+    mockarStatus(500);
+
+    const resultado = await obterConversa("c-1404");
+
+    expect(resultado.ok).toBe(false);
+    if (resultado.ok) return;
+    expect(resultado.erro).toContain("404"); // o texto engana; por isso o status
+    expect(resultado.status).toBe(500);
+  });
+
+  it("404 de verdade chega como 404", async () => {
+    mockarStatus(404);
+
+    const resultado = await obterConversa("c-1");
+
+    expect(resultado.ok).toBe(false);
+    if (resultado.ok) return;
+    expect(resultado.status).toBe(404);
+  });
+
+  it("falha sem resposta HTTP nao inventa status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const estado = respostaDoEstadoDoLogin(url);
+        if (estado) return estado;
+        throw new Error("fetch failed");
+      }),
+    );
+
+    const resultado = await obterConversa("c-1");
+
+    expect(resultado.ok).toBe(false);
+    if (resultado.ok) return;
+    expect(resultado.status).toBeUndefined();
   });
 });

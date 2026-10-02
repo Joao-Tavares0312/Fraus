@@ -620,7 +620,30 @@ export type Importacao = {
 
 export type Resultado<T> =
   | { ok: true; dado: T }
-  | { ok: false; erro: string };
+  | {
+      ok: false;
+      erro: string;
+      /**
+       * O status HTTP, quando a falha FOI uma resposta HTTP. Ausente quando
+       * nao houve resposta (API fora, tempo esgotado) e nas rotas que ainda
+       * nao o propagam -- ausente, nunca 0.
+       *
+       * Existe porque o texto do erro carrega a rota, e a rota carrega o id:
+       * decidir "404" por regex no texto fazia um 500 em `/conversas/c-1404`
+       * virar pagina de nao encontrado.
+       */
+      status?: number;
+    };
+
+/** Falha de leitura que foi uma RESPOSTA: carrega o status, alem da frase. */
+class ErroDeStatus extends Error {
+  constructor(
+    mensagem: string,
+    readonly status: number,
+  ) {
+    super(mensagem);
+  }
+}
 
 /*
  * TETOS DE ESPERA. Sem eles, `fetch` no servidor espera indefinidamente: uma
@@ -669,7 +692,12 @@ async function buscar<T>(rota: string): Promise<T> {
   if (falhouNoProxy(resposta.status)) {
     throw new Error(`${MARCA_API_FORA} ${urlDaApi("")}`);
   }
-  if (!resposta.ok) throw new Error(`${rota} respondeu ${resposta.status}`);
+  if (!resposta.ok) {
+    throw new ErroDeStatus(
+      `${rota} respondeu ${resposta.status}`,
+      resposta.status,
+    );
+  }
   return (await resposta.json()) as T;
 }
 
@@ -767,7 +795,9 @@ async function proteger<T>(promessa: Promise<T>): Promise<Resultado<T>> {
   try {
     return { ok: true, dado: await promessa };
   } catch (erro) {
-    return { ok: false, erro: mensagemDeErro(erro) };
+    return erro instanceof ErroDeStatus
+      ? { ok: false, erro: mensagemDeErro(erro), status: erro.status }
+      : { ok: false, erro: mensagemDeErro(erro) };
   }
 }
 
@@ -1099,8 +1129,12 @@ export const listarTiposDeFonte = () =>
 /**
  * O veredito de uma entrega de webhook. A lista vem de `VEREDITOS` em
  * `fraus/db.py` e e digitada aqui uma unica vez -- se um veredito novo entrar
- * la sem entrar aqui, o TypeScript reclama no `switch` de `Entregas.tsx`, que
- * e exatamente onde a divergencia precisa aparecer.
+ * aqui sem entrar em `lib/vereditos.ts`, o TypeScript reclama no `Record` de
+ * la, que e exatamente onde a divergencia precisa aparecer.
+ *
+ * `vazao` (o 429 do teto de entregas por minuto) e `erro` (falha interna, 500)
+ * entraram em 02/10/2026. O primeiro a rota ja gravava sem que esta lista
+ * soubesse, e ele derrubava o painel de Entregas.
  */
 export type Veredito =
   | "aceita"
@@ -1110,7 +1144,9 @@ export type Veredito =
   | "corpo_invalido"
   | "fonte_inativa"
   | "sem_segredo"
-  | "tipo_incompativel";
+  | "tipo_incompativel"
+  | "vazao"
+  | "erro";
 
 /** Uma linha do historico de `GET /integracoes/fontes/{id}/entregas`. */
 export type Entrega = {
@@ -1118,7 +1154,11 @@ export type Entrega = {
   fonte_id: number;
   webhook_id: string | null;
   recebida_em: string;
-  veredito: Veredito;
+  /**
+   * `Veredito` e o que o front CONHECE; a API publica em outro deploy e pode
+   * mandar um valor mais novo. Quem le trata como texto (`descreverVeredito`).
+   */
+  veredito: Veredito | (string & {});
   motivo: string | null;
   /** `null` quando a entrega nao gerou conversa -- nunca "" nem 0. */
   conversa_id: string | null;

@@ -187,7 +187,7 @@ export default async function PaginaModelo() {
 
         {/* Depois do lexicon de emoji de propósito: primeiro o que o projeto
             trouxe pronto, depois o que esta instalação acrescentou por cima. */}
-        <LexicoCurado />
+        <LexicoCurado totalEmojisLexicon={modelo.total_emojis_lexicon} />
           </TabsContent>
 
           <TabsContent value="laya" className="flex min-w-0 flex-col gap-4">

@@ -276,6 +276,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
               <DistribuicaoScores
                 barras={distribuicao.barras}
                 semSinal={distribuicao.semSinal}
+                faixas={faixasVigentes}
               />
             )}
           </Painel>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatarData } from "@/lib/formato";
+import { lerListaDaResposta } from "@/lib/resposta";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 type TermoCurado = {
@@ -39,7 +40,17 @@ const PESOS_DE_PALAVRA = [
  * NPS carregar "estimativa" --, mas anunciar uma intervencao que nao houve e o
  * erro simetrico.
  */
-export function LexicoCurado() {
+export function LexicoCurado({
+  totalEmojisLexicon,
+}: {
+  /**
+   * Quantas entradas o lexicon de emoji tem, de `GET /modelo`
+   * (`total_emojis_lexicon`) -- o mesmo numero do titulo do painel logo acima.
+   * Aqui havia um "751" digitado, que discordaria dele no dia em que a tabela
+   * mudasse.
+   */
+  totalEmojisLexicon: number;
+}) {
   const [curados, setCurados] = useState<TermoCurado[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -54,12 +65,12 @@ export function LexicoCurado() {
       const resposta = await fetch("/api/fraus/lexico/curado", {
         cache: "no-store",
       });
-      const corpo = await resposta.json().catch(() => null);
-      if (!resposta.ok) {
-        setErro(corpo?.detail ?? `a API respondeu ${resposta.status}`);
+      const leitura = await lerListaDaResposta<TermoCurado>(resposta);
+      if (!leitura.ok) {
+        setErro(leitura.erro);
         return;
       }
-      setCurados(Array.isArray(corpo) ? corpo : []);
+      setCurados(leitura.itens);
     } catch {
       setErro("não foi possível falar com a dashboard");
     }
@@ -67,12 +78,18 @@ export function LexicoCurado() {
 
   // Mesmo idioma do resto do shell: a cadeia de `.then` garante que toda
   // escrita de estado aconteça DEPOIS do efeito, nunca durante.
+  //
+  // FALHA NAO E LISTA VAZIA: a cadeia olhava so o corpo, e o `{detail}` de um
+  // 401 ou de uma API fora do ar caia em `[]` -- a tela dizia "Nenhum termo
+  // curado" sem ter lido nada. Ver `lib/resposta.ts`.
   useEffect(() => {
     let vivo = true;
     fetch("/api/fraus/lexico/curado", { cache: "no-store" })
-      .then((resposta) => resposta.json())
-      .then((corpo) => {
-        if (vivo) setCurados(Array.isArray(corpo) ? corpo : []);
+      .then((resposta) => lerListaDaResposta<TermoCurado>(resposta))
+      .then((leitura) => {
+        if (!vivo) return;
+        if (leitura.ok) setCurados(leitura.itens);
+        else setErro(leitura.erro);
       })
       .catch(() => {
         if (vivo) setErro("não foi possível falar com a dashboard");
@@ -281,12 +298,18 @@ export function LexicoCurado() {
         </div>
 
         {curados === null ? (
-          <p className="text-xs text-muted-foreground">carregando…</p>
+          <p className="text-xs text-muted-foreground">
+            {/* Com a leitura falhada, "carregando" ficaria ali para sempre. */}
+            {erro
+              ? "A lista de termos curados não pôde ser lida — o motivo está acima."
+              : "carregando…"}
+          </p>
         ) : curados.length === 0 ? (
           /* ESTADO VAZIO NOMEIA O QUE FALTA, nunca "0 termos". */
           <p className="text-xs leading-relaxed text-muted-foreground">
             Nenhum termo curado. O léxico usa só o SentiLex-PT02 (79.189 formas)
-            e o Emoji Sentiment Ranking (751 emojis, anotados em 2015).
+            e o Emoji Sentiment Ranking ({totalEmojisLexicon} entradas,
+            anotadas em 2015).
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-[var(--linha)] rounded-md border border-[var(--linha)]">

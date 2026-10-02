@@ -32,6 +32,9 @@ const COR_DO_SINAL: Record<string, string> = {
   lexico: "var(--lexico)",
   ironia: "var(--ironia)", // morta para dado real -- ver nota acima
   estilo: "var(--estilo)",
+  // Faltou ate 02/10/2026: a familia entrou no vetor em 03/09 e as seis barras
+  // dela saiam com o trilho vazio (`background: undefined`).
+  incongruencia: "var(--incongruencia)",
   outros: "var(--outros-sinal)",
 };
 
@@ -43,6 +46,7 @@ const TEXTO_DO_SINAL: Record<string, string> = {
   lexico: "text-lexico-texto",
   ironia: "text-ironia-texto", // morta para dado real -- ver nota em COR_DO_SINAL
   estilo: "text-estilo-texto",
+  incongruencia: "text-incongruencia-texto",
   outros: "text-outros-sinal-texto",
 };
 
