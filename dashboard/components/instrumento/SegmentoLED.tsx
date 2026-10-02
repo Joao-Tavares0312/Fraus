@@ -38,6 +38,28 @@ const POLIGONOS: Readonly<Record<Segmento, string>> = {
   g: "14,48 54,48 60,54 54,60 14,60 8,54",
 };
 
+/**
+ * O TRACO FINO, da vitrine (01/10/2026): a mesma celula 68x108 com segmento de
+ * 4 unidades em vez de 12 e sem brilho. O Joao pediu o numero mais leve ao
+ * lado de cartoes minimalistas; o que nao muda e a gramatica -- o apagado
+ * continua desenhado (a 8%), `null` continua sem nenhum segmento aceso.
+ */
+const POLIGONOS_FINOS: Readonly<Record<Segmento, string>> = {
+  a: "6,2 8,0 60,0 62,2 60,4 8,4",
+  b: "66,6 68,8 68,48 66,50 64,48 64,8",
+  c: "66,58 68,60 68,100 66,102 64,100 64,60",
+  d: "6,106 8,104 60,104 62,106 60,108 8,108",
+  e: "2,58 4,60 4,100 2,102 0,100 0,60",
+  f: "2,6 4,8 4,48 2,50 0,48 0,8",
+  g: "6,54 8,52 60,52 62,54 60,56 8,56",
+};
+
+export type TracoDoLED = "cheio" | "fino";
+
+/** O brilho e UM filtro no grupo aceso; o traco fino nao tem brilho nenhum. */
+const brilho = (traco: TracoDoLED) =>
+  traco === "fino" ? undefined : { filter: "drop-shadow(0 0 3px currentColor)" };
+
 const ORDEM: readonly Segmento[] = ["a", "b", "c", "d", "e", "f", "g"];
 
 const LARGURA = 68;
@@ -64,11 +86,14 @@ function Digito({
   acesos,
   altura,
   espaco,
+  traco,
 }: {
   acesos: readonly Segmento[];
   altura: number;
   espaco: number;
+  traco: TracoDoLED;
 }) {
+  const poligonos = traco === "fino" ? POLIGONOS_FINOS : POLIGONOS;
   const apagados = ORDEM.filter((s) => !acesos.includes(s));
   return (
     <svg
@@ -80,16 +105,16 @@ function Digito({
       style={{ marginRight: espaco, flex: "none", overflow: "visible" }}
       data-celula="digito"
     >
-      <g fill="currentColor" opacity={0.1}>
+      <g fill="currentColor" opacity={traco === "fino" ? 0.08 : 0.1}>
         {apagados.map((s) => (
-          <polygon key={s} points={POLIGONOS[s]} />
+          <polygon key={s} points={poligonos[s]} />
         ))}
       </g>
       {/* O brilho e UM filtro no grupo aceso, e nao um por poligono: sete
           `drop-shadow` por digito, em vinte digitos, e custo sem retorno. */}
-      <g fill="currentColor" style={{ filter: "drop-shadow(0 0 3px currentColor)" }}>
+      <g fill="currentColor" style={brilho(traco)}>
         {acesos.map((s) => (
-          <polygon key={s} points={POLIGONOS[s]} data-aceso={s} />
+          <polygon key={s} points={poligonos[s]} data-aceso={s} />
         ))}
       </g>
     </svg>
@@ -101,11 +126,13 @@ function Estreita({
   espaco,
   children,
   nome,
+  traco,
 }: {
   altura: number;
   espaco: number;
   children: React.ReactNode;
   nome: string;
+  traco: TracoDoLED;
 }) {
   return (
     <svg
@@ -117,7 +144,7 @@ function Estreita({
       style={{ marginRight: espaco, flex: "none", overflow: "visible" }}
       data-celula={nome}
     >
-      <g fill="currentColor" style={{ filter: "drop-shadow(0 0 3px currentColor)" }}>
+      <g fill="currentColor" style={brilho(traco)}>
         {children}
       </g>
     </svg>
@@ -128,14 +155,17 @@ function Peca({
   celula,
   altura,
   espaco,
+  traco,
 }: {
   celula: Celula;
   altura: number;
   espaco: number;
+  traco: TracoDoLED;
 }) {
+  const fino = traco === "fino";
   switch (celula.tipo) {
     case "digito":
-      return <Digito acesos={celula.acesos} altura={altura} espaco={espaco} />;
+      return <Digito acesos={celula.acesos} altura={altura} espaco={espaco} traco={traco} />;
     case "mais":
       return (
         <svg
@@ -147,9 +177,11 @@ function Peca({
           style={{ marginRight: espaco, flex: "none", overflow: "visible" }}
           data-celula="mais"
         >
-          <g fill="currentColor" style={{ filter: "drop-shadow(0 0 3px currentColor)" }}>
-            <polygon points={POLIGONOS.g} />
-            <polygon points="28,26 34,20 40,26 40,82 34,88 28,82" />
+          <g fill="currentColor" style={brilho(traco)}>
+            <polygon points={(fino ? POLIGONOS_FINOS : POLIGONOS).g} />
+            <polygon
+              points={fino ? "34,26 36,28 36,80 34,82 32,80 32,28" : "28,26 34,20 40,26 40,82 34,88 28,82"}
+            />
           </g>
         </svg>
       );
@@ -157,22 +189,25 @@ function Peca({
       // A virgula do pt-BR: o ponto com uma CAUDA que desce para a esquerda. E
       // o que separa `66,1` de `66.1` -- milhar, em pt-BR.
       return (
-        <Estreita altura={altura} espaco={espaco} nome="virgula">
-          <circle cx={11} cy={94} r={7.5} />
-          <polygon data-cauda points="12,98 19,94 16,108 6,120 2,115 9,106" />
+        <Estreita altura={altura} espaco={espaco} nome="virgula" traco={traco}>
+          <circle cx={11} cy={fino ? 102 : 94} r={fino ? 4 : 7.5} />
+          <polygon
+            data-cauda
+            points={fino ? "13,103 15,104 9,117 7,116" : "12,98 19,94 16,108 6,120 2,115 9,106"}
+          />
         </Estreita>
       );
     case "ponto":
       return (
-        <Estreita altura={altura} espaco={espaco} nome="ponto">
-          <circle cx={10} cy={98} r={7} />
+        <Estreita altura={altura} espaco={espaco} nome="ponto" traco={traco}>
+          <circle cx={10} cy={fino ? 102 : 98} r={fino ? 4 : 7} />
         </Estreita>
       );
     case "doispontos":
       return (
-        <Estreita altura={altura} espaco={espaco} nome="doispontos">
-          <circle cx={10} cy={36} r={7} />
-          <circle cx={10} cy={72} r={7} />
+        <Estreita altura={altura} espaco={espaco} nome="doispontos" traco={traco}>
+          <circle cx={10} cy={36} r={fino ? 4 : 7} />
+          <circle cx={10} cy={72} r={fino ? 4 : 7} />
         </Estreita>
       );
     case "espaco":
@@ -208,6 +243,7 @@ export function SegmentoLED({
   altura = 40,
   cor = "medido",
   celulas = 3,
+  traco = "cheio",
   className,
 }: {
   /** String JA formatada em pt-BR pelo chamador. `null` = sem sinal (nunca zero). */
@@ -219,6 +255,8 @@ export function SegmentoLED({
   cor?: CorDoLED;
   /** Quantas celulas apagadas mostrar quando `valor` e `null`. */
   celulas?: number;
+  /** `fino` so na vitrine: segmento delgado e sem brilho. */
+  traco?: TracoDoLED;
   className?: string;
 }) {
   const pecas = celulasDoValor(valor, celulas);
@@ -231,11 +269,12 @@ export function SegmentoLED({
       aria-label={legenda}
       data-slot="segmento-led"
       data-apagado={valor === null ? "true" : undefined}
+      data-traco={traco}
       className={`inline-flex items-end ${className ?? ""}`.trim()}
       style={{ color: COR[cor], height: altura }}
     >
       {pecas.map((c, i) => (
-        <Peca key={i} celula={c} altura={altura} espaco={espaco} />
+        <Peca key={i} celula={c} altura={altura} espaco={espaco} traco={traco} />
       ))}
     </span>
   );
