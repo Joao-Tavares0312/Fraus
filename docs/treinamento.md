@@ -635,8 +635,9 @@ fora do Colab; os do treino saem quando o notebook rodar.
 Consequencias:
 
 - A cabeca de ironia treinada antes desta data **nunca viu uma noticia** no
-  treino e foi avaliada num teste que era 88% noticias. `metricas_ironia.json`
-  daquela rodada (F1-macro 0,511) mede mudanca de dominio, nao a tarefa.
+  treino e foi avaliada num teste que era 88% noticias. O F1-macro de 0,511 que
+  o notebook 07 recalculou para ela nesse teste mede mudanca de dominio, nao a
+  tarefa.
 - `conferir_divisao` agora recusa, com erro, divisao cujo teste foge do tamanho
   pedido ou cuja proporcao de classe difere entre os dois lados.
 - O notebook 04 grava em `metricas_ironia.json` a impressao (SHA-256) dos

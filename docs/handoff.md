@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 30/09/2026 (Operação, convites e API publicada)
+# Handoff — Fraus, atualizado em 02/10/2026 (treino do Laya e divisão do corpus de ironia)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -21,6 +21,97 @@ o trabalho.
 
 Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 + Recharts no front (`dashboard/`).
+
+---
+
+## 2.0 Para retomar — Laya e ironia, 02/10/2026
+
+**Onde parou:** o código está pronto e publicado no ramo `feat/treino-laya`
+(PR #80). Falta rodar dois notebooks no Colab, e isso parou porque a cota
+gratuita de GPU da conta acabou na tarde de 02/10/2026.
+
+### O que foi feito e o que se concluiu
+
+- O Laya (encoder mmBERT-base com cabeça de decisão; **não** é um LLM e roda em
+  CPU) foi treinado para emoção e ironia no notebook 07: 2 épocas, 71.102
+  casos, 89 minutos numa T4.
+- **O Laya não é promovido.** Em emoção ele ganha por pouco no teste interno
+  (+0,018 de F1-macro) e perde no XED-pt, que é independente (−0,033, intervalo
+  de −0,043 a −0,023). Em CPU é de 1,7x a 2,9x mais lento. Motor e Fusor
+  continuam com o BERTimbau; nada mudou no caminho de predição.
+- **A comparação de ironia daquele treino não vale.** A divisão treino/teste do
+  corpus de ironia estava com defeito (armadilha 000 da §8) e foi consertada em
+  `fraus/divisao.py`. Os dois modelos precisam ser treinados de novo.
+- A aba **Modelo → Comparação** mostra o laudo versionado em
+  `fraus/dados/comparacao_modelos.json`, com uma ressalva sobre a ironia.
+
+Números, tabelas e bibliografia: [nota do treino](notas/2026-10-02-treino-laya.md).
+Regra da divisão e o antes/depois: `docs/treinamento.md`, notebook 04.
+
+### Passo a passo para terminar
+
+Quem roda o Colab é o João, na conta `joao.tavaresvicente@alunos.unis.edu.br`.
+O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em
+02/10/2026 ele rodou célula na conta errada. Não use o MCP para isso.
+
+1. **Notebook 04** — cabeça de ironia do BERTimbau, 3 épocas, GPU obrigatória:
+   <https://colab.research.google.com/github/Joao-Tavares0312/Fraus/blob/feat/treino-laya/notebooks/04_treino_ironia.ipynb>
+   - Ele grava por cima de `fraus/modelos/bertimbau-ironia` no Drive. Para
+     guardar o modelo anterior, renomeie a pasta antes.
+   - A célula 5 tem de imprimir perto de **28.365 linhas no treino e 4.778 no
+     teste, com cerca de 59% de irônicas dos dois lados**. Esses números foram
+     medidos fora do Colab com a regra nova. Se a divisão sair diferente do
+     pedido, `conferir_divisao` para o notebook com erro — é o comportamento
+     certo, não contorne.
+2. **Notebook 07** — Laya, abrindo pelo link para pegar a versão do ramo:
+   <https://colab.research.google.com/github/Joao-Tavares0312/Fraus/blob/feat/treino-laya/notebooks/07_treino_laya.ipynb>
+   - Na célula 7: `MODO_FUMACA = False` e `EPOCAS = 2`. Estimativa de 1h50 na
+     T4 (são mais casos de ironia que no primeiro treino); não há checkpoint
+     por época, então sessão que cai recomeça.
+   - A célula 5 para com erro se o BERTimbau do Drive não for o do passo 1. É a
+     trava que garante que os dois modelos são avaliados no mesmo teste.
+3. **Trazer os resultados.** No Drive, em `fraus/modelos/`:
+   `comparacao_modelos.json` e `metricas_laya.json` (o que tem `_fumaca` no
+   nome é da rodada de teste e não serve).
+4. **Publicar o laudo novo.** Copie `comparacao_modelos.json` por cima de
+   `fraus/dados/comparacao_modelos.json`. O arquivo do notebook não tem
+   `ressalvas`; só escreva uma se houver algo a ressalvar. Confira com
+   `uv run pytest -q tests/test_rota_comparacao.py` e atualize a tabela de
+   resultados na nota do treino.
+5. **Ler o resultado de ironia pelo recorte certo.** Nas notícias a fonte
+   entrega o rótulo (Estadão é sempre não-irônico; os sites de sátira, sempre
+   irônicos), então o número agregado deve sair alto e isso não é vitória. O
+   que conta é "Ironia — só tweets" e a régua de domínio.
+6. **Decidir a promoção, que são duas decisões separadas:**
+   - *Laya no lugar do BERTimbau:* só se ganhar no XED-pt e na régua. O
+     critério foi escrito antes do primeiro treino; não o afrouxe depois de ver
+     o número.
+   - *BERTimbau de ironia novo em produção:* passa pelo portão de
+     `scripts/validar_candidato_ironia.py` (ver `docs/treinamento.md`, "Portão
+     de promoção do artefato"). Promover exige exportar para ONNX e republicar
+     o ZIP de modelos da API (`docs/deploy-vercel.md`).
+7. **Depois do merge do PR #80:** troque `RAMO` de `'feat/treino-laya'` para
+   `'main'` na célula 2 dos notebooks 04 e 07. Até lá, **não apague o ramo** —
+   os notebooks o clonam.
+
+### Se a GPU não estiver disponível
+
+O aviso "Cannot connect to GPU backend" é cota da conta, não defeito do
+notebook. Ela costuma voltar em menos de um dia, e o Google não publica o
+prazo. Não conecte sem GPU: o notebook 04 recusa na primeira célula e o Laya em
+CPU levaria dias. A alternativa gratuita é o Kaggle, mas os dois notebooks usam
+Drive e download do Colab e teriam de ser adaptados antes.
+
+### O que não foi verificado
+
+- Os notebooks 04 e 07 não rodaram no Colab depois do conserto da divisão. As
+  células novas do 07 foram simuladas com o corpus real e predições falsas.
+- A célula 10 do repositório grava os pesos em FP16 (metade do tamanho, sem
+  trocar decisão). Ela nunca rodou no Colab: o treino de 02/10 usou a versão
+  anterior e saiu em FP32, com 617 MB. INT8 dinâmico está descartado para este
+  encoder — trocou 56% das decisões no modelo treinado.
+- A medição de tempo do laudo roda o BERTimbau em PyTorch e o Laya em ONNX, na
+  CPU do Colab. Não é o tempo de produção.
 
 ---
 
@@ -469,6 +560,13 @@ ela continua obrigatória para a API subir e continua sendo exibida por
 mensagem na dashboard, com a ressalva de confiabilidade que a tela já mostra.
 Rodar o notebook 04 continua valendo; só deixou de ser urgente.
 
+**Atualização de 02/10/2026:** a cabeça que está no Drive
+(`fraus/modelos/bertimbau-ironia`), treinada com as fontes públicas do IDPT,
+usou uma divisão treino/teste com defeito (armadilha 000 da §8): treinou só com
+tweets e foi avaliada num teste 88% notícias. O F1-macro de 0,511 que o
+notebook 07 recalculou para ela nesse teste mede mudança de domínio, não a
+tarefa. A divisão foi consertada e o retreino é o passo 1 da §2.0.
+
 Verificação: `uv run pytest tests/test_ironia_dominio.py`. Se o modelo melhorar,
 **aperte os limiares desse arquivo junto** — limiar frouxo que nunca falha não
 mede nada. E se `test_acuracia_perfeita_do_relatorio_vale_so_no_corpus_gerado`
@@ -835,6 +933,18 @@ Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
 ---
 
 ## 8. Armadilhas já pagas — não repita
+
+000. **`astype(str)` transformou campo vazio no autor "nan" — conserto de
+   02/10/2026.** A divisão "por autor" do corpus de ironia agrupava as linhas
+   pelo autor para que a mesma pessoa não ficasse em treino e teste. As 18.373
+   notícias não têm autor; o pandas lê o campo vazio como NaN, `astype(str)`
+   devolve `"nan"`, e todas viraram um autor só, que caiu inteiro no teste. Foi
+   pedido 15% para teste e saiu 63%; o treino ficou 86% irônico e só de tweets.
+   Nada falhou: o notebook treinou, mediu e gravou. Quem denunciou foi o Laya
+   respondendo "irônico" para tudo. **Divisão por grupo se confere pelo
+   resultado**, não pela intenção do código: tamanho do teste e proporção de
+   classe dos dois lados. É o que `fraus.divisao.conferir_divisao` faz, com
+   erro. Parente direto da invariante 10.
 
 00. **O proxy emprestava a credencial do deploy a quem não tinha sessão —
    conserto de 02/10/2026.** As páginas redirecionavam o visitante para

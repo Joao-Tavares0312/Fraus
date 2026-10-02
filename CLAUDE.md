@@ -55,6 +55,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/sinais/estilo.py` | caixa alta, pontuação, alongamento, palavrão, censura |
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex e o ranking de emoji |
 | `fraus/cortesia.py` | "ok, obrigado" sozinho é **sem sinal**, não promotor — `Conversa.tem_sinal_cliente` |
+| `fraus/divisao.py` | divisão treino/teste por autor dos notebooks 04 e 07, com conferência que falha alto |
+| `fraus/comparacao_modelos.py` | comparação pareada BERTimbau × Laya e o laudo; versionado em `fraus/dados/comparacao_modelos.json` |
 | `fraus/fatias.py` | avaliação por fatia (parte pura); `scripts/avaliar_por_fatias.py` alimenta `docs/cartao-do-modelo.md` |
 | `fraus/api/repontuacao.py` | repontuar em segundo plano, com progresso e 409 se já rodando |
 | `scripts/retreinar_fusor_local.py` | reproduz o notebook 02 em CPU e só grava o fusor com `--promover` |
@@ -211,6 +213,7 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
 - `docs/treinamento.md` — os dois notebooks e os artefatos
 - `dashboard/DESIGN.md` — sistema de design da interface
 - `docs/notas/2026-09-30-operacao-producao.md` — análise persistida, Operação, convites e evidências da publicação
+- `docs/notas/2026-10-02-treino-laya.md` — treino do Laya: resultado, decisão de não promover e bibliografia
 - `docs/deploy-vercel.md` — procedimento interno; dashboard e API publicam separadamente
 - `docs/conformidade.md` — EU AI Act: o que obriga e o que **proíbe** (não pontuar atendente)
 - `mkdocs.yml` — site interno; `mkdocs-publico.yml` define o recorte publicado
