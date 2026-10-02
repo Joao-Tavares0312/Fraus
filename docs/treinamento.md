@@ -615,6 +615,41 @@ O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM
 | `kaggle` | baixa da conta Kaggle; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
 | `upload` | seletor de arquivos do navegador, para corpus que chegou por e-mail |
 
+### A divisao por autor — conserto de 02/10/2026
+
+A regra da divisao mora em `fraus/divisao.py` e e a mesma nos notebooks 04 e
+07: um grupo por autor, e **cada linha sem autor e um grupo proprio**.
+
+Ate 02/10/2026 a regra estava escrita nos notebooks com `autores.astype(str)`,
+que transforma o campo vazio no autor "nan". As 18.373 noticias nao tem autor:
+viraram uma pessoa so e cairam inteiras no teste.
+
+| | Antes | Depois |
+|---|---|---|
+| Treino | 12.271 linhas, 86% ironicas, so tweets | 28.365 linhas, 59% ironicas |
+| Teste | 20.872 linhas (63% do corpus), 43% ironicas | 4.778 linhas (14%), 59% ironicas |
+
+Os numeros de "depois" foram medidos aplicando a regra nova ao corpus real,
+fora do Colab; os do treino saem quando o notebook rodar.
+
+Consequencias:
+
+- A cabeca de ironia treinada antes desta data **nunca viu uma noticia** no
+  treino e foi avaliada num teste que era 88% noticias. `metricas_ironia.json`
+  daquela rodada (F1-macro 0,511) mede mudanca de dominio, nao a tarefa.
+- `conferir_divisao` agora recusa, com erro, divisao cujo teste foge do tamanho
+  pedido ou cuja proporcao de classe difere entre os dois lados.
+- O notebook 04 grava em `metricas_ironia.json` a impressao (SHA-256) dos
+  textos do teste. O notebook 07 para antes do treino se o teste dele nao tiver
+  a mesma impressao: sem isso, frases do treino do BERTimbau cairiam no teste
+  da comparacao.
+- Nas noticias a fonte entrega o rotulo (Estadao e sempre nao-ironico; os dois
+  sites de satira, sempre ironicos). Com as noticias dos dois lados, o numero
+  agregado tende a subir por reconhecer o jornal. Os dois notebooks imprimem o
+  resultado **separado por meio**, e o que se le como desempenho em ironia e o
+  dos tweets e o da regua de dominio. Numero alto no agregado e sintoma
+  (invariante 10), nao vitoria.
+
 ### Candidato Laya
 
 O Laya multilíngue pode substituir apenas a cabeça de ironia, sem alterar

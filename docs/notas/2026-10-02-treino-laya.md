@@ -210,10 +210,11 @@ abre, e o tempo de cold start ainda não foi medido na Vercel.
 
 ## O que falta
 
-- **Consertar a divisão do corpus de ironia** nos notebooks 04 e 07 (linha sem
-  autor vira grupo próprio, com estratificação por classe) e treinar de novo a
-  cabeça de ironia do BERTimbau. Só depois disso uma comparação de ironia entre
-  os dois modelos quer dizer alguma coisa.
+- **Rodar de novo, nesta ordem:** notebook 04 (cabeça de ironia do BERTimbau)
+  e depois notebook 07. A divisão foi consertada em `fraus/divisao.py`; medida
+  fora do Colab no corpus real, ela dá 28.365 linhas no treino e 4.778 no
+  teste, com 59% de irônicas dos dois lados. O 07 recusa rodar se o BERTimbau
+  do Drive for de outra divisão. Detalhe em `docs/treinamento.md`, notebook 04.
 - **Emoção pelo Laya em produção não existe no código**, e com este resultado
   não há motivo para escrever. O ZIP do notebook
   tem o desenho do notebook 06 e a cabeça de ironia o lê sem mudança; ler
