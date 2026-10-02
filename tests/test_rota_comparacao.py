@@ -144,9 +144,13 @@ def test_laya_treinado_no_servidor_responde_ironia_e_emocao(tmp_path, monkeypatc
     assert tarefas["ironia"]["laya"]["prob_ironia"] == 0.3
     assert tarefas["ironia"]["laya"]["ms"] >= 0
     assert tarefas["emocao"]["laya"]["classe"] == "nojo"
+    assert tarefas["emocao"]["laya"]["treinado"] is True
+    assert tarefas["ironia"]["laya"]["treinado"] is True
 
 
-def test_artefato_laya_sem_a_pergunta_de_emocao_nao_chuta_emocao(tmp_path, monkeypatch):
+def test_laya_sem_treino_le_emocao_e_a_leitura_sai_marcada_como_sem_treino(
+    tmp_path, monkeypatch
+):
     pasta = tmp_path / "laya-ironia"
     pasta.mkdir()
     (pasta / "laya.onnx").write_bytes(b"x")
@@ -154,16 +158,47 @@ def test_artefato_laya_sem_a_pergunta_de_emocao_nao_chuta_emocao(tmp_path, monke
     monkeypatch.delenv("FRAUS_IRONIA_BACKEND", raising=False)
     monkeypatch.setattr(modelo, "CAMINHO_ONNX_LAYA", pasta)
 
+    import fraus.sinais.emocao_laya as emocao_laya
     import fraus.sinais.ironia_laya as ironia_laya
 
     class IroniaFalsa:
         def prever_mensagens(self, textos):
             return [[0.4, 0.6]]
 
+    class EmocaoFalsa:
+        def prever_mensagens(self, textos):
+            p = [0.0] * len(NOMES_EMOCOES)
+            p[NOMES_EMOCOES.index("tristeza")] = 1.0
+            return [p]
+
     monkeypatch.setattr(ironia_laya, "obter_classificador_ironia_laya_onnx", lambda: IroniaFalsa())
-    emocao = modelo.simular_comparacao(PedidoSimulacao(texto="oi"), _ctx())["tarefas"]["emocao"]
-    assert emocao["laya"]["disponivel"] is False
-    assert "sem treino de emoção" in emocao["laya"]["motivo"]
+    monkeypatch.setattr(emocao_laya, "obter_classificador_emocao_laya_onnx", lambda: EmocaoFalsa())
+    tarefas = modelo.simular_comparacao(PedidoSimulacao(texto="oi"), _ctx())["tarefas"]
+    assert tarefas["emocao"]["laya"]["disponivel"] is True
+    assert tarefas["emocao"]["laya"]["classe"] == "tristeza"
+    assert tarefas["emocao"]["laya"]["treinado"] is False
+    assert tarefas["ironia"]["laya"]["treinado"] is False
+    assert "treinado" not in tarefas["emocao"]["bertimbau"]
+
+
+def test_com_backend_laya_a_emocao_do_laya_tambem_sai_marcada(tmp_path, monkeypatch):
+    pasta = tmp_path / "laya-ironia"
+    pasta.mkdir()
+    (pasta / "laya.onnx").write_bytes(b"x")
+    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
+    monkeypatch.setattr(modelo, "CAMINHO_ONNX_LAYA", pasta)
+
+    import fraus.sinais.emocao_laya as emocao_laya
+
+    class EmocaoFalsa:
+        def prever_mensagens(self, textos):
+            return [[1.0] + [0.0] * (len(NOMES_EMOCOES) - 1)]
+
+    monkeypatch.setattr(emocao_laya, "obter_classificador_emocao_laya_onnx", lambda: EmocaoFalsa())
+    tarefas = modelo.simular_comparacao(PedidoSimulacao(texto="oi"), _ctx())["tarefas"]
+    assert tarefas["ironia"]["laya"]["treinado"] is False
+    assert tarefas["emocao"]["laya"] == {**tarefas["emocao"]["laya"], "treinado": False,
+                                         "classe": "alegria", "executor": "laya-onnx"}
 
 
 def test_frase_ao_vivo_recusa_texto_vazio_e_motor_sem_cabecas():

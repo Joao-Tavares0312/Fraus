@@ -534,6 +534,8 @@ export type LeituraAoVivo =
       executor: string;
       prob_ironia?: number;
       probabilidades?: Record<string, number>;
+      /** Só nas leituras do Laya: `false` é o checkpoint base, sem fine-tuning. */
+      treinado?: boolean;
     }
   | { disponivel: false; motivo: string };
 

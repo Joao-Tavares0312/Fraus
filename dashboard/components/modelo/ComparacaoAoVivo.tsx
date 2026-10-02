@@ -130,7 +130,10 @@ export function ComparacaoAoVivo() {
               <h3 className="rotulo-instrumento mb-2 text-foreground">{rotulo}</h3>
               <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <Cabeca nome="BERTimbau fine-tunado" leitura={resultado.tarefas[chave].bertimbau} />
-                <Cabeca nome="Laya" leitura={resultado.tarefas[chave].laya} />
+                <Cabeca
+                  nome={nomeDoLaya(resultado.tarefas[chave].laya)}
+                  leitura={resultado.tarefas[chave].laya}
+                />
               </div>
             </section>
           ))}
@@ -152,6 +155,12 @@ export function ComparacaoAoVivo() {
       )}
     </div>
   );
+}
+
+/** O laudo mede dois Layas; a leitura ao vivo diz qual deles está no servidor. */
+function nomeDoLaya(leitura: LeituraAoVivo): string {
+  if (!leitura.disponivel || leitura.treinado === undefined) return "Laya";
+  return leitura.treinado ? "Laya treinado" : "Laya sem treino";
 }
 
 function Cabeca({ nome, leitura }: { nome: string; leitura: LeituraAoVivo }) {
