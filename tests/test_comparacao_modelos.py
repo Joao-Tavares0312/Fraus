@@ -189,3 +189,26 @@ def test_relatorio_escreve_sem_diferenca_quando_o_intervalo_cruza_o_zero():
     texto = relatorio_markdown(laudo)
     assert "sem diferença demonstrada" in texto
     assert "não foi medida" in texto  # latencia ausente e nomeada, nao zerada
+
+
+def test_modelo_pode_prever_classe_que_o_conjunto_nao_tem():
+    # XED-pt nao tem `neutro`, mas o modelo pode responder `neutro`: a predicao
+    # entra na matriz como erro, e o F1 continua sobre as classes do conjunto.
+    conjunto = avaliar_conjunto(
+        identificador="xed", tarefa="emocao", nome="XED", independente=True,
+        rotulos=[0, 0, 1, 1],
+        preditos_por_modelo={"bertimbau": [0, 2, 1, 2], "laya_treinado": [0, 0, 1, 1]},
+        classes=[0, 1, 2], nomes_classes=["a", "b", "neutro"], classes_do_f1=[0, 1],
+        reamostras=50,
+    )
+    bertimbau = conjunto["modelos"]["bertimbau"]
+    assert bertimbau["matriz"] == [[1, 0, 1], [0, 1, 1], [0, 0, 0]]
+    neutro = bertimbau["por_classe"][2]
+    assert (neutro["exemplos"], neutro["fp"], neutro["recall"]) == (0, 2, None)
+    assert bertimbau["f1_macro"] == pytest.approx(2 / 3)  # so a e b; neutro nao entra
+    assert conjunto["modelos"]["laya_treinado"]["f1_macro"] == 1.0
+
+
+def test_classe_fora_da_matriz_e_erro_nomeado():
+    with pytest.raises(ValueError, match="classe 6"):
+        matriz_de_confusao([0, 1], [0, 6], classes=[0, 1])

@@ -115,6 +115,9 @@ def matriz_de_confusao(
     posicao = {classe: i for i, classe in enumerate(classes)}
     matriz = [[0] * len(classes) for _ in classes]
     for real, predito in zip(rotulos, preditos):
+        for classe in (int(real), int(predito)):
+            if classe not in posicao:
+                raise ValueError(f"classe {classe} fora das classes da matriz {list(classes)}")
         matriz[posicao[int(real)]][posicao[int(predito)]] += 1
     return matriz
 
@@ -157,6 +160,7 @@ def avaliar_conjunto(
     preditos_por_modelo: dict[str, Sequence[int]],
     classes: Sequence[int],
     nomes_classes: Sequence[str],
+    classes_do_f1: Sequence[int] | None = None,
     candidato: str = "laya_treinado",
     referencia: str = "bertimbau",
     reamostras: int = 2000,
@@ -165,7 +169,14 @@ def avaliar_conjunto(
 
     `independente` diz se NENHUM modelo viu dado da mesma procedencia no
     treino -- e o que separa o XED-pt e a regua do teste interno.
+
+    `classes` sao todas as respostas POSSIVEIS do modelo e definem a matriz.
+    `classes_do_f1` sao as que o conjunto de fato contem: o XED-pt nao tem
+    `neutro`, e contar o F1 de uma classe sem exemplo puniria todo modelo por
+    igual sem medir nada. Predicao de classe ausente continua sendo erro, e
+    aparece na matriz.
     """
+    classes_do_f1 = list(classes if classes_do_f1 is None else classes_do_f1)
     for modelo, preditos in preditos_por_modelo.items():
         if len(preditos) != len(rotulos):
             raise ValueError(f"{modelo}: {len(preditos)} predicoes para {len(rotulos)} exemplos")
@@ -174,7 +185,7 @@ def avaliar_conjunto(
         matriz = matriz_de_confusao(rotulos, preditos, classes=classes)
         modelos[modelo] = {
             "acuracia": sum(int(p) == int(r) for p, r in zip(preditos, rotulos)) / len(rotulos),
-            "f1_macro": f1_macro(rotulos, preditos, classes=classes),
+            "f1_macro": f1_macro(rotulos, preditos, classes=classes_do_f1),
             "matriz": matriz,
             "por_classe": contagens_por_classe(matriz, nomes_classes),
         }
@@ -183,7 +194,7 @@ def avaliar_conjunto(
         [int(p) == int(r) for p, r in zip(a, rotulos)],
         [int(p) == int(r) for p, r in zip(b, rotulos)],
     )
-    bs = bootstrap_da_diferenca(rotulos, a, b, classes=classes, reamostras=reamostras)
+    bs = bootstrap_da_diferenca(rotulos, a, b, classes=classes_do_f1, reamostras=reamostras)
     return {
         "id": identificador,
         "tarefa": tarefa,
