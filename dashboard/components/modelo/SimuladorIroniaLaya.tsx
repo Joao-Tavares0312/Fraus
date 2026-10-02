@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 const TETO = 2000;
 const PARTIDAS = [
@@ -154,7 +155,7 @@ export function SimuladorIroniaLaya() {
             setPerfil("equilibrado");
             setConfiguracao({ ...BASE, ...PERFIS.equilibrado });
             setResultado(null);
-          }}>Restaurar configuração padrão</Button>
+          }}><IconeDeAcao acao="restaurar" />Restaurar configuração padrão</Button>
         </div>
       </details>
 

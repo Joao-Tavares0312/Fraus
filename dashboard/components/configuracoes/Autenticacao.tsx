@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 type Ligadas = {
   chave_mestra: string;
@@ -164,7 +165,7 @@ function Corpo({
         )}
 
         <div>
-          <Button type="button" size="sm" variant="outline" onClick={dispensar}>
+          <Button type="button" size="sm" variant="outline" onClick={dispensar}><IconeDeAcao acao="confirmar" />
             Já copiei
           </Button>
         </div>

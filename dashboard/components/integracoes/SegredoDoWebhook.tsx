@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 /**
  * O segredo de assinatura do webhook: gerar, copiar, colocar no ambiente.
@@ -122,10 +123,10 @@ export function SegredoDoWebhook({
               autoFocus
               onChange={(evento) => setVariavelEmEdicao(evento.target.value)}
             />
-            <Button type="submit" size="sm" disabled={ocupada}>
+            <Button type="submit" size="sm" disabled={ocupada}><IconeDeAcao acao="salvar" />
               Salvar
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => setEditando(false)} disabled={ocupada}>
+            <Button type="button" size="sm" variant="outline" onClick={() => setEditando(false)} disabled={ocupada}><IconeDeAcao acao="cancelar" />
               Cancelar
             </Button>
           </div>

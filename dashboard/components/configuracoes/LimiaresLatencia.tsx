@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 const CAMPOS: {
   chave: "pico" | "saudavel" | "degradando";
@@ -255,7 +256,7 @@ export function LimiaresLatencia({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" onClick={salvar} disabled={salvando || !mudou}>
+        <Button type="button" onClick={salvar} disabled={salvando || !mudou}><IconeDeAcao acao="salvar" />
           {salvando ? "Salvando…" : "Salvar limiares"}
         </Button>
         <Button

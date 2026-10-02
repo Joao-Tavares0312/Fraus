@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 export const CAMPO = "w-full min-w-0 border border-input bg-background px-3 py-2 text-sm focus-visible:outline focus-visible:outline-ring";
 export const PILHA = "flex flex-col gap-4";
@@ -58,7 +59,7 @@ export function FaixaNps({ titulo, intervalo }: { titulo: string; intervalo: Int
   return <div className="flex flex-col gap-2"><Medida nome={titulo} valor={intervalo?.nps ?? null} casas={1} estimativa /><Medida nome="Conversas com sinal" valor={intervalo?.n ?? 0} /><p className="text-xs text-muted-foreground">{intervalo ? `IC 95%: ${formatarNumero(intervalo.ic_inferior, 1)} a ${formatarNumero(intervalo.ic_superior, 1)}. ${intervalo.nps === null ? "NPS oculto: menos de 30 conversas com sinal." : ""}` : "Sem conversas com sinal."}</p></div>;
 }
 export function Carregamento({ erro, recarregar }: { erro: string | null; recarregar: () => void }) {
-  return erro ? <div className={PILHA}><EstadoVazio titulo="Não foi possível carregar" explicacao={erro} /><Button variant="outline" onClick={recarregar}>Tentar novamente</Button></div> : <p role="status" className="text-sm text-muted-foreground">Consultando os dados da operação…</p>;
+  return erro ? <div className={PILHA}><EstadoVazio titulo="Não foi possível carregar" explicacao={erro} /><Button variant="outline" onClick={recarregar}><IconeDeAcao acao="atualizar" />Tentar novamente</Button></div> : <p role="status" className="text-sm text-muted-foreground">Consultando os dados da operação…</p>;
 }
 export function SelecionarConversas({ conversas, selecionadas, mudar }: { conversas: ResumoConversa[]; selecionadas: string[]; mudar: (ids: string[]) => void }) {
   const [busca, setBusca] = useState("");
