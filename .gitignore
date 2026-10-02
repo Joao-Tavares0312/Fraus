@@ -51,3 +51,7 @@ node_modules/
 # capturas de revisao do Impeccable: evidencia da sessao, nao codigo
 /dashboard/.impeccable/review/
 /dashboard/.impeccable/build/
+# vinculo local com o projeto da Vercel e o token que `vercel link` baixa
+.vercel
+.env*
+!.env*.example
