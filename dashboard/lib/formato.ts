@@ -44,6 +44,19 @@ export function formatarNumero(valor: number, casas = 1): string {
   return formatador.format(valor);
 }
 
+/**
+ * Numero com sinal explicito (+ e o menos tipografico), sem "−0".
+ *
+ * O sinal sai do valor JA arredondado: -0,001 com duas casas e zero na tela, e
+ * escrever "−0" diria que algo puxou para baixo quando nada mexeu.
+ */
+export function formatarComSinal(valor: number, casas = 2): string {
+  const fator = 10 ** casas;
+  const arredondado = Math.round(Math.abs(valor) * fator) / fator;
+  if (arredondado === 0) return "0";
+  return `${valor > 0 ? "+" : "−"}${formatarNumero(arredondado, casas)}`;
+}
+
 export function formatarPercentual(valor: number): string {
   return `${NUMERO.format(valor)}%`;
 }

@@ -22,6 +22,24 @@ from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
                                 ClassificadorTexto)
 
 
+def regua_do_fusor(fusor) -> str | None:
+    """A regua de um motor, calculada so do fusor e da regra da cortesia.
+
+    Fora da classe para que a API responda "qual a regua vigente" sem abrir as
+    tres sessoes de modelo: `ProvedorDeMotor.regua` chama esta mesma funcao com
+    o fusor lido do disco. Uma regra so -- duas copias dariam duas reguas para
+    o mesmo motor e o aviso de regua misturada dispararia sozinho.
+    """
+    assinatura = getattr(fusor, "assinatura", None)
+    pesos = assinatura() if callable(assinatura) else None
+    if pesos is None:
+        return None
+    from fraus import cortesia
+
+    regra = hashlib.sha256("\n".join(sorted(cortesia.FORMULAS_DE_CORTESIA)).encode())
+    return f"{pesos}-{regra.hexdigest()[:8]}"
+
+
 class _Guardado:
     """Classificador atras de um semaforo compartilhado pelas tres cabecas.
 
@@ -381,14 +399,7 @@ class Motor:
         nenhum). O banco grava a regua com cada conversa, e o aviso de regua
         misturada conta quem ficou para tras.
         """
-        assinatura = getattr(self._fusor, "assinatura", None)
-        pesos = assinatura() if callable(assinatura) else None
-        if pesos is None:
-            return None
-        from fraus import cortesia
-
-        regra = hashlib.sha256("\n".join(sorted(cortesia.FORMULAS_DE_CORTESIA)).encode())
-        return f"{pesos}-{regra.hexdigest()[:8]}"
+        return regua_do_fusor(self._fusor)
 
     def importancias(self) -> dict:
         """Peso global de cada feature -- usado pela ficha do modelo em `/modelo`."""

@@ -148,3 +148,65 @@ def test_saude_dispara_o_aquecimento_da_instancia_fria(tmp_path):
             break
         time.sleep(0.02)
     assert provedor.estado == "pronto"
+
+
+def test_regua_nao_espera_a_carga_dos_modelos():
+    """`/indicadores` pergunta a regua em toda abertura da Visao geral.
+
+    Ate 02/10/2026 a pergunta passava pelo `__getattr__` e esperava as tres
+    sessoes ONNX: 10 a 12 s numa instancia nova (medido em producao), a
+    dashboard desistia e mostrava o agregado de reserva.
+    """
+    def construir():
+        raise AssertionError("a regua nao pode construir o motor")
+
+    chamadas = []
+
+    def regua_barata():
+        chamadas.append(1)
+        return "abc-123"
+
+    provedor = ProvedorDeMotor(construir, regua=regua_barata)
+    assert provedor.regua() == "abc-123"
+    assert provedor.regua() == "abc-123"
+    assert len(chamadas) == 1
+    assert provedor.estado == "frio"
+
+
+def test_regua_do_motor_carregado_e_a_mesma_regra():
+    from fraus.motor import regua_do_fusor
+
+    class FusorComAssinatura:
+        def assinatura(self):
+            return "pesos"
+
+    class MotorComFusor(Motor):
+        def __init__(self):  # noqa: D107
+            self._fusor = FusorComAssinatura()
+
+    barata = regua_do_fusor(FusorComAssinatura())
+    assert barata is not None and barata.startswith("pesos-")
+    assert MotorComFusor().regua() == barata
+    provedor = ProvedorDeMotor(MotorComFusor)
+    assert provedor.regua() == barata  # sem atalho, cai no motor
+
+
+def test_fusor_sem_assinatura_nao_tem_regua():
+    from fraus.motor import regua_do_fusor
+
+    assert regua_do_fusor(object()) is None
+
+
+def test_indicadores_respondem_com_o_motor_ainda_frio(tmp_path):
+    banco = Banco(tmp_path / "frio.db")
+    banco.migrar()
+
+    def construir():
+        raise AssertionError("rota de leitura nao carrega modelo")
+
+    provedor = ProvedorDeMotor(construir, regua=lambda: "abc-123")
+    cliente = TestClient(criar_app(banco=banco, motor=provedor, raiz_importacao=tmp_path))
+    resposta = cliente.get("/indicadores")
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()["pontuadas_com_regua_antiga"] == 0
+    assert provedor.estado == "frio"

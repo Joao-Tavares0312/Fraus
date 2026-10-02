@@ -60,6 +60,7 @@ from fraus.api.vazao import (ENTREGAS_POR_JANELA, INGESTOES_POR_JANELA,
 from fraus.db import Banco
 from fraus.fusor import Fusor
 from fraus.motor import Motor  # reexportado: `from fraus.api.main import Motor` segue valendo
+from fraus.motor import regua_do_fusor
 from fraus.sinais.emocao import ClassificadorEmocao
 from fraus.sinais.ironia import ClassificadorIronia
 from fraus.sinais.texto import ClassificadorTexto
@@ -345,7 +346,11 @@ def criar_app_padrao() -> FastAPI:
     # tela de atendimento e a de analise mostram. Faltar o modelo tira essa
     # leitura do ar, e o mesmo motivo do invariante 7 vale para ela.
 
-    motor = ProvedorDeMotor(construir_motor_padrao)
+    motor = ProvedorDeMotor(
+        construir_motor_padrao,
+        # A regua sai do fusor sozinho: leitura nao espera sessao de modelo.
+        regua=lambda: regua_do_fusor(Fusor.carregar(CAMINHO_FUSOR)),
+    )
     banco = Banco(DESTINO_BANCO)
     banco.migrar()
 

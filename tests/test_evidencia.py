@@ -87,13 +87,13 @@ def test_uma_mensagem_SO_e_fraca_mesmo_sendo_substancial():
     """
     uma_so = _conversa("o boleto venceu ontem e o sistema nao emite segunda via")
     assert evidencia_fraca(uma_so) is True
-    assert motivos_de_evidencia_fraca(uma_so) == ["uma unica mensagem do cliente"]
+    assert motivos_de_evidencia_fraca(uma_so) == ["uma única mensagem do cliente"]
 
 
 def test_os_motivos_sao_nomeados_nao_so_o_booleano():
     """A tela precisa dizer POR QUE a evidencia e fraca -- "fraca" nao aciona ninguem."""
     assert motivos_de_evidencia_fraca(_conversa("demorou")) == [
-        "uma unica mensagem do cliente",
+        "uma única mensagem do cliente",
         "menos de 5 palavras do cliente",
     ]
     assert motivos_de_evidencia_fraca(_conversa("ok", "sim", "ta")) == [

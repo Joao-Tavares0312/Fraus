@@ -59,7 +59,7 @@ def motivos_de_evidencia_fraca(
 
     motivos = []
     if len(mensagens) < MENSAGENS_MINIMAS:
-        motivos.append("uma unica mensagem do cliente")
+        motivos.append("uma única mensagem do cliente")
 
     # Contar PALAVRAS, e nao so mensagens: "ok" / "sim" / "ta" sao tres
     # mensagens e o mesmo vazio dividido em tres.

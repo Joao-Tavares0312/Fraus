@@ -115,6 +115,29 @@ _BARRA = re.compile(
     r"(?:[ ,T]+(?P<h>\d{1,2}):(?P<m>\d{2})(?::(?P<s>\d{2}))?\s*(?P<ampm>[APap]\.?[Mm]\.?)?)?$"
 )
 _EPOCH = re.compile(r"^\d{10}(?:\d{3})?$")
+# Epoch so e horario dentro de uma janela plausivel para um atendimento: de 2000
+# ate amanha. Dez digitos tambem e o formato de id de chat e de telefone, e todo
+# numero de dez digitos "e" um instante entre 2001 e 2286.
+_EPOCH_MINIMO = datetime(2000, 1, 1, tzinfo=timezone.utc)
+_FOLGA_DO_FUTURO = timedelta(days=1)
+
+
+def _de_epoch(texto: str) -> datetime | None:
+    """Segundos (10 digitos) ou milissegundos (13) desde 1970, ou None.
+
+    None para o numero que cairia fora da janela: e id, nao horario. Em
+    02/10/2026 o id de um chat do Telegram (8624457065) virou a data
+    19/04/2243, e -- pior -- deu a mesma hora a todas as falas: latencia zero
+    e nota calculada para uma conversa que nao tinha horario nenhum.
+    """
+    numero = int(texto)
+    try:
+        data = datetime.fromtimestamp(numero / 1000 if len(texto) == 13 else numero, timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return None
+    if not _EPOCH_MINIMO <= data <= datetime.now(timezone.utc) + _FOLGA_DO_FUTURO:
+        return None
+    return data
 
 
 @dataclass
@@ -229,8 +252,7 @@ def interpretar_datas(
         if achado:
             data = _com_barra(achado, dia_primeiro)
         elif _EPOCH.match(texto):
-            numero = int(texto)
-            data = datetime.fromtimestamp(numero / 1000 if len(texto) == 13 else numero, timezone.utc)
+            data = _de_epoch(texto)
         else:
             data = _iso(texto) if texto else None
         if data is not None and data.tzinfo is None:

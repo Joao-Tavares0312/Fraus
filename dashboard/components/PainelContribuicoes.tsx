@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { ordenarPorMagnitude } from "@/lib/derivacoes";
-import { EXPLICACAO_SEM_SINAL, formatarNumero } from "@/lib/formato";
+import { EXPLICACAO_SEM_SINAL, formatarComSinal } from "@/lib/formato";
 import type { MotivoSemSinal } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BarrasDeFeature } from "./BarrasDeFeature";
@@ -109,9 +109,7 @@ export function PainelContribuicoes({
       <BarrasDeFeature
         features={features}
         modo="divergente"
-        formatarValor={(valor) =>
-          `${valor > 0 ? "+" : valor < 0 ? "−" : ""}${formatarNumero(Math.abs(valor), 2)}`
-        }
+        formatarValor={(valor) => formatarComSinal(valor, 2)}
       />
     </div>
   );
