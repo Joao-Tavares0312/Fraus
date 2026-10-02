@@ -126,6 +126,42 @@ resultado**; o que ela prova é o caminho e três fatos sobre o dado.
 - Com 600 casos o Laya passou a chamar tudo de irônico. É o atalho que a régua
   existe para pegar; só o treino completo diz se ele some.
 
+## Treino completo no Colab (T4)
+
+Duas épocas, 71.102 casos, 89 minutos; perda média 0,8348 e depois 0,8115.
+Laudo gerado em 02/10/2026 às 15:50 UTC. O candidato é o Laya treinado e a
+referência é o BERTimbau; diferença com intervalo de 95% por bootstrap.
+
+| Conjunto | Exemplos | BERTimbau | Laya sem treino | Laya treinado | Diferença de F1-macro |
+|---|---|---|---|---|---|
+| Emoção, teste interno | 7.421 | 0,584 | 0,296 | 0,602 | +0,018 (de +0,002 a +0,033) |
+| Emoção, XED-pt | 4.286 | 0,280 | 0,234 | 0,247 | −0,033 (de −0,043 a −0,023) |
+| Ironia, teste interno | 20.872 | 0,511 | 0,554 | 0,388 | −0,122 (de −0,132 a −0,113) |
+| Régua de ironia | 20 | 0,394 | 0,524 | 0,333 | −0,061 (de −0,280 a +0,167) |
+
+**O Laya treinado não é promovido.** O critério estava escrito antes do treino:
+ganhar no XED-pt e na régua.
+
+- **Emoção.** Ele ganha por pouco no teste interno, que tem a mesma procedência
+  do treino (tradução automática do GoEmotions), e perde no XED-pt, que nenhum
+  dos dois viu. Aprendeu melhor o corpus e generaliza pior. No XED-pt, que não
+  tem `neutro`, ele responde `neutro` em 1.942 de 4.286 frases, contra 1.545 do
+  BERTimbau.
+- **Ironia.** O atalho da rodada de fumaça não sumiu: o modelo chama de irônico
+  quase tudo (recall de 0,988 em irônico e de 0,087 em não-irônico no teste
+  interno; os 20 exemplos da régua, todos irônicos). O treino piorou a leitura
+  que o Laya fazia sem treino.
+- **Tempo**, em CPU do Colab com 2 núcleos, uma mensagem por vez, mediana de 50:
+  emoção 126 ms no BERTimbau contra 361 ms no Laya; ironia 273 ms contra
+  459 ms. O Laya foi medido em ONNX FP32 e o BERTimbau em PyTorch.
+
+Hipótese para a ironia, **não medida**: a divisão "por autor" trata todas as
+linhas sem autor como um grupo só, e esse grupo inteiro cai de um lado. O
+treino ficou com 12.270 casos e o teste com 20.872, numa divisão que pedia 15%
+para teste; treino e teste podem ter proporções de classe opostas. A regra vem
+do notebook 04, então vale também para a cabeça de ironia do BERTimbau. Falta
+ver a contagem de classes que a célula 5 imprime.
+
 ## Encolhimento: o que foi medido
 
 | Passo | Tamanho | Decisões trocadas |
@@ -163,11 +199,11 @@ abre, e o tempo de cold start ainda não foi medido na Vercel.
 
 ## O que falta
 
-- **Rodar o treino.** Primeiro com `MODO_FUMACA = True`, que valida o notebook
-  inteiro em minutos e imprime a estimativa do treino completo na T4.
-- **Decidir com os números.** Se o Laya treinado não ganhar do BERTimbau no
-  XED-pt e na régua, ele não é promovido.
-- **Emoção pelo Laya em produção não existe no código.** O ZIP do notebook
+- **Conferir a divisão do corpus de ironia** (hipótese acima). Se ela se
+  confirmar, o teste interno de ironia mede mudança de distribuição, e a
+  correção vale para o notebook 04 também.
+- **Emoção pelo Laya em produção não existe no código**, e com este resultado
+  não há motivo para escrever. O ZIP do notebook
   tem o desenho do notebook 06 e a cabeça de ironia o lê sem mudança; ler
   emoção dele exige um adaptador novo e uma decisão sobre o Fusor, que foi
   treinado com as features `emocao_*` do BERTimbau.
