@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 
+from fraus.fuso import FUSO_DO_PRODUTO, no_fuso_do_produto
 from fraus.modelos import Conversa
 from fraus.sinais.curadoria import Curadoria
 
@@ -471,6 +472,20 @@ def _numero_do_ambiente(
     return valor
 
 
+def _inicio_no_produto(conversa: Conversa) -> str:
+    """O valor da COLUNA `iniciada_em`: o inicio no fuso do produto.
+
+    A coluna existe para recortar por dia (`SUBSTR(iniciada_em, 1, 10)`) e para
+    ordenar, e as duas coisas sao feitas sobre o TEXTO. Gravada no offset de
+    origem, uma conversa em UTC caia no dia seguinte e "10:00-03:00" (13h UTC)
+    ordenava antes de "11:00+00:00" (auditoria de 02/10/2026). Com um fuso so,
+    os dez primeiros caracteres sao o dia e a ordem do texto e a do instante.
+
+    O `payload` nao muda: ele guarda o que a fonte mandou.
+    """
+    return no_fuso_do_produto(conversa.iniciada_em).isoformat()
+
+
 class Banco:
     """Aceita um caminho de arquivo (SQLite) ou uma URL `postgresql://`."""
 
@@ -711,6 +726,31 @@ class Banco:
                 }
                 if coluna not in existentes:
                     conexao.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
+            self._normalizar_inicios(conexao)
+
+    @staticmethod
+    def _normalizar_inicios(conexao) -> None:
+        """Reescreve a coluna `iniciada_em` das linhas gravadas em outro offset.
+
+        Ver `_inicio_no_produto`. So a COLUNA muda, e ela e derivada: o instante
+        e o mesmo e o `payload` fica intacto. Idempotente -- na segunda vez nao
+        ha linha fora do padrao -- e roda dentro da transacao da migracao.
+        """
+        # O offset como o `isoformat` o escreve ("-03:00"), tirado de um
+        # instante qualquer em vez de digitado: quem mudar o fuso muda so la.
+        sufixo = datetime.now(FUSO_DO_PRODUTO).isoformat()[-6:]
+        linhas = conexao.execute(
+            "SELECT id, iniciada_em FROM conversas WHERE iniciada_em NOT LIKE ?",
+            (f"%{sufixo}",),
+        ).fetchall()
+        for linha in linhas:
+            normalizado = no_fuso_do_produto(
+                datetime.fromisoformat(linha["iniciada_em"])
+            ).isoformat()
+            conexao.execute(
+                "UPDATE conversas SET iniciada_em = ? WHERE id = ?",
+                (normalizado, linha["id"]),
+            )
 
     def salvar(
         self,
@@ -737,7 +777,7 @@ class Banco:
                 (
                     conversa.id,
                     conversa.canal,
-                    conversa.iniciada_em.isoformat(),
+                    _inicio_no_produto(conversa),
                     score,
                     categoria,
                     conversa.model_dump_json(),
@@ -793,7 +833,7 @@ class Banco:
             conexao.executemany(
                 self._upsert("conversas", ("id", "canal", "iniciada_em", "score",
                     "categoria", "payload", "lexico_versao", "regua"), ("id",)),
-                [(c.id, c.canal, c.iniciada_em.isoformat(), score, categoria,
+                [(c.id, c.canal, _inicio_no_produto(c), score, categoria,
                   c.model_dump_json(), lexico_versao, regua)
                  for c, score, categoria in registros],
             )
@@ -974,7 +1014,10 @@ class Banco:
         filtros: list[str] = []
         parametros: list[object] = []
         # O recorte e por DIA, como a API. SUBSTR funciona igual nos dois
-        # dialetos e evita comparar offsets ISO como texto completo.
+        # dialetos e evita comparar offsets ISO como texto completo. Os dez
+        # primeiros caracteres SAO o dia do produto porque a coluna e gravada
+        # no fuso do produto (`_inicio_no_produto`), e `migrar` normaliza as
+        # linhas anteriores a isso.
         if de is not None:
             filtros.append("SUBSTR(iniciada_em, 1, 10) >= ?")
             parametros.append(de)

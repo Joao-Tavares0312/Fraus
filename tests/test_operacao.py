@@ -13,7 +13,9 @@ from fraus.operacao import descobrir_temas, limitar_esperas, simular_escala
 from tests.test_motor import _motor, _fusor_treinado
 from tests.test_api import CSV
 
-BASE = datetime(2026, 9, 15, 10, tzinfo=timezone.utc)
+# 10h no relogio do PRODUTO: a escala le a hora de chegada no fuso do produto
+# (fraus/fuso.py), nao no offset em que a conversa foi gravada.
+BASE = datetime(2026, 9, 15, 10, tzinfo=timezone(timedelta(hours=-3)))
 
 
 def conversa(i="c1", canal="chat", texto="cobranca duplicada preciso estorno", dia=0, humana=True):

@@ -16,6 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.motor_preguicoso import motor_e_real
 from fraus.api.esquemas import PedidoAnalise
+from fraus.fuso import dia_do_produto
 from fraus.indicadores import nota_0_10
 from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
 from fraus.ingest.mapeador import ORDENS_DE_DATA
@@ -97,7 +98,7 @@ def _analisar_e_registrar(ctx: Contexto, nome: str, dados: bytes, opcoes) -> dic
                  for a in resposta["analises"]]
     ctx.banco.salvar_lote(registros, curadoria.versao, ctx.regua_vigente())
     ctx.banco.auditar(str(ctx.usuario_id) if ctx.usuario_id is not None else "credencial-tecnica-ou-local", "registrar_analise", str(len(registros)))
-    datas = sorted(c.iniciada_em.date().isoformat() for c, _, _ in registros)
+    datas = sorted(dia_do_produto(c.iniciada_em).isoformat() for c, _, _ in registros)
     return {**resposta, "gravacao": {"salvas": len(registros),
         "ids": [c.id for c, _, _ in registros], "banco": ctx.banco.dialeto,
         "de": datas[0], "ate": datas[-1]}}

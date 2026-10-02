@@ -14,6 +14,13 @@ from fraus.db import Banco
 from tests.conftest import URL_POSTGRES
 
 
+class _SemLinhas(list):
+    """Cursor vazio: itera como lista e responde `fetchall`, como os reais."""
+
+    def fetchall(self):
+        return []
+
+
 class _Gravador:
     """Conexao falsa: so anota o que `migrar` mandou executar, na ordem."""
 
@@ -22,7 +29,7 @@ class _Gravador:
 
     def execute(self, sql, parametros=()):
         self.comandos.append(sql)
-        return []
+        return _SemLinhas()
 
     def executescript(self, sql):
         self.comandos.append(sql)
