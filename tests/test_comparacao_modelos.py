@@ -47,3 +47,145 @@ def test_bootstrap_de_modelos_iguais_cruza_o_zero():
     resultado = bootstrap_da_diferenca(rotulos, preditos, preditos, classes=[0, 1], reamostras=100)
     assert resultado.diferenca == 0.0
     assert resultado.ic_inferior == resultado.ic_superior == 0.0
+
+
+# --- laudo: matriz de confusao, contagens por classe e relatorio --------------
+
+from fraus.comparacao_modelos import (  # noqa: E402
+    avaliar_conjunto,
+    contagens_por_classe,
+    matriz_de_confusao,
+    montar_laudo,
+    relatorio_markdown,
+    validar_laudo,
+)
+
+
+def test_matriz_tem_o_real_na_linha_e_o_predito_na_coluna():
+    matriz = matriz_de_confusao([0, 0, 1, 1, 1], [0, 1, 1, 1, 0], classes=[0, 1])
+    assert matriz == [[1, 1], [1, 2]]
+
+
+def test_contagens_por_classe_sao_uma_contra_o_resto():
+    matriz = [[1, 1], [1, 2]]
+    nao, sim = contagens_por_classe(matriz, ["nao-ironico", "ironico"])
+    assert (sim["vp"], sim["fp"], sim["fn"], sim["vn"]) == (2, 1, 1, 1)
+    assert (nao["vp"], nao["fp"], nao["fn"], nao["vn"]) == (1, 1, 1, 2)
+    assert sim["precisao"] == pytest.approx(2 / 3)
+    assert sim["recall"] == pytest.approx(2 / 3)
+    assert sim["exemplos"] == 3
+
+
+def test_classe_nunca_prevista_tem_precisao_ausente_e_nao_zero():
+    # Sem nenhuma predicao da classe nao ha o que medir: None, nunca 0.
+    matriz = matriz_de_confusao([0, 1], [0, 0], classes=[0, 1])
+    _, rara = contagens_por_classe(matriz, ["a", "b"])
+    assert rara["precisao"] is None
+    assert rara["recall"] == 0.0
+    assert rara["f1"] is None
+
+
+def _conjunto():
+    rotulos = [0, 1] * 20
+    return avaliar_conjunto(
+        identificador="ironia_interno",
+        tarefa="ironia",
+        nome="Ironia — teste interno",
+        independente=False,
+        rotulos=rotulos,
+        preditos_por_modelo={"bertimbau": [0] * 40, "laya_treinado": list(rotulos)},
+        classes=[0, 1],
+        nomes_classes=["nao-ironico", "ironico"],
+        reamostras=200,
+    )
+
+
+def test_conjunto_avaliado_carrega_matriz_contagens_e_comparacao():
+    conjunto = _conjunto()
+    assert conjunto["exemplos"] == 40
+    assert conjunto["modelos"]["laya_treinado"]["acuracia"] == 1.0
+    assert conjunto["modelos"]["bertimbau"]["matriz"] == [[20, 0], [20, 0]]
+    comparacao = conjunto["comparacao"]
+    assert (comparacao["candidato"], comparacao["referencia"]) == ("laya_treinado", "bertimbau")
+    assert comparacao["mcnemar"]["so_candidato"] == 20
+    assert comparacao["diferenca_demonstrada"] is True
+
+
+def test_modelos_iguais_nao_tem_diferenca_demonstrada():
+    rotulos = [0, 1] * 20
+    conjunto = avaliar_conjunto(
+        identificador="x", tarefa="ironia", nome="x", independente=True, rotulos=rotulos,
+        preditos_por_modelo={"bertimbau": list(rotulos), "laya_treinado": list(rotulos)},
+        classes=[0, 1], nomes_classes=["a", "b"], reamostras=100,
+    )
+    assert conjunto["comparacao"]["diferenca_demonstrada"] is False
+
+
+def test_conjunto_recusa_predicoes_de_tamanho_diferente():
+    with pytest.raises(ValueError):
+        avaliar_conjunto(
+            identificador="x", tarefa="ironia", nome="x", independente=True, rotulos=[0, 1],
+            preditos_por_modelo={"bertimbau": [0], "laya_treinado": [0, 1]},
+            classes=[0, 1], nomes_classes=["a", "b"],
+        )
+
+
+def _laudo(**extras):
+    return montar_laudo(
+        conjuntos=[_conjunto()],
+        latencia={
+            "hardware": "CPU do Colab, 2 nucleos",
+            "amostra": 50,
+            "medidas": [
+                {"modelo": "bertimbau", "tarefa": "ironia", "executor": "torch",
+                 "mediana_ms": 41.5, "p95_ms": 60.0},
+            ],
+        },
+        procedencia={"fraus_commit": "abc1234"},
+        rodada_de_fumaca=extras.get("fumaca", False),
+        gerado_em="2026-10-02T13:00:00+00:00",
+    )
+
+
+def test_laudo_montado_passa_na_validacao():
+    laudo = _laudo()
+    assert laudo["schema"] == 1
+    validar_laudo(laudo)
+
+
+def test_validacao_recusa_laudo_de_outro_schema_ou_sem_conjuntos():
+    with pytest.raises(ValueError):
+        validar_laudo({"schema": 2, "conjuntos": []})
+    with pytest.raises(ValueError):
+        validar_laudo({"schema": 1})
+    with pytest.raises(ValueError):
+        validar_laudo([])
+
+
+def test_relatorio_traz_os_numeros_do_laudo_e_a_procedencia():
+    texto = relatorio_markdown(_laudo())
+    assert "# Comparação de modelos" in texto
+    assert "Ironia — teste interno" in texto
+    assert "| ironico | 20 | 0 | 0 | 20 |" in texto  # VP FP FN VN do Laya treinado
+    assert "41,5 ms" in texto
+    assert "CPU do Colab, 2 nucleos" in texto
+    assert "abc1234" in texto
+
+
+def test_relatorio_de_fumaca_avisa_que_nao_e_resultado():
+    assert "rodada de fumaça" in relatorio_markdown(_laudo(fumaca=True)).lower()
+    assert "rodada de fumaça" not in relatorio_markdown(_laudo()).lower()
+
+
+def test_relatorio_escreve_sem_diferenca_quando_o_intervalo_cruza_o_zero():
+    rotulos = [0, 1] * 20
+    conjunto = avaliar_conjunto(
+        identificador="x", tarefa="ironia", nome="Empate", independente=True, rotulos=rotulos,
+        preditos_por_modelo={"bertimbau": list(rotulos), "laya_treinado": list(rotulos)},
+        classes=[0, 1], nomes_classes=["a", "b"], reamostras=100,
+    )
+    laudo = montar_laudo(conjuntos=[conjunto], latencia=None, procedencia={},
+                         rodada_de_fumaca=False, gerado_em="2026-10-02T13:00:00+00:00")
+    texto = relatorio_markdown(laudo)
+    assert "sem diferença demonstrada" in texto
+    assert "não foi medida" in texto  # latencia ausente e nomeada, nao zerada

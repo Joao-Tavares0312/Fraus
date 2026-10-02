@@ -454,6 +454,95 @@ export type SimulacaoIroniaLaya = {
   pontua: false;
 };
 
+/** VP/FP/FN/VN de UMA classe contra o resto, como o laudo traz. */
+export type ContagemDeClasse = {
+  classe: string;
+  exemplos: number;
+  vp: number;
+  fp: number;
+  fn: number;
+  vn: number;
+  /** `null` quando o modelo nunca previu a classe: sem predição não há medida. */
+  precisao: number | null;
+  recall: number | null;
+  f1: number | null;
+};
+
+export type MedidasDoModelo = {
+  acuracia: number;
+  f1_macro: number;
+  /** Linha = classe real, coluna = classe predita, na ordem de `classes`. */
+  matriz: number[][];
+  por_classe: ContagemDeClasse[];
+};
+
+export type ComparacaoDoConjunto = {
+  candidato: string;
+  referencia: string;
+  diferenca_f1_macro: number;
+  ic95: [number, number];
+  mcnemar: { so_candidato: number; so_referencia: number; p_valor: number };
+  /** Decidido no servidor: falso quando o IC 95% contém o zero. */
+  diferenca_demonstrada: boolean;
+};
+
+export type ConjuntoComparado = {
+  id: string;
+  tarefa: "emocao" | "ironia";
+  nome: string;
+  /** Nenhum modelo viu dado desta procedência no treino. */
+  independente: boolean;
+  exemplos: number;
+  classes: string[];
+  modelos: Record<string, MedidasDoModelo>;
+  comparacao: ComparacaoDoConjunto;
+};
+
+export type MedidaDeLatencia = {
+  modelo: string;
+  tarefa: string;
+  executor: string;
+  mediana_ms: number;
+  p95_ms: number;
+};
+
+/**
+ * O laudo que o notebook 07 grava e `GET /modelo/comparacao` serve como está.
+ * Nenhum campo é recalculado aqui.
+ */
+export type LaudoComparacao = {
+  schema: number;
+  gerado_em: string;
+  /** Treino de poucos minutos, só para validar o caminho: não é resultado. */
+  rodada_de_fumaca: boolean;
+  nomes_modelos: Record<string, string>;
+  conjuntos: ConjuntoComparado[];
+  /** `null` quando o tempo não foi medido — nunca zero. */
+  latencia: { hardware: string; amostra: number; medidas: MedidaDeLatencia[] } | null;
+  procedencia: Record<string, unknown>;
+};
+
+/** Uma cabeça lendo UMA fala agora — ou o motivo de ela não estar carregada. */
+export type LeituraAoVivo =
+  | {
+      disponivel: true;
+      classe: string;
+      ms: number;
+      executor: string;
+      prob_ironia?: number;
+      probabilidades?: Record<string, number>;
+    }
+  | { disponivel: false; motivo: string };
+
+export type ComparacaoAoVivo = {
+  texto: string;
+  tarefas: Record<"ironia" | "emocao", { bertimbau: LeituraAoVivo; laya: LeituraAoVivo }>;
+  limiar_ironia: number;
+  /** Backend multitarefa: uma passada produz as duas leituras do BERTimbau. */
+  passada_unica: boolean;
+  pontua: false;
+};
+
 export type ConfiguracaoIroniaLaya = {
   contexto: string;
   instrucao: string;
@@ -836,6 +925,42 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
         );
       }
       return (await resposta.json()) as Simulacao;
+    })(),
+  );
+}
+
+/** `laudo: null` é o estado normal antes de o notebook 07 gerar o arquivo. */
+export const obterComparacao = () =>
+  proteger(buscar<{ laudo: LaudoComparacao | null }>("/modelo/comparacao"));
+
+/** Destino do navegador para baixar o relatório: o proxy repassa o anexo. */
+export const URL_RELATORIO_COMPARACAO = `${PROXY}/modelo/comparacao/relatorio`;
+
+export async function simularComparacao(
+  texto: string,
+): Promise<Resultado<ComparacaoAoVivo>> {
+  return proteger(
+    (async () => {
+      const resposta = await fetch(urlDaApi("/modelo/comparacao/simular"), {
+        method: "POST",
+        headers: await cabecalhosDaApi({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ texto }),
+        cache: "no-store",
+      });
+      if (!resposta.ok) {
+        const corpo = (await resposta.json().catch(() => null)) as
+          | { detail?: unknown }
+          | null;
+        const detalhe = corpo?.detail;
+        throw new Error(
+          typeof detalhe === "string"
+            ? detalhe
+            : detalhe
+              ? JSON.stringify(detalhe)
+              : `/modelo/comparacao/simular respondeu ${resposta.status}`,
+        );
+      }
+      return (await resposta.json()) as ComparacaoAoVivo;
     })(),
   );
 }

@@ -652,6 +652,12 @@ Ele não promete 100% de acerto, e número perto disso seria sintoma (invariante
 10). No fim, poda o vocabulário de 256 mil tokens para o que o português usa,
 exporta para ONNX e só adota INT8 se no máximo 1% das decisões mudar.
 
+A última célula grava `comparacao_modelos.json` (acurácia, F1-macro, matriz
+de confusão, VP/FP/FN/VN por classe, McNemar, IC e latência em CPU) e o mesmo
+laudo em Markdown. Copiado para `modelos/`, ele aparece na aba **Modelo →
+Comparação** da dashboard (`GET /modelo/comparacao`), que também lê uma fala
+com as cabeças carregadas no servidor, lado a lado.
+
 Rode primeiro com `MODO_FUMACA = True`. O que foi pesquisado, o que foi medido
 localmente e o que ainda falta está na nota interna
 `docs/notas/2026-10-02-treino-laya.md`.
