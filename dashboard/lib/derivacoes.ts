@@ -17,6 +17,7 @@
  * cada mensagem do cliente ate a proxima resposta (bot ou humano).
  */
 
+import { diaDoProduto } from "./fuso";
 import lexicoEmoji from "./lexicoEmoji.json";
 import type {
   Categoria,
@@ -295,13 +296,6 @@ export type PontoSerie = {
   comScore: number;
 };
 
-function chaveDoDia(iso: string): string {
-  const data = new Date(iso);
-  const mes = `${data.getMonth() + 1}`.padStart(2, "0");
-  const dia = `${data.getDate()}`.padStart(2, "0");
-  return `${data.getFullYear()}-${mes}-${dia}`;
-}
-
 /**
  * Da forma de grafico ao que `GET /serie-temporal` ja agregou.
  *
@@ -336,7 +330,7 @@ export function serieDiaria(detalhes: DetalheConversa[]): PontoSerie[] {
   >();
 
   for (const conversa of detalhes) {
-    const dia = chaveDoDia(conversa.iniciada_em);
+    const dia = diaDoProduto(conversa.iniciada_em);
     const balde =
       porDia.get(dia) ?? { categorias: [], latencias: [], atendimentos: 0 };
     balde.atendimentos += 1;

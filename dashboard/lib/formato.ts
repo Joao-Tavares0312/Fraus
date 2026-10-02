@@ -1,5 +1,7 @@
 /** Formatacao pt-BR. Uma unica fonte para que nenhum numero apareça com duas caras. */
 
+import { noFusoDoProduto } from "./fuso";
+
 export const ROTULO_SEM_SINAL = "sem sinal";
 
 /**
@@ -104,7 +106,8 @@ export function formatarSegundosLED(segundos: number): {
 }
 
 export function formatarDataHora(iso: string): string {
-  return new Date(iso).toLocaleString("pt-BR", {
+  return noFusoDoProduto(iso).toLocaleString("pt-BR", {
+    timeZone: "UTC",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -114,7 +117,8 @@ export function formatarDataHora(iso: string): string {
 }
 
 export function formatarData(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", {
+  return noFusoDoProduto(iso).toLocaleDateString("pt-BR", {
+    timeZone: "UTC",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -122,7 +126,8 @@ export function formatarData(iso: string): string {
 }
 
 export function formatarHora(iso: string): string {
-  return new Date(iso).toLocaleTimeString("pt-BR", {
+  return noFusoDoProduto(iso).toLocaleTimeString("pt-BR", {
+    timeZone: "UTC",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
