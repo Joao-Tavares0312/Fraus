@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatarNps, formatarSegundos } from "./formato";
+import { formatarComSinal, formatarNps, formatarSegundos } from "./formato";
 
 /**
  * As BORDAS dos dois formatadores que mais aparecem na tela. Os dois erravam
@@ -47,5 +47,19 @@ describe("formatarSegundos", () => {
 
   it("horas e minutos", () => {
     expect(formatarSegundos(3900)).toBe("1 h 5 min");
+  });
+});
+
+describe("formatarComSinal", () => {
+  it("valor que arredonda para zero nao leva sinal", () => {
+    // A tela de Analisar mostrava "−0" na contribuicao da caixa alta (02/10/2026).
+    expect(formatarComSinal(-0.001, 2)).toBe("0");
+    expect(formatarComSinal(0.004, 2)).toBe("0");
+    expect(formatarComSinal(-0, 2)).toBe("0");
+  });
+  it("positivo leva +, negativo leva o sinal de menos tipografico", () => {
+    expect(formatarComSinal(2.851, 2)).toBe("+2,85");
+    expect(formatarComSinal(-3.08, 2)).toBe("−3,08");
+    expect(formatarComSinal(-0.006, 2)).toBe("−0,01");
   });
 });

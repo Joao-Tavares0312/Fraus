@@ -95,8 +95,8 @@ export function MetricasTreino({
     return (
       <EstadoVazio
         className="m-5"
-        titulo="Nenhuma cabeça foi treinada ainda"
-        explicacao="GET /modelo respondeu metricas: null para todas, que é o valor correto antes do treino — o servidor não inventa número. Assim que os notebooks rodarem no Colab e exportarem os arquivos de métricas, acurácia e F1 aparecem aqui. Zero não é resposta: seria dizer que o modelo erra tudo, quando ele nem existe."
+        titulo="Métricas de treino não publicadas neste servidor"
+        explicacao="GET /modelo respondeu metricas: null para todas: este servidor não tem os arquivos de métricas que os notebooks exportam. Isso acontece antes do treino e também quando o pacote publicado leva os pesos mas não os metricas.json — a resposta sozinha não distingue os dois casos, e o servidor não inventa número. Zero não é resposta: seria dizer que o modelo erra tudo."
         etapa="notebooks/01 (satisfação), 03 (emoção) e 04 (ironia), descritos em docs/treinamento.md"
       />
     );

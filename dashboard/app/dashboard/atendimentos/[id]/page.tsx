@@ -22,13 +22,14 @@ import { ResumoDoAtendimento } from "@/components/atendimentos/ResumoDoAtendimen
 import { Painel } from "@/components/Painel";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { Transcricao } from "@/components/Transcricao";
+import { idDaRota } from "@/lib/rota";
 
 export const dynamic = "force-dynamic";
 
 export default async function PaginaDoAtendimento(
   props: PageProps<"/dashboard/atendimentos/[id]">,
 ) {
-  const { id } = await props.params;
+  const id = idDaRota((await props.params).id);
   const parametros = await props.searchParams;
   // O periodo nao filtra ESTA tela (ela e um atendimento so), mas viaja no
   // link de volta para nao perder o recorte de quem veio da tabela.
