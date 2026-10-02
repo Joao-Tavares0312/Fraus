@@ -615,6 +615,42 @@ O notebook aceita **tres origens** para o corpus, escolhidas na variavel `ORIGEM
 | `kaggle` | baixa da conta Kaggle; exige `KAGGLE_USERNAME`/`KAGGLE_KEY` nos Secrets do Colab |
 | `upload` | seletor de arquivos do navegador, para corpus que chegou por e-mail |
 
+### A divisao por autor — conserto de 02/10/2026
+
+A regra da divisao mora em `fraus/divisao.py` e e a mesma nos notebooks 04 e
+07: um grupo por autor, e **cada linha sem autor e um grupo proprio**.
+
+Ate 02/10/2026 a regra estava escrita nos notebooks com `autores.astype(str)`,
+que transforma o campo vazio no autor "nan". As 18.373 noticias nao tem autor:
+viraram uma pessoa so e cairam inteiras no teste.
+
+| | Antes | Depois |
+|---|---|---|
+| Treino | 12.271 linhas, 86% ironicas, so tweets | 28.365 linhas, 59% ironicas |
+| Teste | 20.872 linhas (63% do corpus), 43% ironicas | 4.778 linhas (14%), 59% ironicas |
+
+Os numeros de "depois" foram medidos aplicando a regra nova ao corpus real,
+fora do Colab; os do treino saem quando o notebook rodar.
+
+Consequencias:
+
+- A cabeca de ironia treinada antes desta data **nunca viu uma noticia** no
+  treino e foi avaliada num teste que era 88% noticias. O F1-macro de 0,511 que
+  o notebook 07 recalculou para ela nesse teste mede mudanca de dominio, nao a
+  tarefa.
+- `conferir_divisao` agora recusa, com erro, divisao cujo teste foge do tamanho
+  pedido ou cuja proporcao de classe difere entre os dois lados.
+- O notebook 04 grava em `metricas_ironia.json` a impressao (SHA-256) dos
+  textos do teste. O notebook 07 para antes do treino se o teste dele nao tiver
+  a mesma impressao: sem isso, frases do treino do BERTimbau cairiam no teste
+  da comparacao.
+- Nas noticias a fonte entrega o rotulo (Estadao e sempre nao-ironico; os dois
+  sites de satira, sempre ironicos). Com as noticias dos dois lados, o numero
+  agregado tende a subir por reconhecer o jornal. Os dois notebooks imprimem o
+  resultado **separado por meio**, e o que se le como desempenho em ironia e o
+  dos tweets e o da regua de dominio. Numero alto no agregado e sintoma
+  (invariante 10), nao vitoria.
+
 ### Candidato Laya
 
 O Laya multilíngue pode substituir apenas a cabeça de ironia, sem alterar
@@ -638,6 +674,37 @@ uv run python scripts/validar_candidato_ironia.py --backend laya
 A aba **Modelo → Ironia · Laya** chama somente essa cabeça e não persiste nem
 altera notas. O tipo de pergunta usado é `choice` com chaves neutras, não
 `noul`, por causa do viés de rótulo documentado pelos próprios autores.
+
+#### Fine-tuning do Laya — notebook 07 (02/10/2026, ainda não executado)
+
+O candidato acima responde a frio. `notebooks/07_treino_laya.ipynb` treina o
+mesmo checkpoint nas duas perguntas do Fraus — emoção (`PERGUNTA_EMOCAO`, em
+`fraus/treino_laya.py`) e ironia (`PERGUNTA_IRONIA`) — com o script oficial de
+GPU única do Laya, e o compara com os BERTimbau dos notebooks 03 e 04 nos
+mesmos exemplos de teste: McNemar exato e IC por bootstrap da diferença de
+F1-macro (`fraus/comparacao_modelos.py`), mais o XED-pt e a régua de domínio.
+
+Ele não promete 100% de acerto, e número perto disso seria sintoma (invariante
+10). No fim, poda o vocabulário de 256 mil tokens para o que o português usa,
+exporta para ONNX e só adota INT8 se no máximo 1% das decisões mudar.
+
+A última célula grava `comparacao_modelos.json` (acurácia, F1-macro, matriz
+de confusão, VP/FP/FN/VN por classe, McNemar, IC e latência em CPU) e o mesmo
+laudo em Markdown. Copiado para `modelos/`, ele aparece na aba **Modelo →
+Comparação** da dashboard (`GET /modelo/comparacao`), que também lê uma fala
+com as cabeças carregadas no servidor, lado a lado.
+
+**Para o laudo chegar à produção** ele é versionado com o código, em
+`fraus/dados/comparacao_modelos.json`: `modelos/` fica fora do git e, na
+Vercel, é trocada inteira pelo ZIP dos pesos. A rota serve o laudo de
+`modelos/` quando ele existe e, na falta, o versionado. O campo opcional
+`ressalvas` (lista de textos) registra o que se soube sobre a medição depois de
+feita; ele aparece no topo da aba e do relatório. Os números do laudo nunca são
+editados à mão — laudo novo é notebook rodado de novo.
+
+Rode primeiro com `MODO_FUMACA = True`. O que foi pesquisado, o que foi medido
+localmente e o que ainda falta está na nota interna
+`docs/notas/2026-10-02-treino-laya.md`.
 
 ### Alternativas ao IDPT — levantamento de 14/08/2026
 

@@ -8,6 +8,7 @@ quem chama o Motor e a rota, nao o contrario.
 import hashlib
 import os
 import threading
+import time
 
 from fraus.deriva import resumo_de_deriva
 from fraus.fusor import Fusor, montar_features
@@ -164,6 +165,32 @@ class Motor:
         if not textos:
             return None
         return [float(p[IRONICO]) for p in self._ironia.prever_mensagens(textos)]
+
+    def ler_cabecas(self, texto: str) -> dict:
+        """Emocao e ironia de UMA fala, com o tempo de cada cabeca em separado.
+
+        Existe para `/modelo/comparacao/simular`: `simular_texto` roda as tres
+        cabecas juntas, e o tempo somado delas nao se compara com o de um
+        modelo sozinho. No backend multitarefa uma passada so produz as duas
+        leituras -- o tempo e o mesmo nas duas e `passada_unica` diz isso.
+        """
+        inicio = time.perf_counter()
+        todas = self._prever_todas([texto])
+        if todas:
+            ms = (time.perf_counter() - inicio) * 1000
+            emocao, prob_ironia = todas["emocao"][0], todas["ironia"][0][IRONICO]
+            ms_emocao = ms_ironia = ms
+        else:
+            emocao = self._emocao.prever_mensagens([texto])[0]
+            ms_emocao = (time.perf_counter() - inicio) * 1000
+            inicio = time.perf_counter()
+            prob_ironia = self._ironia.prever_mensagens([texto])[0][IRONICO]
+            ms_ironia = (time.perf_counter() - inicio) * 1000
+        return {
+            "emocao": {"probabilidades": [float(p) for p in emocao], "ms": ms_emocao},
+            "ironia": {"prob_ironia": float(prob_ironia), "ms": ms_ironia},
+            "passada_unica": bool(todas),
+        }
 
     def pontuar_conversa(self, conversa, curadoria=None) -> float | None:
         """Score 0-100, ou `None` sem fala do cliente.

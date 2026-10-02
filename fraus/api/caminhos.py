@@ -118,6 +118,17 @@ CAMINHO_METRICAS_EMOCAO = artefato(
 CAMINHO_METRICAS_IRONIA = artefato(
     "FRAUS_CAMINHO_METRICAS_IRONIA", "modelos/metricas_ironia.json"
 )
+# O laudo que o notebook 07 grava: BERTimbau x Laya nos mesmos exemplos de
+# teste. Ausente e o estado normal ate o notebook rodar -- `/modelo/comparacao`
+# devolve `laudo: null` e a tela nomeia o que falta.
+CAMINHO_COMPARACAO = artefato(
+    "FRAUS_CAMINHO_COMPARACAO", "modelos/comparacao_modelos.json"
+)
+# O laudo versionado com o codigo. `modelos/` fica fora do git e, na Vercel, e
+# trocada inteira pelo ZIP dos pesos: um laudo so ali nunca chegaria a
+# producao. Este e medicao, nao peso -- 31 KB de JSON que a banca pode auditar
+# no repositorio. O laudo local, quando existe, vence este.
+CAMINHO_COMPARACAO_PUBLICADA = RAIZ_PROJETO / "fraus" / "dados" / "comparacao_modelos.json"
 
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
 # (uso local, ver README) -- entao ele nao pode aceitar caminho arbitrario do

@@ -7,6 +7,7 @@ vi.mock("@/lib/formato", async () => import("../../lib/formato"));
 vi.mock("@/lib/utils", async () => import("../../lib/utils"));
 vi.mock("@/components/ui/button", async () => import("../ui/button"));
 vi.mock("@/components/ui/input", async () => import("../ui/input"));
+vi.mock("@/components/IconeDeAcao", async () => import("../IconeDeAcao"));
 const recurso = vi.hoisted(() => vi.fn());
 vi.mock("./comum", () => ({
   CAMPO: "", GRADE: "", LINHA: "", PILHA: "", lista: () => [],

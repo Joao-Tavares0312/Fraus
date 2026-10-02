@@ -92,3 +92,12 @@ def test_pontuar_conversa_nao_precisa_do_classificador_de_ironia_para_o_vetor():
     score = _motor().pontuar_conversa(_conversa_com("otimo atendimento"))
     assert score is not None
     assert 0.0 <= score <= 100.0
+
+
+def test_ler_cabecas_devolve_emocao_e_ironia_com_o_tempo_de_cada_uma():
+    leitura = _motor().ler_cabecas("que absurdo")
+    assert len(leitura["emocao"]["probabilidades"]) == len(NOMES_EMOCOES)
+    assert 0.0 <= leitura["ironia"]["prob_ironia"] <= 1.0
+    assert leitura["emocao"]["ms"] >= 0 and leitura["ironia"]["ms"] >= 0
+    # Tres classificadores separados: cada cabeca tem a propria passada.
+    assert leitura["passada_unica"] is False

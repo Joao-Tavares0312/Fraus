@@ -11,14 +11,21 @@ prob_ironia alta ao mesmo tempo.
 Analisar ARQUIVO e outro dominio: `rotas/analise.py`.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+import time
 
-from fraus.api.caminhos import (CAMINHO_METRICAS, CAMINHO_METRICAS_EMOCAO,
-                                CAMINHO_METRICAS_IRONIA,
-                                backend_ironia_declarado, metricas_de)
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
+
+from fraus.api.caminhos import (CAMINHO_COMPARACAO,
+                                CAMINHO_COMPARACAO_PUBLICADA, CAMINHO_METRICAS,
+                                CAMINHO_METRICAS_EMOCAO,
+                                CAMINHO_METRICAS_IRONIA, CAMINHO_ONNX_LAYA,
+                                backend_declarado, backend_ironia_declarado,
+                                metricas_de)
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoSimulacao, PedidoSimulacaoIroniaLaya
 from fraus.sinais.emoji import linhas_lexicon, score_do_emoji
+from fraus.comparacao_modelos import relatorio_markdown, validar_laudo
 from fraus.sinais.emocao import NOMES_EMOCOES
 
 # Teto de tamanho do texto aceito por /modelo/simular -- nao e limite de
@@ -201,5 +208,161 @@ def simular_ironia_laya(pedido: PedidoSimulacaoIroniaLaya) -> dict:
         "modelo": "convaiinnovations/laya",
         "checkpoint": "multilingual",
         "revisao": revisao_laya_declarada(),
+        "pontua": False,
+    }
+
+
+# --- Comparacao BERTimbau x Laya ----------------------------------------------
+#
+# Os NUMEROS da comparacao vem de um laudo gravado pelo notebook 07, que le
+# milhares de exemplos rotulados com os dois modelos. A API so serve o arquivo:
+# avaliar ao vivo exigiria os dois modelos e o conjunto de teste dentro do
+# deploy. A frase ao vivo e outra coisa -- uma fala, as cabecas que ESTIVEREM
+# carregadas, o tempo de cada uma -- e nomeia a que falta em vez de omitir.
+
+LIMIAR_IRONIA_COMPARACAO = 0.5
+
+
+def _laudo_de_comparacao() -> dict | None:
+    try:
+        # O laudo local (recem-saido do notebook) vence o versionado com o codigo.
+        laudo = metricas_de(CAMINHO_COMPARACAO)
+        if laudo is None:
+            laudo = metricas_de(CAMINHO_COMPARACAO_PUBLICADA)
+        if laudo is not None:
+            validar_laudo(laudo)
+    except ValueError as erro:  # inclui JSON invalido
+        raise HTTPException(
+            status_code=500, detail=f"laudo de comparação ilegível: {erro}"
+        ) from erro
+    return laudo
+
+
+@router.get("/modelo/comparacao")
+def comparacao() -> dict:
+    """O laudo do notebook 07, ou `laudo: null` enquanto ele nao foi gerado."""
+    return {"laudo": _laudo_de_comparacao()}
+
+
+@router.get("/modelo/comparacao/relatorio")
+def relatorio_comparacao() -> PlainTextResponse:
+    """O mesmo laudo por extenso, em Markdown, montado no servidor."""
+    laudo = _laudo_de_comparacao()
+    if laudo is None:
+        raise HTTPException(
+            status_code=404,
+            detail="não há laudo de comparação: nem modelos/comparacao_modelos.json "
+                   "nem o laudo versionado em fraus/dados/",
+        )
+    return PlainTextResponse(
+        relatorio_markdown(laudo),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="comparacao-modelos.md"'},
+    )
+
+
+def _leitura_ironia(prob_ironia: float, ms: float, executor: str) -> dict:
+    return {
+        "disponivel": True,
+        "prob_ironia": prob_ironia,
+        "classe": "ironico" if prob_ironia >= LIMIAR_IRONIA_COMPARACAO else "nao-ironico",
+        "ms": ms,
+        "executor": executor,
+    }
+
+
+def _leitura_emocao(probabilidades: list[float], ms: float, executor: str) -> dict:
+    return {
+        "disponivel": True,
+        "probabilidades": dict(zip(NOMES_EMOCOES, probabilidades)),
+        "classe": NOMES_EMOCOES[max(range(len(probabilidades)), key=probabilidades.__getitem__)],
+        "ms": ms,
+        "executor": executor,
+    }
+
+
+def _indisponivel(motivo: str) -> dict:
+    return {"disponivel": False, "motivo": motivo}
+
+
+def _cronometrar(classificador, texto: str) -> tuple[list[float], float]:
+    inicio = time.perf_counter()
+    probabilidades = classificador.prever_mensagens([texto])[0]
+    return [float(p) for p in probabilidades], (time.perf_counter() - inicio) * 1000
+
+
+@router.post("/modelo/comparacao/simular")
+def simular_comparacao(
+    pedido: PedidoSimulacao, ctx: Contexto = Depends(obter_contexto)
+) -> dict:
+    """Uma fala lida pelas cabecas carregadas, lado a lado -- nao persiste nem pontua."""
+    texto = pedido.texto.strip()
+    if not texto:
+        raise HTTPException(status_code=400, detail="texto vazio")
+    if len(texto) > TETO_TEXTO_SIMULACAO:
+        raise HTTPException(
+            status_code=400,
+            detail=f"texto acima do limite de {TETO_TEXTO_SIMULACAO} caracteres",
+        )
+    ler_cabecas = getattr(ctx.motor, "ler_cabecas", None)
+    if ler_cabecas is None:
+        raise HTTPException(
+            status_code=409,
+            detail="o motor em uso é de demonstração e não expõe as cabeças de leitura",
+        )
+    cabecas = ler_cabecas(texto)
+    executor = backend_declarado()
+    executor_ironia = backend_ironia_declarado()
+    artefato_laya = (CAMINHO_ONNX_LAYA / "laya.onnx").is_file()
+
+    em_uso = cabecas["ironia"]
+    if executor_ironia == "padrao":
+        ironia_bertimbau = _leitura_ironia(em_uso["prob_ironia"], em_uso["ms"], executor)
+        if artefato_laya:
+            try:
+                from fraus.sinais.ironia_laya import obter_classificador_ironia_laya_onnx
+
+                probabilidades, ms = _cronometrar(obter_classificador_ironia_laya_onnx(), texto)
+                ironia_laya = _leitura_ironia(probabilidades[1], ms, "laya-onnx")
+            except Exception as erro:  # leitura lateral: a falha dela nao derruba a outra
+                ironia_laya = _indisponivel(f"o Laya não carregou: {erro}")
+        else:
+            ironia_laya = _indisponivel(
+                "o artefato do Laya não está neste servidor "
+                f"({CAMINHO_ONNX_LAYA.name}/laya.onnx)"
+            )
+    else:
+        # A cabeca de ironia em uso JA e o Laya; o BERTimbau de ironia nao sobe.
+        ironia_laya = _leitura_ironia(em_uso["prob_ironia"], em_uso["ms"], executor_ironia)
+        ironia_bertimbau = _indisponivel(
+            f"FRAUS_IRONIA_BACKEND={executor_ironia}: a cabeça BERTimbau de ironia "
+            "não é carregada neste servidor"
+        )
+
+    emocao_bertimbau = _leitura_emocao(
+        cabecas["emocao"]["probabilidades"], cabecas["emocao"]["ms"], executor
+    )
+    if artefato_laya:
+        try:
+            from fraus.sinais.emocao_laya import obter_classificador_emocao_laya_onnx
+
+            probabilidades, ms = _cronometrar(obter_classificador_emocao_laya_onnx(), texto)
+            emocao_laya = _leitura_emocao(probabilidades, ms, "laya-onnx")
+        except Exception as erro:
+            emocao_laya = _indisponivel(str(erro))
+    else:
+        emocao_laya = _indisponivel(
+            "o Laya treinado para emoção não está neste servidor "
+            f"({CAMINHO_ONNX_LAYA.name}/laya.onnx)"
+        )
+
+    return {
+        "texto": texto,
+        "tarefas": {
+            "ironia": {"bertimbau": ironia_bertimbau, "laya": ironia_laya},
+            "emocao": {"bertimbau": emocao_bertimbau, "laya": emocao_laya},
+        },
+        "limiar_ironia": LIMIAR_IRONIA_COMPARACAO,
+        "passada_unica": cabecas["passada_unica"],
         "pontua": False,
     }
