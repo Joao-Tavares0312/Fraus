@@ -167,7 +167,8 @@ ver a contagem de classes que a célula 5 imprime.
 | Passo | Tamanho | Decisões trocadas |
 |---|---|---|
 | FP32 com vocabulário podado (45.927 de 256 mil tokens), Colab | 617 MB | 0 |
-| INT8 dinâmico em todos os MatMul, Colab | — | **71%** |
+| INT8 dinâmico em todos os MatMul, Colab, checkpoint de fumaça | — | **71%** |
+| INT8 dinâmico em todos os MatMul, Colab, checkpoint treinado | — | **56%** |
 | Pesos em FP16 no disco, máquina local (vocabulário de teste) | 285 MB contra 565 MB | 0, diferença de saída exatamente zero |
 
 Onde o INT8 quebra, medido localmente em 30 frases contra o FP32 (checkpoint de
