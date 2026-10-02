@@ -1,12 +1,15 @@
-"""Leitura de emocao pelo Laya exportado para ONNX -- so quando ele foi treinado.
-
-O checkpoint base do Laya responde a pergunta de emocao a frio, e responder a
-frio nao e medir: por isso esta leitura so existe quando o `manifesto.json` do
-artefato declara a pergunta `emocao`, que e o que o notebook 07 grava depois do
-fine-tuning. Artefato do notebook 06 (so ironia) nao tem a chave, e a resposta
-aqui e "indisponivel", nunca um chute.
+"""Leitura de emocao pelo Laya exportado para ONNX.
 
 Usa o MESMO grafo carregado pela cabeca de ironia: um modelo, duas perguntas.
+
+O checkpoint base do Laya responde a pergunta de emocao a frio, e responder a
+frio nao e o mesmo que ter sido treinado para isso. Ate 02/10/2026 esta leitura
+era recusada quando o artefato nao declarava a pergunta `emocao`; o efeito era
+a comparacao ao vivo nunca fechar em producao, onde o Laya carregado e o
+checkpoint base. Agora a leitura acontece e quem consome pergunta a
+`laya_treinado_pelo_fraus` para ROTULAR: "Laya sem treino" e um dos tres
+modelos do laudo (F1-macro de 0,296 em emocao no teste interno), e mostra-lo
+com esse nome e medicao, nao chute.
 """
 
 from __future__ import annotations
@@ -17,10 +20,6 @@ from pathlib import Path
 from typing import Any
 
 from fraus.treino_laya import PERGUNTA_EMOCAO, probabilidades_emocao
-
-
-class EmocaoLayaIndisponivelError(RuntimeError):
-    pass
 
 
 def perguntas_do_artefato(diretorio: Path) -> tuple[str, ...]:
@@ -51,18 +50,13 @@ class ClassificadorEmocaoLayaOnnx:
         ]
 
 
-def _diretorio_do_artefato() -> Path:
-    from fraus.api.caminhos import CAMINHO_ONNX_LAYA
-
-    return CAMINHO_ONNX_LAYA
+def laya_treinado_pelo_fraus(diretorio: Path) -> bool:
+    """O artefato saiu do fine-tuning do notebook 07? So ele declara `emocao`."""
+    return "emocao" in perguntas_do_artefato(diretorio)
 
 
 @lru_cache(maxsize=1)
 def obter_classificador_emocao_laya_onnx() -> ClassificadorEmocaoLayaOnnx:
-    if "emocao" not in perguntas_do_artefato(_diretorio_do_artefato()):
-        raise EmocaoLayaIndisponivelError(
-            "o artefato Laya carregado é o checkpoint sem treino de emoção"
-        )
     from fraus.sinais.ironia_laya import obter_classificador_ironia_laya_onnx
 
     return ClassificadorEmocaoLayaOnnx(obter_classificador_ironia_laya_onnx()._agente)

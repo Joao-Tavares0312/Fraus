@@ -5,7 +5,7 @@ import pytest
 from fraus.sinais.emocao import NOMES_EMOCOES
 from fraus.sinais.emocao_laya import (
     ClassificadorEmocaoLayaOnnx,
-    EmocaoLayaIndisponivelError,
+    laya_treinado_pelo_fraus,
     perguntas_do_artefato,
 )
 from fraus.treino_laya import PERGUNTA_EMOCAO
@@ -39,10 +39,24 @@ def test_manifesto_declara_as_perguntas_e_artefato_antigo_so_tem_ironia(tmp_path
     assert perguntas_do_artefato(tmp_path) == ("emocao", "ironia")
 
 
-def test_obter_emocao_recusa_artefato_sem_treino_de_emocao(tmp_path, monkeypatch):
-    import fraus.sinais.emocao_laya as modulo
+def test_so_o_artefato_do_notebook_07_conta_como_treinado(tmp_path):
+    assert laya_treinado_pelo_fraus(tmp_path) is False
+    (tmp_path / "manifesto.json").write_text(json.dumps({"formato": "fp32"}))  # notebook 06
+    assert laya_treinado_pelo_fraus(tmp_path) is False
+    (tmp_path / "manifesto.json").write_text(json.dumps({"perguntas": ["emocao", "ironia"]}))
+    assert laya_treinado_pelo_fraus(tmp_path) is True
 
-    monkeypatch.setattr(modulo, "_diretorio_do_artefato", lambda: tmp_path)
+
+def test_checkpoint_sem_treino_tambem_le_emocao_pelo_mesmo_agente(monkeypatch):
+    # Em producao o Laya carregado e o checkpoint base. Ele responde a pergunta
+    # de emocao a frio; quem diz que e "sem treino" e a rota, nao uma recusa.
+    import fraus.sinais.emocao_laya as modulo
+    import fraus.sinais.ironia_laya as ironia_laya
+
+    agente = AgenteFalso()
+    monkeypatch.setattr(ironia_laya, "obter_classificador_ironia_laya_onnx",
+                        lambda: type("Ironia", (), {"_agente": agente})())
     modulo.obter_classificador_emocao_laya_onnx.cache_clear()
-    with pytest.raises(EmocaoLayaIndisponivelError):
-        modulo.obter_classificador_emocao_laya_onnx()
+    saida = modulo.obter_classificador_emocao_laya_onnx().prever_mensagens(["socorro"])
+    modulo.obter_classificador_emocao_laya_onnx.cache_clear()
+    assert saida[0][NOMES_EMOCOES.index("medo")] == 0.4

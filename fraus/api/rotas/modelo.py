@@ -314,6 +314,11 @@ def simular_comparacao(
     executor = backend_declarado()
     executor_ironia = backend_ironia_declarado()
     artefato_laya = (CAMINHO_ONNX_LAYA / "laya.onnx").is_file()
+    # "Laya" sozinho nao diz qual: o checkpoint base e o do notebook 07 sao
+    # dois modelos do laudo, com numeros diferentes. A tela nomeia pelo campo.
+    from fraus.sinais.emocao_laya import laya_treinado_pelo_fraus
+
+    treinado = {"treinado": laya_treinado_pelo_fraus(CAMINHO_ONNX_LAYA)}
 
     em_uso = cabecas["ironia"]
     if executor_ironia == "padrao":
@@ -323,7 +328,7 @@ def simular_comparacao(
                 from fraus.sinais.ironia_laya import obter_classificador_ironia_laya_onnx
 
                 probabilidades, ms = _cronometrar(obter_classificador_ironia_laya_onnx(), texto)
-                ironia_laya = _leitura_ironia(probabilidades[1], ms, "laya-onnx")
+                ironia_laya = _leitura_ironia(probabilidades[1], ms, "laya-onnx") | treinado
             except Exception as erro:  # leitura lateral: a falha dela nao derruba a outra
                 ironia_laya = _indisponivel(f"o Laya não carregou: {erro}")
         else:
@@ -333,7 +338,9 @@ def simular_comparacao(
             )
     else:
         # A cabeca de ironia em uso JA e o Laya; o BERTimbau de ironia nao sobe.
-        ironia_laya = _leitura_ironia(em_uso["prob_ironia"], em_uso["ms"], executor_ironia)
+        ironia_laya = (
+            _leitura_ironia(em_uso["prob_ironia"], em_uso["ms"], executor_ironia) | treinado
+        )
         ironia_bertimbau = _indisponivel(
             f"FRAUS_IRONIA_BACKEND={executor_ironia}: a cabeça BERTimbau de ironia "
             "não é carregada neste servidor"
@@ -347,12 +354,12 @@ def simular_comparacao(
             from fraus.sinais.emocao_laya import obter_classificador_emocao_laya_onnx
 
             probabilidades, ms = _cronometrar(obter_classificador_emocao_laya_onnx(), texto)
-            emocao_laya = _leitura_emocao(probabilidades, ms, "laya-onnx")
+            emocao_laya = _leitura_emocao(probabilidades, ms, "laya-onnx") | treinado
         except Exception as erro:
-            emocao_laya = _indisponivel(str(erro))
+            emocao_laya = _indisponivel(f"o Laya não carregou: {erro}")
     else:
         emocao_laya = _indisponivel(
-            "o Laya treinado para emoção não está neste servidor "
+            "o artefato do Laya não está neste servidor "
             f"({CAMINHO_ONNX_LAYA.name}/laya.onnx)"
         )
 

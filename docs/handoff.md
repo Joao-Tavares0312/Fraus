@@ -934,6 +934,18 @@ Empresa fictícia (não definida), tema claro (dark-only hoje), pin do
 
 ## 8. Armadilhas já pagas — não repita
 
+0000. **Duas instâncias frias migrando juntas se derrubavam — conserto de
+   02/10/2026.** `Banco.migrar()` roda no boot de cada função da Vercel. Logo
+   depois de um deploy todas as instâncias são novas; duas subiram no mesmo
+   segundo, o DDL de uma esperou a tabela que a outra segurava e o Postgres
+   matou uma delas com `DeadlockDetected`. As primeiras requisições da
+   dashboard (`/auth/eu`, `/serie-temporal`) voltaram 500 e depois tudo
+   "voltou sozinho" — o tipo de falha que ninguém investiga. Agora a migração
+   começa por `pg_advisory_xact_lock`: uma instância migra, as outras esperam.
+   A trava é de **transação**, não de sessão, porque a produção passa pelo
+   pooler em modo transação. `tests/test_migracao_concorrente.py` reproduz com
+   oito instâncias e só roda de verdade com `FRAUS_TESTE_POSTGRES_URL`.
+
 000. **`astype(str)` transformou campo vazio no autor "nan" — conserto de
    02/10/2026.** A divisão "por autor" do corpus de ironia agrupava as linhas
    pelo autor para que a mesma pessoa não ficasse em treino e teste. As 18.373

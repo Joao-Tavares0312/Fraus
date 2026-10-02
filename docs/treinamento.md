@@ -692,7 +692,9 @@ A última célula grava `comparacao_modelos.json` (acurácia, F1-macro, matriz
 de confusão, VP/FP/FN/VN por classe, McNemar, IC e latência em CPU) e o mesmo
 laudo em Markdown. Copiado para `modelos/`, ele aparece na aba **Modelo →
 Comparação** da dashboard (`GET /modelo/comparacao`), que também lê uma fala
-com as cabeças carregadas no servidor, lado a lado.
+com as cabeças carregadas no servidor, lado a lado. Cada leitura do Laya diz
+se o artefato do servidor é o treinado pelo notebook 07 ou o checkpoint base
+("Laya sem treino"): em produção é o base, que lê ironia e, a frio, emoção.
 
 **Para o laudo chegar à produção** ele é versionado com o código, em
 `fraus/dados/comparacao_modelos.json`: `modelos/` fica fora do git e, na

@@ -660,10 +660,22 @@ class Banco:
         ("conversas", "regua", "TEXT"),
     )
 
+    # Numero arbitrario e fixo: quem migra este esquema disputa ESTA trava.
+    # Mudar o valor separaria versoes novas e antigas em filas diferentes.
+    TRAVA_DE_MIGRACAO = 4_627_287_081
+
     def migrar(self) -> None:
         dialeto = _DIALETOS[self.dialeto]
         with self._conectar() as conexao:
             if self._postgres:
+                # Uma instancia migra por vez. Cada funcao fria da Vercel roda
+                # isto no boot, e duas subindo juntas se travavam: o DDL de uma
+                # esperava a tabela que a outra segurava (`DeadlockDetected` em
+                # 02/10/2026, com 500 nas primeiras requisicoes apos o deploy).
+                # A trava e da TRANSACAO -- cai sozinha no commit ou no
+                # rollback, e por isso funciona atras do pooler em modo
+                # transacao, onde trava de sessao nao sobrevive.
+                conexao.execute(f"SELECT pg_advisory_xact_lock({self.TRAVA_DE_MIGRACAO})")
                 conexao.executescript(ESQUEMA_POSTGRES_ANTES)
             conexao.executescript(ESQUEMA.format(**dialeto))
             if self._postgres:
