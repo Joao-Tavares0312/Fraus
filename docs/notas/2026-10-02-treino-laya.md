@@ -98,13 +98,68 @@ Duas leituras:
    (comentário em `scripts/preparar_modelos_vercel.py`). A lista de 19 mil
    tokens veio só dos docs e léxicos do repositório; com os corpora de verdade
    ela cresce, e o notebook mede quanto do XED-pt cai em `<unk>`.
-2. **O INT8 não está aprovado.** As trocas foram medidas num checkpoint com
+2. **O INT8 não está aprovado** (e a rodada no Colab o reprovou de vez; ver "Encolhimento" abaixo). As trocas foram medidas num checkpoint com
    três passos de gradiente, com probabilidades coladas no limiar — não é
    representativo, mas também não é um sinal verde. O notebook só troca o FP32
    pelo INT8 se no máximo 1% das decisões mudar numa amostra do teste.
 
 O grafo exportado aceita **uma frase e uma pergunta por chamada**: emoção e
 ironia pelo Laya são duas passadas por mensagem.
+
+## Rodada de fumaça no Colab (T4)
+
+O notebook rodou inteiro com 600 casos e uma época. **Número de fumaça não é
+resultado**; o que ela prova é o caminho e três fatos sobre o dado.
+
+| Conjunto | BERTimbau | Laya sem treino | Laya, 600 casos |
+|---|---|---|---|
+| Emoção, teste interno (F1-macro) | 0,585 | 0,296 | 0,435 |
+| Emoção, XED-pt (F1-macro) | 0,281 | 0,234 | 0,234 |
+| Ironia, teste interno (F1-macro) | 0,511 | 0,554 | 0,301 |
+| Régua de ironia (falso positivo / falso negativo) | 70% / 50% | 0% / 80% | 100% / 0% |
+
+- A divisão do notebook 03 foi reproduzida: o BERTimbau repetiu os números do
+  cartão do modelo, então o teste interno de emoção é pareado de verdade.
+- O treino completo tem 71.102 casos (58.832 de emoção com as repetições das
+  classes raras, 12.270 de ironia). Estimativa na T4: até 6,4 h para 4 épocas,
+  sem checkpoint por época.
+- Com 600 casos o Laya passou a chamar tudo de irônico. É o atalho que a régua
+  existe para pegar; só o treino completo diz se ele some.
+
+## Encolhimento: o que foi medido
+
+| Passo | Tamanho | Decisões trocadas |
+|---|---|---|
+| FP32 com vocabulário podado (45.927 de 256 mil tokens), Colab | 617 MB | 0 |
+| INT8 dinâmico em todos os MatMul, Colab | — | **71%** |
+| Pesos em FP16 no disco, máquina local (vocabulário de teste) | 285 MB contra 565 MB | 0, diferença de saída exatamente zero |
+
+Onde o INT8 quebra, medido localmente em 30 frases contra o FP32 (checkpoint de
+fumaça, então a contagem de trocas é pessimista, mas o desvio de probabilidade
+não é):
+
+| O que foi quantizado | Tamanho | Desvio máximo | Trocas (emoção + ironia, de 60) |
+|---|---|---|---|
+| tudo, int8 por canal (o do notebook 06) | 201 MB | 0,53 | 13 |
+| tudo, int8 por canal com `reduce_range` | 201 MB | 0,55 | 13 |
+| tudo, uint8 por tensor | 200 MB | 0,57 | 10 |
+| só o encoder | 235 MB | 0,54 | 13 |
+| só o MLP do encoder | 390 MB | 0,57 | 12 |
+| só a atenção do encoder | 409 MB | 0,23 | 5 |
+| só a cabeça de decisão | 531 MB | 0,005 | 0 |
+
+A cabeça de decisão aguenta INT8, mas ela é 6% do arquivo. O encoder não
+aguenta, e não é saturação de inteiro (`reduce_range` e uint8 não mudam nada).
+Quantização dinâmica do mmBERT está descartada até prova em contrário.
+
+**O que substitui o INT8:** o checkpoint do Laya já é gravado em meia precisão,
+e o export para ONNX só o reescreve em float32. `fraus/pesos_fp16.py` grava os
+pesos em float16 no arquivo e insere a conversão para float32 na carga. A conta
+não muda — a diferença de peso medida foi exatamente zero — e o arquivo cai
+pela metade. Com o vocabulário real a expectativa é perto de 310 MB, contra
+mais de 1 GB do FP32 em produção hoje; o número de verdade sai na próxima
+execução da célula 10. O custo é de carga: a conversão acontece quando a sessão
+abre, e o tempo de cold start ainda não foi medido na Vercel.
 
 ## O que falta
 

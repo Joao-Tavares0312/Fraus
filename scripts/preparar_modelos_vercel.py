@@ -92,10 +92,11 @@ def conferir_modelos(raiz: Path) -> None:
             formato = manifesto["formato"]
         except (OSError, ValueError, KeyError, TypeError) as erro:
             raise ArtefatoDeModelosInvalido("manifesto da Laya invalido") from erro
-        if formato not in {"fp32", "int8"}:
+        if formato not in {"fp32", "fp16", "int8"}:
             raise ArtefatoDeModelosInvalido(f"formato da Laya desconhecido: {formato!r}")
         # O export FP32 referencia estes pesos externos; o INT8 aprovado pelo
-        # notebook e autossuficiente e nao precisa carregar o arquivo FP32.
+        # notebook e o FP16 (pesos em meia precisao dentro do proprio grafo,
+        # ver fraus/pesos_fp16.py) sao autossuficientes.
         if formato == "fp32" and not (laya / "laya.onnx.data").is_file():
             raise ArtefatoDeModelosInvalido(
                 "artefato de modelo ausente: modelos-onnx/laya-ironia/laya.onnx.data"
