@@ -251,6 +251,7 @@ def avaliar_conjunto(
     candidato: str = "laya_treinado",
     referencia: str = "bertimbau",
     reamostras: int = 2000,
+    par_ids: Sequence[str] | None = None,
 ) -> dict:
     """Um conjunto de teste lido por todos os modelos, pronto para o laudo.
 
@@ -282,6 +283,29 @@ def avaliar_conjunto(
         [int(p) == int(r) for p, r in zip(b, rotulos)],
     )
     bs = bootstrap_da_diferenca(rotulos, a, b, classes=classes_do_f1, reamostras=reamostras)
+    if par_ids is not None:
+        for modelo, preditos in preditos_por_modelo.items():
+            intervalo = bootstrap_por_par(rotulos, preditos, par_ids, reamostras=reamostras)
+            modelos[modelo]["acuracia_por_par"] = intervalo.valor
+            modelos[modelo]["ic95_por_par"] = [intervalo.ic_inferior, intervalo.ic_superior]
+        diferenca = bootstrap_por_par(
+            rotulos, a, par_ids, preditos_referencia=b, reamostras=reamostras
+        )
+    comparacao = {
+        "candidato": candidato,
+        "referencia": referencia,
+        "diferenca_f1_macro": bs.diferenca,
+        "ic95": [bs.ic_inferior, bs.ic_superior],
+        "mcnemar": {"so_candidato": mc.so_a, "so_referencia": mc.so_b, "p_valor": mc.p_valor},
+        # Intervalo que contem o zero nao demonstra vantagem de ninguem.
+        "diferenca_demonstrada": not (bs.ic_inferior <= 0.0 <= bs.ic_superior),
+    }
+    if par_ids is not None:
+        comparacao["diferenca_acuracia_por_par"] = diferenca.valor
+        comparacao["ic95_diferenca_por_par"] = [diferenca.ic_inferior, diferenca.ic_superior]
+        comparacao["por_par_demonstrada"] = not (
+            diferenca.ic_inferior <= 0.0 <= diferenca.ic_superior
+        )
     return {
         "id": identificador,
         "tarefa": tarefa,
@@ -290,15 +314,7 @@ def avaliar_conjunto(
         "exemplos": len(rotulos),
         "classes": list(nomes_classes),
         "modelos": modelos,
-        "comparacao": {
-            "candidato": candidato,
-            "referencia": referencia,
-            "diferenca_f1_macro": bs.diferenca,
-            "ic95": [bs.ic_inferior, bs.ic_superior],
-            "mcnemar": {"so_candidato": mc.so_a, "so_referencia": mc.so_b, "p_valor": mc.p_valor},
-            # Intervalo que contem o zero nao demonstra vantagem de ninguem.
-            "diferenca_demonstrada": not (bs.ic_inferior <= 0.0 <= bs.ic_superior),
-        },
+        "comparacao": comparacao,
     }
 
 

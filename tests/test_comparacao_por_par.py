@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from fraus.comparacao_modelos import acuracia_por_par, bootstrap_por_par, ece
+from fraus.comparacao_modelos import acuracia_por_par, avaliar_conjunto, bootstrap_por_par, ece
 
 
 def test_par_so_conta_quando_os_dois_lados_acertam():
@@ -49,3 +49,28 @@ def test_ece_zero_quando_calibrado_e_positivo_quando_superconfiante():
     assert ece([1.0] * 10, [1] * 5 + [0] * 5) == pytest.approx(0.5)
     with pytest.raises(ValueError, match="0..1"):
         ece([1.2], [1])
+
+
+def _conjunto(par_ids=None):
+    rotulos = [0, 1] * 20
+    return avaliar_conjunto(
+        identificador="regua_pares", tarefa="ironia", nome="Régua de pares",
+        independente=True, rotulos=rotulos,
+        preditos_por_modelo={"laya_treinado": rotulos, "bertimbau": [1, 1] * 20},
+        classes=[0, 1], nomes_classes=["não irônico", "irônico"],
+        par_ids=par_ids, reamostras=200,
+    )
+
+
+def test_conjunto_com_pares_traz_acuracia_por_par_e_comparacao():
+    resultado = _conjunto([f"p{i}" for i in range(20) for _ in range(2)])
+    assert resultado["modelos"]["laya_treinado"]["acuracia_por_par"] == 1.0
+    assert resultado["modelos"]["bertimbau"]["acuracia_por_par"] == 0.0
+    assert resultado["comparacao"]["diferenca_acuracia_por_par"] == 1.0
+    assert resultado["comparacao"]["por_par_demonstrada"] is True
+
+
+def test_conjunto_sem_pares_nao_muda():
+    resultado = _conjunto()
+    assert "acuracia_por_par" not in resultado["modelos"]["laya_treinado"]
+    assert "diferenca_acuracia_por_par" not in resultado["comparacao"]
