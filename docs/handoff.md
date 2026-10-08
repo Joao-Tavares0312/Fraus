@@ -51,6 +51,15 @@ Regra da divisão e o antes/depois: `docs/treinamento.md`, notebook 04.
 
 ### Passo a passo para terminar
 
+> **Suspenso em 08/10/2026 — leia [Ironia: corpus e Laya](ironia.md) antes.**
+> O passo 1 rodou com a divisão certa (28.365 / 4.778) e o BERTimbau deu F1
+> 0,994 no teste e P(irônico) = 1,0 em "ok, obrigado". A causa é o corpus: os
+> tweets não irônicos do IDPT são 100% `#economia` de portais de notícia. O
+> modelo não foi exportado e o passo 2 não rodou, porque o Laya veria o mesmo
+> atalho. A nova ordem é consertar o negativo, construir a régua de pares
+> mínimos, corrigir `laya_treinado_pelo_fraus` e só então treinar. Medições:
+> `docs/notas/2026-10-08-ironia-corpus.md`.
+
 Quem roda o Colab é o João, na conta institucional dele (a da Unis).
 O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em
 02/10/2026 ele rodou célula na conta errada. Por isso a célula 1 dos
