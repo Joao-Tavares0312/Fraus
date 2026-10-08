@@ -60,9 +60,68 @@ Regra da divisão e o antes/depois: `docs/treinamento.md`, notebook 04.
 > mínimos, corrigir `laya_treinado_pelo_fraus` e só então treinar. Medições:
 > `docs/notas/2026-10-08-ironia-corpus.md`.
 > Próximo passo: a régua de pares (docs/ironia.md, "Régua de pares mínimos")
-> — anotar, consolidar, congelar. Página de anotação:
-> https://claude.ai/artifact/VgWoczk7VoYpKckq3P3e6G (privada; compartilhar
-> com cada anotador como Contributor).
+> — anotar, consolidar, congelar.
+
+### Régua de ironia: o que fazer quando as respostas chegarem (estado de 08/10/2026)
+
+A anotação mora no próprio Fraus (PRs #86, #87 e #88, `main` em `8671e60`,
+API e dashboard publicadas em 08/10). A página do claude.ai foi abandonada:
+ela exige conta, e os colegas não têm. Em 08/10 o João postou no grupo de
+WhatsApp um **link de grupo de 5 vagas** (`/anotar/grupo/<token>`), criado
+pelo console do navegador logado como dev. Cada pessoa que abre vira um
+anotador próprio; abrir em outro aparelho gasta vaga nova.
+
+Já anotado: as 300 respostas do João, dadas no claude.ai, em
+`fraus/dados/anotacao_regua/anotador-claude-ai.json` (anotador
+`claude-ai-1`). Sozinhas elas dão 225/300 frases no rótulo pretendido e só
+82/150 pares inteiros. No estrato elogio, ele marcou "depende do contexto"
+em 19 dos 50 irônicos.
+
+Quando os colegas terminarem:
+
+1. **Exportar.** Logado como dev em `https://fraus-one.vercel.app`, no
+   console do navegador:
+   `fetch('/api/fraus/anotacao/respostas').then(r => r.json()).then(d => { console.log(d.length + ' registros'); copy(JSON.stringify(d)); })`
+   e colar num `respostas-grupo.json`. Respostas de link revogado já saem
+   de fora. (O `scripts/exportar_anotacao.py` faz o mesmo, mas precisa da
+   `FRAUS_CHAVE_ACESSO`, cujo valor ninguém sabe — ver o passo 6.)
+2. **Consolidar.**
+   `uv run python scripts/consolidar_regua_ironia.py fraus/dados/anotacao_regua/anotador-claude-ai.json respostas-grupo.json`.
+   Grava em `fraus/dados/`:
+   - `regua_ironia_pares.csv`;
+   - `regua_ironia_descartes.csv`, com o motivo de cada descarte;
+   - `regua_ironia_invariancia.csv`;
+   - `regua_ironia_meta.json`, com o κ global e por estrato e as duas
+     impressões, uma dos textos e outra de rótulos com pares.
+3. **Ler o resultado antes de congelar.**
+   - **Piso:** abaixo de 100 pares o script recusa e diz quantos faltam.
+     Nesse caso, olhar `regua_ironia_descartes.csv` por estrato. O
+     suspeito é o elogio. Reescrever os pares ambíguos no rascunho
+     (`fraus/dados/regua_ironia_rascunho.csv`), mantendo a vírgula e o "?"
+     iguais nos dois lados, e anotar só esses de novo com um link novo.
+   - **κ baixo:** significa discordância entre os anotadores, não defeito
+     do modelo, e deve ser publicado junto, com o número de anotadores.
+4. **Congelar.** Versionar os quatro arquivos. O teste
+   `test_regua_versionada_bate_com_o_meta`, que hoje fica pulado, passa a
+   rodar e trava a régua. Mudar uma frase, um rótulo ou um par depois disso
+   quebra o teste de propósito.
+5. **Só então treinar.** A ordem segue `docs/ironia.md`:
+   1. consertar os negativos do corpus;
+   2. corrigir `laya_treinado_pelo_fraus`, que exige `emocao` no manifesto;
+   3. fazer os três treinos;
+   4. comparar cada candidato com o baseline só de estilo
+      (`fraus/baseline_estilo.py`) usando
+      `avaliar_conjunto(..., par_ids=...)`. Promove só com
+      `candidato_vence_por_par = True`.
+6. **Pendências de operação.**
+   - **Chave técnica:** rotacionar a `FRAUS_CHAVE_ACESSO` no projeto `fraus`
+     da Vercel. Ela está marcada como sensível e ninguém sabe o valor; sem
+     ela, `scripts/criar_link_anotacao.py` e `scripts/exportar_anotacao.py`
+     não rodam. A rota de dev também aceita o JWT de dev pelo proxy, que é o
+     que se usou em 08/10.
+   - **Fechar o grupo:** depois da anotação, revogar o link de grupo com
+     `POST /anotacao/grupos/<g_id>/revogar` (a resposta da criação mostrou o
+     `g_id`).
 
 Quem roda o Colab é o João, na conta institucional dele (a da Unis).
 O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em
