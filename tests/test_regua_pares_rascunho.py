@@ -45,3 +45,14 @@ def test_conferencia_reprova_ponto_final_so_nos_ironicos():
     textos = ["a b"] * 10 + ["a b."] * 10
     with pytest.raises(ValueError, match="termina_ponto"):
         conferir_registro_equilibrado(textos, [0] * 10 + [1] * 10)
+
+
+def test_virgula_e_interrogacao_iguais_dentro_de_cada_par():
+    por_par = {}
+    for frase in carregar_rascunho():
+        por_par.setdefault(frase.par_id, {})[frase.rotulo] = frase.texto
+    divergentes = sorted(
+        par_id for par_id, lados in por_par.items()
+        if ("," in lados[0]) != ("," in lados[1]) or lados[0].count("?") != lados[1].count("?")
+    )
+    assert not divergentes, f"virgula ou interrogacao so de um lado: {divergentes}"
