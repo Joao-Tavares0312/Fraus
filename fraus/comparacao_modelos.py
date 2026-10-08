@@ -187,6 +187,7 @@ def ece(probabilidades: Sequence[float], rotulos: Sequence[int], *, faixas: int 
 SCHEMA_LAUDO = 1
 
 NOMES_MODELOS = {
+    "baseline_estilo": "Baseline só de estilo",
     "bertimbau": "BERTimbau fine-tunado",
     "laya_sem_treino": "Laya sem treino",
     "laya_treinado": "Laya treinado",
@@ -432,6 +433,25 @@ def relatorio_markdown(laudo: dict) -> str:
             f"p = {_numero(mcnemar['p_valor'], 4)}.",
             "",
         ]
+        if "ic95_diferenca_por_par" in comparacao:
+            linhas += ["Acurácia por par (os dois lados do par certos), IC 95% por bootstrap de pares:", ""]
+            for modelo, medidas in conjunto["modelos"].items():
+                if "acuracia_por_par" in medidas:
+                    ic_i, ic_s = medidas["ic95_por_par"]
+                    linhas.append(
+                        f"- {nomes.get(modelo, modelo)}: {_numero(medidas['acuracia_por_par'])} "
+                        f"(IC 95% de {_numero(ic_i)} a {_numero(ic_s)})"
+                    )
+            d_i, d_s = comparacao["ic95_diferenca_por_par"]
+            vence = "sim" if comparacao.get("candidato_vence_por_par") else "não"
+            linhas += [
+                "",
+                f"{candidato} menos {referencia}, por par: "
+                f"{_com_sinal(comparacao['diferenca_acuracia_por_par'])} "
+                f"(IC 95% de {_com_sinal(d_i)} a {_com_sinal(d_s)}) — "
+                f"candidato vence por par: **{vence}** (limite inferior acima de zero).",
+                "",
+            ]
         for modelo, medidas in conjunto["modelos"].items():
             linhas += [
                 f"### {nomes.get(modelo, modelo)} — acertos e erros por classe",

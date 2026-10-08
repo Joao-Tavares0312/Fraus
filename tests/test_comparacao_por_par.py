@@ -91,3 +91,17 @@ def test_candidato_vence_por_par_tem_sinal():
     )["comparacao"]
     assert pior["por_par_demonstrada"] is True
     assert pior["candidato_vence_por_par"] is False
+
+
+def test_relatorio_traz_acuracia_por_par_com_ic_e_o_criterio_de_promocao():
+    from fraus.comparacao_modelos import montar_laudo, relatorio_markdown
+
+    conjunto = _conjunto([f"p{i}" for i in range(20) for _ in range(2)])
+    conjunto["modelos"]["baseline_estilo"] = dict(conjunto["modelos"]["bertimbau"])
+    texto = relatorio_markdown(montar_laudo(
+        conjuntos=[conjunto], latencia=None, procedencia={}, rodada_de_fumaca=False,
+        gerado_em="2026-10-08T12:00:00+00:00",
+    ))
+    assert "Acurácia por par" in texto
+    assert "Baseline só de estilo" in texto
+    assert "IC 95%" in texto and "candidato vence por par: **sim**" in texto
