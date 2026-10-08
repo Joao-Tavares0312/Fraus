@@ -67,6 +67,12 @@ ENTREGAS_POR_JANELA = 120
 # vazou o link e quer encher o banco.
 RESPOSTAS_DE_ANOTACAO_POR_JANELA = 60
 
+# Leitura publica da fila (`GET /anotacao/{token}`), contada POR IP -- e por
+# IP, nao por token, porque o caso a cortar e o de quem chuta tokens: token
+# inventado tambem gasta a janela. 30 por minuto sobra para quem recarrega a
+# pagina; cada leitura carrega todas as respostas gravadas.
+LEITURAS_DE_ANOTACAO_POR_JANELA = 30
+
 
 class LimitadorDeVazao:
     """Janela deslizante por IP, em memoria. Reinicia com o processo -- que e

@@ -41,6 +41,11 @@ TIPO_RESPOSTA = "resposta_regua"
 CAMINHOS_FIXOS = ("anotadores", "respostas")
 CAMPOS_DO_REGISTRO = ("anotador", "frase_id", "resposta", "instante")
 _NAO_ENCONTRADO = "link de anotacao invalido ou revogado"
+# Teto de VOLUME por link, ao lado do teto de ritmo (`vazao.py`): cinco
+# respostas por frase da regua (300 x 5 = 1500). Trocar de ideia algumas vezes
+# cabe; um link vazado nao enche o banco -- so com o ritmo, seriam 86 mil
+# registros por dia.
+MAXIMO_RESPOSTAS_POR_ANOTADOR = 5 * 300
 
 
 class PedidoResposta(BaseModel):
@@ -81,6 +86,15 @@ def _anotador_valido(ctx: Contexto, token: str) -> str:
     return registro["anotador"]
 
 
+def _espera_ou_429(limitador, identidade: str) -> None:
+    espera = segundos_ate_a_vaga(limitador, identidade)
+    if espera is not None:
+        raise HTTPException(
+            429, "muitas requisicoes seguidas -- aguarde antes de tentar de novo",
+            headers={"Retry-After": str(espera)},
+        )
+
+
 def _registros(ctx: Contexto) -> list[dict]:
     return [{k: r[k] for k in CAMPOS_DO_REGISTRO} for r in ctx.banco.documentos(TIPO_RESPOSTA)]
 
@@ -117,6 +131,17 @@ def criar_anotador(ctx: Contexto = Depends(obter_contexto)):
     return {"anotador": anotador, "token": token}
 
 
+@router.post("/anotadores/{anotador}/revogar")
+def revogar_anotador(anotador: str, ctx: Contexto = Depends(obter_contexto)):
+    """So dev. O registro e achado pelo id opaco DENTRO do payload: o id da
+    linha e o hash do token, que ninguem mais tem."""
+    alvo = next((r for r in ctx.banco.documentos(TIPO_ANOTADOR) if r["anotador"] == anotador), None)
+    if alvo is None:
+        raise HTTPException(404, "anotador inexistente")
+    ctx.banco.alterar_documento(TIPO_ANOTADOR, alvo["id"], lambda d: {**d, "revogado": True})
+    return {"anotador": anotador, "revogado": True}
+
+
 # DECLARADA ANTES de `/{token}`: o Starlette casa na ordem de registro, e
 # "respostas" e um token sintaticamente valido.
 @router.get("/respostas")
@@ -126,7 +151,11 @@ def exportar_respostas(ctx: Contexto = Depends(obter_contexto)):
 
 
 @router.get("/{token}")
-def fila_do_anotador(token: str, ctx: Contexto = Depends(obter_contexto)):
+def fila_do_anotador(token: str, request: Request, ctx: Contexto = Depends(obter_contexto)):
+    # Por IP e ANTES de olhar o token: token inventado gasta a janela -- e o
+    # caso de enumeracao. `client.host` pelo mesmo motivo de `vazao.py`.
+    _espera_ou_429(request.app.state.limitador_de_leitura_de_anotacao,
+                   request.client.host if request.client else "desconhecido")
     anotador = _anotador_valido(ctx, token)
     return {
         "frases": ordem_do_anotador(_rascunho(), anotador),
@@ -139,12 +168,11 @@ async def gravar_resposta(token: str, request: Request, ctx: Contexto = Depends(
     # Corpo lido a mao, nao por parametro tipado: o 422 padrao do FastAPI
     # devolve o `input` recebido, e esta rota e anonima.
     anotador = await run_in_threadpool(_anotador_valido, ctx, token)
-    espera = segundos_ate_a_vaga(request.app.state.limitador_de_anotacao, anotador)
-    if espera is not None:
-        raise HTTPException(
-            429, "muitas respostas seguidas -- aguarde antes de mandar de novo",
-            headers={"Retry-After": str(espera)},
-        )
+    _espera_ou_429(request.app.state.limitador_de_anotacao, anotador)
+    ja_mandadas = await run_in_threadpool(
+        lambda: sum(1 for r in ctx.banco.documentos(TIPO_RESPOSTA) if r["anotador"] == anotador))
+    if ja_mandadas >= MAXIMO_RESPOSTAS_POR_ANOTADOR:
+        raise HTTPException(409, "este link ja mandou o maximo de respostas")
     try:
         bruto = json.loads(await request.body())
     except (ValueError, UnicodeDecodeError):

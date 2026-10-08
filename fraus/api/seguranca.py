@@ -256,7 +256,7 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
         return True
     # Criar link de anotador e exportar as respostas da regua: dev. As rotas
     # publicas do anotador saem do middleware antes deste teste.
-    if caminho in ("/anotacao/anotadores", "/anotacao/respostas"):
+    if caminho in ("/anotacao/anotadores", "/anotacao/respostas") or caminho.startswith("/anotacao/anotadores/"):
         return True
     if caminho.startswith("/integracoes") or caminho == "/modelo" or caminho.startswith("/modelo/"):
         return True

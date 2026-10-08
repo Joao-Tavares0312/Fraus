@@ -214,3 +214,78 @@ def test_exportar_devolve_registros_no_formato_da_consolidacao(cliente):
     assert [r["instante"] for r in registros] == sorted(r["instante"] for r in registros)
     from fraus.consolidacao_regua import ultimas_respostas
     assert ultimas_respostas(registros) == {frase: ["nao_ironico"]}
+
+
+# ---- teto de volume, vazao da leitura e revogacao -------------------------
+
+
+def test_link_que_ja_mandou_o_maximo_recebe_409(cliente, banco):
+    from fraus.api.rotas.anotacao import MAXIMO_RESPOSTAS_POR_ANOTADOR
+    criado = criar_anotador(cliente)
+    frase = uma_frase()
+    banco.guardar_documentos([
+        ("resposta_regua", f"{criado['anotador']}:{i}", {
+            "anotador": criado["anotador"], "frase_id": frase, "resposta": "ironico",
+            "instante": f"2026-10-08T10:00:00.{i:06d}+00:00"})
+        for i in range(MAXIMO_RESPOSTAS_POR_ANOTADOR)
+    ])
+    corpo = {"frase_id": frase, "resposta": "contexto"}
+    barrada = cliente.post(f"/anotacao/{criado['token']}/respostas", json=corpo)
+    assert barrada.status_code == 409
+    assert barrada.json() == {"detail": "este link ja mandou o maximo de respostas"}
+    outro = criar_anotador(cliente)["token"]
+    assert cliente.post(f"/anotacao/{outro}/respostas", json=corpo).status_code == 201
+
+
+def test_teto_e_cinco_respostas_por_frase():
+    from fraus.api.rotas.anotacao import MAXIMO_RESPOSTAS_POR_ANOTADOR
+    assert MAXIMO_RESPOSTAS_POR_ANOTADOR == 5 * len(carregar_rascunho()) == 1500
+
+
+def test_leitura_publica_tem_teto_por_ip_e_token_inventado_conta(cliente):
+    from fraus.api.vazao import LEITURAS_DE_ANOTACAO_POR_JANELA
+    token = criar_anotador(cliente)["token"]
+    for i in range(LEITURAS_DE_ANOTACAO_POR_JANELA):
+        assert cliente.get(f"/anotacao/inventado-{i}").status_code == 404
+    barrada = cliente.get(f"/anotacao/{token}")
+    assert barrada.status_code == 429
+    assert int(barrada.headers["Retry-After"]) >= 1
+    assert "aguarde" in barrada.json()["detail"]
+
+
+def test_revogar_anotador_derruba_o_link(cliente):
+    criado = criar_anotador(cliente)
+    resposta = cliente.post(f"/anotacao/anotadores/{criado['anotador']}/revogar", headers=DEV)
+    assert resposta.status_code == 200
+    assert resposta.json() == {"anotador": criado["anotador"], "revogado": True}
+    assert cliente.get(f"/anotacao/{criado['token']}").status_code == 404
+    corpo = {"frase_id": uma_frase(), "resposta": "ironico"}
+    assert cliente.post(f"/anotacao/{criado['token']}/respostas", json=corpo).status_code == 404
+
+
+def test_revogar_anotador_desconhecido_e_404(cliente):
+    assert cliente.post("/anotacao/anotadores/a_00000000/revogar", headers=DEV).status_code == 404
+
+
+def test_revogar_exige_dev(cliente):
+    criado = criar_anotador(cliente)
+    caminho = f"/anotacao/anotadores/{criado['anotador']}/revogar"
+    assert cliente.post(caminho).status_code == 401
+    token = token_de_usuario(cliente)
+    assert cliente.post(caminho, headers={"Authorization": f"Bearer {token}"}).status_code == 403
+    assert cliente.get(f"/anotacao/{criado['token']}").status_code == 200
+
+
+def test_isencao_publica_nao_casa_rotas_de_dev():
+    from fraus.api.seguranca import rota_administrativa, rota_publica_de_anotacao
+    for metodo, caminho in (
+        ("POST", "/anotacao/anotadores/a_1/revogar"),
+        ("POST", "/anotacao/anotadores"),
+        ("GET", "/anotacao/respostas"),
+        ("POST", "/anotacao/anotadores/respostas"),
+        ("POST", "/anotacao/x/respostas/mais"),
+    ):
+        assert not rota_publica_de_anotacao(metodo, caminho), caminho
+    assert rota_administrativa("POST", "/anotacao/anotadores/a_1/revogar")
+    assert rota_publica_de_anotacao("GET", "/anotacao/tok")
+    assert rota_publica_de_anotacao("POST", "/anotacao/tok/respostas")
