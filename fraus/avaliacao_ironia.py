@@ -237,11 +237,21 @@ def carregar_regua_pares(
     return frases
 
 
+def _aceita_variante(texto: str) -> bool:
+    base = texto.strip()
+    return bool(base) and (base[-1].isalpha() or base[-1] == ".") and not any(
+        ord(c) >= 0x2600 for c in base
+    )
+
+
 def variantes_de_invariancia(
     frases: Sequence[FraseDaRegua], *, quantas: int = 20, semente: int = 42
 ) -> list[dict]:
     """Mesma frase, outra superficie, mesmo rotulo. Fora da metrica principal."""
-    escolhidas = random.Random(semente).sample(list(frases), quantas)
+    # Origem so entre frases que terminam em letra ou ponto e nao tem emoji:
+    # "internet!." e "🙂 🙂" nao sao outra superficie, sao defeito de gerador.
+    elegiveis = [f for f in frases if _aceita_variante(f.texto)]
+    escolhidas = random.Random(semente).sample(elegiveis, quantas)
     variantes = []
     for frase in escolhidas:
         base = frase.texto.rstrip()

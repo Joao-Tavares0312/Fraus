@@ -48,13 +48,20 @@ def test_carga_recusa_rotulo_trocado_ou_par_movido(tmp_path):
 
 
 def test_invariancia_preserva_rotulo_e_muda_so_a_superficie():
-    frases = [FraseDaRegua(f"p{i}", "elogio", f"frase {i}.", i % 2, 1.0) for i in range(40)]
+    textos = [f"frase {i}." if i % 3 else f"frase {i}!" for i in range(30)]
+    textos += ["quer mesmo isso? 🙂", "ja resolvi 🙂 🙂", "acabou a internet!"]
+    frases = [FraseDaRegua(f"p{i}", "elogio", t, i % 2, 1.0) for i, t in enumerate(textos)]
     variantes = variantes_de_invariancia(frases, quantas=20)
     assert len(variantes) == 40
     origem = {f.texto: f for f in frases}
+    assert variantes == variantes_de_invariancia(frases, quantas=20)
     for v in variantes:
         assert v["rotulo"] == origem[v["frase_origem"]].rotulo
-        assert v["texto"].rstrip(" 🙂.") == v["frase_origem"].rstrip(".")
+        assert v["texto"] != v["frase_origem"]
+        assert not v["texto"].endswith(("!.", "?."))
+        assert "🙂 🙂" not in v["texto"]
+        assert "🙂" not in v["frase_origem"]
+        assert v["frase_origem"].rstrip()[-1].isalpha() or v["frase_origem"].rstrip().endswith(".")
 
 
 def test_regua_versionada_bate_com_o_meta():
