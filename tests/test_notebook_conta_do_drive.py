@@ -45,3 +45,18 @@ def test_conta_errada_nao_cai_no_fallback_silencioso(nome):
         if isinstance(no, ast.Try):
             dentro = ast.unparse(no)
             assert "conferir_conta_do_drive(CONTA_DRIVE)" not in dentro
+
+
+def test_notebook_04_le_so_o_corpus_que_a_celula_3_escolheu():
+    # Em 08/10/2026 um `sintetico_s42.csv` de 28/09 esquecido na pasta do Drive
+    # ia entrar no treino junto do IDPT: a leitura relia a pasta inteira em vez da
+    # lista `encontrados` que a celula 3 monta para a ORIGEM escolhida.
+    celulas = json.loads(
+        (NOTEBOOKS / "04_treino_ironia.ipynb").read_text(encoding="utf-8")
+    )["cells"]
+    leitura = next(
+        "".join(c["source"]) for c in celulas
+        if "".join(c["source"]).startswith("# 4. Corpus lido")
+    )
+    assert "caminhos = encontrados" in leitura
+    assert "_tabelas_em(DIR_CORPUS)" not in leitura
