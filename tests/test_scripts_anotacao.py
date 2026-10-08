@@ -71,3 +71,18 @@ def test_revogar_chama_a_rota_de_dev_e_nao_cria_link(monkeypatch, capsys):
     assert [(p.get_method(), p.full_url) for p in pedidos] == [
         ("POST", "https://fraus-api.vercel.app/anotacao/anotadores/a_0000beef/revogar")]
     assert "a_0000beef revogado" in capsys.readouterr().out
+
+
+def test_grupo_cria_um_link_de_grupo_com_as_vagas(monkeypatch, capsys):
+    pedidos, abrir = gravador({"grupo": "g_0000beef", "token": "tok-grupo"})
+    monkeypatch.setenv("FRAUS_CHAVE_ACESSO", CHAVE)
+    monkeypatch.delenv("FRAUS_DASHBOARD_URL", raising=False)
+    monkeypatch.setattr(criar_link_anotacao, "abrir_url", abrir)
+    criar_link_anotacao.main(["--grupo", "5"])
+    [pedido] = pedidos
+    assert (pedido.get_method(), pedido.full_url) == ("POST", "https://fraus-api.vercel.app/anotacao/grupos")
+    assert json.loads(pedido.data) == {"vagas": 5}
+    assert pedido.get_header("Content-type") == "application/json"
+    saida = capsys.readouterr().out
+    assert "https://fraus-one.vercel.app/anotar/grupo/tok-grupo" in saida
+    assert "g_0000beef" in saida and CHAVE not in saida

@@ -114,6 +114,16 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
   por `POST /anotacao/<token>/respostas`; o instante é do servidor. A primeira
   rodada (João, na página antiga do claude.ai) está versionada em
   `fraus/dados/anotacao_regua/anotador-claude-ai.json`, anotador `claude-ai-1`.
+- Para um grupo de mensagens, `scripts/criar_link_anotacao.py --grupo 5` cria
+  **um** link (`https://fraus-one.vercel.app/anotar/grupo/<token>`) com 5
+  vagas. Cada pessoa que o abre ganha o próprio anotador (a vaga é ocupada de
+  forma serializada no banco, então 5 não viram 6) e a página guarda o link
+  pessoal só naquele navegador. Em outro aparelho, abrir o link do grupo de
+  novo gasta outra vaga e começa do zero; quem quiser trocar de aparelho guarda
+  o endereço da página pessoal. Repassar o link do grupo também gasta vaga.
+  Grupo cheio responde "Este link já foi usado por todas as pessoas previstas".
+  Revogar o grupo (`POST /anotacao/grupos/<g_id>/revogar`) fecha a entrada;
+  com `?anotadores=1` revoga também quem entrou, e as respostas saem do export.
 - O token viaja na URL e fica nos logs de requisição da Vercel e no histórico
   do navegador, como o link de convite. Link vazado se revoga com
   `scripts/criar_link_anotacao.py --revogar <id>`; as respostas desse anotador
