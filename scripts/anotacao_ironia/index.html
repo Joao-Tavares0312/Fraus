@@ -101,7 +101,7 @@ button.voltar { min-height: 40px; width: fit-content; background: transparent; c
 <script>
 (function () {
   var el = function (id) { return document.getElementById(id); };
-  var frases = [], ordem = [], respostas = {}, pos = 0, uid = null, db = null, salvando = false;
+  var frases = [], ordem = [], respostas = {}, pos = 0, uid = null, db = null, salvando = false, registrado = false;
 
   function erro(msg) { var e = el("erro"); e.textContent = msg; e.hidden = !msg; }
   function fatal(msg) { el("carregando").hidden = true; el("tela").hidden = true; el("fim").hidden = true; erro(msg); }
@@ -142,6 +142,9 @@ button.voltar { min-height: 40px; width: fit-content; background: transparent; c
     var f = ordem[pos], instante = new Date().toISOString();
     salvando = true; erro(""); desenhar();
     try {
+      // Quem organiza so acha as respostas de quem esta listado aqui: as
+      // subarvores de cada anotador nao sao enumeraveis.
+      if (!registrado) { await db.doc("anotadores/" + uid).set({ anotador: uid, desde: instante }); registrado = true; }
       await colecao().doc(f.id + "~" + Date.now()).set({ anotador: uid, frase_id: f.id, resposta: r, instante: instante });
       respostas[f.id] = r;
       pos = primeiraSemResposta();
