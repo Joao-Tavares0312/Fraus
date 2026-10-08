@@ -119,6 +119,7 @@ export function Fila({ estado, responder, voltar }: { estado: EstadoDaFila; resp
       <p className="max-w-[65ch] text-sm text-muted-foreground">
         Ironia aqui é dizer o contrário do que se quer dizer, em tom de crítica ou zombaria. &quot;Depende do contexto&quot; é resposta válida, não falha.
       </p>
+      <p className="-mt-3 text-xs text-muted-foreground">Para continuar em outro aparelho, guarde o endereço desta página.</p>
       {estado.erro ? <p role="alert" className="border border-destructive/60 bg-destructive/10 px-3.5 py-3 text-sm text-destructive">{estado.erro}</p> : null}
       <section className="flex flex-col gap-5">
         <div className="flex min-h-9 items-center justify-between gap-3">

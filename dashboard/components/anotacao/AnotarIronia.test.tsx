@@ -46,3 +46,9 @@ describe("Voltar durante o envio", () => {
     expect(botao).not.toContain('aria-disabled="true"');
   });
 });
+
+describe("outro aparelho", () => {
+  it("avisa que o endereco da pagina e o que leva a anotacao para outro aparelho", () => {
+    expect(html(false)).toContain("Para continuar em outro aparelho, guarde o endereço desta página.");
+  });
+});
