@@ -178,3 +178,22 @@ describe("carregarFila", () => {
     expect(await carregarFila("t", json(200, { frases: [], respostas: {} }))).toEqual({ tipo: "erro" });
   });
 });
+
+describe("contrato novo da API", () => {
+  it("409 encerra: mostra o erro e nao aceita mais respostas", async () => {
+    const r = await enviarResposta("t", "a", "ironico", async () => new Response("{}", { status: 409 }));
+    expect(r).toEqual({ ok: false, falha: { tipo: "maximo" } });
+    const e = fila(fila(estadoDaFila(frases, {})).enviar()).falha({ tipo: "maximo" });
+    expect(e.erro).toMatch(/não foi registrada/i);
+    expect(e.pos).toBe(0);
+    expect(fila(e).podeResponder).toBe(false);
+    expect(fila(e).enviar()).toBe(e);
+  });
+  it("429 no GET pede para aguardar, sem tratar como link invalido", async () => {
+    expect(await carregarFila("t", async () => new Response("{}", { status: 429, headers: { "Retry-After": "5" } }))).toEqual({ tipo: "limite" });
+  });
+  it("o 429 do POST nao depende do texto", async () => {
+    const r = await enviarResposta("t", "a", "ironico", async () => new Response(JSON.stringify({ detail: "qualquer coisa" }), { status: 429 }));
+    expect(r).toEqual({ ok: false, falha: { tipo: "limite", segundos: null } });
+  });
+});

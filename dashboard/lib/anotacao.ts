@@ -15,6 +15,7 @@ export type Respostas = Record<string, Resposta>;
 export type Falha =
   | { tipo: "rede" }
   | { tipo: "limite"; segundos: number | null }
+  | { tipo: "maximo" }
   | { tipo: "http"; status: number };
 
 export type EstadoDaFila = {
@@ -23,6 +24,8 @@ export type EstadoDaFila = {
   pos: number;
   enviando: boolean;
   erro: string | null;
+  /** 409: o link ja mandou o maximo de respostas; nada mais e aceito. */
+  encerrada: boolean;
 };
 
 /** Mesmo formato do token gerado pela API (`secrets.token_urlsafe(32)`). */
@@ -40,7 +43,7 @@ export function estadoDaFila(frases: readonly Frase[], respostas: Respostas): Es
   const ids = new Set(frases.map((f) => f.id));
   const validas: Respostas = {};
   for (const [id, r] of Object.entries(respostas)) if (ids.has(id)) validas[id] = r;
-  return { frases, respostas: validas, pos: primeiraSemResposta(frases, validas), enviando: false, erro: null };
+  return { frases, respostas: validas, pos: primeiraSemResposta(frases, validas), enviando: false, erro: null, encerrada: false };
 }
 
 export function faltam(e: EstadoDaFila): number {
@@ -49,6 +52,7 @@ export function faltam(e: EstadoDaFila): number {
 
 export function mensagemDeFalha(f: Falha): string {
   const base = "Sua resposta NÃO foi registrada.";
+  if (f.tipo === "maximo") return `${base} Este link já mandou o máximo de respostas e não aceita mais nenhuma. Avise quem organiza a anotação.`;
   if (f.tipo === "limite") return `${base} Muitas respostas seguidas: aguarde alguns segundos e tente de novo.`;
   if (f.tipo === "rede") return `${base} Não consegui falar com o servidor. Confira a conexão e tente de novo.`;
   return `${base} O servidor recusou o envio (erro ${f.status}). Tente de novo.`;
@@ -58,11 +62,11 @@ export function fila(e: EstadoDaFila) {
   const fim = e.pos >= e.frases.length;
   return {
     fim,
-    podeResponder: !fim && !e.enviando,
+    podeResponder: !fim && !e.enviando && !e.encerrada,
     podeVoltar: e.pos > 0 && !e.enviando,
     /** Comeca um envio. Sem efeito (mesmo objeto) se ja ha um em andamento ou se acabou. */
     enviar(): EstadoDaFila {
-      return fim || e.enviando ? e : { ...e, enviando: true, erro: null };
+      return fim || e.enviando || e.encerrada ? e : { ...e, enviando: true, erro: null };
     },
     /** So aqui, depois do 201, a resposta entra e a fila anda. */
     sucesso(fraseId: string, resposta: Resposta): EstadoDaFila {
@@ -71,7 +75,7 @@ export function fila(e: EstadoDaFila) {
     },
     /** A frase fica onde esta e nada e gravado. */
     falha(f: Falha): EstadoDaFila {
-      return { ...e, enviando: false, erro: mensagemDeFalha(f) };
+      return { ...e, enviando: false, erro: mensagemDeFalha(f), encerrada: e.encerrada || f.tipo === "maximo" };
     },
     voltar(): EstadoDaFila {
       return e.pos > 0 && !e.enviando ? { ...e, pos: e.pos - 1, erro: null } : e;
@@ -103,6 +107,7 @@ export async function enviarResposta(
       body: JSON.stringify({ frase_id: fraseId, resposta }),
     });
     if (r.status === 201) return { ok: true };
+    if (r.status === 409) return { ok: false, falha: { tipo: "maximo" } };
     if (r.status === 429) {
       const s = Number(r.headers.get("Retry-After"));
       return { ok: false, falha: { tipo: "limite", segundos: Number.isFinite(s) && s > 0 ? s : null } };
@@ -116,12 +121,14 @@ export async function enviarResposta(
 export type Carga =
   | { tipo: "ok"; frases: Frase[]; respostas: Respostas }
   | { tipo: "invalido" }
+  | { tipo: "limite" }
   | { tipo: "erro" };
 
 export async function carregarFila(token: string, buscar: Buscar = (u, i) => fetch(u, i)): Promise<Carga> {
   try {
     const r = await buscar(`${BASE}/${token}`, { cache: "no-store" });
     if (r.status === 404) return { tipo: "invalido" };
+    if (r.status === 429) return { tipo: "limite" };
     if (!r.ok) return { tipo: "erro" };
     const corpo = (await r.json()) as { frases?: unknown; respostas?: unknown };
     if (!Array.isArray(corpo.frases) || corpo.frases.length === 0) return { tipo: "erro" };
