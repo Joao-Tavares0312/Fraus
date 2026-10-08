@@ -15,7 +15,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from fraus.avaliacao_ironia import (CAMINHO_META_REGUA, CAMINHO_REGUA_PARES,  # noqa: E402
-                                    FraseDaRegua, carregar_rascunho,
+                                    FraseDaRegua, carregar_rascunho, impressao_dos_rotulos,
                                     variantes_de_invariancia)
 from fraus.consolidacao_regua import (RESPOSTAS, conferir_ids, decidir_pares, fleiss_kappa,  # noqa: E402
                                       ultimas_respostas)
@@ -63,6 +63,9 @@ def main(caminho_respostas: str) -> None:
         "descartados": len({d["par_id"] for d in descartadas}),
         "data": date.today().isoformat(),
         "impressao": impressao_dos_textos(m["texto"] for m in mantidas),
+        "impressao_rotulos": impressao_dos_rotulos(
+            (m["par_id"], m["rotulo"], m["texto"]) for m in mantidas
+        ),
         "tipo_avaliacao": "regua_de_pares_rotulada_as_cegas_rascunho_autoral",
     }
     CAMINHO_META_REGUA.write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

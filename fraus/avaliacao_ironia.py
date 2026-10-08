@@ -16,7 +16,7 @@ import csv
 import hashlib
 import json
 import random
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -194,6 +194,18 @@ class FraseDaRegua:
     concordancia: float
 
 
+def linhas_de_impressao(linhas: Iterable[tuple[str, int, str]]) -> list[str]:
+    """`par_id|rotulo|texto`: o que a impressao de rotulos resume."""
+    return [f"{par_id}|{int(rotulo)}|{texto}" for par_id, rotulo, texto in linhas]
+
+
+def impressao_dos_rotulos(linhas: Iterable[tuple[str, int, str]]) -> str:
+    """Impressao de par, rotulo e texto juntos: virar um rotulo tambem e edicao."""
+    from fraus.divisao import impressao_dos_textos
+
+    return impressao_dos_textos(linhas_de_impressao(linhas))
+
+
 def carregar_regua_pares(
     caminho: Path = CAMINHO_REGUA_PARES, meta: Path = CAMINHO_META_REGUA
 ) -> list[FraseDaRegua]:
@@ -208,11 +220,19 @@ def carregar_regua_pares(
             )
             for linha in csv.DictReader(arquivo)
         ]
-    esperada = json.loads(Path(meta).read_text(encoding="utf-8"))["impressao"]
+    dados_meta = json.loads(Path(meta).read_text(encoding="utf-8"))
+    esperada = dados_meta["impressao"]
     if impressao_dos_textos(f.texto for f in frases) != esperada:
         raise ValueError(
             "a impressao da regua nao bate com o meta: frase editada depois do "
             "congelamento. Reanote ou declare uma versao nova."
+        )
+    if "impressao_rotulos" not in dados_meta or impressao_dos_rotulos(
+        (f.par_id, f.rotulo, f.texto) for f in frases
+    ) != dados_meta["impressao_rotulos"]:
+        raise ValueError(
+            "a impressao de rotulos da regua nao bate com o meta: rotulo trocado ou "
+            "par movido depois do congelamento (ou meta sem impressao_rotulos)."
         )
     return frases
 
