@@ -848,6 +848,30 @@ class Banco:
             linhas = conexao.execute("SELECT id, payload FROM operacao_registros WHERE tipo = ? ORDER BY id", (tipo,)).fetchall()
         return [{**json.loads(l["payload"]), "id": l["id"]} for l in linhas]
 
+    @staticmethod
+    def _padrao_de_prefixo(prefixo: str) -> str:
+        """`prefixo%` com os curingas do LIKE escapados -- `_` aparece em todo
+        id de anotador (`a_...`) e, solto, casaria com qualquer caractere."""
+        escapado = prefixo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        return escapado + "%"
+
+    def documentos_com_prefixo(self, tipo: str, prefixo: str) -> list[dict]:
+        """So os registros cujo id COMECA com `prefixo` -- para rota publica
+        nao carregar a tabela inteira de um tipo. `ESCAPE` explicito vale nos
+        dois dialetos."""
+        with self._conectar() as conexao:
+            linhas = conexao.execute(
+                "SELECT id, payload FROM operacao_registros WHERE tipo = ? AND id LIKE ? ESCAPE '\\' ORDER BY id",
+                (tipo, self._padrao_de_prefixo(prefixo))).fetchall()
+        return [{**json.loads(l["payload"]), "id": l["id"]} for l in linhas if l["id"].startswith(prefixo)]
+
+    def contar_documentos_com_prefixo(self, tipo: str, prefixo: str) -> int:
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT COUNT(*) AS total FROM operacao_registros WHERE tipo = ? AND id LIKE ? ESCAPE '\\'",
+                (tipo, self._padrao_de_prefixo(prefixo))).fetchone()
+        return int(linha["total"])
+
     def guardar_documento(self, tipo: str, identificador: str, valor: dict) -> None:
         with self._conectar() as conexao:
             self._travar_operacao(conexao)

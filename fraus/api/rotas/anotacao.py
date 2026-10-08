@@ -96,7 +96,19 @@ def _espera_ou_429(limitador, identidade: str) -> None:
 
 
 def _registros(ctx: Contexto) -> list[dict]:
+    """TODAS as respostas -- so para o export de dev, nunca em rota publica."""
     return [{k: r[k] for k in CAMPOS_DO_REGISTRO} for r in ctx.banco.documentos(TIPO_RESPOSTA)]
+
+
+def _prefixo(anotador: str) -> str:
+    # O id do registro comeca com `<anotador>:` (ver `gravar_resposta`); o
+    # banco filtra por esse prefixo e a rota publica nunca le a tabela inteira.
+    return f"{anotador}:"
+
+
+def _registros_do_anotador(ctx: Contexto, anotador: str) -> list[dict]:
+    return [{k: r[k] for k in CAMPOS_DO_REGISTRO}
+            for r in ctx.banco.documentos_com_prefixo(TIPO_RESPOSTA, _prefixo(anotador))]
 
 
 def _resumo_sem_eco(erro: ValidationError) -> str:
@@ -159,7 +171,7 @@ def fila_do_anotador(token: str, request: Request, ctx: Contexto = Depends(obter
     anotador = _anotador_valido(ctx, token)
     return {
         "frases": ordem_do_anotador(_rascunho(), anotador),
-        "respostas": respostas_do_anotador(_registros(ctx), anotador),
+        "respostas": respostas_do_anotador(_registros_do_anotador(ctx, anotador), anotador),
     }
 
 
@@ -170,7 +182,7 @@ async def gravar_resposta(token: str, request: Request, ctx: Contexto = Depends(
     anotador = await run_in_threadpool(_anotador_valido, ctx, token)
     _espera_ou_429(request.app.state.limitador_de_anotacao, anotador)
     ja_mandadas = await run_in_threadpool(
-        lambda: sum(1 for r in ctx.banco.documentos(TIPO_RESPOSTA) if r["anotador"] == anotador))
+        ctx.banco.contar_documentos_com_prefixo, TIPO_RESPOSTA, _prefixo(anotador))
     if ja_mandadas >= MAXIMO_RESPOSTAS_POR_ANOTADOR:
         raise HTTPException(409, "este link ja mandou o maximo de respostas")
     try:
@@ -186,6 +198,6 @@ async def gravar_resposta(token: str, request: Request, ctx: Contexto = Depends(
     instante = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     registro = {"anotador": anotador, "frase_id": pedido.frase_id,
                 "resposta": pedido.resposta, "instante": instante}
-    identificador = f"{anotador}:{pedido.frase_id}:{instante}:{uuid.uuid4().hex[:6]}"
+    identificador = f"{_prefixo(anotador)}{pedido.frase_id}:{instante}:{uuid.uuid4().hex[:6]}"
     await run_in_threadpool(ctx.banco.guardar_documento, TIPO_RESPOSTA, identificador, registro)
     return registro
