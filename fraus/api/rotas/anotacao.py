@@ -171,10 +171,13 @@ def exportar_respostas(ctx: Contexto = Depends(obter_contexto)):
 
 @router.get("/{token}")
 def fila_do_anotador(token: str, request: Request, ctx: Contexto = Depends(obter_contexto)):
-    # Por IP e ANTES de olhar o token: token inventado gasta a janela -- e o
-    # caso de enumeracao. `client.host` pelo mesmo motivo de `vazao.py`.
-    _espera_ou_429(request.app.state.limitador_de_leitura_de_anotacao,
-                   request.client.host if request.client else "desconhecido")
+    # Contado pelo HASH DO TOKEN, antes de olhar o banco: token inventado
+    # tambem gasta janela (a dele). NAO por IP: a dashboard chama pelo proxy
+    # do Next, entao todo anotador chega com o IP do proxy e uma janela por IP
+    # seria UMA janela para todos -- 30 leituras por minuto para a turma
+    # inteira. Enumerar token e inviavel pela entropia (256 bits), nao pelo
+    # teto; o teto protege o banco de um laco sobre o mesmo link.
+    _espera_ou_429(request.app.state.limitador_de_leitura_de_anotacao, _hash(token))
     anotador = _anotador_valido(ctx, token)
     return {
         "frases": ordem_do_anotador(_rascunho(), anotador),
@@ -186,8 +189,11 @@ def fila_do_anotador(token: str, request: Request, ctx: Contexto = Depends(obter
 async def gravar_resposta(token: str, request: Request, ctx: Contexto = Depends(obter_contexto)):
     # Corpo lido a mao, nao por parametro tipado: o 422 padrao do FastAPI
     # devolve o `input` recebido, e esta rota e anonima.
+    # Teto ANTES do banco e pelo hash do token, pelo mesmo motivo da leitura:
+    # POST com token inventado tambem e contado, e o IP do proxy nao separa
+    # anotadores. Um token por anotador, entao e o mesmo que contar por ele.
+    _espera_ou_429(request.app.state.limitador_de_anotacao, _hash(token))
     anotador = await run_in_threadpool(_anotador_valido, ctx, token)
-    _espera_ou_429(request.app.state.limitador_de_anotacao, anotador)
     ja_mandadas = await run_in_threadpool(
         ctx.banco.contar_documentos_com_prefixo, TIPO_RESPOSTA, _prefixo(anotador))
     if ja_mandadas >= MAXIMO_RESPOSTAS_POR_ANOTADOR:

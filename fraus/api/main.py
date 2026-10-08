@@ -205,12 +205,12 @@ def criar_app(
     # Um trabalho de repontuacao por app, pelo mesmo motivo dos limitadores:
     # nasce e morre com ele, e nao vaza de um teste para o proximo.
     app.state.repontuacao = Repontuacao()
-    # Resposta de anotacao da regua: rota PUBLICA de escrita, contada por
-    # ANOTADOR (resolvido do token ja conferido), nunca pelo token cru --
-    # assim um anonimo com token inventado nao gasta a janela de ninguem.
+    # Resposta de anotacao da regua: rota PUBLICA de escrita, contada pelo
+    # HASH DO TOKEN antes de olhar o banco -- token inventado gasta so a
+    # propria janela, e o IP do proxy da dashboard nao separa anotadores.
     app.state.limitador_de_anotacao = LimitadorDeVazao(RESPOSTAS_DE_ANOTACAO_POR_JANELA)
-    # A leitura publica da fila tem limitador proprio, por IP: e ali que se
-    # chuta token, e um 404 conta tanto quanto um 200.
+    # A leitura publica da fila tem limitador proprio, tambem por hash do
+    # token (ver `rotas/anotacao.py`): um 404 conta tanto quanto um 200.
     app.state.limitador_de_leitura_de_anotacao = LimitadorDeVazao(LEITURAS_DE_ANOTACAO_POR_JANELA)
 
     registrar_middleware_de_acesso(app, ctx)

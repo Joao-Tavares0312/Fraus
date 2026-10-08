@@ -62,15 +62,17 @@ INGESTOES_POR_JANELA = 120
 ENTREGAS_POR_JANELA = 120
 
 # Resposta de anotacao da regua (`POST /anotacao/{token}/respostas`): rota
-# PUBLICA de escrita, contada POR ANOTADOR. 60 por minuto e uma resposta por
+# PUBLICA de escrita, contada POR HASH DO TOKEN (um token por anotador). 60 por minuto e uma resposta por
 # segundo -- acima do ritmo de quem le uma frase e clica, e um teto para quem
 # vazou o link e quer encher o banco.
 RESPOSTAS_DE_ANOTACAO_POR_JANELA = 60
 
-# Leitura publica da fila (`GET /anotacao/{token}`), contada POR IP -- e por
-# IP, nao por token, porque o caso a cortar e o de quem chuta tokens: token
-# inventado tambem gasta a janela. 30 por minuto sobra para quem recarrega a
-# pagina; cada leitura carrega todas as respostas gravadas.
+# Leitura publica da fila (`GET /anotacao/{token}`), contada POR HASH DO
+# TOKEN, e NAO por IP: a dashboard chama a API pelo proxy do Next, e todo
+# anotador chega com o mesmo IP -- uma janela por IP seria uma janela para a
+# turma inteira. Token inventado tambem e contado (a janela dele); contra
+# enumeracao quem protege e a entropia do token. 30 por minuto sobra para
+# quem recarrega a pagina.
 LEITURAS_DE_ANOTACAO_POR_JANELA = 30
 
 
@@ -79,14 +81,28 @@ class LimitadorDeVazao:
     aceitavel: o ataque que isto corta e o de UMA sessao continua, e um
     reinicio de deploy ja e uma pausa maior que a janela inteira."""
 
-    def __init__(self, tentativas: int = TENTATIVAS_POR_JANELA, janela_s: float = JANELA_S):
+    def __init__(self, tentativas: int = TENTATIVAS_POR_JANELA, janela_s: float = JANELA_S,
+                 varrer_acima_de: int = 10_000):
         self._tentativas = tentativas
         self._janela_s = janela_s
         self._historico: dict[str, deque[float]] = defaultdict(deque)
+        # Identidade cuja janela ja passou e esquecida quando o dicionario
+        # cresce alem disto. Por IP isso quase nao acontece; por hash de token
+        # (anotacao) cada token inventado abriria uma entrada para sempre.
+        self._varrer_acima_de = varrer_acima_de
+        self._limiar = varrer_acima_de
+
+    def _varrer(self, limite: float) -> None:
+        for identidade in [i for i, fila in self._historico.items() if not fila or fila[-1] <= limite]:
+            del self._historico[identidade]
+        # Amortizado: a proxima varredura so depois de o dicionario dobrar.
+        self._limiar = max(self._varrer_acima_de, 2 * len(self._historico))
 
     def permite(self, identidade: str, agora: float) -> bool:
-        fila = self._historico[identidade]
         limite = agora - self._janela_s
+        if identidade not in self._historico and len(self._historico) >= self._limiar:
+            self._varrer(limite)
+        fila = self._historico[identidade]
         while fila and fila[0] <= limite:
             fila.popleft()
         if len(fila) >= self._tentativas:
