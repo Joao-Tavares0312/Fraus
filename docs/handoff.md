@@ -59,6 +59,10 @@ Regra da divisão e o antes/depois: `docs/treinamento.md`, notebook 04.
 > atalho. A nova ordem é consertar o negativo, construir a régua de pares
 > mínimos, corrigir `laya_treinado_pelo_fraus` e só então treinar. Medições:
 > `docs/notas/2026-10-08-ironia-corpus.md`.
+> Próximo passo: a régua de pares (docs/ironia.md, "Régua de pares mínimos")
+> — anotar, consolidar, congelar. Página de anotação:
+> https://claude.ai/artifact/VgWoczk7VoYpKckq3P3e6G (privada; compartilhar
+> com cada anotador como Contributor).
 
 Quem roda o Colab é o João, na conta institucional dele (a da Unis).
 O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em

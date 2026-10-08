@@ -96,6 +96,28 @@ Contra o BERTimbau, com tarefa e dado iguais, a literatura não dá motivo para 
 
 A única vantagem estrutural do Laya para ironia é o vocabulário multilíngue, que permite misturar o MultiPICo das outras oito línguas. A literatura, porém, é desfavorável à transferência de ironia entre línguas: o viés de tópico dos corpora atrapalha ([Ortega-Bueno et al. 2023](https://boa.unimib.it/handle/10281/451401)), e detectores de sarcasmo não generalizam entre datasets ([Jang & Frassinelli 2024](https://aclanthology.org/2024.naacl-long.238)). O ganho que de fato muda o produto aparece na régua de domínio, quando se troca o corpus. Um modelo treinado no IDPT deve ficar perto do acaso por par, como o 0,52 oficial nos tweets. Um modelo treinado com negativos coloquiais e pares mínimos tem espaço para ganhar dezenas de pontos ali, na escala das quedas de 25 a 30 pontos que a literatura de contrast sets e filtragem adversarial atribui ao viés. Essa magnitude é inferência por analogia e não foi medida em português. A régua de 300 pares existe justamente para medi-la.
 
+## Régua de pares mínimos
+
+Estado: **rascunho pronto, anotação em andamento.** Spec em
+`docs/superpowers/specs/2026-10-08-regua-pares-ironia-design.md` (interno).
+
+- 150 pares (elogio, reclamação, neutra), registro equilibrado conferido por
+  `conferir_registro_equilibrado` e, par a par, mesma vírgula e mesmo número
+  de "?" nos dois lados. O baseline só de estilo acerta 0,18 dos pares fora
+  da amostra no rascunho, abaixo do acaso (0,25). O rascunho é autoral; o
+  rótulo que vale é o da anotação às cegas.
+- A anotação é numa página privada do claude.ai que mostra só o texto, uma
+  frase por vez, sem par, estrato nem rótulo. Cada anotador vê e grava só as
+  próprias respostas e precisa de acesso de Contributor; o dono lê todas.
+- **Critério de promoção de qualquer cabeça de ironia:** vencer o baseline só
+  de estilo (`fraus/baseline_estilo.py`) em acurácia por par na régua, com IC
+  95% da diferença excluindo zero. O teste interno do IDPT não entra.
+- Depois da anotação: exportar as respostas (a coleção `anotadores` lista quem
+  anotou; as respostas de cada um ficam em
+  `data/users/<id>/anotacoes/respostas`), juntar tudo numa lista JSON e rodar
+  `uv run python scripts/consolidar_regua_ironia.py respostas.json`. Menos de
+  100 pares confirmados para o script com erro dizendo quantos faltam.
+
 ## Conclusão
 
 A pergunta "Laya ou BERTimbau, só ironia ou multitarefa" foi formulada sobre um corpus que não sustenta nenhuma das quatro respostas, porque nele o rótulo é a fonte. A decisão que de fato move o resultado vem antes do encoder. São três passos: trocar o `nao-ironico.csv` de #economia e as notícias por fala coloquial sincera, construir a régua de pares mínimos e comparar cada modelo com um baseline de estilo que não sabe nada de ironia. O Laya só-ironia continua valendo como experimento, como a célula (i) de um desenho controlado e não como conserto, e só depois de corrigir `laya_treinado_pelo_fraus` para que o produto não rotule um modelo treinado como "sem treino".
