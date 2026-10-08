@@ -24,14 +24,16 @@ def test_emoji_e_acento_nao_quebram_os_tracos():
 
 
 def test_baseline_aprende_atalho_de_pontuacao():
-    textos = [f"frase numero {i}." for i in range(30)] + [f"frase numero {i}" for i in range(30)]
+    # Ambas as classes tem 16 caracteres; apenas o periodo final distingue classe 0.
+    textos = [f"frase numero {i:02d}." for i in range(30)] + [f"frase numero {i:03d}" for i in range(30)]
     rotulos = [0] * 30 + [1] * 30
     modelo = BaselineEstilo().treinar(textos, rotulos)
     assert modelo.prever(["outra frase.", "outra frase"]) == [0, 1]
 
 
 def test_baseline_nao_resolve_par_de_mesmo_registro():
-    textos = [f"frase numero {i}." for i in range(30)] + [f"frase numero {i}" for i in range(30)]
+    # Ambas as classes tem 16 caracteres; apenas o periodo final distingue classe 0.
+    textos = [f"frase numero {i:02d}." for i in range(30)] + [f"frase numero {i:03d}" for i in range(30)]
     modelo = BaselineEstilo().treinar(textos, [0] * 30 + [1] * 30)
     # Os dois lados de cada par tem a mesma superficie: o baseline responde
     # igual para os dois, entao nunca acerta um par inteiro.

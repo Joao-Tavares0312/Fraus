@@ -13,6 +13,8 @@ from collections.abc import Sequence
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 NOMES_TRACOS = (
     "comprimento_log", "prop_maiusculas", "inicio_minusculo", "termina_ponto",
@@ -65,7 +67,9 @@ class BaselineEstilo:
     """Regressao logistica sobre os tracos de superficie."""
 
     def __init__(self, semente: int = 42):
-        self._modelo = LogisticRegression(max_iter=1000, random_state=semente)
+        self._modelo = make_pipeline(
+            StandardScaler(), LogisticRegression(max_iter=1000, random_state=semente)
+        )
 
     def treinar(self, textos: Sequence[str], rotulos: Sequence[int]) -> "BaselineEstilo":
         self._modelo.fit(matriz_de_tracos(textos), np.asarray(rotulos, dtype=int))
