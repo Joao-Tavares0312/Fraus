@@ -68,6 +68,7 @@ nav:
   - Invariantes: invariantes.md
   - Arquitetura: arquitetura.md
   - Treinamento: treinamento.md
+  - "Ironia: corpus e Laya": ironia.md
   - Integração com o Tars: integracao-tars.md
   - Design da interface: design.md
   - Conformidade (AI Act): conformidade.md

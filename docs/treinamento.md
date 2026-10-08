@@ -595,6 +595,12 @@ Classificacao binaria: 0 nao-ironico, 1 ironico.
 
 **Corpus:** IDPT 2021, a tarefa de *Irony Detection in Portuguese* do IberLEF — 15,2k tweets e 18,4k noticias anotados.
 
+> **08/10/2026: o treino publico do IDPT entrega o rotulo pela fonte.** Os
+> tweets nao-ironicos sao 100% `#economia` de portais de noticia; as noticias
+> sao rotuladas pelo site. Retreinado com a divisao certa, o BERTimbau deu F1
+> 0,994 no teste e P(ironico) = 1,0 em "ok, obrigado" -- e nao foi exportado.
+> Analise, plano e o treino do Laya so em ironia: [Ironia: corpus e Laya](ironia.md).
+
 ### Fontes publicas do treino e teste oficial fechado
 
 O **teste oficial**, anotado para a competicao, continua protegido e deve ser

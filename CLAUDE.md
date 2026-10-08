@@ -214,6 +214,7 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
 - `dashboard/DESIGN.md` — sistema de design da interface
 - `docs/notas/2026-09-30-operacao-producao.md` — análise persistida, Operação, convites e evidências da publicação
 - `docs/notas/2026-10-02-treino-laya.md` — treino do Laya: resultado, decisão de não promover e bibliografia
+- `docs/ironia.md` — por que o IDPT entrega o rótulo, como treinar o Laya só em ironia e a régua de pares mínimos; medições em `docs/notas/2026-10-08-ironia-corpus.md`
 - `docs/deploy-vercel.md` — procedimento interno; dashboard e API publicam separadamente
 - `docs/conformidade.md` — EU AI Act: o que obriga e o que **proíbe** (não pontuar atendente)
 - `mkdocs.yml` — site interno; `mkdocs-publico.yml` define o recorte publicado
