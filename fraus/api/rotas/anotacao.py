@@ -13,6 +13,13 @@ antes da parametrica aqui, e o middleware exclui esses nomes da isencao.
 
 A fila nunca leva par, estrato, rotulo, dominio nem `g`: so `id` e `texto`.
 O instante da resposta e do SERVIDOR; o corpo nao escolhe quando respondeu.
+
+LINK DE GRUPO. Um link so, postado num grupo de mensagens, que da a cada
+pessoa o SEU anotador: `POST /anotacao/grupos/<token>/entrar` (publica) ocupa
+uma vaga e devolve um token pessoal novo. A vaga e ocupada antes de o
+anotador nascer, numa leitura-e-escrita serializada (`alterar_documento`):
+cinco vagas nao viram seis com cliques simultaneos. Quem repassa o link
+gasta vaga -- o link nao sabe quem e quem.
 """
 
 import hashlib
@@ -23,7 +30,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator
 
 from fraus.anotacao_regua import ordem_do_anotador, respostas_do_anotador
 from fraus.api.contexto import Contexto, obter_contexto
@@ -35,12 +42,16 @@ router = APIRouter(prefix="/anotacao")
 
 TIPO_ANOTADOR = "anotador_regua"
 TIPO_RESPOSTA = "resposta_regua"
+TIPO_GRUPO = "grupo_regua"
 # Caminhos fixos sob /anotacao que NAO sao token. O middleware importa daqui:
 # uma rota fixa nova que esquecesse de entrar nesta lista seria isentada de
 # credencial como se fosse link de anotador.
-CAMINHOS_FIXOS = ("anotadores", "respostas")
+CAMINHOS_FIXOS = ("anotadores", "respostas", "grupos")
 CAMPOS_DO_REGISTRO = ("anotador", "frase_id", "resposta", "instante")
 _NAO_ENCONTRADO = "link de anotacao invalido ou revogado"
+_GRUPO_NAO_ENCONTRADO = "link de grupo invalido ou revogado"
+_GRUPO_CHEIO = "este link de grupo ja esta cheio"
+VAGAS_MAXIMAS_POR_GRUPO = 20
 # Teto de VOLUME por link, ao lado do teto de ritmo (`vazao.py`): cinco
 # respostas por frase da regua (300 x 5 = 1500). Trocar de ideia algumas vezes
 # cabe; um link vazado nao enche o banco -- so com o ritmo, seriam 86 mil
@@ -62,6 +73,13 @@ class PedidoResposta(BaseModel):
         if valor not in RESPOSTAS:
             raise ValueError("resposta desconhecida")
         return valor
+
+
+class PedidoGrupo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # Estrito: "5" e `true` nao viram vaga por coercao.
+    vagas: StrictInt = Field(ge=1, le=VAGAS_MAXIMAS_POR_GRUPO)
 
 
 @lru_cache(maxsize=1)
@@ -111,7 +129,7 @@ def _registros_do_anotador(ctx: Contexto, anotador: str) -> list[dict]:
             for r in ctx.banco.documentos_com_prefixo(TIPO_RESPOSTA, _prefixo(anotador))]
 
 
-def _resumo_sem_eco(erro: ValidationError) -> str:
+def _resumo_sem_eco(erro: ValidationError, modelo: type[BaseModel] = PedidoResposta) -> str:
     """Onde e o que falhou, sem NADA do que veio (armadilha 10 do handoff).
 
     Diferente de `registro.resumo_validacao`, aqui o modelo e `extra="forbid"`
@@ -123,24 +141,113 @@ def _resumo_sem_eco(erro: ValidationError) -> str:
         loc = item["loc"]
         if item["type"] == "extra_forbidden":
             partes.append("(campo_nao_previsto)")
-        elif loc and loc[0] in PedidoResposta.model_fields:
+        elif loc and loc[0] in modelo.model_fields:
             partes.append(f"{loc[0]} ({item['type']})")
         else:
             partes.append(f"({item['type']})")
     return "corpo nao bate o contrato: " + ", ".join(partes)
 
 
-@router.post("/anotadores", status_code=201)
-def criar_anotador(ctx: Contexto = Depends(obter_contexto)):
-    """So dev (`rota_administrativa`). O token sai aqui e nunca mais."""
+async def _corpo_validado(request: Request, modelo: type[BaseModel]):
+    """Corpo lido a mao, nao por parametro tipado: o 422 padrao do FastAPI
+    devolve o `input` recebido (armadilha 10 do handoff)."""
+    try:
+        bruto = json.loads(await request.body())
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(422, "corpo nao e JSON valido") from None
+    try:
+        return modelo.model_validate(bruto)
+    except ValidationError as erro:
+        raise HTTPException(422, _resumo_sem_eco(erro, modelo)) from None
+
+
+def _guardar_anotador(banco, anotador: str, **extra) -> str:
+    """Grava o anotador e devolve o token -- que so existe nesta resposta."""
     token = secrets.token_urlsafe(32)
-    anotador = "a_" + secrets.token_hex(4)
-    ctx.banco.guardar_documento(TIPO_ANOTADOR, _hash(token), {
+    banco.guardar_documento(TIPO_ANOTADOR, _hash(token), {
         "anotador": anotador,
         "criado_em": datetime.now(timezone.utc).isoformat(),
         "revogado": False,
+        **extra,
     })
-    return {"anotador": anotador, "token": token}
+    return token
+
+
+def _novo_id_de_anotador() -> str:
+    return "a_" + secrets.token_hex(4)
+
+
+@router.post("/anotadores", status_code=201)
+def criar_anotador(ctx: Contexto = Depends(obter_contexto)):
+    """So dev (`rota_administrativa`). O token sai aqui e nunca mais."""
+    anotador = _novo_id_de_anotador()
+    return {"anotador": anotador, "token": _guardar_anotador(ctx.banco, anotador)}
+
+
+def ocupar_vaga(banco, chave_do_grupo: str, anotador: str) -> dict:
+    """Poe `anotador` numa vaga do grupo, ou 404/409 -- tudo dentro da trava
+    de `alterar_documento`, que serializa a leitura e a escrita (BEGIN
+    IMMEDIATE no SQLite, advisory lock no Postgres). Contar vaga fora dela
+    deixaria dois cliques simultaneos lerem "4 de 5" e gravarem 6."""
+    def transformar(grupo):
+        if grupo.get("revogado"):
+            raise HTTPException(404, _GRUPO_NAO_ENCONTRADO)
+        if len(grupo["anotadores"]) >= grupo["vagas"]:
+            raise HTTPException(409, _GRUPO_CHEIO)
+        return {**grupo, "anotadores": [*grupo["anotadores"], anotador]}
+
+    grupo = banco.alterar_documento(TIPO_GRUPO, chave_do_grupo, transformar)
+    if grupo is None:
+        raise HTTPException(404, _GRUPO_NAO_ENCONTRADO)
+    return grupo
+
+
+@router.post("/grupos", status_code=201)
+async def criar_grupo(request: Request, ctx: Contexto = Depends(obter_contexto)):
+    """So dev. Um link para N pessoas; o token sai aqui e nunca mais."""
+    pedido = await _corpo_validado(request, PedidoGrupo)
+    token = secrets.token_urlsafe(32)
+    grupo = "g_" + secrets.token_hex(4)
+    await run_in_threadpool(ctx.banco.guardar_documento, TIPO_GRUPO, _hash(token), {
+        "grupo": grupo,
+        "vagas": pedido.vagas,
+        "anotadores": [],
+        "revogado": False,
+        "criado_em": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"grupo": grupo, "token": token}
+
+
+@router.post("/grupos/{token}/entrar", status_code=201)
+def entrar_no_grupo(token: str, request: Request, ctx: Contexto = Depends(obter_contexto)):
+    """Publica. Ocupa uma vaga e devolve o token PESSOAL de um anotador novo.
+
+    A vaga e ocupada ANTES de o anotador ser gravado: se o processo cair entre
+    os dois passos perde-se uma vaga, nunca se ganha uma a mais. Teto pelo
+    hash do token do grupo, pelo mesmo motivo das outras rotas publicas.
+    """
+    _espera_ou_429(request.app.state.limitador_de_grupo, _hash(token))
+    anotador = _novo_id_de_anotador()
+    grupo = ocupar_vaga(ctx.banco, _hash(token), anotador)
+    return {"token": _guardar_anotador(ctx.banco, anotador, grupo=grupo["grupo"])}
+
+
+@router.post("/grupos/{grupo}/revogar")
+def revogar_grupo(grupo: str, anotadores: bool = False, ctx: Contexto = Depends(obter_contexto)):
+    """So dev. Fecha a ENTRADA pelo link do grupo; quem ja entrou segue
+    anotando. Com `?anotadores=1` revoga tambem os anotadores do grupo -- e as
+    respostas deles saem do export."""
+    alvo = next((g for g in ctx.banco.documentos(TIPO_GRUPO) if g["grupo"] == grupo), None)
+    if alvo is None:
+        raise HTTPException(404, "grupo inexistente")
+    ctx.banco.alterar_documento(TIPO_GRUPO, alvo["id"], lambda d: {**d, "revogado": True})
+    revogados = 0
+    if anotadores:
+        for registro in ctx.banco.documentos(TIPO_ANOTADOR):
+            if registro.get("grupo") == grupo and not registro.get("revogado"):
+                ctx.banco.alterar_documento(TIPO_ANOTADOR, registro["id"], lambda d: {**d, "revogado": True})
+                revogados += 1
+    return {"grupo": grupo, "revogado": True, "anotadores_revogados": revogados}
 
 
 @router.post("/anotadores/{anotador}/revogar")
@@ -198,14 +305,7 @@ async def gravar_resposta(token: str, request: Request, ctx: Contexto = Depends(
         ctx.banco.contar_documentos_com_prefixo, TIPO_RESPOSTA, _prefixo(anotador))
     if ja_mandadas >= MAXIMO_RESPOSTAS_POR_ANOTADOR:
         raise HTTPException(409, "este link ja mandou o maximo de respostas")
-    try:
-        bruto = json.loads(await request.body())
-    except (ValueError, UnicodeDecodeError):
-        raise HTTPException(422, "corpo nao e JSON valido") from None
-    try:
-        pedido = PedidoResposta.model_validate(bruto)
-    except ValidationError as erro:
-        raise HTTPException(422, _resumo_sem_eco(erro)) from None
+    pedido = await _corpo_validado(request, PedidoResposta)
     if pedido.frase_id not in _ids_do_rascunho():
         raise HTTPException(422, "frase_id fora da regua")
     instante = datetime.now(timezone.utc).isoformat(timespec="microseconds")

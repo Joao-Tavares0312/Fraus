@@ -55,7 +55,7 @@ from fraus.api.rotas.analise import (TETO_ARQUIVO_ANALISE,
                                      TETO_CONVERSAS_ANALISE)
 from fraus.api.rotas.modelo import TETO_LEXICON, TETO_TEXTO_SIMULACAO
 from fraus.api.seguranca import registrar_middleware_de_acesso
-from fraus.api.vazao import (ENTREGAS_POR_JANELA, INGESTOES_POR_JANELA,
+from fraus.api.vazao import (ENTRADAS_DE_GRUPO_POR_JANELA, ENTREGAS_POR_JANELA, INGESTOES_POR_JANELA,
                              LEITURAS_DE_ANOTACAO_POR_JANELA,
                              RESPOSTAS_DE_ANOTACAO_POR_JANELA,
                              LimitadorDeVazao, registrar_middleware_de_vazao)
@@ -212,6 +212,8 @@ def criar_app(
     # A leitura publica da fila tem limitador proprio, tambem por hash do
     # token (ver `rotas/anotacao.py`): um 404 conta tanto quanto um 200.
     app.state.limitador_de_leitura_de_anotacao = LimitadorDeVazao(LEITURAS_DE_ANOTACAO_POR_JANELA)
+    # Entrada pelo link de grupo: limitador proprio, pelo hash do token do grupo.
+    app.state.limitador_de_grupo = LimitadorDeVazao(ENTRADAS_DE_GRUPO_POR_JANELA)
 
     registrar_middleware_de_acesso(app, ctx)
 

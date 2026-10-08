@@ -75,6 +75,12 @@ RESPOSTAS_DE_ANOTACAO_POR_JANELA = 60
 # quem recarrega a pagina.
 LEITURAS_DE_ANOTACAO_POR_JANELA = 30
 
+# Entrada pelo link de GRUPO (`POST /anotacao/grupos/{token}/entrar`), contada
+# pelo hash do token do grupo. 10 por minuto sobra para um grupo de ate 20
+# pessoas abrindo o link ao mesmo tempo, e corta o laco que tentaria esvaziar
+# as vagas.
+ENTRADAS_DE_GRUPO_POR_JANELA = 10
+
 
 class LimitadorDeVazao:
     """Janela deslizante por IP, em memoria. Reinicia com o processo -- que e

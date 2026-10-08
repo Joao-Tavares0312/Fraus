@@ -70,6 +70,11 @@ def rota_publica_de_anotacao(metodo: str, caminho: str) -> bool:
     partes = caminho.split("/")
     if len(partes) < 3 or partes[0] != "" or partes[1] != "anotacao":
         return False
+    # Link de grupo: so `POST /anotacao/grupos/<token>/entrar`. Criar e
+    # revogar grupo (`/anotacao/grupos`, `/anotacao/grupos/<id>/revogar`) sao
+    # de dev e caem no `return False` abaixo -- "grupos" e caminho fixo.
+    if partes[2] == "grupos" and len(partes) == 5:
+        return metodo == "POST" and partes[3] != "" and partes[4] == "entrar"
     token = partes[2]
     if not token or token in CAMINHOS_FIXOS_DA_ANOTACAO:
         return False
@@ -256,7 +261,9 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
         return True
     # Criar link de anotador e exportar as respostas da regua: dev. As rotas
     # publicas do anotador saem do middleware antes deste teste.
-    if caminho in ("/anotacao/anotadores", "/anotacao/respostas") or caminho.startswith("/anotacao/anotadores/"):
+    if caminho in ("/anotacao/anotadores", "/anotacao/respostas", "/anotacao/grupos") or caminho.startswith(
+        ("/anotacao/anotadores/", "/anotacao/grupos/")
+    ):
         return True
     if caminho.startswith("/integracoes") or caminho == "/modelo" or caminho.startswith("/modelo/"):
         return True
