@@ -306,6 +306,9 @@ def avaliar_conjunto(
         comparacao["por_par_demonstrada"] = not (
             diferenca.ic_inferior <= 0.0 <= diferenca.ic_superior
         )
+        # Criterio de promocao pre-registrado: o limite INFERIOR acima de zero.
+        # `por_par_demonstrada` sozinha tambem acende quando o candidato e pior.
+        comparacao["candidato_vence_por_par"] = diferenca.ic_inferior > 0.0
     return {
         "id": identificador,
         "tarefa": tarefa,

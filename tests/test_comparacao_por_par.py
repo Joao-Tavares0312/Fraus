@@ -74,3 +74,20 @@ def test_conjunto_sem_pares_nao_muda():
     resultado = _conjunto()
     assert "acuracia_por_par" not in resultado["modelos"]["laya_treinado"]
     assert "diferenca_acuracia_por_par" not in resultado["comparacao"]
+
+
+def test_candidato_vence_por_par_tem_sinal():
+    pares = [f"p{i}" for i in range(20) for _ in range(2)]
+    melhor = _conjunto(pares)["comparacao"]
+    assert melhor["candidato_vence_por_par"] is True
+
+    rotulos = [0, 1] * 20
+    pior = avaliar_conjunto(
+        identificador="regua_pares", tarefa="ironia", nome="Régua de pares",
+        independente=True, rotulos=rotulos,
+        preditos_por_modelo={"laya_treinado": [1, 1] * 20, "bertimbau": rotulos},
+        classes=[0, 1], nomes_classes=["não irônico", "irônico"],
+        par_ids=pares, reamostras=200,
+    )["comparacao"]
+    assert pior["por_par_demonstrada"] is True
+    assert pior["candidato_vence_por_par"] is False
