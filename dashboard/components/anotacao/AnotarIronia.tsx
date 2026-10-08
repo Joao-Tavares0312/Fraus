@@ -99,7 +99,7 @@ export function AnotarIronia({ token }: { token: string }) {
   );
 }
 
-function Fila({ estado, responder, voltar }: { estado: EstadoDaFila; responder: (r: Resposta) => void; voltar: () => void }) {
+export function Fila({ estado, responder, voltar }: { estado: EstadoDaFila; responder: (r: Resposta) => void; voltar: () => void }) {
   const f = fila(estado);
   const total = estado.frases.length;
   const feitas = total - faltam(estado);
@@ -126,7 +126,16 @@ function Fila({ estado, responder, voltar }: { estado: EstadoDaFila; responder: 
             {faltam(estado) === 1 ? "Falta 1" : `Faltam ${faltam(estado)}`}
           </span>
           {estado.pos > 0 ? (
-            <Button variant="ghost" onClick={voltar} disabled={estado.enviando} className="h-9 px-3">← Voltar</Button>
+            <Button
+              variant="ghost"
+              // aria-disabled e clique ignorado, como as respostas: `disabled`
+              // tiraria o foco do teclado a cada envio.
+              aria-disabled={estado.enviando}
+              onClick={() => { if (!estado.enviando) voltar(); }}
+              className="h-9 px-3 aria-disabled:opacity-60"
+            >
+              ← Voltar
+            </Button>
           ) : null}
         </div>
         <div className="h-1 bg-compasso" aria-hidden="true"><div className="h-full bg-primary" style={{ width: `${(100 * feitas) / total}%` }} /></div>
