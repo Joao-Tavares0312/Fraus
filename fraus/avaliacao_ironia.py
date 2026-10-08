@@ -12,8 +12,11 @@ teste usem exatamente a mesma regua. Elas nao podem entrar no treino.
 
 from __future__ import annotations
 
+import csv
+import hashlib
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from fraus.sinais.ironia import IRONICO
 
@@ -111,3 +114,64 @@ def candidato_apto_para_promocao(
         resultado.taxa_falso_positivo <= maximo_falso_positivo
         and resultado.taxa_falso_negativo <= maximo_falso_negativo
     )
+
+
+# --- Regua de pares minimos (08/10/2026) -------------------------------------
+#
+# A regua de 20 acima continua sendo o que e: autoral. A de pares e escrita
+# aqui como RASCUNHO e so vira regua depois da anotacao as cegas
+# (docs/superpowers/specs/2026-10-08-regua-pares-ironia-design.md).
+
+CAMINHO_RASCUNHO = Path(__file__).parent / "dados" / "regua_ironia_rascunho.csv"
+
+
+@dataclass(frozen=True)
+class FraseDoRascunho:
+    par_id: str
+    estrato: str
+    dominio: str
+    rotulo: int
+    texto: str
+
+    @property
+    def frase_id(self) -> str:
+        """Id opaco: e o que a pagina de anotacao ve no lugar de par e rotulo."""
+        return hashlib.sha256(self.texto.encode("utf-8")).hexdigest()[:12]
+
+
+def carregar_rascunho(caminho: Path = CAMINHO_RASCUNHO) -> list[FraseDoRascunho]:
+    with open(caminho, encoding="utf-8", newline="") as arquivo:
+        return [
+            FraseDoRascunho(
+                par_id=linha["par_id"], estrato=linha["estrato"], dominio=linha["dominio"],
+                rotulo=int(linha["rotulo"]), texto=linha["texto"],
+            )
+            for linha in csv.DictReader(arquivo)
+        ]
+
+
+def conferir_registro_equilibrado(
+    textos: Sequence[str], rotulos: Sequence[int], *, tolerancia: float = 0.10
+) -> None:
+    """Nenhum traco de superficie pode acompanhar o rotulo.
+
+    Para cada traco binario, a fracao entre as ironicas e entre as nao
+    ironicas difere no maximo `tolerancia`. O comprimento medio (em log)
+    tambem. Um traco que separa as classes seria a regua repetindo o defeito
+    do IDPT.
+    """
+    from fraus.baseline_estilo import TRACOS_BINARIOS, tracos_de_superficie
+
+    if len(textos) != len(rotulos):
+        raise ValueError("textos e rotulos de tamanhos diferentes")
+    tracos = [tracos_de_superficie(t) for t in textos]
+    for nome in (*TRACOS_BINARIOS, "comprimento_log"):
+        ironicas = [t[nome] for t, r in zip(tracos, rotulos) if r == IRONICO]
+        sinceras = [t[nome] for t, r in zip(tracos, rotulos) if r != IRONICO]
+        if not ironicas or not sinceras:
+            raise ValueError("a conferencia exige frases das duas classes")
+        diferenca = abs(sum(ironicas) / len(ironicas) - sum(sinceras) / len(sinceras))
+        if diferenca > tolerancia:
+            raise ValueError(
+                f"o traco {nome} acompanha o rotulo: diferenca {diferenca:.2f} > {tolerancia:.2f}"
+            )
