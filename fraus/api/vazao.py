@@ -61,6 +61,12 @@ INGESTOES_POR_JANELA = 120
 # apareceria em silencio no dia em que alguem ajustasse so uma.
 ENTREGAS_POR_JANELA = 120
 
+# Resposta de anotacao da regua (`POST /anotacao/{token}/respostas`): rota
+# PUBLICA de escrita, contada POR ANOTADOR. 60 por minuto e uma resposta por
+# segundo -- acima do ritmo de quem le uma frase e clica, e um teto para quem
+# vazou o link e quer encher o banco.
+RESPOSTAS_DE_ANOTACAO_POR_JANELA = 60
+
 
 class LimitadorDeVazao:
     """Janela deslizante por IP, em memoria. Reinicia com o processo -- que e
