@@ -90,6 +90,93 @@ def bootstrap_da_diferenca(
     )
 
 
+@dataclass(frozen=True)
+class ResultadoIntervalo:
+    valor: float
+    ic_inferior: float
+    ic_superior: float
+    reamostras: int
+
+
+def _acertos_por_par(
+    rotulos: Sequence[int], preditos: Sequence[int], par_ids: Sequence[str]
+) -> dict[str, bool]:
+    """Par certo e par com OS DOIS lados certos; par mal formado e erro alto."""
+    if not len(rotulos) == len(preditos) == len(par_ids):
+        raise ValueError("rotulos, predicoes e pares de tamanhos diferentes")
+    lados: dict[str, list[tuple[int, bool]]] = {}
+    for rotulo, predito, par in zip(rotulos, preditos, par_ids):
+        lados.setdefault(str(par), []).append((int(rotulo), int(predito) == int(rotulo)))
+    mal_formados = sorted(
+        par for par, itens in lados.items() if sorted(r for r, _ in itens) != [0, 1]
+    )
+    if mal_formados:
+        raise ValueError(f"par sem exatamente um lado de cada rotulo: {mal_formados[:5]}")
+    return {par: all(acerto for _, acerto in itens) for par, itens in lados.items()}
+
+
+def acuracia_por_par(
+    rotulos: Sequence[int], preditos: Sequence[int], par_ids: Sequence[str]
+) -> float:
+    """Fracao de pares com os dois lados certos. O acaso e 25%, nao 50%."""
+    acertos = _acertos_por_par(rotulos, preditos, par_ids)
+    return sum(acertos.values()) / len(acertos)
+
+
+def bootstrap_por_par(
+    rotulos: Sequence[int],
+    preditos: Sequence[int],
+    par_ids: Sequence[str],
+    *,
+    preditos_referencia: Sequence[int] | None = None,
+    reamostras: int = 2000,
+    semente: int = 42,
+) -> ResultadoIntervalo:
+    """IC 95% percentil da acuracia por par -- ou da diferenca para a referencia.
+
+    Reamostra PARES, nao frases: os dois lados de um par sao dependentes, e
+    reamostrar frase estreitaria o intervalo sem motivo.
+    """
+    acertos = _acertos_por_par(rotulos, preditos, par_ids)
+    pares = sorted(acertos)
+    valores = np.array([acertos[p] for p in pares], dtype=float)
+    if preditos_referencia is not None:
+        referencia = _acertos_por_par(rotulos, preditos_referencia, par_ids)
+        valores = valores - np.array([referencia[p] for p in pares], dtype=float)
+    gerador = np.random.default_rng(semente)
+    medias = np.empty(reamostras)
+    for i in range(reamostras):
+        medias[i] = valores[gerador.integers(0, len(valores), len(valores))].mean()
+    inferior, superior = np.percentile(medias, [2.5, 97.5])
+    return ResultadoIntervalo(
+        valor=float(valores.mean()),
+        ic_inferior=float(inferior),
+        ic_superior=float(superior),
+        reamostras=reamostras,
+    )
+
+
+def ece(probabilidades: Sequence[float], rotulos: Sequence[int], *, faixas: int = 10) -> float:
+    """Erro de calibracao esperado de P(classe 1), em faixas iguais de 0 a 1.
+
+    Media ponderada, por faixa, de |P media - frequencia observada da classe 1|.
+    """
+    p = np.asarray(probabilidades, dtype=float)
+    y = np.asarray(rotulos, dtype=int)
+    if len(p) != len(y) or len(p) == 0:
+        raise ValueError("probabilidades e rotulos vazios ou de tamanhos diferentes")
+    if ((p < 0.0) | (p > 1.0)).any():
+        raise ValueError("probabilidade fora de 0..1")
+    bordas = np.linspace(0.0, 1.0, faixas + 1)
+    indices = np.clip(np.digitize(p, bordas[1:-1], right=True), 0, faixas - 1)
+    total = 0.0
+    for faixa in range(faixas):
+        mascara = indices == faixa
+        if mascara.any():
+            total += mascara.mean() * abs(p[mascara].mean() - y[mascara].mean())
+    return float(total)
+
+
 # --- O laudo ------------------------------------------------------------------
 #
 # O que o notebook 07 grava em `comparacao_modelos.json` e a API serve sem
@@ -100,6 +187,7 @@ def bootstrap_da_diferenca(
 SCHEMA_LAUDO = 1
 
 NOMES_MODELOS = {
+    "baseline_estilo": "Baseline só de estilo",
     "bertimbau": "BERTimbau fine-tunado",
     "laya_sem_treino": "Laya sem treino",
     "laya_treinado": "Laya treinado",
@@ -164,6 +252,7 @@ def avaliar_conjunto(
     candidato: str = "laya_treinado",
     referencia: str = "bertimbau",
     reamostras: int = 2000,
+    par_ids: Sequence[str] | None = None,
 ) -> dict:
     """Um conjunto de teste lido por todos os modelos, pronto para o laudo.
 
@@ -195,6 +284,32 @@ def avaliar_conjunto(
         [int(p) == int(r) for p, r in zip(b, rotulos)],
     )
     bs = bootstrap_da_diferenca(rotulos, a, b, classes=classes_do_f1, reamostras=reamostras)
+    if par_ids is not None:
+        for modelo, preditos in preditos_por_modelo.items():
+            intervalo = bootstrap_por_par(rotulos, preditos, par_ids, reamostras=reamostras)
+            modelos[modelo]["acuracia_por_par"] = intervalo.valor
+            modelos[modelo]["ic95_por_par"] = [intervalo.ic_inferior, intervalo.ic_superior]
+        diferenca = bootstrap_por_par(
+            rotulos, a, par_ids, preditos_referencia=b, reamostras=reamostras
+        )
+    comparacao = {
+        "candidato": candidato,
+        "referencia": referencia,
+        "diferenca_f1_macro": bs.diferenca,
+        "ic95": [bs.ic_inferior, bs.ic_superior],
+        "mcnemar": {"so_candidato": mc.so_a, "so_referencia": mc.so_b, "p_valor": mc.p_valor},
+        # Intervalo que contem o zero nao demonstra vantagem de ninguem.
+        "diferenca_demonstrada": not (bs.ic_inferior <= 0.0 <= bs.ic_superior),
+    }
+    if par_ids is not None:
+        comparacao["diferenca_acuracia_por_par"] = diferenca.valor
+        comparacao["ic95_diferenca_por_par"] = [diferenca.ic_inferior, diferenca.ic_superior]
+        comparacao["por_par_demonstrada"] = not (
+            diferenca.ic_inferior <= 0.0 <= diferenca.ic_superior
+        )
+        # Criterio de promocao pre-registrado: o limite INFERIOR acima de zero.
+        # `por_par_demonstrada` sozinha tambem acende quando o candidato e pior.
+        comparacao["candidato_vence_por_par"] = diferenca.ic_inferior > 0.0
     return {
         "id": identificador,
         "tarefa": tarefa,
@@ -203,15 +318,7 @@ def avaliar_conjunto(
         "exemplos": len(rotulos),
         "classes": list(nomes_classes),
         "modelos": modelos,
-        "comparacao": {
-            "candidato": candidato,
-            "referencia": referencia,
-            "diferenca_f1_macro": bs.diferenca,
-            "ic95": [bs.ic_inferior, bs.ic_superior],
-            "mcnemar": {"so_candidato": mc.so_a, "so_referencia": mc.so_b, "p_valor": mc.p_valor},
-            # Intervalo que contem o zero nao demonstra vantagem de ninguem.
-            "diferenca_demonstrada": not (bs.ic_inferior <= 0.0 <= bs.ic_superior),
-        },
+        "comparacao": comparacao,
     }
 
 
@@ -326,6 +433,25 @@ def relatorio_markdown(laudo: dict) -> str:
             f"p = {_numero(mcnemar['p_valor'], 4)}.",
             "",
         ]
+        if "ic95_diferenca_por_par" in comparacao:
+            linhas += ["Acurácia por par (os dois lados do par certos), IC 95% por bootstrap de pares:", ""]
+            for modelo, medidas in conjunto["modelos"].items():
+                if "acuracia_por_par" in medidas:
+                    ic_i, ic_s = medidas["ic95_por_par"]
+                    linhas.append(
+                        f"- {nomes.get(modelo, modelo)}: {_numero(medidas['acuracia_por_par'])} "
+                        f"(IC 95% de {_numero(ic_i)} a {_numero(ic_s)})"
+                    )
+            d_i, d_s = comparacao["ic95_diferenca_por_par"]
+            vence = "sim" if comparacao.get("candidato_vence_por_par") else "não"
+            linhas += [
+                "",
+                f"{candidato} menos {referencia}, por par: "
+                f"{_com_sinal(comparacao['diferenca_acuracia_por_par'])} "
+                f"(IC 95% de {_com_sinal(d_i)} a {_com_sinal(d_s)}) — "
+                f"candidato vence por par: **{vence}** (limite inferior acima de zero).",
+                "",
+            ]
         for modelo, medidas in conjunto["modelos"].items():
             linhas += [
                 f"### {nomes.get(modelo, modelo)} — acertos e erros por classe",

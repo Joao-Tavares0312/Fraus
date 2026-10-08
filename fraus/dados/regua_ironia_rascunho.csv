@@ -1,0 +1,301 @@
+par_id,estrato,dominio,rotulo,texto
+elogio-01,elogio,delivery,0,"Chegou quentinho e antes do horário, muito bom"
+elogio-01,elogio,delivery,1,"Chegou frio e duas horas depois, muito bom"
+elogio-02,elogio,delivery,0,"o entregador subiu até meu andar pra entregar, que gentileza."
+elogio-02,elogio,delivery,1,"o entregador jogou o pacote por cima do portão, que gentileza."
+elogio-03,elogio,delivery,0,"Veio o molho extra que eu pedi na observação, amei"
+elogio-03,elogio,delivery,1,"Veio só o molho extra e o lanche ficou no restaurante, amei"
+elogio-04,elogio,delivery,0,"Pedi às 20h e às 20h30 já estava jantando, rapidez impressionante"
+elogio-04,elogio,delivery,1,"Pedi às 20h e às 23h30 ainda estava esperando, rapidez impressionante"
+elogio-05,elogio,delivery,0,"O restaurante mandou um bilhetinho e um brinde, adorei o carinho."
+elogio-05,elogio,delivery,1,"O restaurante mandou o pedido de outra pessoa inteiro, adorei o carinho."
+elogio-06,elogio,delivery,0,"a pizza veio bem embalada e inteirinha, parabéns pelo cuidado."
+elogio-06,elogio,delivery,1,"a pizza veio de lado e grudada na tampa, parabéns pelo cuidado."
+elogio-07,elogio,delivery,0,"O suporte devolveu na hora o valor do item que faltou, show."
+elogio-07,elogio,delivery,1,"O suporte disse que o item que faltou é problema meu, show."
+elogio-08,elogio,delivery,0,"chegou tão rápido que o açaí veio durinho, perfeito kkk"
+elogio-08,elogio,delivery,1,"chegou tão tarde que o açaí virou vitamina, perfeito kkk"
+elogio-09,elogio,banco,0,"Resolveram a contestação da compra em dois dias, excelente atendimento"
+elogio-09,elogio,banco,1,"Resolveram a contestação da compra em dois meses, excelente atendimento"
+elogio-10,elogio,banco,0,"O app novo do banco ficou bem mais fácil de usar, gostei muito"
+elogio-10,elogio,banco,1,"O app novo do banco não abre desde a atualização, gostei muito"
+elogio-11,elogio,banco,0,adorei que o atendente explicou cada tarifa com paciência
+elogio-11,elogio,banco,1,adorei que o atendente desligou no meio da explicação
+elogio-12,elogio,banco,0,"Nota 10 pro chat, desbloquearam meu cartão em cinco minutos"
+elogio-12,elogio,banco,1,"Nota 10 pro chat, meu cartão segue bloqueado há cinco dias"
+elogio-13,elogio,banco,0,"Que eficiência, o pix estornado voltou em 10 minutos"
+elogio-13,elogio,banco,1,"Que eficiência, o pix estornado volta em até 90 dias úteis"
+elogio-14,elogio,banco,0,Muito obrigado por aumentarem meu limite quando eu precisei
+elogio-14,elogio,banco,1,Muito obrigado por baixarem meu limite justo quando eu precisei
+elogio-15,elogio,banco,0,"vcs são ótimos, me avisaram da compra suspeita na hora."
+elogio-15,elogio,banco,1,"vcs são ótimos, me avisaram da compra suspeita uma semana depois."
+elogio-16,elogio,banco,0,"O gerente respondeu minha mensagem no mesmo dia, sensacional."
+elogio-16,elogio,banco,1,"O gerente respondeu minha mensagem depois de três semanas, sensacional."
+elogio-17,elogio,banco,0,"parabéns pelo chat, consegui renegociar a dívida toda por lá 👏"
+elogio-17,elogio,banco,1,"parabéns pelo chat, ele me mandou ligar e a ligação me mandou pro chat 👏"
+elogio-18,elogio,ecommerce,0,"O pedido chegou antes do prazo e bem embalado, amei"
+elogio-18,elogio,ecommerce,1,"O pedido chegou com a caixa aberta e faltando peça, amei"
+elogio-19,elogio,ecommerce,0,"excelente loja, trocaram o tênis e ainda pagaram o frete de volta."
+elogio-19,elogio,ecommerce,1,"excelente loja, pra trocar o tênis cobraram um frete mais caro que ele."
+elogio-20,elogio,ecommerce,0,"Que rapidez, o reembolso caiu dois dias depois da devolução."
+elogio-20,elogio,ecommerce,1,"Que rapidez, o reembolso caiu dois meses depois da devolução."
+elogio-21,elogio,ecommerce,0,"o rastreio atualiza certinho, dá pra acompanhar tudo, top."
+elogio-21,elogio,ecommerce,1,"o rastreio está parado em trânsito há vinte dias, top."
+elogio-22,elogio,ecommerce,0,"Amei a camiseta, veio igualzinha à foto do site!"
+elogio-22,elogio,ecommerce,1,"Amei a camiseta, veio dois números menor e de outra cor!"
+elogio-23,elogio,ecommerce,0,"atendimento maravilhoso, a moça do chat resolveu tudo de primeira"
+elogio-23,elogio,ecommerce,1,"atendimento maravilhoso, a moça do chat pediu o número do pedido seis vezes"
+elogio-24,elogio,ecommerce,0,"MUITO OBRIGADO, a geladeira chegou e já está funcionando"
+elogio-24,elogio,ecommerce,1,"MUITO OBRIGADO, a geladeira chegou com a porta toda amassada"
+elogio-25,elogio,ecommerce,0,"Comprei o celular e veio até película de brinde, que capricho"
+elogio-25,elogio,ecommerce,1,"Comprei o celular e veio uma caixa com um tijolo dentro, que capricho"
+elogio-26,elogio,ecommerce,0,pedi ontem e chegou hoje cedo kkk adorei
+elogio-26,elogio,ecommerce,1,pedi no Natal e chegou no Carnaval kkk adorei
+elogio-27,elogio,telecom,0,"A internet nova está voando, finalmente consigo fazer chamada de vídeo"
+elogio-27,elogio,telecom,1,"A internet nova está voando, finalmente carrega um e-mail por hora"
+elogio-28,elogio,telecom,0,"O técnico veio no horário e resolveu rapidinho, dez de dez"
+elogio-28,elogio,telecom,1,"O técnico não veio no horário nem no dia seguinte, dez de dez"
+elogio-29,elogio,telecom,0,"Adorei o plano novo, pago menos e tenho mais internet!"
+elogio-29,elogio,telecom,1,"Adorei o plano novo, pago mais e tenho menos internet!"
+elogio-30,elogio,telecom,0,"Obrigado pela paciência, configuraram o roteador comigo pelo chat."
+elogio-30,elogio,telecom,1,"Obrigado pela paciência, só me mandaram reiniciar o roteador onze vezes."
+elogio-31,elogio,telecom,0,"que sinal maravilhoso, pega até no subsolo do prédio"
+elogio-31,elogio,telecom,1,"que sinal maravilhoso, só pega se eu subir na laje"
+elogio-32,elogio,telecom,0,"vc foi super atencioso, cancelou a cobrança indevida na hora."
+elogio-32,elogio,telecom,1,"vc foi super atencioso, transferiu minha ligação nove vezes."
+elogio-33,elogio,telecom,0,"A TV voltou bem na hora do jogo, perfeito 😂"
+elogio-33,elogio,telecom,1,"A TV caiu bem na hora do jogo, perfeito 😂"
+elogio-34,elogio,telecom,0,"Atendimento eficiente, portabilidade concluída em um dia"
+elogio-34,elogio,telecom,1,"Atendimento eficiente, portabilidade em análise há um mês"
+elogio-35,elogio,saude,0,"Consegui marcar a consulta pro dia seguinte, muito bom o plano"
+elogio-35,elogio,saude,1,"Consegui marcar a consulta pra daqui a quatro meses, muito bom o plano"
+elogio-36,elogio,saude,0,"a autorização do exame saiu na hora, parabéns."
+elogio-36,elogio,saude,1,"a autorização do exame saiu depois da cirurgia, parabéns."
+elogio-37,elogio,saude,0,"adorei a telemedicina, a médica foi atenciosa e explicou tudo"
+elogio-37,elogio,saude,1,"adorei a telemedicina, a médica caiu da chamada três vezes e sumiu"
+elogio-38,elogio,saude,0,"que atendimento humano, a enfermeira ligou pra saber como eu estava."
+elogio-38,elogio,saude,1,"que atendimento humano, a enfermeira ligou pra cobrar a coparticipação."
+elogio-39,elogio,saude,0,"O reembolso da consulta caiu em uma semana, excelente."
+elogio-39,elogio,saude,1,"O reembolso da consulta caiu em um ano, excelente."
+elogio-40,elogio,saude,0,"muito obrigada, a carteirinha digital funcionou direitinho na recepção."
+elogio-40,elogio,saude,1,"muito obrigada, a carteirinha digital não existe no sistema da recepção."
+elogio-41,elogio,saude,0,"Vcs são incríveis, o resultado do exame saiu no mesmo dia da coleta"
+elogio-41,elogio,saude,1,"Vcs são incríveis, o resultado do exame saiu depois da consulta de retorno"
+elogio-42,elogio,saude,0,"Rede credenciada ótima, tem três hospitais perto de casa."
+elogio-42,elogio,saude,1,"Rede credenciada ótima, o mais perto fica em outra cidade."
+elogio-43,elogio,servico_publico,0,"Serviço exemplar, renovei a CNH pelo site sem sair de casa."
+elogio-43,elogio,servico_publico,1,"Serviço exemplar, pra renovar a CNH pelo site fui lá três vezes."
+elogio-44,elogio,servico_publico,0,"agendamento super prático, consegui vaga pra semana que vem."
+elogio-44,elogio,servico_publico,1,"agendamento super prático, a próxima vaga é pro ano que vem."
+elogio-45,elogio,servico_publico,0,"que maravilha, a segunda via do IPTU saiu em um clique"
+elogio-45,elogio,servico_publico,1,"que maravilha, a segunda via do IPTU só sai na fila do balcão"
+elogio-46,elogio,servico_publico,0,"A atendente do posto resolveu meu cadastro na hora, nota dez"
+elogio-46,elogio,servico_publico,1,"A atendente do posto perdeu meu cadastro de novo, nota dez"
+elogio-47,elogio,servico_publico,0,"parabéns pela nova central, me atenderam em dez minutos!"
+elogio-47,elogio,servico_publico,1,"parabéns pela nova central, me atenderam em dez horas!"
+elogio-48,elogio,servico_publico,0,fui buscar o documento e já estava pronto kkk que eficiência
+elogio-48,elogio,servico_publico,1,fui buscar o documento pela quinta vez e nada kkk que eficiência
+elogio-49,elogio,servico_publico,0,"obrigado pelo aviso, o sistema avisou certinho a data da perícia."
+elogio-49,elogio,servico_publico,1,"obrigado pelo aviso, o sistema avisou da perícia um dia depois dela."
+elogio-50,elogio,servico_publico,0,"O portal novo ficou ótimo, tudo num lugar só"
+elogio-50,elogio,servico_publico,1,"O portal novo ficou ótimo, fora do ar todo dia útil"
+reclamacao-01,reclamacao,banco,0,cobraram a anuidade duas vezes e quero o estorno
+reclamacao-01,reclamacao,banco,1,que maravilha cobrarem a anuidade duas vezes
+reclamacao-02,reclamacao,banco,0,O app do banco travou de novo na hora de pagar o boleto.
+reclamacao-02,reclamacao,banco,1,Amo quando o app do banco trava bem na hora de pagar o boleto.
+reclamacao-03,reclamacao,banco,0,"fiquei 40 minutos na espera, ninguém atendeu até agora."
+reclamacao-03,reclamacao,banco,1,"fiquei 40 minutos na espera, ótimo pra relaxar."
+reclamacao-04,reclamacao,banco,0,Bloquearam meu cartão sem avisar e passei vergonha no mercado
+reclamacao-04,reclamacao,banco,1,Obrigado por bloquearem meu cartão bem na fila do mercado
+reclamacao-05,reclamacao,banco,0,A tarifa de manutenção subiu de novo sem ninguém explicar o motivo.
+reclamacao-05,reclamacao,banco,1,Adoro como a tarifa de manutenção sobe sem ninguém explicar o motivo.
+reclamacao-06,reclamacao,banco,0,"vc me prometeu retorno em 24 horas, ninguém ligou até agora."
+reclamacao-06,reclamacao,banco,1,"vc me prometeu retorno em 24 horas, só não disse de qual ano."
+reclamacao-07,reclamacao,banco,0,"o pix caiu na conta errada, o banco não quer me ajudar"
+reclamacao-07,reclamacao,banco,1,"o pix caiu na conta errada, o banco lavou as mãos, que parceria"
+reclamacao-08,reclamacao,banco,0,"PELA TERCEIRA VEZ o cartão veio com meu nome errado, quero outro"
+reclamacao-08,reclamacao,banco,1,"PELA TERCEIRA VEZ o cartão veio com meu nome errado, já virou coleção"
+reclamacao-09,reclamacao,banco,0,"o caixa eletrônico engoliu meu cartão com a agência fechada, fiquei sem dinheiro"
+reclamacao-09,reclamacao,banco,1,"o caixa eletrônico engoliu meu cartão com a agência fechada, timing perfeito"
+reclamacao-10,reclamacao,ecommerce,0,Meu pedido está atrasado há duas semanas e ninguém responde
+reclamacao-10,reclamacao,ecommerce,1,Meu pedido está atrasado há duas semanas mas quem tem pressa né
+reclamacao-11,reclamacao,ecommerce,0,"O produto veio quebrado, querem que eu pague o frete da troca."
+reclamacao-11,reclamacao,ecommerce,1,"O produto veio quebrado, ainda querem que eu pague a troca, que gentileza."
+reclamacao-12,reclamacao,ecommerce,0,"cancelaram minha compra depois de cobrar no cartão, sem explicação."
+reclamacao-12,reclamacao,ecommerce,1,"cancelaram minha compra depois de cobrar no cartão, que surpresa boa."
+reclamacao-13,reclamacao,ecommerce,0,comprei um fone e chegou uma capinha de celular no lugar
+reclamacao-13,reclamacao,ecommerce,1,comprei um fone e chegou uma capinha de celular quase igual né
+reclamacao-14,reclamacao,ecommerce,0,"o chat me deu três prazos diferentes, qual deles vale de verdade?"
+reclamacao-14,reclamacao,ecommerce,1,"o chat me deu três prazos diferentes, posso escolher o que eu preferir?"
+reclamacao-15,reclamacao,ecommerce,0,a caixa chegou vazia kkk não tem graça nenhuma
+reclamacao-15,reclamacao,ecommerce,1,a caixa chegou vazia kkk pelo menos é leve
+reclamacao-16,reclamacao,ecommerce,0,o reembolso que prometeram para sete dias até agora não caiu
+reclamacao-16,reclamacao,ecommerce,1,o reembolso que prometeram para sete dias deve estar vindo a pé
+reclamacao-17,reclamacao,ecommerce,0,"pedi tamanho M e veio GG pela segunda vez, quero trocar!"
+reclamacao-17,reclamacao,ecommerce,1,"pedi tamanho M e veio GG pela segunda vez, generosos demais!"
+reclamacao-18,reclamacao,ecommerce,0,"o rastreio diz entregue, mas não recebi nada 😤"
+reclamacao-18,reclamacao,ecommerce,1,"o rastreio diz entregue, só se foi em outra dimensão 😤"
+reclamacao-19,reclamacao,telecom,0,"minha internet cai toda noite, o técnico nunca aparece"
+reclamacao-19,reclamacao,telecom,1,"minha internet cai toda noite, pontual como um relógio suíço"
+reclamacao-20,reclamacao,telecom,0,cobraram por um serviço que eu nunca contratei e quero cancelar.
+reclamacao-20,reclamacao,telecom,1,muito criativos em cobrar por um serviço que eu nunca contratei.
+reclamacao-21,reclamacao,telecom,0,Pedi o cancelamento cinco vezes e continuam cobrando todo mês
+reclamacao-21,reclamacao,telecom,1,Pedi o cancelamento cinco vezes e pelo jeito vou ser cliente pra sempre
+reclamacao-22,reclamacao,telecom,0,"Pago por 500 mega e chegam 50, quero um desconto"
+reclamacao-22,reclamacao,telecom,1,"Pago por 500 mega e chegam 50, que plano honesto"
+reclamacao-23,reclamacao,telecom,0,vcs me transferiram oito vezes e ninguém resolveu
+reclamacao-23,reclamacao,telecom,1,vcs me transferiram oito vezes e já conheço o setor inteiro
+reclamacao-24,reclamacao,telecom,0,"o sinal some dentro de casa, preciso ir pra rua pra ligar."
+reclamacao-24,reclamacao,telecom,1,"o sinal some dentro de casa, ótimo pra eu tomar um sol na rua."
+reclamacao-25,reclamacao,telecom,0,"A fatura veio com o dobro do valor, de onde saiu isso?"
+reclamacao-25,reclamacao,telecom,1,"A fatura veio com o dobro do valor, é presente de aniversário?"
+reclamacao-26,reclamacao,telecom,0,"o técnico marcou das 8h às 18h, deve ter esquecido de mim 😒"
+reclamacao-26,reclamacao,telecom,1,"o técnico marcou das 8h às 18h, quem sabe chega no Natal 😒"
+reclamacao-27,reclamacao,saude,0,"O plano negou minha cirurgia pela segunda vez, sem justificativa"
+reclamacao-27,reclamacao,saude,1,"O plano negou minha cirurgia pela segunda vez, que cuidado comigo"
+reclamacao-28,reclamacao,saude,0,esperei três horas na recepção mesmo tendo hora marcada com o médico.
+reclamacao-28,reclamacao,saude,1,pontualidade britânica é esperar três horas na recepção com hora marcada.
+reclamacao-29,reclamacao,saude,0,"a mensalidade subiu 25%, o atendimento só piorou desde então"
+reclamacao-29,reclamacao,saude,1,"a mensalidade subiu 25% e o atendimento piorou, ótimo custo-benefício"
+reclamacao-30,reclamacao,saude,0,"nenhum dermatologista disponível nos próximos seis meses, preciso de consulta."
+reclamacao-30,reclamacao,saude,1,"nenhum dermatologista nos próximos seis meses, ainda bem que não tenho pressa."
+reclamacao-31,reclamacao,saude,0,O reembolso foi negado porque faltou um carimbo na nota
+reclamacao-31,reclamacao,saude,1,Genial negar o reembolso porque faltou um carimbo na nota
+reclamacao-32,reclamacao,saude,0,"Vcs perderam o pedido de autorização do meu exame, de novo"
+reclamacao-32,reclamacao,saude,1,"Vcs perderam o pedido de autorização do meu exame, que organização"
+reclamacao-33,reclamacao,saude,0,"A central só atende em horário comercial, justo quando eu trabalho."
+reclamacao-33,reclamacao,saude,1,"A central só atende em horário comercial, bem pensado pra quem trabalha."
+reclamacao-34,reclamacao,saude,0,"O aplicativo do plano pede login toda vez que eu abro, cansa."
+reclamacao-34,reclamacao,saude,1,"O aplicativo do plano pede login toda vez que eu abro, segurança máxima né."
+reclamacao-35,reclamacao,servico_publico,0,"O site da prefeitura está fora do ar desde segunda, preciso da guia!"
+reclamacao-35,reclamacao,servico_publico,1,"O site da prefeitura está fora do ar desde segunda, deve estar de férias!"
+reclamacao-36,reclamacao,servico_publico,0,"preciso levar o mesmo documento pela quarta vez, isso é um absurdo"
+reclamacao-36,reclamacao,servico_publico,1,"quarta vez levando o mesmo documento, já sou de casa"
+reclamacao-37,reclamacao,servico_publico,0,a fila do posto começa de madrugada e só distribuem dez senhas.
+reclamacao-37,reclamacao,servico_publico,1,que emoção a fila do posto começar de madrugada pra disputar dez senhas.
+reclamacao-38,reclamacao,servico_publico,0,"O protocolo que me passaram aparece como inválido, não consigo acompanhar"
+reclamacao-38,reclamacao,servico_publico,1,"O protocolo que me passaram aparece como inválido, ajudou muito"
+reclamacao-39,reclamacao,servico_publico,0,a ouvidoria respondeu minha reclamação depois de um ano kkk ridículo
+reclamacao-39,reclamacao,servico_publico,1,a ouvidoria respondeu minha reclamação depois de um ano kkk que agilidade
+reclamacao-40,reclamacao,servico_publico,0,o atendente me mandou pra outro órgão que me mandou de volta.
+reclamacao-40,reclamacao,servico_publico,1,belo passeio o atendente me mandar pra outro órgão que me mandou de volta.
+reclamacao-41,reclamacao,servico_publico,0,"o boleto da taxa veio com vencimento de ontem, deve ser erro no sistema"
+reclamacao-41,reclamacao,servico_publico,1,"o boleto da taxa veio com vencimento de ontem, muito prático"
+reclamacao-42,reclamacao,servico_publico,0,"a vistoria foi remarcada pela terceira vez, sem motivo nenhum."
+reclamacao-42,reclamacao,servico_publico,1,"a vistoria foi remarcada pela terceira vez, já estou pegando gosto."
+reclamacao-43,reclamacao,delivery,0,"meu lanche chegou frio, com a bebida derramada na sacola!"
+reclamacao-43,reclamacao,delivery,1,"meu lanche chegou frio e com a bebida derramada, combo completo!"
+reclamacao-44,reclamacao,delivery,0,"O entregador marcou como entregue sem trazer nada, deve ter sido erro."
+reclamacao-44,reclamacao,delivery,1,"O entregador marcou como entregue, só esqueceu de trazer."
+reclamacao-45,reclamacao,delivery,0,"Pedi sem cebola e veio cheio de cebola, não dá pra comer"
+reclamacao-45,reclamacao,delivery,1,"Pedi sem cebola e veio cheio de cebola, atenção aos detalhes"
+reclamacao-46,reclamacao,delivery,0,A taxa de entrega saiu mais cara que o próprio lanche.
+reclamacao-46,reclamacao,delivery,1,Um ótimo negócio a taxa de entrega sair mais cara que o lanche.
+reclamacao-47,reclamacao,delivery,0,"o pedido atrasou duas horas, o suporte só ofereceu R$ 5 de cupom."
+reclamacao-47,reclamacao,delivery,1,"o pedido atrasou duas horas e ganhei R$ 5 de cupom, que generosidade."
+reclamacao-48,reclamacao,delivery,0,"Vc cancelou meu pedido depois de uma hora, fiquei sem jantar."
+reclamacao-48,reclamacao,delivery,1,"Vc cancelou meu pedido depois de uma hora, valeu pela companhia."
+reclamacao-49,reclamacao,delivery,0,"o restaurante esqueceu metade do pedido, quero o resto 😅"
+reclamacao-49,reclamacao,delivery,1,"o restaurante mandou metade do pedido, deve ser dieta 😅"
+reclamacao-50,reclamacao,delivery,0,"o pedido ficou em ""saiu para entrega"" por três horas e não chegou até agora."
+reclamacao-50,reclamacao,delivery,1,"o pedido ficou em ""saiu para entrega"" por três horas e pelo visto vem de outro estado."
+neutra-01,neutra,banco,0,qual o horário de funcionamento da agência do centro? fecha no almoço?
+neutra-01,neutra,banco,1,qual o horário de funcionamento da agência do centro? ou só abre quando dá vontade?
+neutra-02,neutra,banco,0,Quanto tempo leva para o cartão novo chegar? uma semana?
+neutra-02,neutra,banco,1,Quanto tempo leva para o cartão novo chegar? uma década?
+neutra-03,neutra,banco,0,Como faço pra aumentar o limite? pelo app ou na agência?
+neutra-03,neutra,banco,1,Como faço pra aumentar o limite? com reza ou simpatia?
+neutra-04,neutra,banco,0,vcs podem me dizer quando cai o estorno? só pra eu me programar
+neutra-04,neutra,banco,1,vcs podem me dizer quando cai o estorno? só pra eu avisar meus netos
+neutra-05,neutra,banco,0,A transferência agendada sai hoje ou só no próximo dia útil?
+neutra-05,neutra,banco,1,A transferência agendada sai hoje ou só na próxima encarnação?
+neutra-06,neutra,banco,0,tem algum telefone para falar com uma pessoa? ou só pelo chat?
+neutra-06,neutra,banco,1,tem algum telefone para falar com uma pessoa? ou isso é luxo?
+neutra-07,neutra,banco,0,"meu cartão foi recusado, tento de novo mais tarde?"
+neutra-07,neutra,banco,1,"meu cartão foi recusado, tento de novo no ano bissexto?"
+neutra-08,neutra,banco,0,Preciso ir na agência para atualizar o cadastro? ou dá pelo app?
+neutra-08,neutra,banco,1,Preciso ir na agência para atualizar o cadastro? ou preciso de padrinho?
+neutra-09,neutra,banco,0,Qual o prazo pra liberar a portabilidade do salário? essa semana ainda? 🙂
+neutra-09,neutra,banco,1,Qual o prazo pra liberar a portabilidade do salário? até eu me aposentar? 🙂
+neutra-10,neutra,ecommerce,0,consigo trocar o produto? na loja física ou só pelo correio?
+neutra-10,neutra,ecommerce,1,consigo trocar o produto? na loja física ou só por telepatia?
+neutra-11,neutra,ecommerce,0,"meu pedido aparece como enviado, chega essa semana?"
+neutra-11,neutra,ecommerce,1,"meu pedido aparece como enviado, chega nesse século?"
+neutra-12,neutra,ecommerce,0,vocês entregam no sábado? ou só em dia útil?
+neutra-12,neutra,ecommerce,1,vocês entregam no sábado? ou em algum sábado do futuro?
+neutra-13,neutra,ecommerce,0,"O cupom de desconto vale pra quê, frete ou produto?"
+neutra-13,neutra,ecommerce,1,"O cupom de desconto vale pra quê, enfeitar o e-mail?"
+neutra-14,neutra,ecommerce,0,Qual o prazo do reembolso depois que a devolução chega? em dias úteis ou corridos?
+neutra-14,neutra,ecommerce,1,Qual o prazo do reembolso depois que a devolução chega? em anos ou décadas?
+neutra-15,neutra,ecommerce,0,a encomenda pode ficar na portaria? kkk trabalho o dia todo
+neutra-15,neutra,ecommerce,1,a encomenda pode ficar na portaria? kkk ou vai dar outra volta no país
+neutra-16,neutra,ecommerce,0,esse modelo volta a ter estoque? ou saiu de linha?
+neutra-16,neutra,ecommerce,1,esse modelo volta a ter estoque? ou é lenda?
+neutra-17,neutra,ecommerce,0,o frete grátis vale pra minha cidade? ou só pra capital?
+neutra-17,neutra,ecommerce,1,o frete grátis vale pra minha cidade? ou só pra Lua?
+neutra-18,neutra,ecommerce,0,em que etapa está meu pedido? ainda no centro de distribuição?
+neutra-18,neutra,ecommerce,1,em que etapa está meu pedido? fazendo turismo no centro de distribuição?
+neutra-19,neutra,telecom,0,vcs sabem quando volta a internet aqui no bairro? hoje ainda?
+neutra-19,neutra,telecom,1,vcs sabem quando volta a internet aqui no bairro? ano que vem?
+neutra-20,neutra,telecom,0,como faço para trocar a senha do wi-fi? pelo aplicativo?
+neutra-20,neutra,telecom,1,como faço para trocar a senha do wi-fi? preciso de um diploma?
+neutra-21,neutra,telecom,0,"O técnico vem de manhã, à tarde ou só amanhã cedo?"
+neutra-21,neutra,telecom,1,"O técnico vem de manhã, à tarde ou no ano que vem?"
+neutra-22,neutra,telecom,0,tem como mudar o vencimento da fatura? pro dia 10 de cada mês?
+neutra-22,neutra,telecom,1,tem como mudar o vencimento da fatura? ou só com abaixo-assinado?
+neutra-23,neutra,telecom,0,qual a velocidade real do plano de 300 mega? no wi-fi?
+neutra-23,neutra,telecom,1,qual a velocidade real do plano de 300 mega? 3?
+neutra-24,neutra,telecom,0,O roteador novo já foi enviado? pelo correio? 🙂
+neutra-24,neutra,telecom,1,O roteador novo já foi enviado? de navio? 🙂
+neutra-25,neutra,telecom,0,consigo cancelar pelo chat ou só por telefone?
+neutra-25,neutra,telecom,1,consigo cancelar pelo chat ou só por pombo-correio?
+neutra-26,neutra,telecom,0,o número do chamado continua valendo por quantos dias?
+neutra-26,neutra,telecom,1,o número do chamado continua valendo por quantas gerações?
+neutra-27,neutra,saude,0,qual o prazo para autorizar uma ressonância? cinco dias úteis?
+neutra-27,neutra,saude,1,qual o prazo para autorizar uma ressonância? cinco anos úteis?
+neutra-28,neutra,saude,0,tem pediatra de plantão no fim de semana? ou só durante a semana?
+neutra-28,neutra,saude,1,tem pediatra de plantão no fim de semana? ou só em feriado de lua cheia?
+neutra-29,neutra,saude,0,O plano cobre fisioterapia? quantas sessões por ano?
+neutra-29,neutra,saude,1,O plano cobre fisioterapia? uma sessão por década?
+neutra-30,neutra,saude,0,Vcs têm previsão de quando liberam o resultado do exame? ainda essa semana?
+neutra-30,neutra,saude,1,Vcs têm previsão de quando liberam o resultado do exame? ainda nesta vida?
+neutra-31,neutra,saude,0,posso fazer a consulta por vídeo? ou só presencial?
+neutra-31,neutra,saude,1,posso fazer a consulta por vídeo? ou por sinal de fumaça?
+neutra-32,neutra,saude,0,como peço o reembolso da consulta particular? pelo app?
+neutra-32,neutra,saude,1,como peço o reembolso da consulta particular? rezando?
+neutra-33,neutra,saude,0,a carência do plano odontológico é de quantos meses? ou dias?
+neutra-33,neutra,saude,1,a carência do plano odontológico é de quantos meses? ou séculos?
+neutra-34,neutra,saude,0,qual o telefone da central de marcação? kkk é aquele que mudou?
+neutra-34,neutra,saude,1,qual o telefone da central de marcação? kkk aquele que atende de primeira?
+neutra-35,neutra,servico_publico,0,Qual documento preciso levar para tirar a identidade? a certidão de nascimento?
+neutra-35,neutra,servico_publico,1,Qual documento preciso levar para tirar a identidade? a certidão do meu tataravô?
+neutra-36,neutra,servico_publico,0,O resultado da perícia sai quando? na próxima semana?
+neutra-36,neutra,servico_publico,1,O resultado da perícia sai quando? na próxima Copa?
+neutra-37,neutra,servico_publico,0,dá pra agendar o atendimento pelo site ou só no balcão?
+neutra-37,neutra,servico_publico,1,dá pra agendar o atendimento pelo site ou o site é só de enfeite?
+neutra-38,neutra,servico_publico,0,Quanto tempo demora a análise da aposentadoria? mais de um mês?
+neutra-38,neutra,servico_publico,1,Quanto tempo demora a análise da aposentadoria? até eu fazer cem anos?
+neutra-39,neutra,servico_publico,0,onde pego a senha de atendimento? kkk é na entrada?
+neutra-39,neutra,servico_publico,1,onde pego a senha de atendimento? kkk no sorteio?
+neutra-40,neutra,servico_publico,0,A iluminação da minha rua vai ser consertada quando? nesta semana?
+neutra-40,neutra,servico_publico,1,A iluminação da minha rua vai ser consertada quando? nas próximas eleições?
+neutra-41,neutra,servico_publico,0,A segunda via da certidão pode ser pedida online? ou só no cartório? 🙂
+neutra-41,neutra,servico_publico,1,A segunda via da certidão pode ser pedida online? ou é coisa do futuro? 🙂
+neutra-42,neutra,servico_publico,0,Vocês avisam por e-mail quando o processo andar? ou por SMS?
+neutra-42,neutra,servico_publico,1,Vocês avisam por e-mail quando o processo andar? se andar?
+neutra-43,neutra,delivery,0,Meu pedido já saiu do restaurante? ou ainda estão preparando?
+neutra-43,neutra,delivery,1,Meu pedido já saiu do restaurante? ou ainda estão plantando o tomate?
+neutra-44,neutra,delivery,0,Quanto tempo falta para o entregador chegar? ele já está perto?
+neutra-44,neutra,delivery,1,Quanto tempo falta para o entregador chegar? ele vem a pé de outro estado?
+neutra-45,neutra,delivery,0,o pedido vem com talher? ou preciso pedir à parte?
+neutra-45,neutra,delivery,1,o pedido vem com talher? ou janto com a mão de novo?
+neutra-46,neutra,delivery,0,dá pra acompanhar o entregador pelo mapa? ou só pelo status?
+neutra-46,neutra,delivery,1,dá pra acompanhar o entregador pelo mapa? ou ele tá fazendo city tour?
+neutra-47,neutra,delivery,0,Vc pode confirmar se o pedido saiu sem glúten? ou foi com pão comum?
+neutra-47,neutra,delivery,1,Vc pode confirmar se o pedido saiu sem glúten? ou veio com glúten extra de brinde?
+neutra-48,neutra,delivery,0,qual o horário de entrega no domingo? até meia-noite?
+neutra-48,neutra,delivery,1,qual o horário de entrega no domingo? segunda?
+neutra-49,neutra,delivery,0,O motoboy pode deixar com o porteiro? ou precisa ser comigo?
+neutra-49,neutra,delivery,1,O motoboy pode deixar com o porteiro? ou vai jogar pela janela de novo?
+neutra-50,neutra,delivery,0,o reembolso do item que faltou cai no cartão? ou no app? 🙏
+neutra-50,neutra,delivery,1,o reembolso do item que faltou cai no cartão? algum dia? 🙏

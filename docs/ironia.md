@@ -86,7 +86,7 @@ Os três treinos usam a mesma divisão, conferida pela impressão de `metricas_i
 
 O teste interno não decide nada, já que o BERTimbau marca 0,99 nele. Quem decide é uma **régua de domínio independente**, escrita por quem não viu as predições, congelada com `impressao_dos_textos` antes da primeira avaliação e marcada `independente=True` no laudo. A régua tem **200 a 400 itens em pares mínimos** e quatro estratos: elogio sincero, elogio irônico, reclamação literal (que separa ironia de sentimento negativo) e ironia sem marcador. Inclui ainda testes de invariância no estilo do CheckList ([Ribeiro et al. 2020](https://arxiv.org/abs/2005.04118)): o mesmo texto com e sem ponto final, em caixa alta ou baixa e com um emoji neutro tem de receber a mesma predição. A métrica principal é a **acurácia por par**, em que o modelo acerta os dois membros. O acaso aqui é 25%, e um modelo de estilo não consegue acertar os dois lados de um par com o mesmo registro. O tamanho sai de uma conta binomial própria: com acurácia em torno de 0,8, n=100 dá IC de ±7,8 pontos, n=200 dá ±5,5 e n=400 dá ±3,9. A régua atual tem 20 itens e IC de −0,28 a +0,17, larga demais para decidir qualquer coisa. Pares mínimos com troca de rótulo derrubam modelos em até 25% em relação ao teste original ([Gardner et al. 2020](https://arxiv.org/abs/2004.02709)), e é essa queda que o Fraus precisa conseguir medir.
 
-Três baselines entram como modelos extras em `preditos_por_modelo`, no espírito do baseline "só a hipótese", que acerta ~67% no SNLI ([Gururangan et al. 2018](https://arxiv.org/abs/1803.02324)). O primeiro é **só estilo**: regressão logística sobre ~15 features sem léxico (comprimento, proporção de maiúsculas, ponto final, `!?…`, dígitos e R$, URL, @, hashtag, emoji, alongamento, "kkk"). O segundo é **só fonte**. O terceiro é **TF-IDF + LR**, que mostra a parte lexical do registro. Se o baseline de estilo também chega perto de 0,99 no teste interno, o teste mede procedência. O modelo só conta como detector de ironia se vencer o baseline de estilo **na régua**, com diferença demonstrada. `fraus/comparacao_modelos.py` já tem `mcnemar_exato`, `bootstrap_da_diferenca` (2.000 reamostras, F1-macro), `avaliar_conjunto` e `montar_laudo`, que já distinguem procedência igual de independente. Faltam quatro peças: IC de um único modelo, **bootstrap por par** (reamostrar pares, e não itens, para preservar a dependência dentro do par), acurácia por par e **ECE** com diagrama de confiabilidade ([Guo et al. 2017](https://arxiv.org/abs/1706.04599)). O ECE importa porque o Laya sai superconfiante e a temperatura dele é ajustada numa fatia do próprio corpus viciado. Para o McNemar, o que conta são os pares discordantes: com ~20 discordantes, só uma divisão de 15:5 ou mais dá p<0,05. Como guarda de regressão, entra a medição que já existe em `docs/treinamento.md`: P(irônico) médio por estrela da B2W. Se a diferença entre resenhas positivas e negativas continuar grande, o atalho continua lá.
+Três baselines entram como modelos extras em `preditos_por_modelo`, no espírito do baseline "só a hipótese", que acerta ~67% no SNLI ([Gururangan et al. 2018](https://arxiv.org/abs/1803.02324)). O primeiro é **só estilo**: regressão logística sobre ~15 features sem léxico (comprimento, proporção de maiúsculas, ponto final, `!?…`, dígitos e R$, URL, @, hashtag, emoji, alongamento, "kkk"). O segundo é **só fonte**. O terceiro é **TF-IDF + LR**, que mostra a parte lexical do registro. Se o baseline de estilo também chega perto de 0,99 no teste interno, o teste mede procedência. O modelo só conta como detector de ironia se vencer o baseline de estilo **na régua**, com diferença demonstrada. `fraus/comparacao_modelos.py` já tem `mcnemar_exato`, `bootstrap_da_diferenca` (2.000 reamostras, F1-macro), `avaliar_conjunto` e `montar_laudo`, que já distinguem procedência igual de independente. As quatro peças que faltavam já existem no mesmo módulo: IC de um único modelo, **bootstrap por par** (reamostrar pares, e não itens, para preservar a dependência dentro do par), acurácia por par e **ECE** com diagrama de confiabilidade ([Guo et al. 2017](https://arxiv.org/abs/1706.04599)). O ECE importa porque o Laya sai superconfiante e a temperatura dele é ajustada numa fatia do próprio corpus viciado. Para o McNemar, o que conta são os pares discordantes: com ~20 discordantes, só uma divisão de 15:5 ou mais dá p<0,05. Como guarda de regressão, entra a medição que já existe em `docs/treinamento.md`: P(irônico) médio por estrela da B2W. Se a diferença entre resenhas positivas e negativas continuar grande, o atalho continua lá.
 
 ## O ganho esperado é de poucos pontos, e vem do dado
 
@@ -95,6 +95,41 @@ Contra o multitarefa de 02/10, o Laya só-ironia vai melhorar muito no teste int
 Contra o BERTimbau, com tarefa e dado iguais, a literatura não dá motivo para esperar diferença grande. Em PT-BR, o BERTimbau vence o mBERT por margens de 2 a 4 pontos, por exemplo 89,2 contra 86,8 de F1 no ASSIN2 RTE ([neuralmind-ai](https://github.com/neuralmind-ai/portuguese-bert)). O mmBERT-base supera o XLM-R base no XTREME (72,8 contra 70,4), mas português é só ~2,4% da mistura de pré-treino, e o artigo não traz nenhum benchmark de classificação em português ([Marone et al. 2025](https://arxiv.org/html/2509.06888)). Há um precedente em que o mmBERT-base venceu o BERTimbau em NER clínico em português, com micro-F1 de 0,76, num preprint ainda sem revisão ([arXiv 2603.26510](https://arxiv.org/abs/2603.26510)). Não existe resultado de mmBERT, XLM-R ou Laya no IDPT, nem de afinação do Laya em ironia em qualquer língua. Na CPU, o Laya é mais lento: 459 ms contra 273 ms por mensagem na ironia, com ressalva, porque o Laya rodou em ONNX FP32 e o BERTimbau em PyTorch (nota interna de 02/10, `docs/notas/2026-10-02-treino-laya.md`). A velocidade do ModernBERT só aparece em GPU e em sequências longas.
 
 A única vantagem estrutural do Laya para ironia é o vocabulário multilíngue, que permite misturar o MultiPICo das outras oito línguas. A literatura, porém, é desfavorável à transferência de ironia entre línguas: o viés de tópico dos corpora atrapalha ([Ortega-Bueno et al. 2023](https://boa.unimib.it/handle/10281/451401)), e detectores de sarcasmo não generalizam entre datasets ([Jang & Frassinelli 2024](https://aclanthology.org/2024.naacl-long.238)). O ganho que de fato muda o produto aparece na régua de domínio, quando se troca o corpus. Um modelo treinado no IDPT deve ficar perto do acaso por par, como o 0,52 oficial nos tweets. Um modelo treinado com negativos coloquiais e pares mínimos tem espaço para ganhar dezenas de pontos ali, na escala das quedas de 25 a 30 pontos que a literatura de contrast sets e filtragem adversarial atribui ao viés. Essa magnitude é inferência por analogia e não foi medida em português. A régua de 300 pares existe justamente para medi-la.
+
+## Régua de pares mínimos
+
+Estado: **rascunho pronto, anotação em andamento.** Spec em
+`docs/superpowers/specs/2026-10-08-regua-pares-ironia-design.md` (interno).
+
+- 150 pares (elogio, reclamação, neutra), registro equilibrado conferido por
+  `conferir_registro_equilibrado` e, par a par, mesma vírgula e mesmo número
+  de "?" nos dois lados. O baseline só de estilo acerta 0,18 dos pares fora
+  da amostra no rascunho, abaixo do acaso (0,25). O rascunho é autoral; o
+  rótulo que vale é o da anotação às cegas.
+- A anotação é numa página privada do claude.ai que mostra só o texto, uma
+  frase por vez, sem par, estrato nem rótulo. Cada anotador vê e grava só as
+  próprias respostas e precisa de acesso de Contributor; o dono lê todas.
+- **Critério de promoção de qualquer cabeça de ironia:** vencer o baseline só
+  de estilo (`fraus/baseline_estilo.py`) em acurácia por par na régua, com IC
+  95% da diferença excluindo zero. O teste interno do IDPT não entra. No
+  laudo isso é o campo `candidato_vence_por_par` (limite inferior do IC da
+  diferença acima de zero). `por_par_demonstrada` só diz que o IC exclui zero
+  e também acende quando o candidato é significativamente pior; para promover,
+  vale `candidato_vence_por_par`.
+- Depois da anotação: exportar as respostas (a coleção `anotadores` lista quem
+  anotou; as respostas de cada um ficam em
+  `data/users/<id>/anotacoes/respostas`), juntar tudo numa lista JSON e rodar
+  `uv run python scripts/consolidar_regua_ironia.py respostas.json`. Menos de
+  100 pares confirmados para o script com erro dizendo quantos faltam.
+- Cada registro de `respostas.json` é o próprio documento gravado pela página,
+  sem envelope `{id, data}`:
+  `{"anotador": "...", "frase_id": "...", "resposta": "ironico|nao_ironico|contexto", "instante": "2026-10-08T12:00:00Z"}`.
+  A leitura do banco vem em páginas, então confira que todas foram juntadas
+  antes de consolidar; o script usa a última resposta de cada anotador por frase.
+- A página embaralha a ordem por anotador (semente derivada do id) e nunca põe
+  os dois lados de um par em sequência. A régua congelada guarda duas
+  impressões no meta: uma dos textos e outra de `par_id|rótulo|texto`, de modo
+  que trocar um rótulo ou mover um par também falha alto na carga.
 
 ## Conclusão
 
