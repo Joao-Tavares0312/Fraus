@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 
 from fraus import acesso, credencial, token_acesso
 from fraus.api.contexto import Contexto
+from fraus.api.rotas.anotacao import CAMINHOS_FIXOS as CAMINHOS_FIXOS_DA_ANOTACAO
 from fraus.api.rotas.webhook import PREFIXO_WEBHOOK
 from fraus.db import Banco
 
@@ -55,6 +56,33 @@ ISENTAS = (
     "/auth/registrar",
     "/auth/entrar",
 )
+
+
+def rota_publica_de_anotacao(metodo: str, caminho: str) -> bool:
+    """O link do anotador: `GET /anotacao/<token>` e `POST /anotacao/<token>/respostas`.
+
+    Isenta pelo FORMATO EXATO, no molde do convite, e nunca por prefixo:
+    `/anotacao/respostas` (exportar) e `/anotacao/anotadores` (criar) tem o
+    mesmo formato de um token e sao so de dev. Uma isencao por prefixo
+    entregaria as respostas de todos os anotadores a qualquer anonimo.
+    `caminho` ja chega sem barra final.
+    """
+    partes = caminho.split("/")
+    if len(partes) < 3 or partes[0] != "" or partes[1] != "anotacao":
+        return False
+    # Link de grupo: so `POST /anotacao/grupos/<token>/entrar`. Criar e
+    # revogar grupo (`/anotacao/grupos`, `/anotacao/grupos/<id>/revogar`) sao
+    # de dev e caem no `return False` abaixo -- "grupos" e caminho fixo.
+    if partes[2] == "grupos" and len(partes) == 5:
+        return metodo == "POST" and partes[3] != "" and partes[4] == "entrar"
+    token = partes[2]
+    if not token or token in CAMINHOS_FIXOS_DA_ANOTACAO:
+        return False
+    if metodo == "GET":
+        return len(partes) == 3
+    if metodo == "POST":
+        return len(partes) == 4 and partes[3] == "respostas"
+    return False
 
 
 def chave_bearer(authorization: str | None) -> str | None:
@@ -231,6 +259,12 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
     """
     if caminho.startswith("/operacao/acesso") or (caminho == "/operacao/equipes" and metodo != "GET"):
         return True
+    # Criar link de anotador e exportar as respostas da regua: dev. As rotas
+    # publicas do anotador saem do middleware antes deste teste.
+    if caminho in ("/anotacao/anotadores", "/anotacao/respostas", "/anotacao/grupos") or caminho.startswith(
+        ("/anotacao/anotadores/", "/anotacao/grupos/")
+    ):
+        return True
     if caminho.startswith("/integracoes") or caminho == "/modelo" or caminho.startswith("/modelo/"):
         return True
     if caminho in ("/conversas/importar", "/conversas/importar/previa", "/conversas/repontuar"):
@@ -298,6 +332,7 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
             return await call_next(request)
         if (
             caminho in ISENTAS
+            or rota_publica_de_anotacao(request.method, caminho)
             or caminho.startswith(f"{PREFIXO_WEBHOOK}/")
             or request.method == "OPTIONS"
         ):

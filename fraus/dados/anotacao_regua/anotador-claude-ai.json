@@ -1,0 +1,1802 @@
+[
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "fe9df34f9be3",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:48.300Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "fd7db4fffc1a",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:11:02.815Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "fce36c53dba9",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:53:57.460Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "fa1e817ee6b4",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:59:54.327Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f880ff71713b",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:01:13.746Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f83b272253e0",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:14:30.607Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f7ca0eb81ecd",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:02:55.741Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f757433ccd32",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:06:05.281Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f70254590b67",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:06:46.042Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f6f238143e4b",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:53:00.109Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f59f0e640cb1",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:51:53.976Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f57c3b0f2e2a",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:56:44.413Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f54c104d6a02",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:04:31.288Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f4b168475d15",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:36.727Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f3158240955b",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:46.997Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "f134c07039f1",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:01:35.983Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "efecc29563e4",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:12:26.861Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ef1ff872fc50",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:55:00.116Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "eecbfa6c97b6",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:06:09.122Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ece398b03529",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:11:43.830Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "eaf41b237c4f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:12:34.669Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "eaadeeb2ec55",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:10:28.351Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e9e6884c3d64",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:01:18.030Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e97eee6489b7",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:52:40.118Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e67d869cda3f",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:11:10.646Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e5c9a813f8b5",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:16.873Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e571ac64ba12",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:04:00.109Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e2a7ae0311c5",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:56:07.686Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e269379fabee",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:49.857Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e25474e2e66f",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:33.377Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e1ec29f75139",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:17.163Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e1a90a440c10",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:54.957Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e0ccfeea7b65",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:06:35.833Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "e0a28271c7e7",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:04:28.509Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "dfac69fe6b93",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:35.898Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "df79e3dd1de8",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:53:38.500Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "dec254ecfb50",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:13:45.397Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "de3c4bb7dd1f",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:58.367Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "de2ecf58e167",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:38.939Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "dd681b884c12",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:51:58.960Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "dd38d25b9aca",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:09:42.050Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "dced38136b18",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:07:23.754Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "daf153c0156a",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:23.153Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "da71a8f50836",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:32.859Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d9abddf4668a",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:10:40.181Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d97e2617f6fd",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:09:13.137Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d9597dd2f67f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:26.362Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d7b0066c298a",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:49.752Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d7519dc276a6",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:52:06.719Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d71a0f0a52c7",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:01:53.125Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d6836a4417a0",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:41.340Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d5f31f5a049b",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:42.763Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d50c8c1d955b",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:09:08.658Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d2ba76976f40",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:59:25.152Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d21ceee98e35",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:59:14.369Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "d1eb6b1f08e3",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:54:56.876Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "cec8f7c4ada1",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:11:23.264Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ce70ce7e3d5f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:18.411Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ccb6ea9a226f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:53:53.755Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ccafbed87d77",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:56:17.222Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "cb6050c6984e",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:02:51.403Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "caff45cdedfc",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:13:59.772Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ca97cd835d21",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:55:09.050Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ca05b0959e38",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:05:00.247Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c99f905655ef",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:16.075Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c82017c130dd",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:53.038Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c5c9b8a49642",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:25.684Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c57f6eef9155",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:47.721Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c47d786e8756",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:03:12.906Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c41723342f21",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:51:37.533Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c3b7a1111401",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:17.707Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c2ba2c5bbee5",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:51:05.372Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c278a40ecaa0",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:09:03.877Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c12eb3741654",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:54:46.206Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c0ce171f7305",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:53:03.754Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "c0981a453b40",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:09:36.826Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "bed4c47e9938",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:01:22.897Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "bec47820da6a",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:56:53.652Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "bddd2c2e7ef4",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:12:00.807Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "bacd18ebb3cd",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:35.299Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b8b366afd929",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:08:45.243Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b831a3332005",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:11:06.910Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b7b9873303b4",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:40.139Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b6ee0b15302f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:17.669Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b63f10c503dc",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:56:27.494Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b5f49cda93ba",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:01:28.482Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b45d6be45e77",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:51.195Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b2d27ecbf93a",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:43.030Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b1e30595fbe1",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:01:48.548Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b1d3eec44b9f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:06:41.593Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b163760628f2",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:20.177Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "b1095bcb63fb",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:02.604Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "af70fab24570",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:23.731Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ad921498530e",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:51:49.081Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "ad06bd836251",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:59:28.555Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "acff669f61ea",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:28.606Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "abaddb3d36bc",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:01:41.299Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "aa3067276e38",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:57:21.290Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "a7cb796f4e9e",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:54:08.610Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "a6dedf59f677",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:11:17.015Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "a5b2f25bc37b",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:53.162Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "a3dcb5fc78f5",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:35.994Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "a27f0aa53c63",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:06.158Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "a2320ef2f128",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:42.627Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "a122db38abf6",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:50:51.966Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9cf4e963e75b",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:56:57.388Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9af5e1a7f543",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:36.060Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9a9be93d5e71",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:55:04.003Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9a70f2554fb4",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:50.270Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9704f206cf07",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:05:21.198Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "965004008e40",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:12:45.941Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "95df31870b14",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:19.077Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "95a49f64da65",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:53:25.016Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9551d1af01c1",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:03.904Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9519068c3f3f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:03:38.939Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "941a1cfb1d67",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:05:28.399Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9418b2d19680",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:55:45.608Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "93d967afd830",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:02:13.754Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "9283676919af",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:02:34.042Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "90d52da3332f",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:35.564Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8f9c29d734ed",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:53:34.069Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8f869a8c8dc1",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:35.125Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8f37bd429772",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:05:58.232Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8f228f877de9",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:00.321Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8f159793cc15",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:14:18.908Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8e1171402a48",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:50.574Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8ce714f94038",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:47.006Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8c5e9a848910",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:54:17.328Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8c1496f44fef",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:53:19.449Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8be0a4a218fe",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:59:10.528Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8b98613277fb",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:13.348Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8aa0ef0a5ff4",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:13:00.142Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "8a52697c19a1",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:14:10.773Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "874cfddbf9b0",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:58:01.338Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "86e03aed51c9",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:02:38.981Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "869738f54ea5",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:59:01.361Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "84229e9207f7",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:46.889Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "82b888b6200c",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:05:17.741Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "824de3f56c12",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:51:00.772Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "81fd5a224416",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:12:16.973Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "819341380051",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:53:30.943Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "818cd93a7f58",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:09:45.809Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "813d2c9c8117",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:40.713Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "805b48ccfe52",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:59:38.257Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7fb58a3a46bf",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:53:47.861Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7f352bd4fdc1",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:55:56.353Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7ec9bb4e8b98",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:31.672Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7ead261b783c",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:08:06.404Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7e3d05c9e1bd",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:57:14.410Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7d2b8cf4c4de",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:51:27.039Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7b148a744847",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:25.286Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "785c5dc389e8",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:09:23.201Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7778f0db68d5",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:25.040Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "771c1f93ddc7",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:59:16.768Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7657101b7437",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:05:40.398Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "75a509c5b568",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:12:50.957Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "7598e7a47615",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:05:04.605Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "71ebca0d8801",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:54.868Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "71970b13a046",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:16.996Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "702aedb4f4ff",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:04:22.540Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6fc5c471a190",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:08:13.541Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6f0b1d0d0bc0",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:53:08.098Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6ee2d3b9ee95",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:10.361Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6d9bb45e2ec3",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:13:42.253Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6d4de05b85f0",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:01:04.154Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6b1a2f80e2a2",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:08:20.947Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6ae68e5deacf",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:09:32.002Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "699fcefee8b6",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:53:42.774Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "68ef2de59db3",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:00:02.986Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "6871497bdc12",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:02:02.433Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "67b8805bffa9",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:09.147Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "672fe19700ea",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:07:29.091Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "63f5c1bc8997",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:59.547Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "639de9529a16",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:11:49.008Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "63370e2067f1",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:43.399Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "62f8f2be966e",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:56:04.300Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "62735a746e34",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:03.917Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "60dc1e8b9bce",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:58:57.626Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5f778d9cc6d1",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:05:12.221Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5f11b7236b9f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:51:20.017Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5ee724653c59",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:06:48.802Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5d8a543f75b4",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:09:26.890Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5ce3c9f4a89a",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:11:34.590Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5a84f0835ed9",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:56:47.988Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5a664e818891",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:02:21.121Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "593193192cf7",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:59:59.435Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5837ad58a59d",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:02:26.482Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "57bc23b5e58f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:01:07.202Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5796a2d55dfe",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:02:31.073Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "56f30a6c3ce8",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:52:35.927Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "565c6b3537ed",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:02:47.963Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "554bec76488a",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:50:57.131Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5396d45d3f83",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:14:15.110Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "53842dc0241e",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:02:42.637Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "52a2bf13988c",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:08:55.538Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "52832c23731d",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:54:31.654Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "5142794e854e",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:13:22.599Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "4fffd95008d6",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:10.180Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "4fbe4eba893f",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:54:12.458Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "4eb8d392e8e0",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:57.748Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "4d50b9d15a3e",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:12:07.805Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "4c5539e0220e",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:58:20.914Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "498dafbf0787",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:06:52.866Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "48124cec1e2c",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:59:44.481Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "47fa76d5ad36",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:09:20.561Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "47025b054267",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:24.769Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "467f0da45aae",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:06:57.409Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "467a1741eb31",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:08.413Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "4648a8ce73da",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:28.299Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "462ab8acfb88",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:05:33.214Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "4578cdf2c076",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:48.514Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "430d090b415d",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:19.828Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "42e90e8f18ca",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:03.537Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "429148d0eb2d",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:55.439Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "41d621b9be0a",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:07:06.641Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "419240545268",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:09:51.384Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "417312e72819",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:14:36.932Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "40604097e2a3",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:07.976Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "3fd9c6cfc0b9",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:10:35.207Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "3f70ea161aa4",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:12:11.311Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "3e45898f498f",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:10:13.416Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "3daea6d74ef0",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:01:58.705Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "3d8850d36016",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:56:10.799Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "39da608e97e2",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:57:01.011Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "396c1d7d142e",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:58:13.227Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "392266b200f1",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:59:07.928Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "382de0ac5860",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:58.536Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "37eba3fec9a2",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:56:33.879Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "37c8ba1b67d9",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:09:55.545Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "37911a25d7b6",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:47.363Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "351ca3155edf",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:53.972Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "342451d7a65d",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:15.433Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "3421a74fd3fa",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:12:54.966Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "3398f7d8b255",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:57:10.316Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "32ce089d67c8",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:54:21.047Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "31c449aa032f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:28.480Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "30a1a5795a79",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:11:20.640Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "305638c98b32",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:54:01.754Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2f74d22af8bb",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:02:10.314Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2f6e06fe8143",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:20.081Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2dccb7be7ca9",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:58:04.425Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2d96627f4a63",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:30.577Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2bfbeacd7276",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:14:07.569Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2bda91e654db",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:01.852Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2b0af5da060b",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:02:07.109Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2a98a408ad61",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:46.663Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2a52929fe621",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:56:21.117Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "29b08051920f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:00:19.146Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "29a0b9529c13",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:51:16.123Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "29799732d37c",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:59:04.129Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2935cdcac979",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:11:54.296Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "287ce221d4ed",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:51.896Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "281ef6048a92",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:54:41.342Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2680fa2b2be1",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:51.916Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "257e66ff0ac8",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:58:44.242Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "24ff6732aad7",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:14:23.885Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "222cd14e9995",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:03.863Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "2212cf6deff4",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:52:44.245Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "217f22ef9c4f",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:54:04.681Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "20fe893dfe29",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:12.993Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "20398c9db010",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:59.543Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1e296388050a",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:01:10.257Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1d6cbf0abb69",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:00:28.448Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1d6186873c43",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:01:45.242Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1ca1fbf45951",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:43.027Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1bea260a20bc",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:08:09.403Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1b136aabb892",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:00:35.491Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "19b5c0323b05",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:54:25.966Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1966273cd219",
+  "resposta": "contexto",
+  "instante": "2026-10-08T14:54:36.886Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1962f5d7befb",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:09:17.118Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "18aa41e6cf7f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:05:45.334Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "185e980cac3f",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:08:48.082Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "179b961faa17",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:10:00.392Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "177f911c99fb",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:51:43.643Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1685f5d7eda9",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:28.572Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "15b5aed2b16d",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:13.097Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "15626e6e4c8f",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:12:22.806Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "146feb3b9e4b",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:54.338Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "13bc1083c57c",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:11:29.808Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "135aa6b628a8",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:11:38.791Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "13574f12c4e9",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:04:09.255Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "12ca4a84f08d",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:11:58.357Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "12806649ac4f",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:03:32.044Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "11d0eccbc540",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:06:13.122Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "11b2e4373ab3",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:54:53.212Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "106bceb98ab0",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:04:57.615Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "1032dc8a765e",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:52:32.225Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "0dc7b0f41a73",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:43.995Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "0d20bccdf314",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:07:57.267Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "0bfc6c07a09a",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:13:25.677Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "0b293526b667",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T14:55:27.146Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "0a59ad6f6f69",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:03:08.274Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "0a57822dc17b",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:12:04.045Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "08de4bc27a80",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:57:46.220Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "041d2d49afee",
+  "resposta": "ironico",
+  "instante": "2026-10-08T14:51:09.333Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "0405739647e0",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:14:03.957Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "031001bbeabf",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:05:07.857Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "02fe161e3770",
+  "resposta": "contexto",
+  "instante": "2026-10-08T15:00:41.753Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "019f98e7f6fa",
+  "resposta": "nao_ironico",
+  "instante": "2026-10-08T15:03:05.683Z"
+ },
+ {
+  "anotador": "claude-ai-1",
+  "frase_id": "019594b71ef9",
+  "resposta": "ironico",
+  "instante": "2026-10-08T15:04:51.389Z"
+ }
+]
