@@ -108,12 +108,16 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
   rótulo que vale é o da anotação às cegas.
 - A anotação mora no Fraus, por link e sem conta: `scripts/criar_link_anotacao.py
   --quantos N` chama `POST /anotacao/anotadores` (só dev) e imprime
-  `<id>  https://fraus.vercel.app/anotar/<token>`. O banco guarda só o hash do
+  `<id>  https://fraus-one.vercel.app/anotar/<token>`. O banco guarda só o hash do
   token e um id opaco (`a_` + 8 hex), nunca nome. A página recebe de
   `GET /anotacao/<token>` só `id` e `texto`, na ordem daquele anotador, e grava
   por `POST /anotacao/<token>/respostas`; o instante é do servidor. A primeira
   rodada (João, na página antiga do claude.ai) está versionada em
   `fraus/dados/anotacao_regua/anotador-claude-ai.json`, anotador `claude-ai-1`.
+- O token viaja na URL e fica nos logs de requisição da Vercel e no histórico
+  do navegador, como o link de convite. Link vazado se revoga com
+  `scripts/criar_link_anotacao.py --revogar <id>`; as respostas desse anotador
+  saem do export.
 - **Critério de promoção de qualquer cabeça de ironia:** vencer o baseline só
   de estilo (`fraus/baseline_estilo.py`) em acurácia por par na régua, com IC
   95% da diferença excluindo zero. O teste interno do IDPT não entra. No

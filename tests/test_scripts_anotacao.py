@@ -47,7 +47,7 @@ def test_criar_link_nao_imprime_a_chave(monkeypatch, capsys):
     monkeypatch.setattr(criar_link_anotacao, "abrir_url", abrir)
     criar_link_anotacao.main(["--quantos", "1"])
     saida = capsys.readouterr()
-    assert "https://fraus.vercel.app/anotar/tok-123" in saida.out
+    assert "https://fraus-one.vercel.app/anotar/tok-123" in saida.out
     assert CHAVE not in saida.out + saida.err
 
 
@@ -61,3 +61,13 @@ def test_exportar_grava_a_lista_de_registros(tmp_path, monkeypatch):
     assert json.loads(destino.read_text(encoding="utf-8")) == registros
     assert pedidos[0].full_url == "https://fraus-api.vercel.app/anotacao/respostas"
     assert pedidos[0].get_method() == "GET"
+
+
+def test_revogar_chama_a_rota_de_dev_e_nao_cria_link(monkeypatch, capsys):
+    pedidos, abrir = gravador({"anotador": "a_0000beef", "revogado": True})
+    monkeypatch.setenv("FRAUS_CHAVE_ACESSO", CHAVE)
+    monkeypatch.setattr(criar_link_anotacao, "abrir_url", abrir)
+    criar_link_anotacao.main(["--revogar", "a_0000beef"])
+    assert [(p.get_method(), p.full_url) for p in pedidos] == [
+        ("POST", "https://fraus-api.vercel.app/anotacao/anotadores/a_0000beef/revogar")]
+    assert "a_0000beef revogado" in capsys.readouterr().out

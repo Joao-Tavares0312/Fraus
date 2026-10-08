@@ -2,11 +2,17 @@
 
 Uso:
     FRAUS_CHAVE_ACESSO=... uv run python scripts/criar_link_anotacao.py [--quantos N]
+    FRAUS_CHAVE_ACESSO=... uv run python scripts/criar_link_anotacao.py --revogar a_xxxxxxxx
 
 Imprime uma linha por anotador: `<id do anotador>  <link>`. O link e
-`{FRAUS_DASHBOARD_URL}/anotar/<token>` (padrao https://fraus.vercel.app) e o
-token so existe nesta saida -- o banco guarda o hash. Quem perder o link
-recebe um novo; o antigo pode ser revogado no banco.
+`{FRAUS_DASHBOARD_URL}/anotar/<token>` (padrao https://fraus-one.vercel.app)
+e o token so existe nesta saida -- o banco guarda o hash. Quem perder o link
+recebe um novo; o antigo e revogado com `--revogar <id>`, que chama
+`POST /anotacao/anotadores/<id>/revogar` (so dev). Respostas de anotador
+revogado deixam de sair no export.
+
+O token viaja na URL: fica no historico do navegador e nos logs de requisicao
+da Vercel, como o link de convite. Mande cada link so para a pessoa dele.
 
 A API e `FRAUS_API_URL` (padrao https://fraus-api.vercel.app). A credencial
 vem de `FRAUS_CHAVE_ACESSO` e nunca e impressa. Nenhum nome de pessoa vai
@@ -18,10 +24,10 @@ import json
 import os
 import sys
 import urllib.request
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 API_PADRAO = "https://fraus-api.vercel.app"
-DASHBOARD_PADRAO = "https://fraus.vercel.app"
+DASHBOARD_PADRAO = "https://fraus-one.vercel.app"
 
 abrir_url = urllib.request.urlopen
 
@@ -45,6 +51,11 @@ def criar_links(api: str, chave: str, dashboard: str, quantos: int, *, abrir=Non
     return links
 
 
+def revogar(api: str, chave: str, anotador: str, *, abrir=None) -> dict:
+    return chamar("POST", urljoin(base(api), f"anotacao/anotadores/{quote(anotador, safe='')}/revogar"),
+                  chave, abrir=abrir)
+
+
 def chave_do_ambiente() -> str:
     chave = os.environ.get("FRAUS_CHAVE_ACESSO")
     if not chave:
@@ -55,7 +66,13 @@ def chave_do_ambiente() -> str:
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--quantos", type=int, default=1)
+    parser.add_argument("--revogar", metavar="ANOTADOR", help="revoga o link deste id (a_xxxxxxxx)")
     args = parser.parse_args(argv)
+    if args.revogar:
+        revogado = revogar(os.environ.get("FRAUS_API_URL", API_PADRAO), chave_do_ambiente(),
+                           args.revogar, abrir=abrir_url)
+        print(f"{revogado['anotador']} revogado")
+        return
     if args.quantos < 1:
         parser.error("--quantos precisa ser pelo menos 1")
     links = criar_links(
