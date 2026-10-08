@@ -53,7 +53,9 @@ Regra da divisão e o antes/depois: `docs/treinamento.md`, notebook 04.
 
 Quem roda o Colab é o João, na conta institucional dele (a da Unis).
 O `colab-mcp` se liga à aba que estiver aberta e não escolhe conta: em
-02/10/2026 ele rodou célula na conta errada. Não use o MCP para isso.
+02/10/2026 ele rodou célula na conta errada. Por isso a célula 1 dos
+notebooks 04 e 07 confere a conta do Drive montado (`CONTA_DRIVE`) e para com
+erro se não for a da Unis: o runtime pode ser de outra conta, o Drive não.
 
 1. **Notebook 04** — cabeça de ironia do BERTimbau, 3 épocas, GPU obrigatória:
    <https://colab.research.google.com/github/Joao-Tavares0312/Fraus/blob/main/notebooks/04_treino_ironia.ipynb>
