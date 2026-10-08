@@ -28,6 +28,7 @@
   --erro: #ff9a8f; --erro-bg: #3a1d1a; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--fg); font-family: var(--sans);
   font-size: 16px; line-height: 1.5;
@@ -77,13 +78,13 @@ button.voltar { min-height: 40px; width: fit-content; background: transparent; c
   <p id="erro" class="erro" role="alert" hidden></p>
   <p id="carregando" class="regra">Carregando as frases…</p>
 
-  <section id="tela" hidden aria-live="polite">
+  <section id="tela" hidden>
     <div class="topo">
-      <span class="faltam" id="faltam"></span>
+      <span class="faltam" id="faltam" aria-live="polite"></span>
       <button type="button" class="voltar" id="voltar">← Voltar</button>
     </div>
     <div class="barra" aria-hidden="true"><i id="progresso"></i></div>
-    <div class="frase"><p id="texto"></p></div>
+    <div class="frase"><p id="texto" aria-live="polite"></p></div>
     <div class="opcoes" id="opcoes">
       <button type="button" data-r="ironico"><kbd>1</kbd> Irônico</button>
       <button type="button" data-r="nao_ironico"><kbd>2</kbd> Não irônico</button>
@@ -169,6 +170,7 @@ button.voltar { min-height: 40px; width: fit-content; background: transparent; c
     ordem = frases.slice(deslocamento).concat(frases.slice(0, deslocamento));
     try {
       var snap = await colecao().limit(1000).get(), ultimo = {};
+      if (snap.docs.length >= 1000) return fatal("Há respostas demais para ler de uma vez e algumas poderiam ficar de fora. Avise quem organiza a anotação antes de continuar.");
       snap.docs.forEach(function (d) {
         var v = d.data();
         if (v && v.anotador === uid && (!ultimo[v.frase_id] || v.instante > ultimo[v.frase_id].instante)) ultimo[v.frase_id] = v;
@@ -182,6 +184,7 @@ button.voltar { min-height: 40px; width: fit-content; background: transparent; c
     el("voltar").addEventListener("click", voltar);
     el("fim-voltar").addEventListener("click", function () { pos = ordem.length - 1; desenhar(); });
     document.addEventListener("keydown", function (ev) {
+      if (ev.repeat) return;
       if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
       var r = { "1": "ironico", "2": "nao_ironico", "3": "contexto" }[ev.key];
       if (r) { ev.preventDefault(); responder(r); }
