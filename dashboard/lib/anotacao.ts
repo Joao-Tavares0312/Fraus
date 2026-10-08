@@ -139,3 +139,88 @@ export async function carregarFila(token: string, buscar: Buscar = (u, i) => fet
     return { tipo: "erro" };
   }
 }
+
+// ---- link de grupo ----------------------------------------------------------
+//
+// Um link so, postado num grupo: cada pessoa que o abre ganha o proprio
+// anotador. O link pessoal fica guardado NESTE navegador, para recarregar a
+// pagina do grupo nao gastar outra vaga. Outro aparelho nao sabe dele.
+
+export type Armazenamento = { ler(chave: string): string | null; gravar(chave: string, valor: string): void };
+
+export type ResultadoDoGrupo =
+  | { tipo: "pessoal"; token: string }
+  | { tipo: "cheio" }
+  | { tipo: "invalido" }
+  | { tipo: "limite"; segundos: number | null }
+  | { tipo: "rede" }
+  | { tipo: "erro" };
+
+/** So o comeco do token: o suficiente para separar grupos, sem guardar a credencial inteira de novo. */
+export function chaveDoGrupo(tokenDoGrupo: string): string {
+  return `fraus-anotacao-grupo:${tokenDoGrupo.slice(0, 16)}`;
+}
+
+/** localStorage com toda leitura e escrita protegida: janela privada, site bloqueado e preview lancam. */
+export const armazenamentoDoNavegador: Armazenamento = {
+  ler(chave) {
+    try { return window.localStorage.getItem(chave); } catch { return null; }
+  },
+  gravar(chave, valor) {
+    try { window.localStorage.setItem(chave, valor); } catch { /* sem onde guardar: o endereco pessoal ainda vale */ }
+  },
+};
+
+function lerSeguro(a: Armazenamento, chave: string): string | null {
+  try { return a.ler(chave); } catch { return null; }
+}
+
+function gravarSeguro(a: Armazenamento, chave: string, valor: string): void {
+  try { a.gravar(chave, valor); } catch { /* idem */ }
+}
+
+// Um pedido por grupo por vez: o efeito do React pode rodar duas vezes, e
+// cada pedido a mais e uma vaga gasta.
+const entradasEmCurso = new Map<string, Promise<ResultadoDoGrupo>>();
+
+async function pedirEntrada(tokenDoGrupo: string, armazenamento: Armazenamento, buscar: Buscar): Promise<ResultadoDoGrupo> {
+  try {
+    const r = await buscar(`${BASE}/grupos/${tokenDoGrupo}/entrar`, { method: "POST", cache: "no-store" });
+    if (r.status === 409) return { tipo: "cheio" };
+    if (r.status === 404) return { tipo: "invalido" };
+    if (r.status === 429) {
+      const s = Number(r.headers.get("Retry-After"));
+      return { tipo: "limite", segundos: Number.isFinite(s) && s > 0 ? s : null };
+    }
+    if (r.status !== 201) return { tipo: "erro" };
+    const pessoal = tokenDeAnotador(((await r.json()) as { token?: unknown }).token);
+    if (!pessoal) return { tipo: "erro" };
+    gravarSeguro(armazenamento, chaveDoGrupo(tokenDoGrupo), pessoal);
+    return { tipo: "pessoal", token: pessoal };
+  } catch {
+    return { tipo: "rede" };
+  }
+}
+
+export function entrarNoGrupo(
+  tokenDoGrupo: string,
+  { armazenamento = armazenamentoDoNavegador, buscar = (u, i) => fetch(u, i) }: { armazenamento?: Armazenamento; buscar?: Buscar } = {},
+): Promise<ResultadoDoGrupo> {
+  const guardado = tokenDeAnotador(lerSeguro(armazenamento, chaveDoGrupo(tokenDoGrupo)));
+  if (guardado) return Promise.resolve({ tipo: "pessoal", token: guardado });
+  const emCurso = entradasEmCurso.get(tokenDoGrupo);
+  if (emCurso) return emCurso;
+  const pedido = pedirEntrada(tokenDoGrupo, armazenamento, buscar).finally(() => entradasEmCurso.delete(tokenDoGrupo));
+  entradasEmCurso.set(tokenDoGrupo, pedido);
+  return pedido;
+}
+
+export function mensagemDoGrupo(r: Exclude<ResultadoDoGrupo, { tipo: "pessoal" }>): string {
+  if (r.tipo === "cheio") return "Este link já foi usado por todas as pessoas previstas. Peça um link novo a quem organiza.";
+  if (r.tipo === "invalido") return "Link inválido ou revogado.";
+  if (r.tipo === "limite") {
+    return r.segundos ? `Muitas tentativas seguidas. Aguarde ${r.segundos} segundos e tente de novo.` : "Muitas tentativas seguidas. Aguarde alguns segundos e tente de novo.";
+  }
+  if (r.tipo === "rede") return "Não consegui falar com o servidor. Confira a conexão e tente de novo.";
+  return "O servidor respondeu de um jeito inesperado. Tente de novo.";
+}

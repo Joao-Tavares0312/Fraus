@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   carregarFila,
+  chaveDoGrupo,
+  entrarNoGrupo,
+  mensagemDoGrupo,
   enviarResposta,
   estadoDaFila,
   faltam,
@@ -195,5 +198,83 @@ describe("contrato novo da API", () => {
   it("o 429 do POST nao depende do texto", async () => {
     const r = await enviarResposta("t", "a", "ironico", async () => new Response(JSON.stringify({ detail: "qualquer coisa" }), { status: 429 }));
     expect(r).toEqual({ ok: false, falha: { tipo: "limite", segundos: null } });
+  });
+});
+
+describe("link de grupo", () => {
+  const grupo = "g".repeat(43);
+  const pessoal = "p".repeat(43);
+  const resposta = (status: number, corpo: unknown = {}, headers: Record<string, string> = {}) =>
+    new Response(JSON.stringify(corpo), { status, headers });
+  const memoria = () => {
+    const dados = new Map<string, string>();
+    return {
+      dados,
+      armazenamento: { ler: (k: string) => dados.get(k) ?? null, gravar: (k: string, v: string) => { dados.set(k, v); } },
+    };
+  };
+
+  it("a chave guarda so os 16 primeiros caracteres do token do grupo", () => {
+    expect(chaveDoGrupo(grupo)).toBe(`fraus-anotacao-grupo:${"g".repeat(16)}`);
+  });
+
+  it("com link pessoal guardado, nao gasta vaga", async () => {
+    const { dados, armazenamento } = memoria();
+    dados.set(chaveDoGrupo(grupo), pessoal);
+    let chamadas = 0;
+    const r = await entrarNoGrupo(grupo, { armazenamento, buscar: async () => { chamadas++; return resposta(201, { token: "x" }); } });
+    expect(r).toEqual({ tipo: "pessoal", token: pessoal });
+    expect(chamadas).toBe(0);
+  });
+
+  it("sem link guardado, entra, guarda e devolve o pessoal", async () => {
+    const { dados, armazenamento } = memoria();
+    const urls: string[] = [];
+    const r = await entrarNoGrupo(grupo, {
+      armazenamento,
+      buscar: async (u, i) => { urls.push(`${i?.method} ${u}`); return resposta(201, { token: pessoal }); },
+    });
+    expect(r).toEqual({ tipo: "pessoal", token: pessoal });
+    expect(urls).toEqual([`POST /api/fraus/anotacao/grupos/${grupo}/entrar`]);
+    expect(dados.get(chaveDoGrupo(grupo))).toBe(pessoal);
+  });
+
+  it("valor guardado fora do formato e ignorado", async () => {
+    const { dados, armazenamento } = memoria();
+    dados.set(chaveDoGrupo(grupo), "../lixo");
+    const r = await entrarNoGrupo(grupo, { armazenamento, buscar: async () => resposta(201, { token: pessoal }) });
+    expect(r).toEqual({ tipo: "pessoal", token: pessoal });
+  });
+
+  it("armazenamento que lanca nao impede a entrada", async () => {
+    const quebrado = { ler: () => { throw new Error("bloqueado"); }, gravar: () => { throw new Error("bloqueado"); } };
+    const r = await entrarNoGrupo(grupo, { armazenamento: quebrado, buscar: async () => resposta(201, { token: pessoal }) });
+    expect(r).toEqual({ tipo: "pessoal", token: pessoal });
+  });
+
+  it("dois pedidos ao mesmo tempo gastam UMA vaga", async () => {
+    const { armazenamento } = memoria();
+    let chamadas = 0;
+    const buscar = async () => { chamadas++; return resposta(201, { token: pessoal }); };
+    const [a, b] = await Promise.all([entrarNoGrupo(grupo, { armazenamento, buscar }), entrarNoGrupo(grupo, { armazenamento, buscar })]);
+    expect(a).toEqual(b);
+    expect(chamadas).toBe(1);
+  });
+
+  it("traduz 409, 404, 429, resposta sem token e rede", async () => {
+    const { armazenamento } = memoria();
+    const com = (r: () => Promise<Response>) => entrarNoGrupo(grupo, { armazenamento, buscar: r });
+    expect(await com(async () => resposta(409))).toEqual({ tipo: "cheio" });
+    expect(await com(async () => resposta(404))).toEqual({ tipo: "invalido" });
+    expect(await com(async () => resposta(429, {}, { "Retry-After": "7" }))).toEqual({ tipo: "limite", segundos: 7 });
+    expect(await com(async () => resposta(201, { token: "curto" }))).toEqual({ tipo: "erro" });
+    expect(await com(async () => { throw new TypeError("rede"); })).toEqual({ tipo: "rede" });
+  });
+
+  it("mensagens do grupo", () => {
+    expect(mensagemDoGrupo({ tipo: "cheio" })).toBe("Este link já foi usado por todas as pessoas previstas. Peça um link novo a quem organiza.");
+    expect(mensagemDoGrupo({ tipo: "invalido" })).toBe("Link inválido ou revogado.");
+    expect(mensagemDoGrupo({ tipo: "limite", segundos: 7 })).toContain("7 segundos");
+    expect(mensagemDoGrupo({ tipo: "rede" })).toContain("conexão");
   });
 });
