@@ -1,0 +1,193 @@
+<title>Anotação de ironia</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Public+Sans:wght@400;600&display=swap">
+<style>
+/* Uma frase por vez, no centro; a tela inteira serve para ler e decidir. */
+:root {
+  --bg: #f6f6f3;
+  --fg: #1d2326;
+  --mudo: #5b666b;
+  --linha: #d6dad8;
+  --cartao: #ffffff;
+  --acento: #1f5f6b;
+  --acento-fg: #ffffff;
+  --erro: #a3261c;
+  --erro-bg: #fbe9e6;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14191b; --fg: #e8ecec; --mudo: #9aa6aa; --linha: #2f3a3e;
+    --cartao: #1c2326; --acento: #6fc0cf; --acento-fg: #0d1517;
+    --erro: #ff9a8f; --erro-bg: #3a1d1a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14191b; --fg: #e8ecec; --mudo: #9aa6aa; --linha: #2f3a3e;
+  --cartao: #1c2326; --acento: #6fc0cf; --acento-fg: #0d1517;
+  --erro: #ff9a8f; --erro-bg: #3a1d1a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--sans);
+  font-size: 16px; line-height: 1.5;
+  padding-block: 20px 32px; padding-inline: 16px;
+}
+main { max-width: 42rem; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+.regra { margin: 0; color: var(--mudo); font-size: 0.9375rem; max-width: 65ch; }
+.topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.faltam { font-variant-numeric: tabular-nums; font-weight: 600; }
+.barra { height: 4px; background: var(--linha); border-radius: 2px; overflow: hidden; }
+.barra > i { display: block; height: 100%; background: var(--acento); width: 0; }
+.frase {
+  background: var(--cartao); border: 1px solid var(--linha); border-radius: 6px;
+  padding: 28px 24px; min-height: 9rem; display: flex; align-items: center;
+}
+.frase p {
+  margin: 0; font-family: var(--serif); font-size: clamp(1.4rem, 5vw, 2rem);
+  line-height: 1.35; overflow-wrap: anywhere; min-width: 0; text-wrap: pretty;
+}
+.opcoes { display: grid; gap: 10px; }
+button {
+  font: inherit; color: var(--fg); background: var(--cartao);
+  border: 1px solid var(--linha); border-radius: 6px; min-height: 52px;
+  padding: 10px 16px; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 12px;
+}
+button:hover:not(:disabled) { border-color: var(--acento); }
+button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+button:disabled { opacity: 0.55; cursor: progress; }
+button kbd {
+  font-family: var(--sans); font-size: 0.8125rem; min-width: 1.6rem; height: 1.6rem;
+  display: inline-grid; place-items: center; border: 1px solid var(--linha); border-radius: 4px; color: var(--mudo);
+}
+button.atual { border-color: var(--acento); background: var(--acento); color: var(--acento-fg); }
+button.atual kbd { border-color: currentColor; color: inherit; }
+button.voltar { min-height: 40px; width: fit-content; background: transparent; color: var(--mudo); }
+.erro {
+  margin: 0; padding: 12px 14px; border-radius: 6px; color: var(--erro);
+  background: var(--erro-bg); border: 1px solid var(--erro);
+}
+.fim h1 { font-family: var(--serif); font-weight: 500; font-size: 1.75rem; line-height: 1.25; margin: 0 0 8px; text-wrap: balance; }
+@media (prefers-reduced-motion: no-preference) { .barra > i { transition: width 0.2s; } }
+</style>
+
+<main>
+  <p class="regra">Ironia aqui é dizer o contrário do que se quer dizer, em tom de crítica ou zombaria. "Depende do contexto" é resposta válida, não falha.</p>
+  <p id="erro" class="erro" role="alert" hidden></p>
+  <p id="carregando" class="regra">Carregando as frases…</p>
+
+  <section id="tela" hidden aria-live="polite">
+    <div class="topo">
+      <span class="faltam" id="faltam"></span>
+      <button type="button" class="voltar" id="voltar">← Voltar</button>
+    </div>
+    <div class="barra" aria-hidden="true"><i id="progresso"></i></div>
+    <div class="frase"><p id="texto"></p></div>
+    <div class="opcoes" id="opcoes">
+      <button type="button" data-r="ironico"><kbd>1</kbd> Irônico</button>
+      <button type="button" data-r="nao_ironico"><kbd>2</kbd> Não irônico</button>
+      <button type="button" data-r="contexto"><kbd>3</kbd> Depende do contexto</button>
+    </div>
+  </section>
+
+  <section id="fim" class="fim" hidden>
+    <h1 id="fim-titulo"></h1>
+    <button type="button" class="voltar" id="fim-voltar">← Voltar e mudar a última resposta</button>
+  </section>
+</main>
+
+<script>
+(function () {
+  var el = function (id) { return document.getElementById(id); };
+  var frases = [], ordem = [], respostas = {}, pos = 0, uid = null, db = null, salvando = false;
+
+  function erro(msg) { var e = el("erro"); e.textContent = msg; e.hidden = !msg; }
+  function fatal(msg) { el("carregando").hidden = true; el("tela").hidden = true; el("fim").hidden = true; erro(msg); }
+
+  function hashId(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return h >>> 0;
+  }
+  function primeiraSemResposta() {
+    for (var i = 0; i < ordem.length; i++) if (!respostas[ordem[i].id]) return i;
+    return ordem.length;
+  }
+  function colecao() { return db.doc("data/users/" + uid + "/anotacoes").collection("respostas"); }
+
+  function desenhar() {
+    var n = ordem.length, feitas = Object.keys(respostas).length;
+    el("progresso").style.width = (100 * feitas / n) + "%";
+    if (pos >= n) {
+      el("tela").hidden = true; el("fim").hidden = false;
+      el("fim-titulo").textContent = "Obrigado — suas " + feitas + " respostas foram salvas.";
+      return;
+    }
+    el("fim").hidden = true; el("tela").hidden = false;
+    var f = ordem[pos], falta = n - feitas;
+    el("faltam").textContent = falta === 1 ? "Falta 1" : "Faltam " + falta;
+    el("texto").textContent = f.texto;
+    el("voltar").hidden = pos === 0;
+    var botoes = el("opcoes").children;
+    for (var i = 0; i < botoes.length; i++) {
+      botoes[i].classList.toggle("atual", respostas[f.id] === botoes[i].dataset.r);
+      botoes[i].disabled = salvando;
+    }
+  }
+
+  async function responder(r) {
+    if (salvando || pos >= ordem.length) return;
+    var f = ordem[pos], instante = new Date().toISOString();
+    salvando = true; erro(""); desenhar();
+    try {
+      await colecao().doc(f.id + "~" + Date.now()).set({ anotador: uid, frase_id: f.id, resposta: r, instante: instante });
+      respostas[f.id] = r;
+      pos = primeiraSemResposta();
+    } catch (e) {
+      erro("Não consegui salvar esta resposta (" + ((e && e.code) || "erro desconhecido") + "). Ela não foi registrada. Tente de novo.");
+    }
+    salvando = false; desenhar();
+  }
+
+  function voltar() { if (!salvando && pos > 0) { erro(""); pos -= 1; desenhar(); } }
+
+  async function iniciar() {
+    try {
+      var resp = await fetch("frases.json");
+      if (!resp.ok) throw new Error("http " + resp.status);
+      frases = await resp.json();
+    } catch (e) { return fatal("Não consegui carregar as frases. Recarregue a página."); }
+    try {
+      var user = await claude.use("user");
+      db = await claude.use("db");
+      uid = user ? await user.id() : null;
+    } catch (e) { uid = null; }
+    if (!db || !uid) return fatal("Entre na sua conta para anotar. Sem identificação, as respostas não podem ser salvas.");
+
+    var deslocamento = hashId(uid) % frases.length;
+    ordem = frases.slice(deslocamento).concat(frases.slice(0, deslocamento));
+    try {
+      var snap = await colecao().limit(1000).get(), ultimo = {};
+      snap.docs.forEach(function (d) {
+        var v = d.data();
+        if (v && v.anotador === uid && (!ultimo[v.frase_id] || v.instante > ultimo[v.frase_id].instante)) ultimo[v.frase_id] = v;
+      });
+      Object.keys(ultimo).forEach(function (k) { respostas[k] = ultimo[k].resposta; });
+    } catch (e) { return fatal("Não consegui ler suas respostas anteriores (" + ((e && e.code) || "erro") + "). Recarregue antes de continuar, para não repetir frases."); }
+
+    el("carregando").hidden = true;
+    pos = primeiraSemResposta();
+    Array.prototype.forEach.call(el("opcoes").children, function (b) { b.addEventListener("click", function () { responder(b.dataset.r); }); });
+    el("voltar").addEventListener("click", voltar);
+    el("fim-voltar").addEventListener("click", function () { pos = ordem.length - 1; desenhar(); });
+    document.addEventListener("keydown", function (ev) {
+      if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      var r = { "1": "ironico", "2": "nao_ironico", "3": "contexto" }[ev.key];
+      if (r) { ev.preventDefault(); responder(r); }
+    });
+    desenhar();
+  }
+  iniciar();
+})();
+</script>
