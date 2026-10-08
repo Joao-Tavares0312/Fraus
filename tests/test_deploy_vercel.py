@@ -211,3 +211,24 @@ def test_promocao_local_restaura_bundle_anterior_se_move_falhar(tmp_path, monkey
 
     assert (atual / "modelos" / "marcador").read_text() == "anterior"
     conferir_modelos(atual)
+
+
+def test_ignore_da_vercel_nao_remove_dados_do_pacote_fraus():
+    """`fraus/dados/` vai na funcao: a rota publica de anotacao le
+    `regua_ironia_rascunho.csv` em runtime, e o lexico/SentiLex tambem. A
+    conferencia usa a mesma semantica de padrao do git que a Vercel segue."""
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None or not (RAIZ / ".git").exists():
+        pytest.skip("sem git para aplicar o .vercelignore")
+    ignorados = subprocess.run(
+        ["git", "ls-files", "-i", "-c", "--exclude-from=.vercelignore", "fraus/"],
+        cwd=RAIZ, capture_output=True, text=True, check=True,
+    ).stdout.split()
+    assert ignorados == []
+    versionados = subprocess.run(
+        ["git", "ls-files", "fraus/dados/regua_ironia_rascunho.csv"],
+        cwd=RAIZ, capture_output=True, text=True, check=True,
+    ).stdout.split()
+    assert versionados == ["fraus/dados/regua_ironia_rascunho.csv"]
