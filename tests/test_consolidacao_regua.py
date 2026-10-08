@@ -1,7 +1,7 @@
 import pytest
 
 from fraus.avaliacao_ironia import FraseDoRascunho
-from fraus.consolidacao_regua import (decidir_pares, fleiss_kappa, rotulo_humano,
+from fraus.consolidacao_regua import (conferir_ids, decidir_pares, fleiss_kappa, rotulo_humano,
                                       ultimas_respostas)
 
 
@@ -65,5 +65,24 @@ def test_menos_pares_que_o_piso_falha_alto():
     frases = _par(1, "")
     ids = {f.texto: f.frase_id for f in frases}
     respostas = {ids["sincera 1"]: ["nao_ironico"] * 2, ids["ironica 1"]: ["ironico"] * 2}
-    with pytest.raises(ValueError, match="1 pares; o piso e 100"):
+    with pytest.raises(ValueError, match="faltam 99"):
         decidir_pares(frases, respostas)
+
+
+def test_conferir_ids_aceita_ids_validos():
+    frases = _par(1, "")
+    ids = {f.texto: f.frase_id for f in frases}
+    registros = [
+        {"anotador": "a", "frase_id": ids["sincera 1"], "resposta": "nao_ironico", "instante": "2026-10-09T10:00:00Z"},
+        {"anotador": "a", "frase_id": ids["ironica 1"], "resposta": "ironico", "instante": "2026-10-09T10:00:00Z"},
+    ]
+    conferir_ids(registros, frases)  # nao levanta
+
+
+def test_conferir_ids_falha_com_ids_desconhecidos():
+    frases = _par(1, "")
+    registros = [
+        {"anotador": "a", "frase_id": "id_desconhecido", "resposta": "ironico", "instante": "2026-10-09T10:00:00Z"},
+    ]
+    with pytest.raises(ValueError, match="id_desconhecido"):
+        conferir_ids(registros, frases)

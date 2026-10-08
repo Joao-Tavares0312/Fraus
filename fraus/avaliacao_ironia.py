@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
+import random
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -175,3 +177,58 @@ def conferir_registro_equilibrado(
             raise ValueError(
                 f"o traco {nome} acompanha o rotulo: diferenca {diferenca:.2f} > {tolerancia:.2f}"
             )
+
+
+# --- Regua congelada de pares minimos (apos anotacao as cegas) ----------------
+
+CAMINHO_REGUA_PARES = Path(__file__).parent / "dados" / "regua_ironia_pares.csv"
+CAMINHO_META_REGUA = Path(__file__).parent / "dados" / "regua_ironia_meta.json"
+
+
+@dataclass(frozen=True)
+class FraseDaRegua:
+    par_id: str
+    estrato: str
+    texto: str
+    rotulo: int
+    concordancia: float
+
+
+def carregar_regua_pares(
+    caminho: Path = CAMINHO_REGUA_PARES, meta: Path = CAMINHO_META_REGUA
+) -> list[FraseDaRegua]:
+    """A regua congelada. Frase mudada depois do congelamento e erro alto."""
+    from fraus.divisao import impressao_dos_textos
+
+    with open(caminho, encoding="utf-8", newline="") as arquivo:
+        frases = [
+            FraseDaRegua(
+                par_id=linha["par_id"], estrato=linha["estrato"], texto=linha["texto"],
+                rotulo=int(linha["rotulo"]), concordancia=float(linha["concordancia"]),
+            )
+            for linha in csv.DictReader(arquivo)
+        ]
+    esperada = json.loads(Path(meta).read_text(encoding="utf-8"))["impressao"]
+    if impressao_dos_textos(f.texto for f in frases) != esperada:
+        raise ValueError(
+            "a impressao da regua nao bate com o meta: frase editada depois do "
+            "congelamento. Reanote ou declare uma versao nova."
+        )
+    return frases
+
+
+def variantes_de_invariancia(
+    frases: Sequence[FraseDaRegua], *, quantas: int = 20, semente: int = 42
+) -> list[dict]:
+    """Mesma frase, outra superficie, mesmo rotulo. Fora da metrica principal."""
+    escolhidas = random.Random(semente).sample(list(frases), quantas)
+    variantes = []
+    for frase in escolhidas:
+        base = frase.texto.rstrip()
+        ponto = base[:-1] if base.endswith(".") else base + "."
+        for nome, texto in (("ponto_final", ponto), ("com_emoji", base + " 🙂")):
+            variantes.append({
+                "frase_origem": frase.texto, "variante": nome,
+                "texto": texto, "rotulo": frase.rotulo,
+            })
+    return variantes

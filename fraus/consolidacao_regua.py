@@ -90,5 +90,17 @@ def decidir_pares(
                 })
     pares = len({m["par_id"] for m in mantidas})
     if pares < minimo_pares:
-        raise ValueError(f"a anotacao confirmou {pares} pares; o piso e {minimo_pares}")
+        raise ValueError(
+            f"a anotacao confirmou {pares} pares; o piso e {minimo_pares}, "
+            f"faltam {minimo_pares - pares}"
+        )
     return mantidas, descartadas
+
+
+def conferir_ids(registros: Sequence[dict], rascunho: Sequence[FraseDoRascunho]) -> None:
+    """Valida que todos os frase_id nos registros existem no rascunho."""
+    validos = {f.frase_id for f in rascunho}
+    desconhecidos = {r["frase_id"] for r in registros if r["frase_id"] not in validos}
+    if desconhecidos:
+        ids_str = ", ".join(sorted(desconhecidos))
+        raise ValueError(f"ids desconhecidos no rascunho: {ids_str}")
