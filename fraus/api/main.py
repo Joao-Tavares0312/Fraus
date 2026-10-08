@@ -45,7 +45,7 @@ from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os tes
                                registrar_cabecalhos_de_seguranca,
                                registrar_middleware_de_corpo)
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
-from fraus.api.rotas import (acesso, analise, auth, configuracoes, conversas,
+from fraus.api.rotas import (acesso, analise, anotacao, auth, configuracoes, conversas,
                              grafo, indicadores, ingestao, integracoes, lexico, perfis,
                              modelo, saude, webhook, operacao)
 # Reexportados: os testes os importam daqui desde antes da quebra em modulos,
@@ -55,7 +55,9 @@ from fraus.api.rotas.analise import (TETO_ARQUIVO_ANALISE,
                                      TETO_CONVERSAS_ANALISE)
 from fraus.api.rotas.modelo import TETO_LEXICON, TETO_TEXTO_SIMULACAO
 from fraus.api.seguranca import registrar_middleware_de_acesso
-from fraus.api.vazao import (ENTREGAS_POR_JANELA, INGESTOES_POR_JANELA,
+from fraus.api.vazao import (ENTRADAS_DE_GRUPO_POR_JANELA, ENTREGAS_POR_JANELA, INGESTOES_POR_JANELA,
+                             LEITURAS_DE_ANOTACAO_POR_JANELA,
+                             RESPOSTAS_DE_ANOTACAO_POR_JANELA,
                              LimitadorDeVazao, registrar_middleware_de_vazao)
 from fraus.db import Banco
 from fraus.fusor import Fusor
@@ -203,6 +205,15 @@ def criar_app(
     # Um trabalho de repontuacao por app, pelo mesmo motivo dos limitadores:
     # nasce e morre com ele, e nao vaza de um teste para o proximo.
     app.state.repontuacao = Repontuacao()
+    # Resposta de anotacao da regua: rota PUBLICA de escrita, contada pelo
+    # HASH DO TOKEN antes de olhar o banco -- token inventado gasta so a
+    # propria janela, e o IP do proxy da dashboard nao separa anotadores.
+    app.state.limitador_de_anotacao = LimitadorDeVazao(RESPOSTAS_DE_ANOTACAO_POR_JANELA)
+    # A leitura publica da fila tem limitador proprio, tambem por hash do
+    # token (ver `rotas/anotacao.py`): um 404 conta tanto quanto um 200.
+    app.state.limitador_de_leitura_de_anotacao = LimitadorDeVazao(LEITURAS_DE_ANOTACAO_POR_JANELA)
+    # Entrada pelo link de grupo: limitador proprio, pelo hash do token do grupo.
+    app.state.limitador_de_grupo = LimitadorDeVazao(ENTRADAS_DE_GRUPO_POR_JANELA)
 
     registrar_middleware_de_acesso(app, ctx)
 
@@ -237,6 +248,7 @@ def criar_app(
     app.include_router(webhook.router)
     app.include_router(auth.router)
     app.include_router(operacao.router)
+    app.include_router(anotacao.router)
 
     return app
 

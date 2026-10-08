@@ -106,9 +106,28 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
   de "?" nos dois lados. O baseline só de estilo acerta 0,18 dos pares fora
   da amostra no rascunho, abaixo do acaso (0,25). O rascunho é autoral; o
   rótulo que vale é o da anotação às cegas.
-- A anotação é numa página privada do claude.ai que mostra só o texto, uma
-  frase por vez, sem par, estrato nem rótulo. Cada anotador vê e grava só as
-  próprias respostas e precisa de acesso de Contributor; o dono lê todas.
+- A anotação mora no Fraus, por link e sem conta: `scripts/criar_link_anotacao.py
+  --quantos N` chama `POST /anotacao/anotadores` (só dev) e imprime
+  `<id>  https://fraus-one.vercel.app/anotar/<token>`. O banco guarda só o hash do
+  token e um id opaco (`a_` + 8 hex), nunca nome. A página recebe de
+  `GET /anotacao/<token>` só `id` e `texto`, na ordem daquele anotador, e grava
+  por `POST /anotacao/<token>/respostas`; o instante é do servidor. A primeira
+  rodada (João, na página antiga do claude.ai) está versionada em
+  `fraus/dados/anotacao_regua/anotador-claude-ai.json`, anotador `claude-ai-1`.
+- Para um grupo de mensagens, `scripts/criar_link_anotacao.py --grupo 5` cria
+  **um** link (`https://fraus-one.vercel.app/anotar/grupo/<token>`) com 5
+  vagas. Cada pessoa que o abre ganha o próprio anotador (a vaga é ocupada de
+  forma serializada no banco, então 5 não viram 6) e a página guarda o link
+  pessoal só naquele navegador. Em outro aparelho, abrir o link do grupo de
+  novo gasta outra vaga e começa do zero; quem quiser trocar de aparelho guarda
+  o endereço da página pessoal. Repassar o link do grupo também gasta vaga.
+  Grupo cheio responde "Este link já foi usado por todas as pessoas previstas".
+  Revogar o grupo (`POST /anotacao/grupos/<g_id>/revogar`) fecha a entrada;
+  com `?anotadores=1` revoga também quem entrou, e as respostas saem do export.
+- O token viaja na URL e fica nos logs de requisição da Vercel e no histórico
+  do navegador, como o link de convite. Link vazado se revoga com
+  `scripts/criar_link_anotacao.py --revogar <id>`; as respostas desse anotador
+  saem do export.
 - **Critério de promoção de qualquer cabeça de ironia:** vencer o baseline só
   de estilo (`fraus/baseline_estilo.py`) em acurácia por par na régua, com IC
   95% da diferença excluindo zero. O teste interno do IDPT não entra. No
@@ -116,16 +135,14 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
   diferença acima de zero). `por_par_demonstrada` só diz que o IC exclui zero
   e também acende quando o candidato é significativamente pior; para promover,
   vale `candidato_vence_por_par`.
-- Depois da anotação: exportar as respostas (a coleção `anotadores` lista quem
-  anotou; as respostas de cada um ficam em
-  `data/users/<id>/anotacoes/respostas`), juntar tudo numa lista JSON e rodar
-  `uv run python scripts/consolidar_regua_ironia.py respostas.json`. Menos de
-  100 pares confirmados para o script com erro dizendo quantos faltam.
-- Cada registro de `respostas.json` é o próprio documento gravado pela página,
-  sem envelope `{id, data}`:
-  `{"anotador": "...", "frase_id": "...", "resposta": "ironico|nao_ironico|contexto", "instante": "2026-10-08T12:00:00Z"}`.
-  A leitura do banco vem em páginas, então confira que todas foram juntadas
-  antes de consolidar; o script usa a última resposta de cada anotador por frase.
+- Depois da anotação: `uv run python scripts/exportar_anotacao.py respostas-fraus.json`
+  baixa `GET /anotacao/respostas` (só dev) e
+  `uv run python scripts/consolidar_regua_ironia.py fraus/dados/anotacao_regua/anotador-claude-ai.json respostas-fraus.json`
+  concatena os arquivos e consolida. Menos de 100 pares confirmados para o
+  script com erro dizendo quantos faltam.
+- Cada registro é
+  `{"anotador": "...", "frase_id": "...", "resposta": "ironico|nao_ironico|contexto", "instante": "2026-10-08T12:00:00.000000+00:00"}`;
+  o script usa a última resposta de cada anotador por frase.
 - A página embaralha a ordem por anotador (semente derivada do id) e nunca põe
   os dois lados de um par em sequência. A régua congelada guarda duas
   impressões no meta: uma dos textos e outra de `par_id|rótulo|texto`, de modo

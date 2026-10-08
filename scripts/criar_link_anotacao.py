@@ -1,0 +1,114 @@
+"""Cria links de anotador da regua de ironia (`POST /anotacao/anotadores`).
+
+Uso:
+    FRAUS_CHAVE_ACESSO=... uv run python scripts/criar_link_anotacao.py [--quantos N]
+    FRAUS_CHAVE_ACESSO=... uv run python scripts/criar_link_anotacao.py --revogar a_xxxxxxxx
+    FRAUS_CHAVE_ACESSO=... uv run python scripts/criar_link_anotacao.py --grupo 5
+
+`--grupo N` cria UM link para postar num grupo: cada pessoa que o abre ganha
+o proprio anotador, ate N vagas (`{dashboard}/anotar/grupo/<token>`). Quem
+repassa o link gasta vaga. Revogar o grupo e `POST
+/anotacao/grupos/<g_id>/revogar` (com `?anotadores=1` revoga tambem quem
+entrou).
+
+Imprime uma linha por anotador: `<id do anotador>  <link>`. O link e
+`{FRAUS_DASHBOARD_URL}/anotar/<token>` (padrao https://fraus-one.vercel.app)
+e o token so existe nesta saida -- o banco guarda o hash. Quem perder o link
+recebe um novo; o antigo e revogado com `--revogar <id>`, que chama
+`POST /anotacao/anotadores/<id>/revogar` (so dev). Respostas de anotador
+revogado deixam de sair no export.
+
+O token viaja na URL: fica no historico do navegador e nos logs de requisicao
+da Vercel, como o link de convite. Mande cada link so para a pessoa dele.
+
+A API e `FRAUS_API_URL` (padrao https://fraus-api.vercel.app). A credencial
+vem de `FRAUS_CHAVE_ACESSO` e nunca e impressa. Nenhum nome de pessoa vai
+para a API: anote fora dela quem recebeu qual id.
+"""
+
+import argparse
+import json
+import os
+import sys
+import urllib.request
+from urllib.parse import quote, urljoin
+
+API_PADRAO = "https://fraus-api.vercel.app"
+DASHBOARD_PADRAO = "https://fraus-one.vercel.app"
+
+abrir_url = urllib.request.urlopen
+
+
+def chamar(metodo: str, url: str, chave: str, *, abrir=None, corpo: dict | None = None):
+    """JSON de uma chamada autenticada. Erro HTTP sobe como esta."""
+    cabecalhos = {"Authorization": f"Bearer {chave}"}
+    dados = None
+    if corpo is not None:
+        dados = json.dumps(corpo).encode("utf-8")
+        cabecalhos["Content-Type"] = "application/json"
+    pedido = urllib.request.Request(url, data=dados, method=metodo, headers=cabecalhos)
+    with (abrir or abrir_url)(pedido, timeout=60) as resposta:
+        return json.loads(resposta.read().decode("utf-8"))
+
+
+def base(url: str) -> str:
+    return url if url.endswith("/") else url + "/"
+
+
+def criar_links(api: str, chave: str, dashboard: str, quantos: int, *, abrir=None) -> list[tuple[str, str]]:
+    links = []
+    for _ in range(quantos):
+        criado = chamar("POST", urljoin(base(api), "anotacao/anotadores"), chave, abrir=abrir)
+        links.append((criado["anotador"], f"{dashboard.rstrip('/')}/anotar/{criado['token']}"))
+    return links
+
+
+def revogar(api: str, chave: str, anotador: str, *, abrir=None) -> dict:
+    return chamar("POST", urljoin(base(api), f"anotacao/anotadores/{quote(anotador, safe='')}/revogar"),
+                  chave, abrir=abrir)
+
+
+def criar_grupo(api: str, chave: str, dashboard: str, vagas: int, *, abrir=None) -> tuple[str, str]:
+    criado = chamar("POST", urljoin(base(api), "anotacao/grupos"), chave, abrir=abrir, corpo={"vagas": vagas})
+    return criado["grupo"], f"{dashboard.rstrip('/')}/anotar/grupo/{criado['token']}"
+
+
+def chave_do_ambiente() -> str:
+    chave = os.environ.get("FRAUS_CHAVE_ACESSO")
+    if not chave:
+        sys.exit("defina FRAUS_CHAVE_ACESSO (mestra ou chave de acesso `fra_`)")
+    return chave
+
+
+def main(argv=None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--quantos", type=int, default=1)
+    parser.add_argument("--revogar", metavar="ANOTADOR", help="revoga o link deste id (a_xxxxxxxx)")
+    parser.add_argument("--grupo", type=int, metavar="VAGAS", help="cria um link de grupo com VAGAS lugares (1 a 20)")
+    args = parser.parse_args(argv)
+    if args.grupo is not None:
+        if not 1 <= args.grupo <= 20:
+            parser.error("--grupo precisa ficar entre 1 e 20")
+        grupo, link = criar_grupo(os.environ.get("FRAUS_API_URL", API_PADRAO), chave_do_ambiente(),
+                                  os.environ.get("FRAUS_DASHBOARD_URL", DASHBOARD_PADRAO), args.grupo,
+                                  abrir=abrir_url)
+        print(f"{grupo}  {link}")
+        return
+    if args.revogar:
+        revogado = revogar(os.environ.get("FRAUS_API_URL", API_PADRAO), chave_do_ambiente(),
+                           args.revogar, abrir=abrir_url)
+        print(f"{revogado['anotador']} revogado")
+        return
+    if args.quantos < 1:
+        parser.error("--quantos precisa ser pelo menos 1")
+    links = criar_links(
+        os.environ.get("FRAUS_API_URL", API_PADRAO), chave_do_ambiente(),
+        os.environ.get("FRAUS_DASHBOARD_URL", DASHBOARD_PADRAO), args.quantos,
+        abrir=abrir_url,
+    )
+    for anotador, link in links:
+        print(f"{anotador}  {link}")
+
+
+if __name__ == "__main__":
+    main()
