@@ -158,8 +158,15 @@ def revogar_anotador(anotador: str, ctx: Contexto = Depends(obter_contexto)):
 # "respostas" e um token sintaticamente valido.
 @router.get("/respostas")
 def exportar_respostas(ctx: Contexto = Depends(obter_contexto)):
-    """So dev. Lista no formato que `scripts/consolidar_regua_ironia.py` le."""
-    return sorted(_registros(ctx), key=lambda r: (r["instante"], r["anotador"], r["frase_id"]))
+    """So dev. Lista no formato que `scripts/consolidar_regua_ironia.py` le.
+
+    Anotador REVOGADO fica de fora: revogar um link e dizer que aquelas
+    respostas nao valem (link vazado, anotador que nao seguiu o protocolo), e
+    elas nao podem entrar na regua pela porta do export.
+    """
+    revogados = {a["anotador"] for a in ctx.banco.documentos(TIPO_ANOTADOR) if a.get("revogado")}
+    validos = [r for r in _registros(ctx) if r["anotador"] not in revogados]
+    return sorted(validos, key=lambda r: (r["instante"], r["anotador"], r["frase_id"]))
 
 
 @router.get("/{token}")
