@@ -29,7 +29,10 @@ fn canto(v: u32) -> vec2f {
   let cinza = vec3f(0.62, 0.63, 0.68);
   let cor = mix(DITO, MEDIDO, clamp(p.tinta, 0.0, 1.0));
   s.cor = mix(cor, cinza, cena.foco.w * cena.leitura.x);
-  s.alfa = cena.leitura.y * (0.35 + 0.4 * fract(p.semente * 17.9));
+  // ponto.z e o ganho: com 120 mil particulas somando luz, cada uma pesa pouco.
+  // Espalhado pela tela, o campo soma menos luz por pixel: o ganho sobe junto.
+  let espalhado = cena.destino.y + cena.leitura.x;
+  s.alfa = cena.leitura.y * min(1.0, cena.ponto.z * (1.0 + 5.0 * espalhado)) * (0.35 + 0.4 * fract(p.semente * 17.9));
   return s;
 }
 

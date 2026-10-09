@@ -25,7 +25,7 @@ export struct Cena {
   leitura: vec4f,
   // foco do orbe (xy), raio do orbe (z), cinza da leitura sem sinal (w)
   foco: vec4f,
-  // tamanho do ponto em unidades de cena (x), escala dos enxames (y)
+  // tamanho do ponto em unidades de cena (x), escala dos enxames (y), ganho de alfa (z)
   ponto: vec4f,
   centros: array<vec4f, 7>,
 }

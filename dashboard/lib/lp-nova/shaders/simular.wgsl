@@ -1,5 +1,6 @@
 import { Cena, Particula } from "./comum.wgsl";
 import { simplex3d } from "@vgpu/wgsl-std/noise/simplex";
+import { hash2 } from "@vgpu/wgsl-std/hash";
 
 @group(0) @binding(0) var<uniform> cena: Cena;
 @group(0) @binding(1) var<storage, read_write> particulas: array<Particula>;
@@ -15,9 +16,12 @@ fn curl(p: vec2f, t: f32) -> vec2f {
   return vec2f(a - b, -(c - d)) / (2.0 * e);
 }
 
-fn em_volta(centro: vec2f, raio: f32, semente: f32, giro: f32) -> vec2f {
-  let ang = semente * 6.2831853 + cena.tempo * giro;
-  let r = raio * sqrt(fract(semente * 7.31));
+// Angulo e raio de hashes INDEPENDENTES: tirados da mesma semente por
+// multiplicacao, eles se correlacionam e o disco vira braco de espiral.
+fn em_volta(centro: vec2f, raio: f32, semente: f32, giro: f32, canal: f32) -> vec2f {
+  let h = hash2(vec2f(semente, canal));
+  let ang = h.x * 6.2831853 + cena.tempo * giro * (0.6 + 0.8 * h.y);
+  let r = raio * sqrt(h.y);
   return centro + vec2f(cos(ang), sin(ang)) * r;
 }
 
@@ -35,9 +39,9 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
 
   // Destinos de cada momento da historia.
   let largura = vec2f(cena.aspecto * 0.95, 0.9);
-  let espalhado = (vec2f(fract(p.semente * 13.7), fract(p.semente * 91.3)) * 2.0 - 1.0) * largura;
-  let enxame = em_volta(cena.centros[p.familia].xy, 0.11 * escala, p.semente, 0.25);
-  let orbe = em_volta(foco, cena.foco.z * (0.55 + 0.25 * cena.leitura.z * sin(cena.tempo * 1.4)), p.semente, 0.12);
+  let espalhado = (hash2(vec2f(p.semente, 3.0)) * 2.0 - 1.0) * largura;
+  let enxame = em_volta(cena.centros[p.familia].xy, 0.11 * escala, p.semente, 0.25, 1.0);
+  let orbe = em_volta(foco, cena.foco.z * (0.55 + 0.25 * cena.leitura.z * sin(cena.tempo * 1.4)), p.semente, 0.12, 2.0);
 
   let alvo = p.origem * w.x + espalhado * (w.y + leitura) + enxame * w.z + orbe * w.w;
 
