@@ -67,3 +67,26 @@ export function pesosDasFases(progresso: number): Pesos {
   pesos.respira = rampa(p, 0.9, MARCOS.fecho);
   return pesos;
 }
+
+export type Ancora = { y: number; p: number };
+
+/**
+ * Da rolagem para o progresso da historia, por ancoras: cada secao diz em que
+ * `scrollY` o seu momento acontece. Assim a cena acompanha o TEXTO -- o
+ * enxame aparece quando a secao do fusor chega, nao num percentual cego da
+ * altura da pagina, que muda com o celular e com o tamanho da copy.
+ */
+export function progressoDaRolagem(scrollY: number, ancoras: Ancora[]): number {
+  if (ancoras.length === 0) return 0;
+  const ordem = [...ancoras].sort((a, b) => a.y - b.y);
+  if (scrollY <= ordem[0].y) return ordem[0].p;
+  for (let i = 1; i < ordem.length; i++) {
+    const a = ordem[i - 1];
+    const b = ordem[i];
+    if (scrollY <= b.y) {
+      const t = b.y === a.y ? 1 : (scrollY - a.y) / (b.y - a.y);
+      return a.p + (b.p - a.p) * t;
+    }
+  }
+  return ordem[ordem.length - 1].p;
+}
