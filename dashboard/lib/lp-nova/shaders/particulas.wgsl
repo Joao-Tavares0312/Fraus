@@ -33,7 +33,10 @@ fn canto(v: u32) -> vec2f {
   // Espalhado pela tela, o campo soma menos luz por pixel: o ganho sobe junto.
   // A mascara tambem espalha (um rosto inteiro) e precisa ler os vazios.
   let espalhado = cena.destino.y + cena.leitura.x + 0.6 * cena.destino.z;
-  s.alfa = cena.leitura.y * min(1.0, cena.ponto.z * (1.0 + 5.0 * espalhado)) * (0.35 + 0.4 * fract(p.semente * 17.9));
+  // Em repouso na frase, quem fala e o TEXTO do DOM (nitido, legivel): as
+  // particulas ficam por baixo como brilho fraco e assumem quando ela se desfaz.
+  let atras_do_texto = mix(1.0, 0.16, cena.destino.x);
+  s.alfa = atras_do_texto * cena.leitura.y * min(1.0, cena.ponto.z * (1.0 + 5.0 * espalhado)) * (0.35 + 0.4 * fract(p.semente * 17.9));
   return s;
 }
 

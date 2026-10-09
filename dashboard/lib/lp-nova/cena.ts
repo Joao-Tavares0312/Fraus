@@ -40,7 +40,7 @@ export type OpcoesCena = {
 
 export type CenaLeitura = {
   pronto: Promise<EstadoRegime>;
-  definirProgresso(progresso: number): void;
+  definirProgresso(progresso: number, rolagemPx?: number): void;
   /** humor em [-1, 1] (detrator .. promotor); cinza = 1 na leitura sem sinal. */
   definirHumor(humor: number, cinza: number): void;
   /** Ressemeia as particulas com a frase medida de novo (depois de um resize). */
@@ -104,6 +104,7 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
   let tempo = 0;
   let total = 0;
   let progresso = 0;
+  let rolagem = 0;
   let humor = 0;
   let cinza = 0;
   let estado: EstadoRegime = { regime: "poster", motivo: "inicial" };
@@ -151,6 +152,7 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
       total,
       celular: opcoes.celular,
       progresso,
+      rolagemPx: rolagem,
       humor,
       cinza,
       tempo,
@@ -236,8 +238,9 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
 
   return {
     pronto,
-    definirProgresso(p) {
+    definirProgresso(p, r = 0) {
       progresso = p;
+      rolagem = r;
     },
     refazerFrase(nova) {
       frase = nova;

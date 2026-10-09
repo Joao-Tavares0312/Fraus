@@ -7,6 +7,12 @@ import { FAMILIAS_DO_VETOR } from "../../components/lp/fatos";
 const base = { aspecto: 1.6, alturaPx: 900, total: 16000, celular: false, progresso: 0.5, humor: 0, cinza: 0, tempo: 1, dt: 1 / 60 };
 
 describe("uniformesDoQuadro", () => {
+  it("a frase acompanha a rolagem: o canvas e fixo, a pagina nao", () => {
+    // 450 px rolados numa tela de 900 = meia tela = 1 unidade de cena para cima
+    expect(uniformesDoQuadro({ ...base, rolagemPx: 450 }).extra[1]).toBeCloseTo(1);
+    expect(uniformesDoQuadro(base).extra[1]).toBe(0);
+  });
+
   it("leva os pesos da coreografia para o shader", () => {
     const u = uniformesDoQuadro(base);
     const p = pesosDasFases(0.5);

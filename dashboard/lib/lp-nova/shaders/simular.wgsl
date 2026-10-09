@@ -48,12 +48,14 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let orbe = em_volta(foco, cena.foco.z * (0.55 + 0.25 * cena.leitura.z * sin(cena.tempo * 1.4)), p.semente, 0.12, 2.0);
 
   let peso_orbe = cena.extra.x;
-  let alvo = p.origem * w.x + espalhado * (w.y + leitura) + mascara * w.z + no * w.w + orbe * peso_orbe;
+  // A origem e da pagina no topo; o canvas e fixo, entao ela sobe com a rolagem.
+  let origem = p.origem + vec2f(0.0, cena.extra.y);
+  let alvo = origem * w.x + espalhado * (w.y + leitura) + mascara * w.z + no * w.w + orbe * peso_orbe;
 
   // Agitacao: forte na dispersao; na leitura, o detrator agita e o promotor assenta.
   let agitado = clamp(-humor, 0.0, 1.0);
   let calma = clamp(humor, 0.0, 1.0);
-  let amp = 0.35 * w.y + leitura * (0.08 + 0.55 * agitado - 0.05 * calma) * (1.0 - cena.foco.w) + 0.03;
+  let amp = 0.35 * w.y + leitura * (0.08 + 0.55 * agitado - 0.05 * calma) * (1.0 - cena.foco.w) + 0.03 * (1.0 - w.x);
   let ruido = curl(p.pos * 1.3 + vec2f(p.semente), cena.tempo * 0.15) * amp;
 
   let mola = 6.0 * (1.0 - 0.6 * w.y);

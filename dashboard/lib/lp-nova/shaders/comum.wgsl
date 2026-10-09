@@ -24,7 +24,7 @@ export struct Cena {
   total: u32,
   // pesos de destino: frase, disperso, mascara, nos
   destino: vec4f,
-  // peso do orbe (x)
+  // peso do orbe (x), rolagem da pagina em unidades de cena (y)
   extra: vec4f,
   // leitura, brilho, respira, humor (-1 detrator .. 1 promotor)
   leitura: vec4f,

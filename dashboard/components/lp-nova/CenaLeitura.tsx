@@ -74,7 +74,7 @@ function montar(
   const raiz = alvoCanvas.closest<HTMLElement>(".ln");
   const medir = () => {
     const progresso = progressoDaRolagem(window.scrollY, ancoras);
-    nova.definirProgresso(progresso);
+    nova.definirProgresso(progresso, window.scrollY);
     const fase = faseDominante(progresso);
     if (raiz && raiz.dataset.fase !== fase) raiz.dataset.fase = fase;
   };

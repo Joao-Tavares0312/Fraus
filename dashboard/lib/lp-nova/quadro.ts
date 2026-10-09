@@ -70,6 +70,8 @@ export type EntradaQuadro = {
   cinza: number;
   tempo: number;
   dt: number;
+  /** Quanto a pagina rolou: a frase do hero sobe junto com o texto. */
+  rolagemPx?: number;
 };
 
 export function uniformesDoQuadro(e: EntradaQuadro) {
@@ -86,7 +88,8 @@ export function uniformesDoQuadro(e: EntradaQuadro) {
     aspecto: e.aspecto,
     total: e.total,
     destino: [p.frase, p.disperso, p.mascara, p.nos],
-    extra: [p.orbe, 0, 0, 0],
+    // extra.y: a rolagem em unidades de cena (a tela inteira mede 2).
+    extra: [p.orbe, ((e.rolagemPx ?? 0) / Math.max(1, e.alturaPx)) * 2, 0, 0],
     leitura: [p.leitura, p.brilho, p.respira, e.humor],
     foco: [foco[0], foco[1], raio, e.cinza],
     // Ganho de alfa: a luz somada do campo fica parecida com 4 mil ou 120 mil.
