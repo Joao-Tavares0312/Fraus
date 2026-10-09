@@ -56,3 +56,38 @@ export function rotuloDoRegime(regime: Regime, motivo: MotivoRegime): string {
   if (descricao) partes.push(descricao);
   return partes.join(" · ");
 }
+
+const ORCAMENTO_MS = 24; // acima disso por 2 s seguidos, o aparelho nao segura
+const JANELA_QUADROS = 120;
+// Um "quadro" maior que isto nao e lentidao: e a aba voltando de oculta, ou a
+// primeira compilacao de pipeline. Contado, ele rebaixaria um aparelho bom
+// para sempre (nada sobe sozinho).
+const QUADRO_ANOMALO_MS = 250;
+
+/**
+ * A SAUDE DE QUADROS: decide a descida unica do padrao `adaptive-quality`.
+ * Media movel de 120 quadros acima do orcamento por mais de 2 s seguidos.
+ */
+export class SaudeDeQuadros {
+  private duracoes: number[] = [];
+  private lentoDesde = 0;
+
+  /** Registra um quadro; devolve true no quadro em que a descida deve acontecer. */
+  registrar(ms: number, agora: number): boolean {
+    if (ms > QUADRO_ANOMALO_MS) {
+      this.duracoes = [];
+      this.lentoDesde = 0;
+      return false;
+    }
+    this.duracoes.push(ms);
+    if (this.duracoes.length > JANELA_QUADROS) this.duracoes.shift();
+    if (this.duracoes.length < JANELA_QUADROS) return false;
+    const media = this.duracoes.reduce((a, b) => a + b, 0) / this.duracoes.length;
+    if (media <= ORCAMENTO_MS) {
+      this.lentoDesde = 0;
+      return false;
+    }
+    if (!this.lentoDesde) this.lentoDesde = agora;
+    return agora - this.lentoDesde > 2000;
+  }
+}

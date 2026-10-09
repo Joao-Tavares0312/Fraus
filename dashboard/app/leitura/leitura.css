@@ -477,6 +477,14 @@
   align-items: center;
   gap: 1rem;
 }
+.ln-veredito__discorda {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--linha);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: color-mix(in oklch, var(--foreground) 82%, transparent);
+}
 .ln-veredito__decisiva {
   margin: 0;
   padding-top: 1.25rem;

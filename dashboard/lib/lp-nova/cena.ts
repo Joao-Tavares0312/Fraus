@@ -1,6 +1,6 @@
 import type { Compute, Draw, Effect, Gpu, StorageBuffer, Surface } from "vgpu";
 import { BYTES_POR_PARTICULA, sementeDasParticulas, uniformesDoQuadro } from "./quadro";
-import { PARTICULAS, rebaixar, regimeInicial, type EstadoRegime } from "./regime";
+import { PARTICULAS, SaudeDeQuadros, rebaixar, regimeInicial, type EstadoRegime } from "./regime";
 import orbeWgsl from "./shaders/orbe.wgsl";
 import particulasWgsl from "./shaders/particulas.wgsl";
 import simularWgsl from "./shaders/simular.wgsl";
@@ -15,18 +15,21 @@ import simularWgsl from "./shaders/simular.wgsl";
  * escolhida vira o humor do campo.
  *
  * Molde: o `renderer.ts` do exemplo `fluid` do vgpu -- import dinamico,
- * `dispose` idempotente, relogio zerado com a aba oculta para o laco nao
- * "correr atras" do tempo perdido.
+ * `dispose` idempotente, passo limitado a 1/30 s para a volta de uma aba
+ * oculta nao "correr atras" do tempo perdido.
+ *
+ * Qualquer falha DEPOIS do init (device perdido, pipeline recusado na criacao
+ * preguicosa, descida de qualidade) derruba a cena para o poster com o motivo
+ * escrito -- nunca uma cena congelada com a frase do hero transparente.
  *
  * Qualidade adaptativa no padrao `adaptive-quality`: comeca no alto e desce
  * UMA vez se o quadro medio passar do orcamento; nada sobe sozinho.
  */
 
 const GRUPO = 64; // @workgroup_size de simular.wgsl: 64 cabe em qualquer adaptador, ate no modo de compatibilidade
-const ORCAMENTO_MS = 24; // acima disso por 2 s seguidos, o aparelho nao segura
-const JANELA_QUADROS = 120;
 
-export type Frase = { texto: string; caixa: DOMRect; fonte: string };
+/** A caixa vem em coordenadas de DOCUMENTO (top + scrollY): a frase mora no topo da pagina. */
+export type Frase = { texto: string; caixa: { left: number; top: number; width: number; height: number }; fonte: string };
 
 export type OpcoesCena = {
   celular: boolean;
@@ -40,6 +43,8 @@ export type CenaLeitura = {
   definirProgresso(progresso: number): void;
   /** humor em [-1, 1] (detrator .. promotor); cinza = 1 na leitura sem sinal. */
   definirHumor(humor: number, cinza: number): void;
+  /** Ressemeia as particulas com a frase medida de novo (depois de um resize). */
+  refazerFrase(frase: Frase | null): void;
   dispose(): void;
 };
 
@@ -102,9 +107,9 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
   let humor = 0;
   let cinza = 0;
   let estado: EstadoRegime = { regime: "poster", motivo: "inicial" };
-  const duracoes: number[] = [];
-  let lentoDesde = 0;
-  let desceu = false;
+  const saude = new SaudeDeQuadros();
+  let frase = opcoes.frase;
+  let ressemear = false;
 
   function dispose() {
     if (encerrada) return;
@@ -124,7 +129,7 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
     const largura = window.innerWidth;
     const altura = window.innerHeight;
     const novo = vgpu.storage(g, total * BYTES_POR_PARTICULA, "read-write");
-    novo.write(sementeDasParticulas(total, origensDaFrase(opcoes.frase, total, largura, altura), Math.random));
+    novo.write(sementeDasParticulas(total, origensDaFrase(frase, total, largura, altura), Math.random));
     // O tipo publico nao expoe `destroy`, mas o objeto tem -- o exemplo
     // `fluid` do vgpu libera os buffers pela mesma coercao.
     (buffer as unknown as { destroy(): void } | undefined)?.destroy();
@@ -153,18 +158,13 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
     });
   }
 
-  function medir(ms: number, agora: number) {
-    if (estado.regime !== "vivo-alto") return;
-    duracoes.push(ms);
-    if (duracoes.length > JANELA_QUADROS) duracoes.shift();
-    if (duracoes.length < JANELA_QUADROS) return;
-    const media = duracoes.reduce((a, b) => a + b, 0) / duracoes.length;
-    if (media <= ORCAMENTO_MS) {
-      lentoDesde = 0;
-      return;
-    }
-    if (!lentoDesde) lentoDesde = agora;
-    if (agora - lentoDesde > 2000) desceu = true;
+  function falhar(causa: unknown) {
+    if (encerrada) return;
+    // Aviso, nao erro: a pagina segue inteira no poster, e o codigo VGPU ajuda
+    // quem for depurar o aparelho.
+    console.warn("lp-nova: a cena caiu para o poster", causa);
+    dispose();
+    mudar(regimeInicial({ temWebGpu: true, movimentoReduzido: false, falhouInit: true }));
   }
 
   const pronto = (async (): Promise<EstadoRegime> => {
@@ -183,6 +183,9 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
         return estado;
       }
       gpu = g;
+      // Pipelines de render nascem preguicosos no primeiro draw; a falha deles
+      // chega por aqui, assincrona, e nao pelo try.
+      g.onError((erro) => falhar(erro));
       alvo = vgpu.surface(g, canvas, { dpr: [1, opcoes.celular ? 1.5 : 2] });
       orbe = vgpu.effect(g, orbeWgsl, { label: "orbe" });
       mudar(inicial);
@@ -190,27 +193,34 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
 
       const passo = (agora: number) => {
         if (encerrada) return;
-        if (!document.hidden && simular && desenho && orbe && alvo && buffer) {
-          const dt = Math.min(1 / 30, (agora - anterior) / 1000);
-          tempo += dt;
-          const u = uniformes(dt);
-          simular.set({ cena: u, particulas: buffer }).dispatch(Math.ceil(total / GRUPO));
-          desenho.set({ cena: u, particulas: buffer });
-          orbe.set({ cena: u });
-          const fundo = orbe;
-          const campo = desenho;
-          vgpu.frame(g, (f) =>
-            f.pass(alvo!, (pass) => {
-              pass.draw(fundo);
-              pass.draw(campo);
-            }),
-          );
-          medir(agora - anterior, agora);
-          if (desceu) {
-            desceu = false;
-            mudar(rebaixar(estado.regime, "quadros"));
-            semear(vgpu, g);
+        try {
+          if (!document.hidden && simular && desenho && orbe && alvo && buffer) {
+            if (ressemear) {
+              ressemear = false;
+              semear(vgpu, g);
+            }
+            const dt = Math.min(1 / 30, (agora - anterior) / 1000);
+            tempo += dt;
+            const u = uniformes(dt);
+            simular.set({ cena: u, particulas: buffer }).dispatch(Math.ceil(total / GRUPO));
+            desenho.set({ cena: u, particulas: buffer });
+            orbe.set({ cena: u });
+            const fundo = orbe;
+            const campo = desenho;
+            vgpu.frame(g, (f) =>
+              f.pass(alvo!, (pass) => {
+                pass.draw(fundo);
+                pass.draw(campo);
+              }),
+            );
+            if (estado.regime === "vivo-alto" && saude.registrar(agora - anterior, agora)) {
+              mudar(rebaixar(estado.regime, "quadros"));
+              semear(vgpu, g);
+            }
           }
+        } catch (erro) {
+          falhar(erro);
+          return;
         }
         anterior = agora;
         quadro = requestAnimationFrame(passo);
@@ -218,12 +228,9 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
       anterior = performance.now();
       quadro = requestAnimationFrame(passo);
       return estado;
-    } catch {
-      if (encerrada) return estado;
-      dispose();
-      const falhou = regimeInicial({ temWebGpu, movimentoReduzido: false, falhouInit: true });
-      mudar(falhou);
-      return falhou;
+    } catch (erro) {
+      falhar(erro);
+      return estado;
     }
   })();
 
@@ -231,6 +238,10 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
     pronto,
     definirProgresso(p) {
       progresso = p;
+    },
+    refazerFrase(nova) {
+      frase = nova;
+      ressemear = true;
     },
     definirHumor(h, c) {
       humor = h;

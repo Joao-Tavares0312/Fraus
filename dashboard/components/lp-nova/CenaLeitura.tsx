@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { iniciarCena, type CenaLeitura as Cena } from "@/lib/lp-nova/cena";
+import { iniciarCena, type CenaLeitura as Cena, type Frase } from "@/lib/lp-nova/cena";
 import { MARCOS, progressoDaRolagem, type Ancora } from "@/lib/lp-nova/fases";
 import { rotuloDoRegime, type EstadoRegime } from "@/lib/lp-nova/regime";
 
@@ -21,30 +21,40 @@ export function useCena() {
   return useContext(ContextoCena);
 }
 
+/**
+ * A frase do hero medida em coordenadas de DOCUMENTO: quem recarrega no meio
+ * da pagina (o navegador restaura a rolagem) ou entra por `#leituras` ainda
+ * ve as particulas cairem nos glifos quando sobe ate o topo.
+ */
+function medirFrase(): Frase | null {
+  const elemento = document.querySelector<HTMLElement>("[data-ln='frase']");
+  if (!elemento) return null;
+  const r = elemento.getBoundingClientRect();
+  const e = getComputedStyle(elemento);
+  return {
+    texto: elemento.textContent ?? "",
+    caixa: { left: r.left + window.scrollX, top: r.top + window.scrollY, width: r.width, height: r.height },
+    // O atalho `font` volta vazio no Chrome; o canvas cairia em 10px.
+    fonte: `${e.fontWeight} ${e.fontSize} ${e.fontFamily}`,
+  };
+}
+
 function montar(
-alvoCanvas: HTMLCanvasElement,
-cena: { current: Cena | null },
-aoMudarRegime: (estado: EstadoRegime) => void,
+  alvoCanvas: HTMLCanvasElement,
+  cena: { current: Cena | null },
+  humor: { current: [number, number] },
+  aoMudarRegime: (estado: EstadoRegime) => void,
 ): () => void {
-  const elementoFrase = document.querySelector<HTMLElement>("[data-ln='frase']");
-  const frase = elementoFrase
-    ? {
-        texto: elementoFrase.textContent ?? "",
-        caixa: elementoFrase.getBoundingClientRect(),
-        // O atalho `font` volta vazio no Chrome; o canvas cairia em 10px.
-        fonte: (() => {
-          const e = getComputedStyle(elementoFrase);
-          return `${e.fontWeight} ${e.fontSize} ${e.fontFamily}`;
-        })(),
-      }
-    : null;
   const nova = iniciarCena(alvoCanvas, {
     celular: window.matchMedia("(max-width: 899px)").matches,
     movimentoReduzido: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    frase,
+    frase: medirFrase(),
     aoMudarRegime,
   });
   cena.current = nova;
+  // O seletor pode ter escolhido a leitura antes de a cena existir (ela espera
+  // as fontes): o ultimo humor pedido vale assim que ela nasce.
+  nova.definirHumor(...humor.current);
 
   // Cada secao marca ONDE o seu momento acontece; o fecho e o fim da rolagem.
   let ancoras: Ancora[] = [];
@@ -61,9 +71,14 @@ aoMudarRegime: (estado: EstadoRegime) => void,
     });
   };
   const medir = () => nova.definirProgresso(progressoDaRolagem(window.scrollY, ancoras));
+  // Rotacao e resize mudam a caixa e o aspecto: a frase e refeita, com folga
+  // para nao ressemear a cada pixel de um arrasto de janela.
+  let espera = 0;
   const redimensionar = () => {
     ancorar();
     medir();
+    window.clearTimeout(espera);
+    espera = window.setTimeout(() => nova.refazerFrase(medirFrase()), 200);
   };
   ancorar();
   medir();
@@ -72,6 +87,7 @@ aoMudarRegime: (estado: EstadoRegime) => void,
   return () => {
     window.removeEventListener("scroll", medir);
     window.removeEventListener("resize", redimensionar);
+    window.clearTimeout(espera);
     nova.dispose();
     cena.current = null;
   };
@@ -80,6 +96,7 @@ aoMudarRegime: (estado: EstadoRegime) => void,
 export function CenaLeitura({ children }: { children: React.ReactNode }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const cena = useRef<Cena | null>(null);
+  const humor = useRef<[number, number]>([0, 0]);
   const [estado, setEstado] = useState<EstadoRegime | null>(null);
 
   useEffect(() => {
@@ -91,7 +108,7 @@ export function CenaLeitura({ children }: { children: React.ReactNode }) {
     // canvas 2D mede a fonte reserva e as particulas nao caem nos glifos.
     void document.fonts.ready.then(() => {
       if (desmontado) return;
-      soltar = montar(alvo, cena, setEstado);
+      soltar = montar(alvo, cena, humor, setEstado);
     });
     return () => {
       desmontado = true;
@@ -102,7 +119,12 @@ export function CenaLeitura({ children }: { children: React.ReactNode }) {
   const regime = estado?.regime;
   // Estavel entre renders: o seletor o usa como dependencia de efeito.
   const contexto = useMemo(
-    () => ({ definirHumor: (h: number, c: number) => cena.current?.definirHumor(h, c) }),
+    () => ({
+      definirHumor: (h: number, c: number) => {
+        humor.current = [h, c];
+        cena.current?.definirHumor(h, c);
+      },
+    }),
     [],
   );
   return (

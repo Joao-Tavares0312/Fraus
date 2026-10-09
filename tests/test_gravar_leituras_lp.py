@@ -97,3 +97,35 @@ def test_identidade_recusa_ficha_sem_pesos():
 
     with pytest.raises(LeituraRecusada):
         identidade_do_modelo({"importancias": []})
+
+
+def test_recusa_resposta_sem_uma_chave_que_a_lp_mostra():
+    respostas = _respostas()
+    del respostas["ironia"]["analises"][0]["mensagens"]
+    with pytest.raises(LeituraRecusada, match="ironia"):
+        _montar(respostas)
+
+
+def test_sem_sinal_exige_o_motivo_do_servidor_e_nao_qualquer_none():
+    # Score nulo por transcricao sem horario (tem_tempo=False) nao e "sem fala do cliente".
+    respostas = _respostas()
+    respostas["sem-sinal"] = _analise(None, motivo=None)
+    with pytest.raises(LeituraRecusada, match="sem-sinal"):
+        _montar(respostas)
+
+
+def test_recusa_api_sem_https_para_nao_mandar_o_token_em_claro():
+    from scripts.gravar_leituras_lp import exigir_https
+
+    with pytest.raises(LeituraRecusada):
+        exigir_https("http://fraus-api.exemplo")
+    assert exigir_https("https://fraus-api.exemplo/") == "https://fraus-api.exemplo"
+
+
+def test_nao_segue_redirect_com_o_token():
+    import urllib.request
+
+    from scripts.gravar_leituras_lp import SemRedirect
+
+    with pytest.raises(LeituraRecusada):
+        SemRedirect().redirect_request(urllib.request.Request("https://a"), None, 302, "Found", {}, "https://b")

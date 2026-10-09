@@ -4,7 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { falasDecisivas, marcasDaAtribuicao, type MarcaAtribuicao } from "@/lib/derivacoes";
 import { humorDaCategoria } from "@/lib/lp-nova/humor";
-import type { ConjuntoLeituras, IdLeitura, Leitura } from "@/lib/lp-nova/leituras";
+import { concordaComRoteiro, dataDaGravacao, type ConjuntoLeituras, type IdLeitura, type Leitura } from "@/lib/lp-nova/leituras";
 import { useCena } from "./CenaLeitura";
 
 const TITULOS: Record<IdLeitura, { aba: string; tese: string }> = {
@@ -23,10 +23,6 @@ const ROTULO_SENTIDO = {
 
 function porcentagem(v: number) {
   return `${Math.round(v * 100)}%`;
-}
-
-function dataCurta(iso: string) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
 }
 
 /**
@@ -97,7 +93,11 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
         </ol>
 
         <aside className="ln-veredito" aria-label="O que o Fraus mediu">
-          <p className="titulo-vitrine ln-veredito__tese">{TITULOS[atual].tese}</p>
+          {/* O ROTEIRO e o que nos escrevemos; o veredito embaixo e o que o motor leu. */}
+          <div>
+            <span className="ln-rotulo">roteiro da conversa</span>
+            <p className="titulo-vitrine ln-veredito__tese">{TITULOS[atual].tese}</p>
+          </div>
           <div className="ln-veredito__nota">
             <SegmentoLED valor={leitura.nota === null ? null : String(leitura.nota)} rotulo="nota estimada" altura={64} cor="medido" traco="fino" celulas={2} />
             <span className="ln-rotulo">
@@ -110,6 +110,12 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
               )}
             </span>
           </div>
+          {!concordaComRoteiro(leitura) && (
+            <p className="ln-veredito__discorda" role="note">
+              O Fraus leu diferente do roteiro. A leitura fica como o motor disse: esconder o erro seria escolher a
+              conversa a dedo.
+            </p>
+          )}
           {decisivas.length > 0 && (
             <p className="ln-veredito__decisiva">
               {decisivas.length === 1 ? "Uma fala decidiu." : `${decisivas.length} falas inclinaram a nota.`} A mais forte:{" "}
@@ -120,7 +126,7 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
       </div>
 
       <p className="ln-procedencia">
-        Leitura gravada pelo motor de produção em {dataCurta(conjunto.procedencia.gravado_em)} · modelo{" "}
+        Leitura gravada pelo motor de produção em {dataDaGravacao(conjunto.procedencia.gravado_em)} · modelo{" "}
         {conjunto.procedencia.modelo} · conversas sintéticas, escritas para esta página · nota é estimativa, não NPS
         declarado.
       </p>

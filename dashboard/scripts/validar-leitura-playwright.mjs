@@ -14,7 +14,8 @@
  *    rolagem a direita: `scrollWidth` sozinho ja enganou este projeto);
  *  - um unico `h1` e os CTAs do hero dentro da dobra a 1280x720;
  *  - sair para /entrar no meio do laco nao derruba nada (device destruido com
- *    quadro em voo e o caso que o `dispose` existe para cobrir).
+ *    quadro em voo e o caso que o `dispose` existe para cobrir);
+ *  - device PERDIDO no meio do laco cai no poster, com a frase legivel de novo.
  */
 import { chromium } from "playwright";
 
@@ -89,9 +90,38 @@ for (const [nome, viewport] of [
   await pagina.close();
 }
 
+{
+  // Device perdido NO MEIO do laco (reset de driver, crash do processo de GPU):
+  // a cena tem de cair no poster com o motivo escrito, sem pageerror, e a frase
+  // do hero tem de voltar a ser legivel.
+  const pagina = await navegador.newPage({ viewport: { width: 1440, height: 900 } });
+  const erros = [];
+  pagina.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+  await pagina.addInitScript(() => {
+    const original = GPUAdapter.prototype.requestDevice;
+    GPUAdapter.prototype.requestDevice = async function (...args) {
+      const device = await original.apply(this, args);
+      window.__deviceDaCena = device;
+      return device;
+    };
+  });
+  await pagina.goto(`${BASE}/leitura`, { waitUntil: "networkidle", timeout: 90_000 });
+  await pagina.waitForTimeout(2500);
+  await pagina.evaluate(() => window.__deviceDaCena?.destroy());
+  await pagina.waitForTimeout(1500);
+  const m = await pagina.evaluate(() => ({
+    regime: document.querySelector(".ln")?.dataset.regime,
+    cor: getComputedStyle(document.querySelector(".ln-fala__texto")).color,
+  }));
+  exigir("device perdido", m.regime === "poster", `regime ${m.regime}`);
+  exigir("device perdido", !/rgba\(0, 0, 0, 0\)/.test(m.cor), "frase do hero continuou transparente");
+  exigir("device perdido", erros.length === 0, erros.join(" | "));
+  await pagina.close();
+}
+
 await navegador.close();
 if (falhas.length) {
   console.error(`FALHOU\n- ${falhas.join("\n- ")}`);
   process.exit(1);
 }
-console.log("ok /leitura: desktop, celular, dobra 1280x720 e movimento reduzido");
+console.log("ok /leitura: desktop, celular, dobra 1280x720, movimento reduzido e device perdido");

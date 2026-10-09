@@ -49,18 +49,41 @@ def montar_conjunto(respostas: dict, modelo: str, agora: str, api: str, shas: di
         if len(analises) != 1:
             raise LeituraRecusada(f"{id_}: esperada 1 analise, vieram {len(analises)}")
         analise = analises[0]
-        sem_nota = analise.get("score") is None
+        faltando = [c for c in (*CHAVES, "score") if c not in analise]
+        if faltando:
+            raise LeituraRecusada(f"{id_}: a resposta nao trouxe {faltando}; API antiga ou contrato mudou")
+        sem_nota = analise["score"] is None
         # A conversa sem fala do cliente PRECISA sair sem nota (invariante 2);
         # as outras PRECISAM sair com nota. Qualquer troca e motor errado.
         if id_ == SEM_CLIENTE and not sem_nota:
             raise LeituraRecusada(f"{id_}: conversa sem cliente voltou com score {analise['score']}")
+        # Score nulo tambem sai de transcricao sem horario; sem cliente e so com o motivo.
+        if id_ == SEM_CLIENTE and not analise["motivo_sem_sinal"]:
+            raise LeituraRecusada(f"{id_}: score nulo sem motivo_sem_sinal; nao e a ausencia de cliente")
         if id_ != SEM_CLIENTE and sem_nota:
             raise LeituraRecusada(f"{id_}: conversa com cliente voltou sem score")
-        leituras.append({"id": id_, **{c: analise.get(c) for c in CHAVES}, "sha256": shas[id_]})
+        leituras.append({"id": id_, **{c: analise[c] for c in CHAVES}, "sha256": shas[id_]})
     return {
         "procedencia": {"gravado_em": agora, "api": api, "modelo": modelo},
         "leituras": leituras,
     }
+
+
+def exigir_https(api: str) -> str:
+    """O Bearer de producao nao trafega em claro."""
+    if not api.startswith("https://"):
+        raise LeituraRecusada(f"FRAUS_LP_API precisa ser https:// (veio {api!r}): o token iria em claro")
+    return api.rstrip("/")
+
+
+class SemRedirect(urllib.request.HTTPRedirectHandler):
+    """O urllib copia o Authorization ao seguir redirect, ate para outro host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise LeituraRecusada(f"a API respondeu {code} para {newurl}; redirect nao e seguido com o token")
+
+
+_ABRIR = urllib.request.build_opener(SemRedirect())
 
 
 def _pedir(api: str, token: str, caminho: str, corpo: dict | None = None) -> dict:
@@ -71,7 +94,7 @@ def _pedir(api: str, token: str, caminho: str, corpo: dict | None = None) -> dic
         method="POST" if dados is not None else "GET",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(pedido, timeout=180) as resposta:
+    with _ABRIR.open(pedido, timeout=180) as resposta:
         return json.loads(resposta.read())
 
 
@@ -95,6 +118,7 @@ def main() -> int:
     if not api or not token:
         print("defina FRAUS_LP_API e FRAUS_LP_TOKEN", file=sys.stderr)
         return 2
+    api = exigir_https(api)
     respostas, shas = {}, {}
     for id_ in IDS:
         bruto = (PASTA_CSV / f"{id_}.csv").read_bytes()
@@ -104,6 +128,12 @@ def main() -> int:
     modelo = identidade_do_modelo(_pedir(api, token, "/modelo"))
     agora = datetime.now(timezone.utc).isoformat(timespec="seconds")
     conjunto = montar_conjunto(respostas, modelo=modelo, agora=agora, api=api, shas=shas)
+    # A pagina mostra quando o motor discorda do roteiro; aqui so avisa, sem
+    # recusar -- recusar seria escolher a leitura a dedo.
+    roteiro = {"obrigado": "detrator", "ironia": "detrator", "espera": "detrator", "promotor": "promotor", "sem-sinal": None}
+    for leitura in conjunto["leituras"]:
+        if leitura["categoria"] != roteiro[leitura["id"]]:
+            print(f"aviso: {leitura['id']} lida como {leitura['categoria']}, roteiro {roteiro[leitura['id']]}")
     DESTINO.write_text(json.dumps(conjunto, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"gravado {DESTINO.relative_to(RAIZ)}")
     return 0

@@ -33,7 +33,9 @@ export type Procedencia = { gravado_em: string; api: string; modelo: string };
 export type ConjuntoLeituras = { procedencia: Procedencia; leituras: Leitura[] };
 export type Falta = { falta: string };
 
-const NAO_GRAVADAS = "leituras ainda não gravadas — rode scripts/gravar_leituras_lp.py contra a API de produção";
+// Para o VISITANTE: o que falta, sem instrucao de desenvolvedor na pagina
+// publica. Como resolver mora em docs/handoff.md (scripts/gravar_leituras_lp.py).
+const NAO_GRAVADAS = "As leituras desta seção ainda não foram gravadas pelo motor de produção";
 
 function texto(v: unknown): v is string {
   return typeof v === "string" && v.length > 0;
@@ -58,4 +60,32 @@ export function validarLeituras(bruto: unknown): ConjuntoLeituras | Falta {
     ordenadas.push(l);
   }
   return { procedencia, leituras: ordenadas };
+}
+
+/** Data da gravacao no fuso do produto: servidor (UTC) e navegador concordam. */
+export function dataDaGravacao(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(iso));
+}
+
+/**
+ * O que o ROTEIRO de cada conversa sintetica encena -- escrito por nos, nao
+ * medido. A pagina compara com a categoria que o motor gravou e, quando
+ * discordam, DIZ que o Fraus leu diferente: esconder o erro seria escolher a
+ * leitura a dedo.
+ */
+export const ROTEIRO: Record<IdLeitura, string | null> = {
+  obrigado: "detrator",
+  ironia: "detrator",
+  espera: "detrator",
+  promotor: "promotor",
+  "sem-sinal": null,
+};
+
+export function concordaComRoteiro(l: { id: IdLeitura; categoria: string | null }): boolean {
+  return ROTEIRO[l.id] === l.categoria;
 }

@@ -32,7 +32,7 @@ export function Analista() {
             <h3>Sem sinal nunca vira zero.</h3>
             <p>
               Conversa sem fala do cliente não tem nota, não entra em média e não aparece como insatisfeita. O display
-              fica ligado e apagado, do jeito que você viu na leitura sem sinal.
+              fica ligado e apagado: medidor que não leu nada, nunca um zero.
             </p>
           </li>
           <li>
