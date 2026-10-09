@@ -115,7 +115,7 @@ export function Atelier() {
           por frame atras da tabela e do grafico que o analista le por horas,
           e a secao 6 do DESIGN.md ja gastou os dois momentos de movimento da
           interface. O espetaculo de particulas em WebGL existe -- mas na LP,
-          que e visita de 40 segundos e outro contrato. Ver components/lp/.
+          que e visita de 40 segundos e outro contrato. Ver components/lp-nova/.
 
           A mascara clareia o campo no ALTO e o apaga descendo, pelo mesmo
           motivo do papel pautado: o terco de baixo pertence ao planeta e a

@@ -1,5 +1,5 @@
 /*
- * LP NOVA (`/leitura`) — prefixo `ln-`, para nao herdar nada da vitrine `vt-`.
+ * A LP (`/`) — prefixo `ln-`. A vitrine antiga (`vt-`) foi removida em 09/10/2026.
  * Tudo nos tokens do Instrumento (globals.css): ambar e o dito, azul o medido,
  * dourado so em acao e foco, magenta so no halo da cena. Bricolage entra so
  * pelas classes `.display-vitrine` / `.titulo-vitrine`; aqui muda tamanho e
@@ -255,6 +255,8 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  /* Quebra antes de chegar no orbe, que mora no terco direito. */
+  max-width: 22rem;
   padding-left: 1.25rem;
   border-left: 1px solid var(--linha);
 }

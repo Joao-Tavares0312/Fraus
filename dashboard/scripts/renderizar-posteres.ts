@@ -78,6 +78,8 @@ async function renderizarTudo(): Promise<Map<string, Uint8Array>> {
         total: TOTAL,
         celular: false,
         progresso,
+        // O poster e a tela parada: o texto e o fundo nao se movem um contra o outro.
+        rolagemPx: 0,
         humor: 0,
         cinza: 0,
         tempo,

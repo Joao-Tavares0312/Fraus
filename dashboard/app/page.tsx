@@ -1,34 +1,45 @@
-import "./vitrine.css";
-import { CabecalhoVitrine } from "@/components/lp/CabecalhoVitrine";
-import { CenaVitrine } from "@/components/lp/CenaVitrine";
-import { Constelacao } from "@/components/lp/Constelacao";
-import { Fecho, Rodape } from "@/components/lp/Fecho";
-import { Hero } from "@/components/lp/Hero";
-import { SemSinal } from "@/components/lp/SemSinal";
-import { Sistema } from "@/components/lp/Sistema";
+import type { Metadata } from "next";
+import "./lp.css";
+import { CenaLeitura } from "@/components/lp-nova/CenaLeitura";
+import { Analista } from "@/components/lp-nova/secoes/Analista";
+import { Fecho } from "@/components/lp-nova/secoes/Fecho";
+import { Hero } from "@/components/lp-nova/secoes/Hero";
+import { Leituras } from "@/components/lp-nova/secoes/Leituras";
+import { Limites } from "@/components/lp-nova/secoes/Limites";
+import { Mascara } from "@/components/lp-nova/secoes/Mascara";
+import { Problema } from "@/components/lp-nova/secoes/Problema";
+import { Topo } from "@/components/lp-nova/secoes/Topo";
+import { carregarLeituras } from "@/lib/lp-nova/carregar";
+
+export const metadata: Metadata = {
+  title: "Fraus — leia o que ficou nas entrelinhas",
+  description:
+    "O Fraus mede a satisfação em atendimentos de chatbot sem perguntar nada ao cliente. Veja o motor ler cinco conversas.",
+};
 
 /**
- * A VITRINE (rota `/`) -- modo Persuade, a unica superficie onde a expressao
- * pode ser alta. Direcao aprovada em 01/10/2026 sobre a mescla de prototipos:
- * hero e orbe da v0, fosforo de osciloscopio da v1, mascara da v6 virando a
- * constelacao da v4, e o orbe atravessando a pagina como fusor.
- *
- * As secoes sao Server Components; so a `CenaVitrine` (canvas + motor) e de
- * cliente. Toda amostra de conversa e nota e SINTETICA e diz isso onde
- * aparece; os numeros-fato vem de `components/lp/fatos.ts`.
+ * A LP (rota `/`, desde 09/10/2026): a mistura da LP nova com a vitrine
+ * antiga, toda em vgpu. Da nova: hero em particulas, leituras gravadas e as
+ * secoes de texto. Da antiga: o fosforo de osciloscopio, o orbe de tres
+ * manchas e a mascara que vira constelacao. Secoes em Server Components; so a
+ * cena e o seletor sao de cliente. `/leitura`, onde ela nasceu, redireciona
+ * para ca (`next.config.ts`).
  */
-export default function PaginaInicial() {
+export default async function PaginaInicial() {
+  const conjunto = await carregarLeituras();
+  const obrigado = "leituras" in conjunto ? (conjunto.leituras.find((l) => l.id === "obrigado") ?? null) : null;
   return (
-    <CenaVitrine>
-      <CabecalhoVitrine />
+    <CenaLeitura>
+      <Topo />
       <main>
-        <Hero />
-        <Constelacao />
-        <SemSinal />
-        <Sistema />
+        <Hero leitura={obrigado} />
+        <Problema />
+        <Mascara leitura={obrigado} />
+        <Leituras conjunto={conjunto} />
+        <Analista />
+        <Limites />
         <Fecho />
       </main>
-      <Rodape />
-    </CenaVitrine>
+    </CenaLeitura>
   );
 }

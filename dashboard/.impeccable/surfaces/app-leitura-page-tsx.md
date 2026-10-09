@@ -1,13 +1,13 @@
 ---
 version: 1
 slug: "app-leitura-page-tsx"
-primary_target: "app/leitura/page.tsx"
+primary_target: "app/page.tsx"
 related_targets: []
 ---
 
-# Surface brief: LP nova /leitura (experimento vgpu)
+# Surface brief: a LP (`/`, vgpu) — nasceu em /leitura
 
-Scope: rota `/leitura`, Persuade. Visitante: gestor/analista de operação de atendimento; secundária, a banca. Ação: ver o Fraus ler uma conversa, depois entrar.
+Scope: rota `/` desde 09/10/2026 (`/leitura` redireciona), Persuade. Fósforo de osciloscópio e orbe de três manchas da vitrine antiga, em WGSL, sob as partículas. Visitante: gestor/analista de operação de atendimento; secundária, a banca. Ação: ver o Fraus ler uma conversa, depois entrar.
 Truth: leituras são do motor real, gravadas com procedência; NPS é estimativa; sem sinal nunca é zero; sem LLM; não pontua atendente.
 Memorable moment: a fala "ok, obrigado 🙂" feita de partículas âmbar se desfaz, cai no orbe e sai azul.
 

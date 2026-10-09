@@ -2,7 +2,7 @@ import { FAMILIAS_DO_VETOR } from "../../components/lp/fatos";
 
 /**
  * A MASCARA E OS NOS: a geometria da constelacao da vitrine antiga
- * (`lib/vitrine/motor.ts`, `construirCeu`), portada para a cena vgpu.
+ * (`construirCeu`, no antigo `lib/vitrine/motor.ts`), portada para a cena vgpu.
  *
  * Tudo em unidades de MASCARA (raio vertical 1, centro 0): a cena escala e
  * posiciona no orbe. A mascara e um oval com olhos e boca VAZIOS -- o que a

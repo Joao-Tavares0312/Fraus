@@ -25,7 +25,6 @@ export function Fecho() {
           <span>Conversas sintéticas, lidas pelo motor real</span>
           <span>NPS estimado</span>
           <span>Sem LLM em runtime</span>
-          <Link href="/">Vitrine anterior</Link>
         </div>
       </footer>
     </>

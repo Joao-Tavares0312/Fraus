@@ -246,11 +246,16 @@ def test_a_tela_modelo_abre_pelo_veredito():
 DIRETORIOS_DA_LP_NOVA = (
     RAIZ / "dashboard" / "components" / "lp-nova",
     RAIZ / "dashboard" / "lib" / "lp-nova",
-    RAIZ / "dashboard" / "app" / "leitura",
 )
+# A pagina da LP: nasceu em `app/leitura/` e virou a raiz em 09/10/2026.
+PAGINA_DA_LP_NOVA = RAIZ / "dashboard" / "app" / "page.tsx"
 
 
 def _arquivos_da_lp_nova():
+    # Pasta que sumiu nao pode virar guarda que passa por nao ler nada.
+    for caminho in (*DIRETORIOS_DA_LP_NOVA, PAGINA_DA_LP_NOVA):
+        assert caminho.exists(), f"{caminho} nao existe; a LP mudou de casa? atualize a guarda"
+    yield PAGINA_DA_LP_NOVA
     for pasta in DIRETORIOS_DA_LP_NOVA:
         for arquivo in sorted(pasta.rglob("*")):
             if arquivo.suffix in (".ts", ".tsx") and not arquivo.name.endswith(".test.ts"):
@@ -258,7 +263,7 @@ def _arquivos_da_lp_nova():
 
 
 def test_a_lp_nova_nao_digita_contagem_de_features_a_mao():
-    """A LP nova (`/leitura`) faz a mesma promessa da vitrine: numero do codigo.
+    """A LP (`/`) faz a mesma promessa da vitrine: numero do codigo.
 
     A contagem vem de `FATOS_DO_MODELO`/`FAMILIAS_DO_VETOR`; um "N features"
     digitado em qualquer arquivo da LP nova e o defeito de 04/09/2026 de novo.

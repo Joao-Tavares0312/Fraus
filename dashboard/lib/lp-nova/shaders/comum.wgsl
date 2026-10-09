@@ -1,7 +1,7 @@
 // O vocabulario compartilhado da cena: a particula, o quadro e as cores com dono.
 //
 // Espaco da cena: y em [-1, 1] (de baixo para cima) e x em [-aspecto, aspecto].
-// As cores sao as da vitrine (`lib/vitrine/motor.ts`): ambar e o DITO, azul e o
+// As cores sao as da vitrine antiga: ambar e o DITO, azul e o
 // MEDIDO, magenta so no halo do orbe. Familia nao ganha cor propria.
 
 export struct Particula {
@@ -34,6 +34,12 @@ export struct Cena {
   ponto: vec4f,
   // onde o campo espalhado mora: centro (xy) e meia-largura (zw)
   campo: vec4f,
+  // o fosforo da vitrine antiga: tela em px css (xy), intensidade dos tracos (z), apaga o dito (w)
+  fosforo: vec4f,
+  // o orbe: centro (xy), raio (z), saturacao (w)
+  orbe: vec4f,
+  // peso das manchas: dito (x), medido (y), halo (z); afastamento (w)
+  paleta: vec4f,
 }
 
 export const DITO: vec3f = vec3f(1.0, 0.6, 0.16);

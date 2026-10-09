@@ -1,6 +1,7 @@
 import { nosDasFeatures, pontoDaMascara } from "./constelacao";
 import { distribuirEnxames } from "./enxames";
 import { pesosDasFases } from "./fases";
+import { estadoDoOrbe } from "./orbe";
 
 /**
  * A PARTE PURA DA CENA: o que vai para a GPU, sem DOM e sem GPU.
@@ -71,7 +72,7 @@ export type EntradaQuadro = {
   tempo: number;
   dt: number;
   /** Quanto a pagina rolou: a frase do hero sobe junto com o texto. */
-  rolagemPx?: number;
+  rolagemPx: number;
 };
 
 export function uniformesDoQuadro(e: EntradaQuadro) {
@@ -82,6 +83,10 @@ export function uniformesDoQuadro(e: EntradaQuadro) {
   const escala = e.celular ? 0.8 : 1;
   // Raio da mascara em unidades de cena: ela ocupa o palco ao lado do texto.
   const mascara = e.celular ? 0.42 : 0.66;
+  // O orbe da vitrine antiga: o mesmo foco, mas raio e canto proprios.
+  const o = estadoDoOrbe(p, e.cinza);
+  const canto = e.celular ? [e.aspecto * 0.72, 0.82] : [e.aspecto * 0.84, 0.72];
+  const raioDoHero = e.celular ? 0.32 : 0.56;
   return {
     tempo: e.tempo,
     dt: e.dt,
@@ -89,12 +94,23 @@ export function uniformesDoQuadro(e: EntradaQuadro) {
     total: e.total,
     destino: [p.frase, p.disperso, p.mascara, p.nos],
     // extra.y: a rolagem em unidades de cena (a tela inteira mede 2).
-    extra: [p.orbe, ((e.rolagemPx ?? 0) / Math.max(1, e.alturaPx)) * 2, 0, 0],
+    extra: [p.orbe, (e.rolagemPx / Math.max(1, e.alturaPx)) * 2, 0, 0],
     leitura: [p.leitura, p.brilho, p.respira, e.humor],
     foco: [foco[0], foco[1], raio, e.cinza],
     // Ganho de alfa: a luz somada do campo fica parecida com 4 mil ou 120 mil.
     ponto: [((e.celular ? 2.2 : 1.6) / Math.max(1, e.alturaPx)) * 2, escala, Math.min(1, 6000 / e.total), mascara],
     // Desktop: metade direita, o texto mora na esquerda. Celular: faixa de cima.
     campo: e.celular ? [0, 0.55, e.aspecto * 0.95, 0.4] : [e.aspecto * 0.5, 0, e.aspecto * 0.5, 0.9],
+    // Tela em pixels CSS, intensidade dos tracos e o apagar do traco do dito.
+    fosforo: [e.aspecto * e.alturaPx, e.alturaPx, o.tracos * p.brilho, o.apagaDito],
+    // Centro do orbe (xy), raio (z) e saturacao (w).
+    orbe: [
+      foco[0] + (canto[0] - foco[0]) * o.noCanto,
+      foco[1] + (canto[1] - foco[1]) * o.noCanto,
+      raioDoHero * o.escala,
+      o.saturacao,
+    ],
+    // Peso das manchas: ambar (dito), azul (medido), magenta (halo); afastamento (w).
+    paleta: [o.dito, o.medido, o.halo, o.afastamento],
   };
 }

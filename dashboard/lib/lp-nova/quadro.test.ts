@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { BYTES_POR_PARTICULA, aleatorioComSemente, sementeDasParticulas, uniformesDoQuadro } from "./quadro";
-import { pesosDasFases } from "./fases";
+import { MARCOS, pesosDasFases } from "./fases";
 import { nosDasFeatures } from "./constelacao";
 import { FAMILIAS_DO_VETOR } from "../../components/lp/fatos";
 
-const base = { aspecto: 1.6, alturaPx: 900, total: 16000, celular: false, progresso: 0.5, humor: 0, cinza: 0, tempo: 1, dt: 1 / 60 };
+const base = { aspecto: 1.6, alturaPx: 900, total: 16000, celular: false, progresso: 0.5, humor: 0, cinza: 0, tempo: 1, dt: 1 / 60, rolagemPx: 0 };
 
 describe("uniformesDoQuadro", () => {
   it("a frase acompanha a rolagem: o canvas e fixo, a pagina nao", () => {
@@ -26,6 +26,24 @@ describe("uniformesDoQuadro", () => {
   });
   it("a mascara tem escala propria, menor no celular", () => {
     expect(uniformesDoQuadro({ ...base, celular: true }).ponto[3]).toBeLessThan(uniformesDoQuadro(base).ponto[3]);
+  });
+  it("o fosforo recebe a tela em pixels: a reticula e os tracos tem espessura de pixel", () => {
+    const [w, h] = uniformesDoQuadro(base).fosforo;
+    expect(w).toBeCloseTo(1440);
+    expect(h).toBe(900);
+  });
+  it("o orbe do hero e grande; na mascara vai para o canto de cima, longe do rosto", () => {
+    const hero = uniformesDoQuadro({ ...base, progresso: 0 }).orbe;
+    const mascara = uniformesDoQuadro({ ...base, progresso: MARCOS.mascara }).orbe;
+    expect(hero[2]).toBeGreaterThan(0.5);
+    expect(mascara[2]).toBeLessThan(hero[2] / 3);
+    expect(mascara[1]).toBeGreaterThan(hero[1]);
+    expect(mascara[0]).toBeGreaterThan(hero[0]);
+  });
+  it("leitura sem sinal apaga a cor do orbe e o traco do dito", () => {
+    const u = uniformesDoQuadro({ ...base, progresso: MARCOS.leitura, cinza: 1 });
+    expect(u.orbe[3]).toBe(0);
+    expect(u.fosforo[3]).toBe(1);
   });
   it("o ganho de alfa cai com mais particulas e nunca passa de 1", () => {
     expect(uniformesDoQuadro({ ...base, total: 120000 }).ponto[2]).toBeCloseTo(0.05);
