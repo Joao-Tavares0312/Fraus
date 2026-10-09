@@ -1,6 +1,5 @@
 import type { Compute, Draw, Effect, Gpu, StorageBuffer, Surface } from "vgpu";
-import { distribuirEnxames } from "./enxames";
-import { pesosDasFases } from "./fases";
+import { BYTES_POR_PARTICULA, sementeDasParticulas, uniformesDoQuadro } from "./quadro";
 import { PARTICULAS, rebaixar, regimeInicial, type EstadoRegime } from "./regime";
 import orbeWgsl from "./shaders/orbe.wgsl";
 import particulasWgsl from "./shaders/particulas.wgsl";
@@ -23,8 +22,7 @@ import simularWgsl from "./shaders/simular.wgsl";
  * UMA vez se o quadro medio passar do orcamento; nada sobe sozinho.
  */
 
-const BYTES_POR_PARTICULA = 40; // Particula em comum.wgsl: 3 x vec2f + u32 + 3 x f32
-const GRUPO = 256; // @workgroup_size de simular.wgsl
+const GRUPO = 64; // @workgroup_size de simular.wgsl: 64 cabe em qualquer adaptador, ate no modo de compatibilidade
 const ORCAMENTO_MS = 24; // acima disso por 2 s seguidos, o aparelho nao segura
 const JANELA_QUADROS = 120;
 
@@ -88,33 +86,6 @@ function origensDaFrase(frase: Frase | null, total: number, largura: number, alt
   return origens;
 }
 
-function sementeDasParticulas(total: number, origens: Float32Array): ArrayBuffer {
-  const bruto = new ArrayBuffer(total * BYTES_POR_PARTICULA);
-  const f32 = new Float32Array(bruto);
-  const u32 = new Uint32Array(bruto);
-  for (const enxame of distribuirEnxames(total)) {
-    for (let i = enxame.inicio; i < enxame.inicio + enxame.particulas; i++) {
-      const b = (i * BYTES_POR_PARTICULA) / 4;
-      f32[b] = origens[i * 2];
-      f32[b + 1] = origens[i * 2 + 1];
-      f32[b + 2] = 0;
-      f32[b + 3] = 0;
-      f32[b + 4] = origens[i * 2];
-      f32[b + 5] = origens[i * 2 + 1];
-      u32[b + 6] = indiceDaFamilia(enxame.chave);
-      f32[b + 7] = Math.random();
-      f32[b + 8] = 0;
-      f32[b + 9] = 0;
-    }
-  }
-  return bruto;
-}
-
-const ORDEM_FAMILIAS = distribuirEnxames(7).map((e) => e.chave);
-function indiceDaFamilia(chave: string): number {
-  return ORDEM_FAMILIAS.indexOf(chave);
-}
-
 export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): CenaLeitura {
   let encerrada = false;
   let gpu: Gpu | undefined;
@@ -153,7 +124,7 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
     const largura = window.innerWidth;
     const altura = window.innerHeight;
     const novo = vgpu.storage(g, total * BYTES_POR_PARTICULA, "read-write");
-    novo.write(sementeDasParticulas(total, origensDaFrase(opcoes.frase, total, largura, altura)));
+    novo.write(sementeDasParticulas(total, origensDaFrase(opcoes.frase, total, largura, altura), Math.random));
     // O tipo publico nao expoe `destroy`, mas o objeto tem -- o exemplo
     // `fluid` do vgpu libera os buffers pela mesma coercao.
     (buffer as unknown as { destroy(): void } | undefined)?.destroy();
@@ -169,32 +140,17 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
   }
 
   function uniformes(dt: number) {
-    const aspecto = canvas.clientWidth / Math.max(1, canvas.clientHeight);
-    const p = pesosDasFases(progresso);
-    // Desktop: o orbe mora no terco direito, ao lado do texto. Celular: no alto.
-    const foco = opcoes.celular ? [0, 0.42] : [aspecto * 0.42, 0];
-    const raio = opcoes.celular ? 0.24 : 0.3;
-    const escala = opcoes.celular ? 0.8 : 1;
-    const centros = distribuirEnxames(7).map((e) => [
-      foco[0] + (e.centro[0] - 0.5) * 2 * 0.62 * escala,
-      foco[1] - (e.centro[1] - 0.5) * 2 * 0.62 * escala,
-      0,
-      0,
-    ]);
-    return {
+    return uniformesDoQuadro({
+      aspecto: canvas.clientWidth / Math.max(1, canvas.clientHeight),
+      alturaPx: canvas.clientHeight,
+      total,
+      celular: opcoes.celular,
+      progresso,
+      humor,
+      cinza,
       tempo,
       dt,
-      aspecto,
-      total,
-      destino: [p.frase, p.disperso, p.enxame, p.orbe],
-      leitura: [p.leitura, p.brilho, p.respira, humor],
-      foco: [foco[0], foco[1], raio, cinza],
-      // Ganho de alfa: a luz somada do campo fica parecida com 4 mil ou 120 mil.
-      ponto: [((opcoes.celular ? 2.2 : 1.6) / Math.max(1, canvas.clientHeight)) * 2, escala, Math.min(1, 6000 / total), 0],
-      // Desktop: metade direita, o texto mora na esquerda. Celular: faixa de cima.
-      campo: opcoes.celular ? [0, 0.55, aspecto * 0.95, 0.4] : [aspecto * 0.5, 0, aspecto * 0.5, 0.9],
-      centros,
-    };
+    });
   }
 
   function medir(ms: number, agora: number) {

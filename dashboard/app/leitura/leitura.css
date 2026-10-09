@@ -85,6 +85,26 @@
   color: var(--medido-texto);
 }
 
+/* --- posteres: sem cena viva (sem WebGPU, GPU recusou, movimento reduzido ou
+   sem JavaScript), cada momento-chave mostra o quadro renderizado do MESMO
+   WGSL por `scripts/renderizar-posteres.ts`. Com a cena viva, nada disso. */
+.ln:not([data-regime^="vivo"]) .ln-hero,
+.ln:not([data-regime^="vivo"]) .ln-fusor__preso,
+.ln:not([data-regime^="vivo"]) .ln-fecho {
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: cover;
+}
+.ln:not([data-regime^="vivo"]) .ln-hero {
+  background-image: url("/lp-nova/hero.png");
+}
+.ln:not([data-regime^="vivo"]) .ln-fusor__preso {
+  background-image: url("/lp-nova/fusor.png");
+}
+.ln:not([data-regime^="vivo"]) .ln-fecho {
+  background-image: url("/lp-nova/fecho.png");
+}
+
 /* --- botoes: a borda conica dourado -> magenta e o unico magenta fora da cena */
 .ln-botoes {
   display: flex;
@@ -582,7 +602,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 2rem;
-  padding-block: 1.5rem;
+  /* folga embaixo para o rotulo fixo do regime nao encostar no link */
+  padding-block: 1.5rem 2.75rem;
   font-family: var(--fonte-mono);
   font-size: 0.6875rem;
   letter-spacing: 0.12em;

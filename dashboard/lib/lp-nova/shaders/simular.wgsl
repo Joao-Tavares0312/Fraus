@@ -25,7 +25,7 @@ fn em_volta(centro: vec2f, raio: f32, semente: f32, giro: f32, canal: f32) -> ve
   return centro + vec2f(cos(ang), sin(ang)) * r;
 }
 
-@compute @workgroup_size(256)
+@compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) id: vec3u) {
   let i = id.x;
   if (i >= cena.total) { return; }

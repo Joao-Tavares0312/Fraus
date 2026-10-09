@@ -11,7 +11,8 @@
     "test:lp": "node scripts/validar-lp-playwright.mjs",
     "contraste": "node scripts/contraste.mjs",
     "pisos": "node scripts/pisos.mjs",
-    "wgsl": "node scripts/checar-wgsl.mjs"
+    "wgsl": "node scripts/checar-wgsl.mjs",
+    "posteres": "jiti scripts/renderizar-posteres.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
