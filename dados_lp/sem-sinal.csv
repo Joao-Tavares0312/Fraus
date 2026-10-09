@@ -1,0 +1,4 @@
+conversa_id,canal,autor,texto,enviada_em,escalou_para_humano
+lp-sem-sinal,chat,bot,"Olá! Como posso ajudar você hoje?",2026-10-05T11:00:00-03:00,false
+lp-sem-sinal,chat,bot,"Ainda está aí? Estou à disposição.",2026-10-05T11:02:00-03:00,false
+lp-sem-sinal,chat,bot,"Como não recebi resposta, vou encerrar o atendimento. Até logo!",2026-10-05T11:05:00-03:00,false

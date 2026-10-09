@@ -1,0 +1,6 @@
+conversa_id,canal,autor,texto,enviada_em,escalou_para_humano
+lp-ironia,chat,cliente,"Comprei um fone há 20 dias e até agora não chegou",2026-10-02T09:10:00-03:00,false
+lp-ironia,chat,bot,"Seu pedido está em transporte. A previsão de entrega é de até 30 dias úteis.",2026-10-02T09:10:05-03:00,false
+lp-ironia,chat,cliente,"30 dias úteis pra um fone, que maravilha",2026-10-02T09:11:20-03:00,false
+lp-ironia,chat,bot,"Fico feliz em ajudar! Posso fazer mais alguma coisa por você?",2026-10-02T09:11:24-03:00,false
+lp-ironia,chat,cliente,"nossa, que atendimento EXCELENTE 🙃",2026-10-02T09:12:02-03:00,false
