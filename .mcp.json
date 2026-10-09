@@ -3,6 +3,15 @@
     "supabase": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=meixwqrttomcfabpwnlk&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+    },
+    "vgpu": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "vgpu@0.5.0",
+        "mcp",
+        "--project-from-cwd"
+      ]
     }
   }
 }
