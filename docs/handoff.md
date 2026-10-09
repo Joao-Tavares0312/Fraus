@@ -190,6 +190,54 @@ Drive e download do Colab e teriam de ser adaptados antes.
 
 ---
 
+## 2.0.1 LP nova com vgpu — branch `feat/lp-nova-vgpu`, 09/10/2026
+
+Experimento pedido pelo João: uma LP que vende o Fraus construída com o
+[vgpu](https://vgpu.sh) (WebGPU da Vercel Labs), na rota **`/leitura`**. A
+vitrine de `/` não foi tocada. Spec em
+`docs/superpowers/specs/2026-10-09-lp-nova-vgpu-design.md`, plano em
+`docs/superpowers/plans/2026-10-09-lp-nova-vgpu.md`, design em
+`dashboard/DESIGN.md` (seção "Vitrine — a LP").
+
+**Mistura (mesmo dia, mesma rota):** a pedido do João, `/leitura` virou a
+mistura da LP nova com a vitrine antiga, toda em vgpu: hero, leituras e textos
+da nova + a máscara que vira constelação da antiga (39 nós por feature). A
+versão só-vgpu com os 7 enxames fica no histórico (`e663e8b`).
+
+**Virou a LP principal (mesmo dia):** a pedido do João, o fósforo de
+osciloscópio e o orbe de três manchas da vitrine antiga voltaram, portados para
+WGSL (`dashboard/lib/lp-nova/shaders/orbe.wgsl`, coreografia pura em
+`lib/lp-nova/orbe.ts`), e a mistura passou a morar em **`/`**. `/leitura`
+redireciona para `/` (`permanent: false`). Com o ok do João, a vitrine WebGL
+antiga foi **apagada** (`components/lp/*.tsx` exceto `fatos.ts`, `lib/vitrine/`,
+`app/vitrine.css`, a dependência `lenis`); o bug de contexto WebGL no
+`next dev` descrito abaixo morreu junto.
+
+**Passo humano que falta:** gravar as leituras com o motor real. Sem isso a
+seção "Escolha uma conversa" mostra o estado vazio.
+
+```bash
+FRAUS_LP_API=<url da fraus-api> FRAUS_LP_TOKEN=<credencial> uv run python scripts/gravar_leituras_lp.py
+git add dashboard/lib/lp-nova/leituras.json
+```
+
+O script recusa gravar se faltar leitura, se a conversa sem cliente voltar com
+nota ou se outra voltar sem. Pôsteres: `cd dashboard && npm run posteres`
+(determinístico, compara duas renderizações). Validação: `npm run wgsl`,
+`npm run test:lp` com o dev de pé (`LP_URL` aponta a base).
+
+**Armadilhas já pagas:** a doc do site do vgpu está à frente da 0.5.0
+(`target.read()` não existe; a leitura é `alvo.color.read({ mipLevel: 0,
+region: "all" })`; `surface` só desenha dentro de `frame()`). A doc certa é a
+versionada: `npx vgpu docs`. O Dawn do Node sobe em modo de compatibilidade
+(workgroup ≤ 128, zero storage buffer no vértice).
+
+**Bug achado na `main` (moot neste branch, que apaga a vitrine WebGL):** em `next dev` a vitrine de `/`
+perde o contexto WebGL. O StrictMode remonta o efeito, a limpeza chama
+`loseContext()` e a segunda montagem pega o mesmo canvas com o contexto perdido
+(8 erros "shader nao compilou null"). O build de produção não é afetado
+(medido). Conserto pendente em branch próprio.
+
 ## 2. Estado em 30/09/2026, com o que mudou em 02/10/2026
 
 **Em 02/10/2026:** PRs #78 (proxy só empresta a credencial do deploy onde não
@@ -586,8 +634,9 @@ lista, ela para de ser lida.
 
 ### Front — `dashboard/`
 
-Rotas (mundo "Instrumento", 30/09/2026): `/` é a **vitrine** (`components/lp/`,
-CSS em `app/vitrine.css`, números em `components/lp/fatos.ts`); a ferramenta
+Rotas (mundo "Instrumento", 30/09/2026): `/` é a **vitrine** (desde 09/10/2026
+a LP em vgpu: `components/lp-nova/`, `lib/lp-nova/`, CSS em `app/lp.css`,
+números em `components/lp/fatos.ts`); a ferramenta
 mora em `/dashboard` (visão geral), `/dashboard/atendimentos` (lista e
 `[id]`), `/dashboard/analisar`, `/dashboard/modelo`, `/dashboard/grafo`,
 `/dashboard/configuracoes` e `/dashboard/integracoes`; mais `/entrar`,

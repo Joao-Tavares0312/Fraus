@@ -1,0 +1,8 @@
+conversa_id,canal,autor,texto,enviada_em,escalou_para_humano
+lp-espera,chat,cliente,"Bom dia, minha internet está caindo toda hora desde ontem",2026-10-03T08:00:00-03:00,false
+lp-espera,chat,bot,"Bom dia! Vou verificar sua conexão. Um momento, por favor.",2026-10-03T08:00:06-03:00,false
+lp-espera,chat,cliente,"Tudo bem, aguardo",2026-10-03T08:00:40-03:00,false
+lp-espera,chat,bot,"Não identifiquei falhas na sua região. Vou transferir para um especialista.",2026-10-03T08:09:15-03:00,true
+lp-espera,chat,cliente,"Certo. Ainda estou aguardando o especialista",2026-10-03T08:24:50-03:00,true
+lp-espera,chat,humano,"Olá, aqui é do suporte técnico. Pode reiniciar o modem, por favor?",2026-10-03T08:47:30-03:00,true
+lp-espera,chat,cliente,"Já reiniciei três vezes antes de chamar vocês",2026-10-03T08:48:10-03:00,true

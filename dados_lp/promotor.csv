@@ -1,0 +1,6 @@
+conversa_id,canal,autor,texto,enviada_em,escalou_para_humano
+lp-promotor,chat,cliente,"Oi! Quero trocar o endereço de entrega do meu pedido",2026-10-04T16:20:00-03:00,false
+lp-promotor,chat,bot,"Claro! Qual é o novo endereço?",2026-10-04T16:20:03-03:00,false
+lp-promotor,chat,cliente,"Rua das Acácias, 120, apartamento 32",2026-10-04T16:20:41-03:00,false
+lp-promotor,chat,bot,"Pronto! O endereço do pedido foi atualizado e a entrega segue no prazo.",2026-10-04T16:20:45-03:00,false
+lp-promotor,chat,cliente,"Perfeito, resolveu na hora! Muito obrigado, atendimento ótimo 😄",2026-10-04T16:21:10-03:00,false

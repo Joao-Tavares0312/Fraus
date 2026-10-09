@@ -27,7 +27,7 @@ export const FATOS_DO_MODELO = {
  *
  * `tests/test_derivacoes_dashboard.py` le estes pares `chave`/`qtd` como
  * texto e compara com o agrupamento de `NOMES_FEATURES`. A soma bate com
- * `FATOS_DO_MODELO.features` por `lib/vitrine/coreografia.test.ts`.
+ * `FATOS_DO_MODELO.features` por `lib/lp-nova/constelacao.test.ts`.
  */
 export const FAMILIAS_DO_VETOR = [
   { chave: "texto", rotulo: "Texto", qtd: 4, leitura: "BERTimbau fine-tunado, probabilidade por mensagem — por isso a nota aponta a fala que a puxou." },

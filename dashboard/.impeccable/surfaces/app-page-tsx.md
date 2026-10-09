@@ -7,7 +7,7 @@ related_targets: []
 
 # Surface brief: LP e dashboard (redesign Instrumento)
 
-Scope: vitrine `/` (Persuade) e as 7 telas do dashboard (Operate). Visitor: analista de operacao de atendimento; secundaria, a banca do TCC.
+Scope: as 7 telas do dashboard (Operate). A vitrine `/` passou a seguir `app-leitura-page-tsx.md` em 09/10/2026. Originalmente: vitrine `/` (Persuade) e as 7 telas do dashboard (Operate). Visitor: analista de operacao de atendimento; secundaria, a banca do TCC.
 Truth: NPS e inferido (estimativa), sem LLM em runtime, sem sinal nunca e zero, o Fraus nao pontua atendentes.
 Memorable moment: o orbe do hero com a nota em LED e a regua dito/medido.
 

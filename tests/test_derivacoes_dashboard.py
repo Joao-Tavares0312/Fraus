@@ -241,3 +241,47 @@ def test_a_tela_modelo_abre_pelo_veredito():
     # aparece uma vez no arquivo, como elemento; o titulo em prosa do Painel
     # ("Simulador ao vivo") nao bate no prefixo `<Simulador`.
     assert pagina.index("<EstadoDoModelo") < pagina.index("<Simulador")
+
+
+DIRETORIOS_DA_LP_NOVA = (
+    RAIZ / "dashboard" / "components" / "lp-nova",
+    RAIZ / "dashboard" / "lib" / "lp-nova",
+)
+# A pagina da LP: nasceu em `app/leitura/` e virou a raiz em 09/10/2026.
+PAGINA_DA_LP_NOVA = RAIZ / "dashboard" / "app" / "page.tsx"
+
+
+def _arquivos_da_lp_nova():
+    # Pasta que sumiu nao pode virar guarda que passa por nao ler nada.
+    for caminho in (*DIRETORIOS_DA_LP_NOVA, PAGINA_DA_LP_NOVA):
+        assert caminho.exists(), f"{caminho} nao existe; a LP mudou de casa? atualize a guarda"
+    yield PAGINA_DA_LP_NOVA
+    for pasta in DIRETORIOS_DA_LP_NOVA:
+        for arquivo in sorted(pasta.rglob("*")):
+            if arquivo.suffix in (".ts", ".tsx") and not arquivo.name.endswith(".test.ts"):
+                yield arquivo
+
+
+def test_a_lp_nova_nao_digita_contagem_de_features_a_mao():
+    """A LP (`/`) faz a mesma promessa da vitrine: numero do codigo.
+
+    A contagem vem de `FATOS_DO_MODELO`/`FAMILIAS_DO_VETOR`; um "N features"
+    digitado em qualquer arquivo da LP nova e o defeito de 04/09/2026 de novo.
+    """
+    literais = []
+    for arquivo in _arquivos_da_lp_nova():
+        texto = arquivo.read_text(encoding="utf-8")
+        for achado in re.finditer(r"\b(\d+)\s+(?:features|numeros|números)\b", texto):
+            if int(achado.group(1)) != len(NOMES_FEATURES):
+                literais.append(f"{arquivo.name}: {achado.group(0)!r}")
+    assert not literais, f"a LP nova digita contagem divergente de NOMES_FEATURES: {literais}"
+
+
+def test_a_lp_nova_nao_transforma_ausencia_em_zero():
+    """Invariante 2 na LP nova: `?? 0` e `|| 0` sao como "sem sinal" vira zero."""
+    achados = []
+    for arquivo in _arquivos_da_lp_nova():
+        for numero, linha in enumerate(arquivo.read_text(encoding="utf-8").splitlines(), 1):
+            if re.search(r"(\?\?|\|\|)\s*0(?![.\d])", linha):
+                achados.append(f"{arquivo.name}:{numero}: {linha.strip()}")
+    assert not achados, f"ausencia virando zero na LP nova: {achados}"

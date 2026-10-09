@@ -1,0 +1,8 @@
+conversa_id,canal,autor,texto,enviada_em,escalou_para_humano
+lp-obrigado,chat,cliente,"Oi, meu boleto veio com valor errado, cobraram duas vezes a mensalidade",2026-10-01T14:02:10-03:00,false
+lp-obrigado,chat,bot,"Olá! Posso ajudar com a segunda via do boleto. Deseja gerar uma nova via?",2026-10-01T14:02:14-03:00,false
+lp-obrigado,chat,cliente,"Não, não quero segunda via. O valor está errado, veio em dobro",2026-10-01T14:03:40-03:00,false
+lp-obrigado,chat,bot,"Entendi! Para gerar a segunda via do boleto, acesse o menu Financeiro.",2026-10-01T14:03:45-03:00,false
+lp-obrigado,chat,cliente,"de novo isso... eu preciso que corrijam a cobrança",2026-10-01T14:05:02-03:00,false
+lp-obrigado,chat,bot,"Não consegui entender. Você pode reformular a pergunta?",2026-10-01T14:05:06-03:00,false
+lp-obrigado,chat,cliente,"ok, obrigado 🙂",2026-10-01T14:06:31-03:00,false

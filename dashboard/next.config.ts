@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
   // package-lock.json fora do repositorio.
   turbopack: {
     root: path.resolve(process.cwd()),
+    // A LP (`/`) importa `.wgsl` como modulo de TypeScript: o
+    // loader do vgpu resolve os `import` entre arquivos WGSL e entrega a
+    // fonte montada como string.
+    rules: {
+      "*.wgsl": {
+        loaders: ["@vgpu/wgsl/loader-webpack"],
+        as: "*.js",
+      },
+    },
   },
   // As telas moraram na raiz ate 31/08/2026, quando a raiz virou a pagina
   // publica do produto. Link salvo, favorito e documentacao anterior nao podem
@@ -24,11 +33,15 @@ const nextConfig: NextConfig = {
       "integracoes",
       "grafo",
     ];
-    return telas.map((tela) => ({
-      source: `/${tela}/:caminho*`,
-      destination: `/dashboard/${tela}/:caminho*`,
-      permanent: false,
-    }));
+    return [
+      ...telas.map((tela) => ({
+        source: `/${tela}/:caminho*`,
+        destination: `/dashboard/${tela}/:caminho*`,
+        permanent: false,
+      })),
+      // A LP nasceu em `/leitura` e virou a raiz em 09/10/2026.
+      { source: "/leitura", destination: "/", permanent: false },
+    ];
   },
 };
 
