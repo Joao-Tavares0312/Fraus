@@ -40,10 +40,15 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   // Destinos de cada momento da historia.
   // O campo espalhado mora do lado do orbe, nunca debaixo do texto.
   let espalhado = cena.campo.xy + (hash2(vec2f(p.semente, 3.0)) * 2.0 - 1.0) * cena.campo.zw;
-  let enxame = em_volta(cena.centros[p.familia].xy, 0.11 * escala, p.semente, 0.25, 1.0);
+  // A constelacao da vitrine antiga: a mascara e os nos, ao redor do orbe.
+  let raio_mascara = cena.ponto.w;
+  let respiro = 1.0 + 0.012 * sin(cena.tempo * 0.9 + p.semente * 6.0);
+  let mascara = foco + p.mascara * raio_mascara * respiro;
+  let no = em_volta(foco + p.no * raio_mascara, 0.022 * escala, p.semente, 0.6, 1.0);
   let orbe = em_volta(foco, cena.foco.z * (0.55 + 0.25 * cena.leitura.z * sin(cena.tempo * 1.4)), p.semente, 0.12, 2.0);
 
-  let alvo = p.origem * w.x + espalhado * (w.y + leitura) + enxame * w.z + orbe * w.w;
+  let peso_orbe = cena.extra.x;
+  let alvo = p.origem * w.x + espalhado * (w.y + leitura) + mascara * w.z + no * w.w + orbe * peso_orbe;
 
   // Agitacao: forte na dispersao; na leitura, o detrator agita e o promotor assenta.
   let agitado = clamp(-humor, 0.0, 1.0);
@@ -60,7 +65,10 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let perto = 1.0 - smoothstep(cena.foco.z * 0.7, cena.foco.z * 1.2, distance(p.pos, foco));
   var tinta_alvo = p.tinta;
   if (w.x > 0.5) { tinta_alvo = 0.0; }
-  tinta_alvo = max(tinta_alvo, perto * w.w);
+  // Na mascara a cor e o lado: ambar o que foi dito, azul o que da para medir.
+  tinta_alvo = mix(tinta_alvo, step(0.0, p.mascara.x), w.z);
+  tinta_alvo = mix(tinta_alvo, 0.55, w.w);
+  tinta_alvo = max(tinta_alvo, perto * peso_orbe);
   tinta_alvo = mix(tinta_alvo, (humor + 1.0) * 0.5, leitura);
   p.tinta = mix(p.tinta, tinta_alvo, 1.0 - exp(-3.0 * cena.dt));
   p.vida = p.vida + cena.dt;

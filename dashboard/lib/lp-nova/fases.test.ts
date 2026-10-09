@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { MARCOS, pesosDasFases, progressoDaRolagem } from "./fases";
+import { MARCOS, faseDominante, pesosDasFases, progressoDaRolagem } from "./fases";
 
 const soma = (p: ReturnType<typeof pesosDasFases>) =>
-  p.frase + p.disperso + p.enxame + p.orbe + p.leitura;
+  p.frase + p.disperso + p.mascara + p.nos + p.orbe + p.leitura;
 
 describe("pesosDasFases", () => {
   it("no topo da pagina, as particulas sao a frase", () => {
@@ -15,9 +15,15 @@ describe("pesosDasFases", () => {
 
   it("cada marco da historia e dominado pela sua fase", () => {
     expect(pesosDasFases(MARCOS.disperso).disperso).toBe(1);
-    expect(pesosDasFases(MARCOS.enxame).enxame).toBe(1);
+    expect(pesosDasFases(MARCOS.mascara).mascara).toBe(1);
+    expect(pesosDasFases(MARCOS.nos).nos).toBe(1);
     expect(pesosDasFases(MARCOS.orbe).orbe).toBe(1);
     expect(pesosDasFases(MARCOS.leitura).leitura).toBe(1);
+  });
+
+  it("a constelacao da vitrine antiga vem antes do fusor: mascara, depois nos, depois orbe", () => {
+    expect(MARCOS.mascara).toBeLessThan(MARCOS.nos);
+    expect(MARCOS.nos).toBeLessThan(MARCOS.orbe);
   });
 
   it("os marcos estao em ordem: a historia nao anda para tras", () => {
@@ -33,7 +39,7 @@ describe("pesosDasFases", () => {
 
   it("na secao do analista o campo recua para nao competir com o dado", () => {
     expect(pesosDasFases(MARCOS.recuo).brilho).toBeLessThan(0.4);
-    expect(pesosDasFases(MARCOS.enxame).brilho).toBe(1);
+    expect(pesosDasFases(MARCOS.nos).brilho).toBe(1);
   });
 
   it("grampeia progresso fora de [0, 1]", () => {
@@ -65,5 +71,14 @@ describe("progressoDaRolagem", () => {
   });
   it("sem ancoras, o progresso fica no topo", () => {
     expect(progressoDaRolagem(500, [])).toBe(0);
+  });
+});
+
+describe("faseDominante", () => {
+  it("nomeia o momento que mais pesa", () => {
+    expect(faseDominante(MARCOS.mascara)).toBe("mascara");
+    expect(faseDominante(MARCOS.nos)).toBe("nos");
+    expect(faseDominante(MARCOS.orbe)).toBe("orbe");
+    expect(faseDominante(0)).toBe("frase");
   });
 });

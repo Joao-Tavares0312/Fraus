@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { iniciarCena, type CenaLeitura as Cena, type Frase } from "@/lib/lp-nova/cena";
-import { MARCOS, progressoDaRolagem, type Ancora } from "@/lib/lp-nova/fases";
+import { MARCOS, faseDominante, progressoDaRolagem, type Ancora } from "@/lib/lp-nova/fases";
 import { rotuloDoRegime, type EstadoRegime } from "@/lib/lp-nova/regime";
 
 /**
@@ -70,7 +70,14 @@ function montar(
       return [{ y: marco === "frase" ? 0 : y, p: MARCOS[marco] }];
     });
   };
-  const medir = () => nova.definirProgresso(progressoDaRolagem(window.scrollY, ancoras));
+  // A fase dominante vai para a raiz: o texto da mascara acende o passo dela.
+  const raiz = alvoCanvas.closest<HTMLElement>(".ln");
+  const medir = () => {
+    const progresso = progressoDaRolagem(window.scrollY, ancoras);
+    nova.definirProgresso(progresso);
+    const fase = faseDominante(progresso);
+    if (raiz && raiz.dataset.fase !== fase) raiz.dataset.fase = fase;
+  };
   // Rotacao e resize mudam a caixa e o aspecto: a frase e refeita, com folga
   // para nao ressemear a cada pixel de um arrasto de janela.
   let espera = 0;

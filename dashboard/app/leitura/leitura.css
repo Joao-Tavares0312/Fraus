@@ -99,7 +99,7 @@
   background-image: url("/lp-nova/hero.png");
 }
 .ln:not([data-regime^="vivo"]) .ln-fusor__preso {
-  background-image: url("/lp-nova/fusor.png");
+  background-image: url("/lp-nova/mascara.png");
 }
 .ln:not([data-regime^="vivo"]) .ln-fecho {
   background-image: url("/lp-nova/fecho.png");
@@ -310,7 +310,7 @@
 
 /* --- fusor: o texto preso enquanto a cena junta os enxames ---------------- */
 .ln-fusor {
-  height: 230svh;
+  height: 320svh;
   padding-block: 0;
 }
 .ln-marco {
@@ -320,8 +320,61 @@
   width: 1px;
   height: 1px;
 }
-.ln-marco--meio {
-  top: 55%;
+.ln-marco--nos {
+  top: 34%;
+}
+.ln-marco--orbe {
+  top: 64%;
+}
+.ln-passos {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1.5rem;
+  max-width: 34rem;
+}
+.ln-passo {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--compasso);
+  transition:
+    opacity 0.5s var(--ease-fluid),
+    border-color 0.5s var(--ease-fluid);
+}
+.ln-passo .ln-prosa {
+  margin: 0;
+}
+/* Com a cena viva, so o passo da fase atual fica aceso. Sem JS, todos. */
+.ln[data-fase] .ln-passo {
+  opacity: 0.32;
+}
+.ln[data-fase="mascara"] .ln-passo[data-passo="mascara"],
+.ln[data-fase="nos"] .ln-passo[data-passo="nos"],
+.ln[data-fase="orbe"] .ln-passo[data-passo="orbe"],
+.ln[data-fase="leitura"] .ln-passo[data-passo="orbe"] {
+  opacity: 1;
+  border-left-color: var(--linha);
+}
+.ln[data-fase="frase"] .ln-passo,
+.ln[data-fase="disperso"] .ln-passo[data-passo="mascara"] {
+  opacity: 1;
+}
+.ln-nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-top: 0.75rem;
+}
+.ln-nota__puxou {
+  flex-basis: 100%;
+  font-size: 0.875rem;
+  color: color-mix(in oklch, var(--foreground) 80%, transparent);
+}
+.ln-nota__puxou q {
+  color: var(--dito-texto);
 }
 .ln-fusor__preso {
   position: sticky;
@@ -331,33 +384,6 @@
   align-items: center;
   padding-block: 5rem 3rem;
 }
-.ln-familias {
-  list-style: none;
-  margin: 2rem 0 0;
-  padding: 0;
-  max-width: 34rem;
-  border-top: 1px solid var(--compasso);
-}
-.ln-familias li {
-  display: grid;
-  grid-template-columns: 2.6rem 8rem 1fr;
-  align-items: baseline;
-  gap: 0.25rem 1rem;
-  padding-block: 0.65rem;
-  border-bottom: 1px solid var(--compasso);
-}
-.ln-familias__nome {
-  font-family: var(--fonte-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.ln-familias__leitura {
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--muted-foreground);
-}
-
 /* --- leituras: a conversao ------------------------------------------------ */
 .ln-leituras__titulo {
   max-width: 18ch;
@@ -667,11 +693,8 @@
     position: relative;
     padding-top: 46svh;
   }
-  .ln-familias li {
-    grid-template-columns: 2.6rem 1fr;
-  }
-  .ln-familias__leitura {
-    grid-column: 2;
+  .ln[data-fase] .ln-passo {
+    opacity: 1;
   }
   .ln-painel {
     grid-template-columns: 1fr;
@@ -709,6 +732,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ln-passo {
+    transition: none;
+  }
   .ln-botao--feixe {
     animation: none;
   }

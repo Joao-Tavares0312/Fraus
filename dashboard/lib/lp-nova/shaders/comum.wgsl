@@ -8,6 +8,9 @@ export struct Particula {
   pos: vec2f,
   vel: vec2f,
   origem: vec2f,
+  // alvo na mascara e no no da propria familia, em unidades de mascara
+  mascara: vec2f,
+  no: vec2f,
   familia: u32,
   semente: f32,
   tinta: f32,
@@ -19,17 +22,18 @@ export struct Cena {
   dt: f32,
   aspecto: f32,
   total: u32,
-  // pesos de destino: frase, disperso, enxame, orbe
+  // pesos de destino: frase, disperso, mascara, nos
   destino: vec4f,
+  // peso do orbe (x)
+  extra: vec4f,
   // leitura, brilho, respira, humor (-1 detrator .. 1 promotor)
   leitura: vec4f,
   // foco do orbe (xy), raio do orbe (z), cinza da leitura sem sinal (w)
   foco: vec4f,
-  // tamanho do ponto em unidades de cena (x), escala dos enxames (y), ganho de alfa (z)
+  // tamanho do ponto em unidades de cena (x), escala (y), ganho de alfa (z), raio da mascara (w)
   ponto: vec4f,
   // onde o campo espalhado mora: centro (xy) e meia-largura (zw)
   campo: vec4f,
-  centros: array<vec4f, 7>,
 }
 
 export const DITO: vec3f = vec3f(1.0, 0.6, 0.16);

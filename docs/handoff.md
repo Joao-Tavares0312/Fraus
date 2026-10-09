@@ -199,6 +199,11 @@ vitrine de `/` não foi tocada. Spec em
 `docs/superpowers/plans/2026-10-09-lp-nova-vgpu.md`, design em
 `dashboard/DESIGN.md` (seção "LP nova").
 
+**Mistura (mesmo dia, mesma rota):** a pedido do João, `/leitura` virou a
+mistura da LP nova com a vitrine antiga, toda em vgpu: hero, leituras e textos
+da nova + a máscara que vira constelação da antiga (39 nós por feature). A
+versão só-vgpu com os 7 enxames fica no histórico (`e663e8b`).
+
 **Passo humano que falta:** gravar as leituras com o motor real. Sem isso a
 seção "Escolha uma conversa" mostra o estado vazio.
 

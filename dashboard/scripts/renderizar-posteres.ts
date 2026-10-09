@@ -28,7 +28,7 @@ const DT = 1 / 60;
 // O hero sem WebGPU mostra a frase no DOM; o poster dele e o campo ambar do lado.
 const MOMENTOS = [
   { nome: "hero", progresso: MARCOS.disperso },
-  { nome: "fusor", progresso: (MARCOS.enxame + MARCOS.orbe) / 2 },
+  { nome: "mascara", progresso: MARCOS.mascara },
   { nome: "fecho", progresso: MARCOS.fecho },
 ] as const;
 

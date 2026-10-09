@@ -3,14 +3,17 @@
  * quanto cada momento da historia pesa no destino das particulas.
  *
  * O shader nao conhece secao nenhuma -- ele recebe estes pesos e mistura os
- * destinos. Assim a ordem da historia (frase, dispersao, enxames, fusor,
+ * destinos. Assim a ordem da historia (frase, dispersao, mascara, nos, fusor,
  * leitura, recuo, fecho) e testavel aqui, e trocar o ritmo da pagina nao
  * exige mexer em WGSL.
  */
 export const MARCOS = {
   frase: 0,
-  disperso: 0.14,
-  enxame: 0.34,
+  disperso: 0.12,
+  // A constelacao da vitrine antiga: a cortesia vira mascara, a mascara se
+  // desfaz em um no por feature, e os nos caem no fusor.
+  mascara: 0.26,
+  nos: 0.38,
   orbe: 0.5,
   leitura: 0.66,
   recuo: 0.8,
@@ -20,7 +23,8 @@ export const MARCOS = {
 export type Pesos = {
   frase: number;
   disperso: number;
-  enxame: number;
+  mascara: number;
+  nos: number;
   orbe: number;
   leitura: number;
   /** Intensidade global do campo; cai na secao do analista. */
@@ -29,13 +33,14 @@ export type Pesos = {
   respira: number;
 };
 
-type Destino = "frase" | "disperso" | "enxame" | "orbe" | "leitura";
+type Destino = "frase" | "disperso" | "mascara" | "nos" | "orbe" | "leitura";
 
 // A leitura segura o campo ate depois do recuo; o fecho devolve tudo ao orbe.
 const CHAVES: ReadonlyArray<[number, Destino]> = [
   [MARCOS.frase, "frase"],
   [MARCOS.disperso, "disperso"],
-  [MARCOS.enxame, "enxame"],
+  [MARCOS.mascara, "mascara"],
+  [MARCOS.nos, "nos"],
   [MARCOS.orbe, "orbe"],
   [MARCOS.leitura, "leitura"],
   [0.88, "leitura"],
@@ -53,7 +58,7 @@ function rampa(p: number, de: number, ate: number): number {
 
 export function pesosDasFases(progresso: number): Pesos {
   const p = Math.min(1, Math.max(0, progresso));
-  const pesos: Pesos = { frase: 0, disperso: 0, enxame: 0, orbe: 0, leitura: 0, brilho: 1, respira: 0 };
+  const pesos: Pesos = { frase: 0, disperso: 0, mascara: 0, nos: 0, orbe: 0, leitura: 0, brilho: 1, respira: 0 };
 
   let i = 0;
   while (i < CHAVES.length - 2 && p > CHAVES[i + 1][0]) i++;
@@ -89,4 +94,13 @@ export function progressoDaRolagem(scrollY: number, ancoras: Ancora[]): number {
     }
   }
   return ordem[ordem.length - 1].p;
+}
+
+const DESTINOS = ["frase", "disperso", "mascara", "nos", "orbe", "leitura"] as const;
+export type Fase = (typeof DESTINOS)[number];
+
+/** O momento que mais pesa agora: o texto da secao acende o passo dele. */
+export function faseDominante(progresso: number): Fase {
+  const p = pesosDasFases(progresso);
+  return DESTINOS.reduce((melhor, d) => (p[d] > p[melhor] ? d : melhor), DESTINOS[0]);
 }

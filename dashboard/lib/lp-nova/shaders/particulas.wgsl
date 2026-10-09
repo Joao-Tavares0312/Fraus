@@ -31,7 +31,8 @@ fn canto(v: u32) -> vec2f {
   s.cor = mix(cor, cinza, cena.foco.w * cena.leitura.x);
   // ponto.z e o ganho: com 120 mil particulas somando luz, cada uma pesa pouco.
   // Espalhado pela tela, o campo soma menos luz por pixel: o ganho sobe junto.
-  let espalhado = cena.destino.y + cena.leitura.x;
+  // A mascara tambem espalha (um rosto inteiro) e precisa ler os vazios.
+  let espalhado = cena.destino.y + cena.leitura.x + 0.6 * cena.destino.z;
   s.alfa = cena.leitura.y * min(1.0, cena.ponto.z * (1.0 + 5.0 * espalhado)) * (0.35 + 0.4 * fract(p.semente * 17.9));
   return s;
 }
