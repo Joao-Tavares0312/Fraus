@@ -63,7 +63,7 @@ export function pesosDasFases(progresso: number): Pesos {
   pesos[de] += 1 - t;
   pesos[para] += t;
 
-  pesos.brilho = 1 - 0.7 * rampa(p, 0.72, MARCOS.recuo) + 0.7 * rampa(p, 0.88, 0.96);
+  pesos.brilho = 1 - 0.7 * rampa(p, 0.72, MARCOS.recuo) + 0.7 * rampa(p, 0.94, MARCOS.fecho);
   pesos.respira = rampa(p, 0.9, MARCOS.fecho);
   return pesos;
 }

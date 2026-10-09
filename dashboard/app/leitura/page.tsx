@@ -1,15 +1,41 @@
+import type { Metadata } from "next";
+import "./leitura.css";
 import { CenaLeitura } from "@/components/lp-nova/CenaLeitura";
+import { Analista } from "@/components/lp-nova/secoes/Analista";
+import { Fecho } from "@/components/lp-nova/secoes/Fecho";
+import { Fusor } from "@/components/lp-nova/secoes/Fusor";
+import { Hero } from "@/components/lp-nova/secoes/Hero";
+import { Leituras } from "@/components/lp-nova/secoes/Leituras";
+import { Limites } from "@/components/lp-nova/secoes/Limites";
+import { Problema } from "@/components/lp-nova/secoes/Problema";
+import { Topo } from "@/components/lp-nova/secoes/Topo";
+import { carregarLeituras } from "@/lib/lp-nova/carregar";
 
-// Harness da Task 6: so a cena e uma pagina alta para rolar. A Task 7 troca
-// pelas sete secoes.
-export default function PaginaLeitura() {
+export const metadata: Metadata = {
+  title: "Fraus — leia o que ficou nas entrelinhas",
+  description:
+    "O Fraus mede a satisfação em atendimentos de chatbot sem perguntar nada ao cliente. Veja o motor ler cinco conversas.",
+};
+
+/**
+ * A LP NOVA (`/leitura`): experimento com vgpu, ao lado da vitrine de `/`.
+ * Secoes em Server Components; so a cena e o seletor sao de cliente.
+ */
+export default async function PaginaLeitura() {
+  const conjunto = await carregarLeituras();
+  const obrigado = "leituras" in conjunto ? (conjunto.leituras.find((l) => l.id === "obrigado") ?? null) : null;
   return (
     <CenaLeitura>
-      <style>{`.ln-cena{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0}
-      .ln-regime{position:fixed;right:16px;bottom:12px;font:12px monospace;color:#aaa;z-index:2}
-      .ln-frase{position:relative;z-index:1;font:600 64px sans-serif;color:transparent;margin:40vh 0 0 8vw;display:inline-block}`}</style>
-      <span data-ln="frase" className="ln-frase">ok, obrigado 🙂</span>
-      <div style={{ height: "700vh" }} />
+      <Topo />
+      <main>
+        <Hero leitura={obrigado} />
+        <Problema />
+        <Fusor />
+        <Leituras conjunto={conjunto} />
+        <Analista />
+        <Limites />
+        <Fecho />
+      </main>
     </CenaLeitura>
   );
 }

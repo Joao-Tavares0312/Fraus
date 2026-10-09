@@ -1,0 +1,689 @@
+/*
+ * LP NOVA (`/leitura`) — prefixo `ln-`, para nao herdar nada da vitrine `vt-`.
+ * Tudo nos tokens do Instrumento (globals.css): ambar e o dito, azul o medido,
+ * dourado so em acao e foco, magenta so no halo da cena. Bricolage entra so
+ * pelas classes `.display-vitrine` / `.titulo-vitrine`; aqui muda tamanho e
+ * peso, nunca familia.
+ */
+
+.ln {
+  position: relative;
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--background);
+  color: var(--foreground);
+}
+.ln ::selection {
+  background: color-mix(in oklch, var(--dito) 38%, transparent);
+  color: var(--foreground);
+}
+.ln :focus-visible {
+  outline: 1px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.ln-cena {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100svh;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+}
+.ln[data-regime="poster"] .ln-cena {
+  display: none;
+}
+.ln main,
+.ln-topo,
+.ln-rodape {
+  position: relative;
+  z-index: 1;
+}
+
+.ln-wrap {
+  width: 100%;
+  max-width: 82rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 3rem);
+}
+.ln-coluna {
+  max-width: 44rem;
+}
+.ln-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ln-rotulo {
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.ln-rotulo strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.ln-prosa {
+  font-family: var(--fonte-sans);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  max-width: 34rem;
+  color: color-mix(in oklch, var(--foreground) 82%, transparent);
+}
+.ln-dito {
+  color: var(--dito-texto);
+}
+.ln-medido {
+  color: var(--medido-texto);
+}
+
+/* --- botoes: a borda conica dourado -> magenta e o unico magenta fora da cena */
+.ln-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+.ln-botao {
+  display: inline-flex;
+  align-items: center;
+  height: 3rem;
+  padding: 0 1.6rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  text-decoration: none;
+  transition:
+    border-color 0.2s var(--ease-fluid),
+    color 0.2s var(--ease-fluid),
+    transform 0.2s var(--ease-fluid);
+}
+@property --ln-giro {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.ln-botao--feixe {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--background), var(--background)) padding-box,
+    conic-gradient(from var(--ln-giro), var(--primary), var(--atelie-halo), var(--primary)) border-box;
+  animation: ln-giro 6s linear infinite;
+}
+.ln-botao--feixe:hover {
+  color: var(--primary);
+}
+@keyframes ln-giro {
+  to {
+    --ln-giro: 360deg;
+  }
+}
+.ln-botao--contorno {
+  border: 1px solid var(--linha);
+  background: color-mix(in oklch, var(--background) 60%, transparent);
+}
+.ln-botao--contorno:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.ln-botao:active {
+  transform: translateY(1px);
+}
+
+/* --- topo ---------------------------------------------------------------- */
+.ln-topo {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 3;
+  border-bottom: 1px solid var(--compasso);
+  background: color-mix(in oklch, var(--background) 72%, transparent);
+  backdrop-filter: blur(12px);
+}
+.ln-topo__faixa {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 3.25rem;
+}
+.ln-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  text-decoration: none;
+}
+.ln-topo__nota {
+  margin-left: auto;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.ln-topo__entrar {
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+  text-decoration: none;
+}
+.ln-topo__entrar:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+/* --- hero ---------------------------------------------------------------- */
+.ln-hero {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-block: 6rem 4rem;
+}
+.ln-hero__miolo {
+  display: grid;
+  gap: 2rem;
+}
+.ln-hero__titulo {
+  font-size: clamp(2.8rem, min(6.4vw, 11vh), 6rem);
+  font-weight: 700;
+  max-width: 12ch;
+}
+.ln-hero__titulo .ln-medido {
+  display: block;
+}
+.ln-fala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem 2.5rem;
+  margin: 0;
+}
+.ln-fala blockquote {
+  margin: 0;
+}
+.ln-fala__texto {
+  font-family: var(--fonte-mono);
+  font-size: clamp(1.5rem, 2.8vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--dito-texto);
+  margin: 0;
+  transition: color 0.6s var(--ease-fluid);
+}
+/* Com a cena viva, as particulas ambar SAO a frase, nos mesmos pixels. */
+.ln[data-regime^="vivo"] .ln-fala__texto {
+  color: transparent;
+}
+.ln-fala__leitura {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--linha);
+}
+.ln-hero__prosa {
+  margin: 0;
+}
+
+/* --- secoes --------------------------------------------------------------- */
+.ln-sec {
+  position: relative;
+  padding-block: clamp(5rem, 11vw, 9rem);
+}
+.ln-sec h2 {
+  margin: 0 0 2.5rem;
+}
+
+.ln-linhas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--compasso);
+}
+.ln-linhas li {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: 1rem 2rem;
+  padding-block: 1.4rem;
+  border-bottom: 1px solid var(--compasso);
+}
+.ln-linhas__nome {
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dito-texto);
+  padding-top: 0.3rem;
+}
+.ln-linhas__texto {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: color-mix(in oklch, var(--foreground) 82%, transparent);
+}
+.ln-fonte {
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  text-underline-offset: 0.3em;
+}
+.ln-fonte:hover {
+  color: var(--primary);
+}
+
+/* --- fusor: o texto preso enquanto a cena junta os enxames ---------------- */
+.ln-fusor {
+  height: 230svh;
+  padding-block: 0;
+}
+.ln-marco {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+}
+.ln-marco--meio {
+  top: 55%;
+}
+.ln-fusor__preso {
+  position: sticky;
+  top: 0;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-block: 5rem 3rem;
+}
+.ln-familias {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  max-width: 34rem;
+  border-top: 1px solid var(--compasso);
+}
+.ln-familias li {
+  display: grid;
+  grid-template-columns: 2.6rem 8rem 1fr;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding-block: 0.65rem;
+  border-bottom: 1px solid var(--compasso);
+}
+.ln-familias__nome {
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ln-familias__leitura {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+/* --- leituras: a conversao ------------------------------------------------ */
+.ln-leituras__titulo {
+  max-width: 18ch;
+}
+.ln-vazio {
+  max-width: 40rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--linha);
+  font-family: var(--fonte-mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--background) 90%, transparent);
+}
+.ln-seletor {
+  background: color-mix(in oklch, var(--background) 91%, transparent);
+  border: 1px solid var(--linha);
+  box-shadow: 0 1px 0 oklch(0 0 0 / 30%);
+}
+.ln-abas {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--linha);
+  scrollbar-width: thin;
+  scrollbar-color: var(--linha) transparent;
+}
+.ln-aba {
+  flex: 0 0 auto;
+  padding: 1rem 1.4rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: none;
+  border: 0;
+  border-right: 1px solid var(--compasso);
+  box-shadow: inset 0 -1px 0 transparent;
+  cursor: pointer;
+  transition:
+    color 0.2s var(--ease-fluid),
+    box-shadow 0.2s var(--ease-fluid);
+}
+.ln-aba:hover {
+  color: var(--foreground);
+}
+.ln-aba[aria-selected="true"] {
+  color: var(--foreground);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+.ln-painel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+}
+.ln-conversa {
+  list-style: none;
+  margin: 0;
+  padding: 1.75rem;
+  display: grid;
+  gap: 0.75rem;
+  border-right: 1px solid var(--compasso);
+}
+.ln-msg {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--linha);
+}
+.ln-msg--cliente .ln-rotulo {
+  color: var(--dito-texto);
+}
+.ln-msg--bot,
+.ln-msg--humano {
+  margin-left: 2rem;
+  border-style: dashed;
+  border-color: var(--compasso);
+}
+.ln-msg__texto {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.ln-msg--bot .ln-msg__texto,
+.ln-msg--humano .ln-msg__texto {
+  color: var(--muted-foreground);
+}
+.ln-msg[data-sentido="puxou_para_baixo"] {
+  background: color-mix(in oklch, var(--detrator) 13%, transparent);
+  border-color: color-mix(in oklch, var(--detrator) 45%, transparent);
+}
+.ln-msg[data-sentido="puxou_para_cima"] {
+  background: color-mix(in oklch, var(--promotor) 11%, transparent);
+  border-color: color-mix(in oklch, var(--promotor) 40%, transparent);
+}
+.ln-msg__marca {
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--detrator-texto);
+}
+.ln-msg[data-sentido="puxou_para_cima"] .ln-msg__marca {
+  color: var(--promotor-texto);
+}
+.ln-veredito {
+  padding: 1.75rem;
+  display: grid;
+  align-content: start;
+  gap: 1.5rem;
+}
+.ln-veredito__tese {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  line-height: 1.1;
+}
+.ln-veredito__nota {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.ln-veredito__decisiva {
+  margin: 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--compasso);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: color-mix(in oklch, var(--foreground) 82%, transparent);
+}
+.ln-veredito__decisiva q {
+  color: var(--dito-texto);
+}
+.ln-procedencia {
+  margin: 0;
+  padding: 1rem 1.75rem;
+  border-top: 1px solid var(--compasso);
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+}
+
+/* --- analista ------------------------------------------------------------ */
+.ln-analista h2 {
+  max-width: 20ch;
+}
+.ln-garantias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--linha);
+}
+.ln-garantias li {
+  padding: 2rem 2rem 0 0;
+}
+.ln-garantias li + li {
+  padding-left: 2rem;
+  border-left: 1px solid var(--compasso);
+}
+.ln-garantias__peca {
+  display: flex;
+  align-items: center;
+  height: 3.5rem;
+  margin-bottom: 1.5rem;
+}
+.ln-garantias h3 {
+  margin: 0 0 0.75rem;
+  font-family: var(--fonte-sans);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.ln-garantias p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: color-mix(in oklch, var(--foreground) 78%, transparent);
+}
+.ln-regua {
+  display: inline-flex;
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--linha);
+}
+.ln-regua > span {
+  padding: 0.55rem 0.9rem;
+}
+.ln-regua__dito {
+  color: var(--dito-texto);
+  border-right: 1px solid var(--linha);
+}
+.ln-regua__medido {
+  color: var(--medido-texto);
+}
+.ln-marcada {
+  font-size: 0.9375rem;
+  padding: 0.4rem 0.7rem;
+  background: color-mix(in oklch, var(--detrator) 16%, transparent);
+  border: 1px solid color-mix(in oklch, var(--detrator) 45%, transparent);
+}
+
+/* --- limites ------------------------------------------------------------- */
+.ln-limites__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ln-limites__lista li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 1rem 3rem;
+  align-items: baseline;
+  padding-block: 2.25rem;
+  border-top: 1px solid var(--compasso);
+}
+.ln-limites__lista li:last-child {
+  border-bottom: 1px solid var(--compasso);
+}
+.ln-limites__frase {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* --- fecho --------------------------------------------------------------- */
+.ln-fecho {
+  min-height: 90svh;
+  display: flex;
+  align-items: center;
+}
+.ln-fecho__titulo {
+  font-weight: 700;
+  max-width: 11ch;
+}
+.ln-rodape {
+  border-top: 1px solid var(--compasso);
+  background: color-mix(in oklch, var(--background) 85%, transparent);
+}
+.ln-rodape__faixa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  padding-block: 1.5rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.ln-rodape__faixa a {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  text-underline-offset: 0.3em;
+}
+.ln-rodape__faixa a:hover {
+  color: var(--primary);
+}
+
+.ln-regime {
+  position: fixed;
+  right: 1rem;
+  bottom: 0.75rem;
+  z-index: 4;
+  margin: 0;
+  font-family: var(--fonte-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* --- celular: o orbe mora no alto, o texto embaixo dele ------------------- */
+@media (max-width: 899px) {
+  /* No celular o texto passa por baixo do orbe: os blocos ganham a superficie
+     quase opaca do Instrumento (DESIGN.md, ~90% do fundo) para ler. */
+  .ln-problema .ln-coluna,
+  .ln-fusor .ln-coluna,
+  .ln-analista .ln-wrap,
+  .ln-limites .ln-wrap {
+    background: color-mix(in oklch, var(--background) 88%, transparent);
+    box-shadow: 0 0 0 1rem color-mix(in oklch, var(--background) 88%, transparent);
+  }
+  .ln-hero,
+  .ln-fecho {
+    align-items: flex-end;
+    padding-top: 46svh;
+  }
+  .ln-linhas li {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+  .ln-fusor {
+    height: auto;
+  }
+  .ln-fusor__preso {
+    position: relative;
+    padding-top: 46svh;
+  }
+  .ln-familias li {
+    grid-template-columns: 2.6rem 1fr;
+  }
+  .ln-familias__leitura {
+    grid-column: 2;
+  }
+  .ln-painel {
+    grid-template-columns: 1fr;
+  }
+  .ln-conversa {
+    padding: 1.25rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--compasso);
+  }
+  .ln-msg--bot,
+  .ln-msg--humano {
+    margin-left: 1rem;
+  }
+  .ln-veredito {
+    padding: 1.25rem;
+  }
+  .ln-garantias {
+    grid-template-columns: 1fr;
+  }
+  .ln-garantias li,
+  .ln-garantias li + li {
+    padding: 1.75rem 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--compasso);
+  }
+  .ln-limites__lista li {
+    grid-template-columns: 1fr;
+  }
+  .ln-topo__nota {
+    display: none;
+  }
+  .ln-topo__entrar {
+    margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ln-botao--feixe {
+    animation: none;
+  }
+  .ln-fala__texto {
+    transition: none;
+  }
+}

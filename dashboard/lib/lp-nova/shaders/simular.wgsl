@@ -38,8 +38,8 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let foco = cena.foco.xy;
 
   // Destinos de cada momento da historia.
-  let largura = vec2f(cena.aspecto * 0.95, 0.9);
-  let espalhado = (hash2(vec2f(p.semente, 3.0)) * 2.0 - 1.0) * largura;
+  // O campo espalhado mora do lado do orbe, nunca debaixo do texto.
+  let espalhado = cena.campo.xy + (hash2(vec2f(p.semente, 3.0)) * 2.0 - 1.0) * cena.campo.zw;
   let enxame = em_volta(cena.centros[p.familia].xy, 0.11 * escala, p.semente, 0.25, 1.0);
   let orbe = em_volta(foco, cena.foco.z * (0.55 + 0.25 * cena.leitura.z * sin(cena.tempo * 1.4)), p.semente, 0.12, 2.0);
 

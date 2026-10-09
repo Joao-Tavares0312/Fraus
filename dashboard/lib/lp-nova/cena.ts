@@ -191,6 +191,8 @@ export function iniciarCena(canvas: HTMLCanvasElement, opcoes: OpcoesCena): Cena
       foco: [foco[0], foco[1], raio, cinza],
       // Ganho de alfa: a luz somada do campo fica parecida com 4 mil ou 120 mil.
       ponto: [((opcoes.celular ? 2.2 : 1.6) / Math.max(1, canvas.clientHeight)) * 2, escala, Math.min(1, 6000 / total), 0],
+      // Desktop: metade direita, o texto mora na esquerda. Celular: faixa de cima.
+      campo: opcoes.celular ? [0, 0.55, aspecto * 0.95, 0.4] : [aspecto * 0.5, 0, aspecto * 0.5, 0.9],
       centros,
     };
   }

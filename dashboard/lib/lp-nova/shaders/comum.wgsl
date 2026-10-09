@@ -27,6 +27,8 @@ export struct Cena {
   foco: vec4f,
   // tamanho do ponto em unidades de cena (x), escala dos enxames (y), ganho de alfa (z)
   ponto: vec4f,
+  // onde o campo espalhado mora: centro (xy) e meia-largura (zw)
+  campo: vec4f,
   centros: array<vec4f, 7>,
 }
 
