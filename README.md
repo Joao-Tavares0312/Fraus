@@ -60,7 +60,10 @@ sinal; o intervalo AW(3,T) mede incerteza amostral, não a calibração do model
 Simulações e diferenças antes/depois não demonstram causalidade.
 
 Para comparar fusores, configure `FRAUS_FUSOR_CANDIDATO` com o arquivo de um
-artefato compatível no servidor. Nada é promovido ou repontuado automaticamente.
+artefato compatível no servidor. Sem a variável, com arquivo ausente ou com um
+candidato fora do contrato de 39 features (ou treinado em segundos crus), o
+laboratório responde **503** nomeando o motivo. Nada é promovido ou repontuado
+automaticamente.
 Os testes locais podem usar `scripts/validar_operacao_real.py` e
 `dashboard/scripts/validar-operacao-playwright.mjs` (dados temporários).
 
@@ -185,15 +188,20 @@ propósito: a régua misturada é propriedade do banco, não da semana que se ol
 `POST /conversas/repontuar` zera a divergência. **Limitação declarada:** ele roda
 os três BERTimbau de novo por conversa — o vetor é de 39 features e o fusor exige
 as 39, então não existe recalcular só as três léxicas e as cinco de emoji. Em
-dezenas de atendimentos são segundos; em milhares vira trabalho de fila, e a fila
-não existe. A rota é **síncrona de propósito**: uma fila que ninguém observa
-seria pior que uma espera que se vê.
+dezenas de atendimentos são segundos; em milhares, minutos. Por isso a rota
+responde **202** na hora e roda em **segundo plano**, um trabalho por vez:
+`GET /conversas/repontuar` devolve `total`, `feitas`, `estado` e `erro`, e a
+tela mostra a barra — uma espera que se vê, sem prender a conexão. Pedir de novo
+com uma em andamento dá **409**. O estado e a trava moram no banco; uma
+execução interrompida retoma só o que ainda está na régua anterior
+(`fraus/api/repontuacao.py`).
 
 ```
 GET    /lexico/curado          lista os termos curados
 POST   /lexico/curado          cadastra ou EDITA (tipo, termo, peso, motivo)
 DELETE /lexico/curado/{id}     revoga — o termo volta a valer o léxico base
-POST   /conversas/repontuar    repontua o banco inteiro com o léxico vigente
+POST   /conversas/repontuar    202: repontua o banco inteiro em segundo plano (409 se já roda)
+GET    /conversas/repontuar    progresso da última repontuação (404 se nunca houve)
 ```
 
 ## Stack
@@ -518,6 +526,15 @@ curl -X POST 127.0.0.1:8000/ingestao \
       ]}'
 ```
 
+O corpo é `PedidoIngestao` (`fraus/api/esquemas.py`): `id` e `mensagens`
+(1 a 500, cada uma com `autor`, `texto` e `enviada_em` timezone-aware) são
+obrigatórios; `encerrada_em`, `escalou_para_humano`, `feedback_declarado`
+(`-1` ou `1`: o voto que o próprio cliente deu, se a plataforma o coleta) e
+`comentario_feedback` (até 1.000 caracteres) são opcionais. O voto declarado
+não entra no score: `/indicadores` só o compara com a categoria inferida
+(`concordancia_com_feedback`). `encerrada_em` sem fuso, ou anterior à última
+mensagem, leva **422**. Não há campo de canal, score, nota nem categoria.
+
 **No PowerShell esse comando não roda** — e falha de um jeito que não parece
 falha de shell. `curl` ali é **alias de `Invoke-WebRequest`**, que não conhece
 `-X`, `-H` nem `-d`, e a `\` no fim da linha não continua comando nenhum: cada
@@ -627,8 +644,9 @@ O contrato:
   mudar um espaço muda a assinatura.
 - **Corpo:** o mesmo contrato de `POST /ingestao` (`PedidoIngestao`) — `id`,
   `mensagens` (com `autor`, `texto`, `enviada_em` timezone-aware) e os campos
-  opcionais `encerrada_em`/`escalou_para_humano`. O canal não entra: é o da
-  fonte cadastrada.
+  opcionais `encerrada_em` (com fuso e não anterior à última mensagem),
+  `escalou_para_humano`, `feedback_declarado` (`-1`/`1`) e
+  `comentario_feedback`. O canal não entra: é o da fonte cadastrada.
 
 Exemplo de assinar em Python, curto o bastante para colar direto — a chave
 HMAC é o **base64 decodificado** do segredo, não a string `whsec_...` inteira
@@ -670,7 +688,8 @@ depois autoridade, depois parse, nunca o contrário:
 | **200** | reentrega: mesmo `webhook-id` já **aceito** antes para esta fonte — o Standard Webhooks manda a plataforma retentar diante de qualquer resposta fora de 2xx, então responder erro a uma reentrega legítima poria a integração em laço |
 | **400** | corpo fora do contrato, `webhook-timestamp` fora da janela de 5 minutos, ou um dos três cabeçalhos ausente |
 | **401** | assinatura não confere |
-| **403** | fonte cadastrada e desativada |
+| **429** | teto de 120 entregas por minuto da fonte atingido, contado depois da assinatura; traz `Retry-After` |
+| **403** | fonte cadastrada com tipo diferente de `webhook`, ou desativada — conferido só depois da assinatura |
 | **404** | `fonte_id` inexistente |
 | **503** | variável de ambiente ausente, ou com valor que não é um segredo válido |
 
@@ -806,7 +825,12 @@ desligou.
 
 A subida **não abre janela de terminal**. O `stdout` da API vai para
 `dashboard/.fraus-api.log`, que é onde olhar quando ela falha — o motivo mais
-comum é modelo ausente em `modelos/`, que derruba o boot por design.
+comum é modelo ausente em `modelos/`. Desde o provedor preguiçoso
+(`fraus/api/motor_preguicoso.py`) isso **não derruba o boot**: a API sobe,
+`/saude` responde (`"motor": "real"`, mas `"estado_motor": "erro"`),
+`/saude/prontidao` responde **503**, e a primeira rota que precisa do modelo
+falha alto com o erro memorizado — sem predição substituta. Olhe o
+`estado_motor`, não o `motor`.
 
 ### 6. Produção: dashboard e API separadas
 
@@ -826,8 +850,11 @@ Os dois projetos Vercel usam o mesmo repositório, mas têm configurações
 independentes: [`dashboard/vercel.json`](dashboard/vercel.json) impede o build
 do front de herdar o comando da API; [`vercel.json`](vercel.json) prepara a
 função Python. Durante o build, `scripts/preparar_modelos_vercel.py` baixa um
-ZIP privado, confere o SHA-256, recusa *path traversal*, valida os três grafos
-ONNX, tokenizadores e fusor, e só então permite o deploy.
+ZIP privado, confere o SHA-256, recusa *path traversal* e confere a
+**presença** dos três grafos ONNX, das configurações, dos tokenizadores e do
+fusor (e do manifesto do Laya), e só então permite o deploy. Ele não abre os
+grafos nem carrega o fusor: um `fusor.joblib` fora do contrato passa no build e
+só é recusado em runtime, por `Fusor.carregar`.
 
 O runtime usa satisfação e emoção em ONNX fp32. A ironia BERTimbau vai
 quantizada em int8 no pacote, mas em produção quem lê ironia é o Laya sem
@@ -1023,8 +1050,10 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
   (coluna que parseia como data, poucos valores distintos = autor, texto longo
   = mensagem, cardinalidade em blocos = id) + atribuição húngara.
 - [x] **Data ambígua** — **feita em 14/09/2026** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
-  interpretação com menos saltos negativos na ordem das mensagens; empate =
-  confirmação obrigatória. Data sem fuso vira **aviso visível**, nunca naive
+  interpretação com menos saltos negativos na ordem das mensagens; no empate,
+  assume **dia/mês e avisa** (a prévia expõe `data_ambigua` e a tela permite
+  escolher a ordem), mas **não bloqueia**: registrar e importar gravam com
+  dia/mês se ninguém escolher. Data sem fuso vira **aviso visível**, nunca naive
   silencioso (invariante 6). Sem horário, sem nota (§3.2 do handoff).
 - [x] **Perfis de mapeamento** — **feito em 14/09/2026**: tabela
   `perfis_mapeamento` (só nomes de coluna e papéis, nunca conteúdo), chave =
@@ -1294,11 +1323,15 @@ abre sem login, que é o modo local.
   ou a curadoria. A mudança de 0,5 para 0,75 não precisou dele: o banco estava
   vazio quando ela foi feita.
 
-  **O aviso de régua misturada, porém, só enxerga a versão do léxico.** A
-  conversa grava com qual versão do léxico curado foi pontuada, e é isso que a
-  contagem de `/indicadores` compara — o peso do neutro não é versionado, então
-  mudá-lo mistura duas réguas **sem que nenhuma tela avise**. É a razão a mais
-  para ele continuar constante e não virar botão.
+  **O aviso de régua misturada, porém, não enxerga o peso do neutro.** A
+  conversa grava com qual versão do léxico curado e com qual **régua** foi
+  pontuada — desde 15/09/2026, a régua é o hash dos pesos do fusor somado ao da
+  regra de cortesia (`regua_do_fusor`, em `fraus/motor.py`) —, e é isso que a
+  contagem `pontuadas_com_regua_antiga` de `/indicadores` compara: curadoria,
+  retreino do fusor e troca da cortesia avisam. O peso do neutro não entra
+  nesse hash (`Fusor.assinatura`), então mudá-lo mistura duas réguas **sem que
+  nenhuma tela avise**. É a razão a mais para ele continuar constante e não
+  virar botão.
 - **O fusor é treinado em conversas sintéticas.** Nenhum corpus público de
   resenha PT-BR tem timestamps de diálogo: latência, escalação e abandono saem
   de distribuições calibradas por literatura de live chat. O texto é real, o
@@ -1482,8 +1515,11 @@ invariante 7 pede falha alta e explícita; o comportamento cumpria a metade
 
 **Consertado:** `Fusor.carregar` compara `n_features_in_` com
 `len(NOMES_FEATURES)` e levanta `FusorIncompativelError` nomeando os dois
-números e apontando o notebook. Artefato desatualizado agora derruba a API na
-subida. `vetorizar` também passou a recusar chave EXTRA, não só chave faltando.
+números e apontando o notebook. Artefato desatualizado falha **na carga**, não
+mais na primeira pontuação. Desde o provedor preguiçoso essa carga não é a
+subida: a API sobe, `/saude/prontidao` responde 503 com `estado_motor: "erro"`,
+e toda rota que precisa do modelo propaga o mesmo erro — nenhuma pontua com o
+artefato errado. `vetorizar` também passou a recusar chave EXTRA, não só chave faltando.
 
 O retreino com 38 features rodou no mesmo dia: **acurácia 0,943**, F1-macro
 0,944, contra 0,947 do fusor de 40. A queda é o resultado saudável — as duas
@@ -1583,7 +1619,7 @@ o seu arquivo, e é nele que se mexe:
 | `api/seguranca.py` | as duas credenciais — chave de acesso/mestra e chave de fonte — e o middleware |
 | `api/periodo.py` | validação do recorte `de`/`ate`, pontas inclusivas |
 | `api/caminhos.py` | caminhos configuráveis por ambiente + contenção da importação |
-| `api/rotas/` | um módulo por domínio: `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso` (estado, mestra e chaves), `ingestao`, `modelo`, `analise` |
+| `api/rotas/` | um módulo por domínio (16): `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso` (estado, mestra e chaves), `ingestao`, `modelo`, `analise`, `grafo`, `lexico` (léxico curado), `perfis` (perfis de mapeamento), `webhook`, `auth` (cadastro, login e `/auth/eu`), `operacao` (as sete abas de Operação e os convites) e `anotacao` (régua de ironia) |
 
 As dependências chegam por injeção, não por fechamento léxico — é o que
 permite a rota morar fora do arquivo que constrói o app.

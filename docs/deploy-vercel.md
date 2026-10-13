@@ -78,7 +78,9 @@ Uma URL pré-autenticada concede apenas leitura daquele objeto. No build,
 2. baixa o arquivo;
 3. verifica o checksum;
 4. recusa entradas ZIP que escapem do destino;
-5. valida `model.onnx`, configuração, tokenizador e fusor;
+5. confere a **presença** de `model.onnx`, configuração, tokenizador e fusor
+   (e do manifesto do Laya) — sem abrir os grafos nem carregar o fusor, que só
+   é validado em runtime por `Fusor.carregar`;
 6. falha o deploy se qualquer artefato estiver incompleto.
 
 Depois do build, a inferência não depende da Oracle: os arquivos já fazem parte
@@ -261,6 +263,9 @@ FRAUS_MEDIR_URL=https://... uv run python scripts/medir_latencia_deploy.py --amo
 
 Compare medianas com a mesma origem de rede antes de alterar região. A parcela
 API→Postgres aparece em `Server-Timing` como `espera_pool` e `consulta_db`.
+Exceção: em `/auth/*` o cabeçalho leva só `total` — o detalhe entregaria se o
+e-mail tem conta (a conta existente custa uma consulta a mais); o log
+estruturado continua com as parcelas.
 
 ## Verificação realizada
 
