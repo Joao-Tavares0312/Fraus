@@ -106,7 +106,10 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
         if not linha.strip():
             continue
 
-        achado = LINHA.match(linha)
+        # Sem o espaco inicial: o `^\s*` de LINHA disputava esses espacos com
+        # o autor e com o `\s*` antes do `:`, e 8 mil espacos levavam ~7,7 s
+        # (auditoria de 13/10/2026).
+        achado = LINHA.match(linha.lstrip())
         autor = _autor_de(achado.group("autor")) if achado else None
 
         if autor is None:
