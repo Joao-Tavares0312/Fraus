@@ -53,3 +53,14 @@ describe("GET /api/fraus/iniciar", () => {
     expect(corpo).not.toContain(".fraus-api.log");
   });
 });
+
+describe("npm run dev", () => {
+  it("escuta so em loopback, porque sem login o proxy empresta a chave tecnica", async () => {
+    // Auditoria de 13/10/2026: `next dev` sem -H escuta em todas as
+    // interfaces, e no modo sem login `credencialDoServidor` anexa a chave
+    // tecnica a QUALQUER requisicao -- inclusive de outra maquina da rede.
+    const { readFileSync } = await import("node:fs");
+    const pacote = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
+    expect(pacote.scripts.dev).toMatch(/-H 127\.0\.0\.1\b/);
+  });
+});
