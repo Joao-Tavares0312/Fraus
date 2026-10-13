@@ -262,18 +262,41 @@ Variáveis de ambiente reconhecidas:
 |---|---|---|
 | `FRAUS_CAMINHO_MODELO_TEXTO` | `modelos/bertimbau-satisfacao` | modelo de texto |
 | `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
+| `FRAUS_CAMINHO_MODELO_EMOCAO` / `_IRONIA` | `modelos/bertimbau-emocao` / `modelos/bertimbau-ironia` | as outras duas cabeças no backend Torch |
+| `FRAUS_BACKEND` | `torch` | quem executa as cabeças: `torch` (`modelos/`), `onnx` (`modelos-onnx/`) ou `onnx-multitarefa`; valor desconhecido é erro no boot, sem detecção nem fallback |
+| `FRAUS_CAMINHO_ONNX_TEXTO` / `_EMOCAO` / `_IRONIA` | `modelos-onnx/bertimbau-satisfacao` / `-emocao` / `-ironia` | os grafos ONNX de cada cabeça, com `FRAUS_BACKEND=onnx` |
+| `FRAUS_CAMINHO_ONNX_MULTITAREFA` | `modelos-onnx/bertimbau-multitarefa` | o grafo único de `FRAUS_BACKEND=onnx-multitarefa` |
+| `FRAUS_CAMINHO_ONNX_LAYA` | `modelos-onnx/laya-ironia` | o Laya em ONNX, com `FRAUS_IRONIA_BACKEND=laya-onnx` (o caminho de produção) |
+| `FRAUS_CAMINHO_METRICAS` / `_EMOCAO` / `_IRONIA` | `modelos/bertimbau-satisfacao/metricas.json` / `modelos/metricas_emocao.json` / `modelos/metricas_ironia.json` | métricas dos notebooks lidas por `/modelo`; ausentes, viram `null` |
+| `FRAUS_CAMINHO_COMPARACAO` | `modelos/comparacao_modelos.json` | laudo local BERTimbau × Laya do notebook 07; quando existe, vence o versionado em `fraus/dados/` |
+| `FRAUS_FUSOR_CANDIDATO` | (nenhum) | `.joblib` que o Laboratório de Operação compara com o fusor vigente; sem ela, ou incompatível, a comparação responde 503. Nunca é promovido |
+| `FRAUS_INFERENCIAS_SIMULTANEAS` | `1` | quantas passadas de modelo rodam ao mesmo tempo, somando as três cabeças |
+| `FRAUS_ONNX_THREADS` | `0` | threads por passada ONNX; `0` deixa o runtime escolher |
+| `FRAUS_AQUECER` | `1` | `0` desliga o aquecimento do motor em segundo plano no boot |
 | `FRAUS_IRONIA_BACKEND` | `padrao` | `laya` troca somente a cabeça de ironia pelo Laya multilíngue (PyTorch; exige `uv sync --extra laya`); `laya-onnx` usa o Laya exportado para ONNX, que é o valor de produção |
 | `FRAUS_LAYA_REVISAO` | `55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851` | revisão imutável do checkpoint Laya |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
+| `FRAUS_DATABASE_URL` | (nenhum) | URL PostgreSQL (Supabase em produção); definida, **vence** `FRAUS_CAMINHO_BANCO` |
 | `FRAUS_POSTGRES_MIN_CONEXOES` | `0` | mínimo do pool por instância; zero evita reservar conexão em função fria |
 | `FRAUS_POSTGRES_MAX_CONEXOES` | `2` | máximo do pool por instância serverless (1–20) |
 | `FRAUS_POSTGRES_TIMEOUT_S` | `10` | segundos máximos esperando conexão do pool (0,1–60) |
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
 | `FRAUS_CAMINHO_CHAVES` | `.fraus-chaves.txt` | onde a **primeira subida** grava a mestra e a chave de acesso que ela gera. Única cópia em claro delas; fora do git, e criado com permissão **`0600`** — só o dono lê (em POSIX; no Windows quem manda é a ACL herdada da pasta) |
-| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra, uma chave de acesso ou um **token de sessão** — exceto `POST /ingestao` (chave de fonte), o webhook (assinatura própria) e as públicas (`/saude`, `/acesso/estado`, `/auth/estado`, `/auth/registrar`, `/auth/entrar`) |
-| `FRAUS_JWT_SEGREDO` | (nenhum) | assina o **JWT de sessão** do login de usuário (`POST /auth/entrar`). Sem ela, o login responde 503 dizendo o que falta, `/auth/estado` anuncia `disponivel: false` e a dashboard abre **sem exigir login** — o modo aberto local, mesmo contrato da API sem mestra |
-| `FRAUS_CODIGO_CONVITE` | (nenhum) | o código exigido para **criar conta** em `POST /auth/registrar`. Sem ela o cadastro fica **aberto** — o certo para uso local, e perigoso quando a API está publicada: ver *A porta destrancada*, logo abaixo. Não confundir com a de baixo: esta decide **se** a conta pode nascer; `FRAUS_CODIGO_DEV` decide **com qual papel** |
+| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra, uma chave de acesso ou um **token de sessão** — exceto `POST /ingestao` (chave de fonte), o webhook (assinatura própria) e as públicas (`/saude`, `/saude/prontidao`, `/acesso/estado`, `/auth/estado`, `/auth/registrar`, `/auth/entrar`, a prévia de convite e o link do anotador — lista completa em *Precedência*, abaixo) |
+| `FRAUS_JWT_SEGREDO` | (nenhum) | assina o **JWT de sessão** do login de usuário (`POST /auth/entrar`). Precisa ter **pelo menos 32 bytes**: mais curta, a API não sobe (`validar_configuracao_de_producao`, em qualquer ambiente). Sem ela, o login responde 503 dizendo o que falta, `/auth/estado` anuncia `disponivel: false` e a dashboard abre **sem exigir login** — o modo aberto local, mesmo contrato da API sem mestra |
+| `FRAUS_CODIGO_CONVITE` | (nenhum) | o código exigido para **criar conta** em `POST /auth/registrar`. Sem ela (e fora de `FRAUS_AMBIENTE=producao`, que recusa subir) o cadastro fica **aberto** — o certo para uso local, e perigoso quando a API está publicada: ver *A porta destrancada*, logo abaixo. Não confundir com a de baixo: esta decide **se** a conta pode nascer; `FRAUS_CODIGO_DEV` decide **com qual papel** |
 | `FRAUS_CODIGO_DEV` | (nenhum) | o código de convite que permite um cadastro nascer com papel **`dev`** (administra Integrações, Modelo, Configurações, importação e léxico). Sem ela, nenhum cadastro nasce dev — todo mundo nasce `usuario` (analista: Visão geral e Atendimentos). Código errado é 403 explícito, nunca rebaixamento silencioso |
+| `FRAUS_AMBIENTE` | (nenhum) | `producao` (ou `production`/`prod`) faz a API **recusar subir** sem `FRAUS_CHAVE_MESTRA`, `FRAUS_JWT_SEGREDO`, `FRAUS_CODIGO_CONVITE` e `FRAUS_DATABASE_URL` apontando para PostgreSQL — o aviso da porta destrancada vira recusa (`validar_configuracao_de_producao`, em `fraus/api/main.py`) |
+| `FRAUS_CHAVE_ACESSO` | (nenhum) | na **dashboard**, a credencial que o proxy apresenta (ver *Dashboard*). Na **API**, se definida, também é aceita como chave de acesso — sem linha no banco, então `DELETE /acesso/chaves/{id}` não a revoga |
+| `FRAUS_ORIGENS` | `localhost` e `127.0.0.1` nas portas 3000 e 3001 | origens liberadas no CORS, separadas por vírgula; nunca `*` |
+
+Variáveis lidas só por scripts de operação e pelo CI, não pela API:
+
+| Variável | Padrão | O que faz |
+|---|---|---|
+| `FRAUS_SMOKE_URL` / `FRAUS_SMOKE_TOKEN` | (nenhum) | URL HTTPS e credencial de `scripts/smoke_deploy.py`, que confere `/saude` depois do deploy da API (o workflow `api-deploy.yml` as define) |
+| `FRAUS_MEDIR_TOKEN` | (nenhum) | credencial que `scripts/medir_latencia_deploy.py` manda em `Authorization`, ao lado de `FRAUS_MEDIR_URL` |
+| `FRAUS_DASHBOARD_URL` | `https://fraus-one.vercel.app` | base dos links que `scripts/criar_link_anotacao.py` imprime. **Não confundir** com `FRAUS_URL_DASHBOARD`, lida pelo `mkdocs.yml` para o link "← Dashboard" do site |
 
 #### A porta destrancada — leia antes de publicar a API
 
@@ -306,7 +329,9 @@ ATENCAO: a API responde 401 para anonimo, mas o CADASTRO esta aberto.
 
 Continua sendo **aviso, não recusa de subir**: cadastro aberto é o
 comportamento certo em `localhost`, que é o uso declarado do projeto. O que
-faltava era a frase, não a tranca.
+faltava era a frase, não a tranca. A exceção é declarada: com
+`FRAUS_AMBIENTE=producao`, a API **não sobe** sem mestra, `FRAUS_JWT_SEGREDO`,
+`FRAUS_CODIGO_CONVITE` e `FRAUS_DATABASE_URL` em PostgreSQL.
 
 #### A autenticação já vem ligada
 
