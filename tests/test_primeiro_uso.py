@@ -140,3 +140,24 @@ def test_arquivo_de_credenciais_e_legivel_so_pelo_dono(tmp_path):
         # somente leitura -- o bit de grupo/outros nao existe. O que da para
         # afirmar aqui e que o arquivo foi criado e e gravavel pelo dono.
         assert modo & stat.S_IRUSR
+
+
+def test_aviso_de_subida_aberta_nomeia_o_arquivo_antigo(tmp_path, monkeypatch, capsys):
+    """Auditoria de 13/10/2026: banco novo com `.fraus-chaves.txt` de uma
+    instalacao anterior faz a API subir aberta (decisao declarada, ver o teste
+    acima). O aviso mandava "corrigir a permissao" -- causa errada, e quem le
+    vai procurar permissao enquanto o primeiro anonimo grava a mestra."""
+    import fraus.api.main as principal
+
+    arquivo = tmp_path / ".fraus-chaves.txt"
+    arquivo.write_text("chave_mestra=frm_de_antes\n", encoding="utf-8")
+    monkeypatch.setattr(principal, "CAMINHO_CHAVES", arquivo)
+    monkeypatch.setattr(principal, "DESTINO_BANCO", tmp_path / "novo.db")
+    for variavel in ("FRAUS_CHAVE_MESTRA", "FRAUS_AMBIENTE", "FRAUS_JWT_SEGREDO"):
+        monkeypatch.delenv(variavel, raising=False)
+
+    principal.criar_app_padrao()
+
+    saida = capsys.readouterr().out
+    assert "ja existe" in saida
+    assert "permissao" not in saida

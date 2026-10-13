@@ -381,11 +381,22 @@ def criar_app_padrao() -> FastAPI:
         # Cai aqui quando o arquivo NAO pode ser escrito: nada foi gravado, e a
         # API sobe aberta. Aberta com aviso e recuperavel; fechada com a chave
         # perdida no primeiro boot, nao.
+        #
+        # O arquivo JA EXISTIR (banco recriado, arquivo da instalacao anterior)
+        # cai aqui tambem, e "corrija a permissao" mandava procurar a causa
+        # errada (auditoria de 13/10/2026).
+        if CAMINHO_CHAVES.exists():
+            causa = (
+                f"{CAMINHO_CHAVES} ja existe, de uma instalacao anterior, e o "
+                f"banco nao tem mestra -- ele nao e sobrescrito. Guarde ou "
+                f"apague esse arquivo e suba de novo"
+            )
+        else:
+            causa = f"Nao foi possivel escrever {CAMINHO_CHAVES}. Corrija a permissao e suba de novo"
         print(
-            f"AVISO: API sem autenticacao. Nao foi possivel escrever "
-            f"{CAMINHO_CHAVES} -- ligar sem guardar a chave em lugar nenhum "
-            f"trancaria voce para fora. Corrija a permissao e suba de novo, ou "
-            f"defina FRAUS_CHAVE_MESTRA."
+            f"AVISO: API sem autenticacao. {causa} -- ligar sem guardar a "
+            f"chave em lugar nenhum trancaria voce para fora. Ou defina "
+            f"FRAUS_CHAVE_MESTRA."
         )
 
     # Depois de `ligar_no_primeiro_uso`, de proposito: a mestra que ele acabou
