@@ -15,9 +15,11 @@ from pydantic import BaseModel, Field, model_validator
 
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.motor_preguicoso import motor_e_real
+from fraus.contestacao import contestacao
 from fraus.fusor import Fusor, FusorIncompativelError
 from fraus.indicadores import nps_com_intervalo, nota_0_10
 from fraus.operacao import descobrir_temas, limitar_esperas, simular_escala
+from fraus.resumo import resumir
 from fraus.seguranca.pii import censurar_pii
 
 router = APIRouter(prefix="/operacao")
@@ -500,17 +502,26 @@ def autorizar_exportacao(de: str | None = None, ate: str | None = None, ctx: Con
     return {"autorizada": True}
 
 
+def celula_segura(valor):
+    """Neutraliza formula de planilha em campo de origem externa (lista da
+    OWASP: = + - @ e tambem tab e retorno, que o Excel pula antes de ler)."""
+    return "'" + valor if isinstance(valor, str) and valor.startswith(("=", "+", "-", "@", "\t", "\r")) else valor
+
+
 @router.get("/exportar")
 def exportar(de: str | None = None, ate: str | None = None, ctx: Contexto = Depends(obter_contexto)):
     exigir_exportacao(ctx)
-    registros = ctx.registros_do_recorte(de, ate)
+    # Ordem pelo instante (e id no empate): `todas()` nao promete ordem, e o
+    # texto ISO com offsets diferentes ordena errado (auditoria de 13/10/2026).
+    registros = sorted(ctx.registros_do_recorte(de, ate), key=lambda r: (r[0].iniciada_em, r[0].id))
     arquivo = io.StringIO()
     escritor = csv.writer(arquivo)
-    escritor.writerow(["id", "canal", "iniciada_em", "score_inferido_estimativa", "nota_inferida_estimativa", "categoria"])
+    escritor.writerow(["id", "canal", "iniciada_em", "score_inferido_estimativa", "nota_inferida_estimativa", "categoria", "contestada"])
     for c, s in registros:
         f = ficha(ctx, c, s)
-        # Neutraliza formulas de planilha em campos de origem externa.
         valores = [f[k] if f[k] is not None else "" for k in ("id", "canal", "iniciada_em", "score", "nota", "categoria")]
-        escritor.writerow(["'" + v if isinstance(v, str) and v.startswith(("=", "+", "-", "@")) else v for v in valores])
+        # A mesma marca da API e do CSV da tela: a ressalva sai junto do numero.
+        valores.append("sim" if contestacao(s, resumir(c)["latencia_mediana_s"]) else "")
+        escritor.writerow([celula_segura(v) for v in valores])
     ctx.banco.auditar(ator(ctx), "exportar_recorte", f"{de or '*'}:{ate or '*'}")
     return Response(arquivo.getvalue(), media_type="text/csv", headers={"Content-Disposition": 'attachment; filename="fraus-operacao.csv"'})

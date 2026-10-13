@@ -237,3 +237,30 @@ def test_jornada_ordena_contatos_pelo_instante_e_nao_pelo_texto_do_offset(ambien
 
     assert [c["id"] for c in jornada["contatos"]] == ["jB", "jA"]
     assert jornada["resolucao_declarada"] is False
+
+
+def test_exportacao_do_servidor_leva_contestada_e_sai_em_ordem(ambiente):
+    """Auditoria de 13/10/2026: a API (/conversas) e o CSV da tela marcam a
+    contestacao; o CSV de /operacao/exportar nao, e saia sem ordem."""
+    import csv as _csv
+    import io as _io
+
+    cli, banco, h, _u = ambiente
+    elogio = conversa("z-elogio", texto="perfeito, adorei", dia=-1)  # humano respondeu em 300 s
+    banco.salvar(elogio, 99, "promotor")
+
+    r = cli.get("/operacao/exportar", headers=h["dev"])
+    assert r.status_code == 200, r.text
+    linhas = list(_csv.DictReader(_io.StringIO(r.text)))
+
+    assert [linha["id"] for linha in linhas] == ["z-elogio", "c1", "c2"]
+    marca = {linha["id"]: linha["contestada"] for linha in linhas}
+    assert marca == {"z-elogio": "sim", "c1": "", "c2": ""}
+
+
+def test_exportacao_do_servidor_neutraliza_tab_e_retorno_no_inicio():
+    from fraus.api.rotas.operacao import celula_segura
+
+    assert celula_segura("\t=1+1") == "'\t=1+1"
+    assert celula_segura("\r=1") == "'\r=1"
+    assert celula_segura("chat") == "chat"
