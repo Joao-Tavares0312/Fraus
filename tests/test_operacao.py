@@ -213,3 +213,27 @@ def test_laboratorio_recusa_fusor_candidato_incompativel_com_503(ambiente, tmp_p
     r = cli.post("/operacao/laboratorio/comparar", headers=h["usuario"], json={"conversa_ids": ["c1"]})
     assert r.status_code == 503, r.text
     assert "incompativel" in r.json()["detail"]
+
+
+def test_jornada_ordena_contatos_pelo_instante_e_nao_pelo_texto_do_offset(ambiente):
+    """Auditoria de 13/10/2026: os contatos eram ordenados pela string ISO, e
+    10:00-03:00 (13h UTC, o mais recente) vinha antes de 12:00+00:00 -- a
+    resolucao declarada saia do contato errado."""
+    cli, banco, h, _u = ambiente
+    recente = conversa("jA").model_copy(update={
+        "iniciada_em": datetime(2026, 9, 20, 10, tzinfo=timezone(timedelta(hours=-3))),
+        "feedback_declarado": -1})
+    antiga = conversa("jB").model_copy(update={
+        "iniciada_em": datetime(2026, 9, 20, 12, tzinfo=timezone.utc),
+        "feedback_declarado": 1})
+    banco.salvar(recente, 30, "detrator")
+    banco.salvar(antiga, 90, "promotor")
+    r = cli.post("/operacao/jornadas", headers=h["dev"], json={"referencia": "cliente-123", "conversa_ids": ["jA", "jB"]})
+    assert r.status_code in (200, 201), r.text
+    referencia = r.json()["referencia"]
+
+    jornada = next(j for j in cli.get("/operacao/jornadas", headers=h["dev"]).json()["jornadas"]
+                   if j["referencia"] == referencia)
+
+    assert [c["id"] for c in jornada["contatos"]] == ["jB", "jA"]
+    assert jornada["resolucao_declarada"] is False

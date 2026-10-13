@@ -285,10 +285,12 @@ def jornadas(de: str | None = None, ate: str | None = None, ctx: Contexto = Depe
     grupos = {}
     for c, s in ctx.registros_do_recorte(de, ate):
         if c.id in vinculos:
-            grupos.setdefault(vinculos[c.id], []).append(ficha(ctx, c, s))
+            grupos.setdefault(vinculos[c.id], []).append((c.iniciada_em, ficha(ctx, c, s)))
     saida = []
-    for referencia, contatos in grupos.items():
-        contatos.sort(key=lambda c: (c["iniciada_em"], c["id"]))
+    for referencia, pares in grupos.items():
+        # Pelo INSTANTE, nao pelo texto ISO: offsets diferentes ordenam errado
+        # como string (auditoria de 13/10/2026).
+        contatos = [f for _, f in sorted(pares, key=lambda par: (par[0], par[1]["id"]))]
         saida.append({"referencia": referencia, "contatos": contatos,
             "recontatos": max(0, len(contatos) - 1), "canais": sorted({c["canal"] for c in contatos}),
             "resolucao_declarada": contatos[-1]["feedback"] == 1 if contatos[-1]["feedback"] is not None else None})
