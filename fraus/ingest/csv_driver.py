@@ -6,7 +6,6 @@ depois: esta e a segunda porta de entrada do sistema (a outra e
 """
 
 import csv
-import io
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import datetime
@@ -34,23 +33,6 @@ def carregar_csv(caminho: Path) -> ResultadoIngestao:
     """Le o CSV do disco. Uma linha malformada nunca derruba o lote inteiro."""
     with caminho.open(encoding="utf-8", newline="") as arquivo:
         return carregar_linhas(arquivo)
-
-
-def carregar_texto(conteudo: str) -> ResultadoIngestao:
-    """Mesma leitura, a partir do CONTEUDO do CSV em vez de um caminho.
-
-    Existe para a analise avulsa: o arquivo chega no corpo da requisicao, e
-    interpretado em memoria e nunca toca o disco. E por isso que ela nao viola
-    a decisao que recusa upload na tela de Integracoes -- ali o problema era
-    abrir superficie de ESCRITA numa API sem autenticacao; aqui nada e gravado,
-    nem no banco nem em arquivo.
-
-    A regra de leitura e literalmente a mesma funcao de `carregar_csv`: um
-    segundo parser para o mesmo formato acabaria aceitando coisas diferentes
-    das que a importacao aceita, e a analise avulsa passaria a discordar do que
-    entra no banco.
-    """
-    return carregar_linhas(io.StringIO(conteudo, newline=""))
 
 
 def _data(valor: str, numero_linha: int) -> datetime:

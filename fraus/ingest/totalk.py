@@ -261,10 +261,6 @@ def converter(
     )
 
 
-def converter_texto(conteudo: str, **kwargs) -> ResultadoTotalk:
-    return converter(io.StringIO(conteudo, newline=""), **kwargs)
-
-
 def para_csv_canonico(conversas: list[Conversa]) -> str:
     """Escreve as conversas no formato que `fraus.ingest.csv_driver` le.
 
