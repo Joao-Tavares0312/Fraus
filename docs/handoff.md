@@ -335,7 +335,9 @@ artefato compatível; sua presença em produção não foi confirmada.
 - Metadados de equipe/jornada/problema/permissão/convite ficam em
   `operacao_registros`. Alterações de histórico e aceites concorrentes usam
   transações e locks em ambos os dialetos. Auditoria usa cadeia SHA-256, não
-  assinatura nem defesa contra reescrita integral do banco.
+  assinatura nem defesa contra reescrita integral do banco, e não
+  detecta a remoção dos eventos mais recentes (não há âncora fora da tabela;
+  auditoria de 13/10/2026).
 - Proprietário administra hierarquia; gestor convida/remove membros; membro
   participa. Convite nunca promove para `dev`. Cadastro por convite tem escopo
   vazio na mesma transação de criação; aceite vincula e concede canais da

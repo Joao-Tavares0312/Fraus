@@ -124,7 +124,8 @@ ficha antiga ou incompleta: mostra erro recuperável.
   completa e neutraliza fórmulas em células. A política controla a exportação
   do produto, não a cópia de conteúdo visível.
 - A cadeia SHA-256 detecta quebra dos vínculos; não é assinatura externa e não
-  protege contra reescrita integral do banco por quem o controla.
+  protege contra reescrita integral do banco por quem o controla — nem
+  detecta a remoção dos eventos mais recentes (auditoria de 13/10/2026).
 
 ## Desenvolvimento e QA
 

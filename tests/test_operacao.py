@@ -264,3 +264,20 @@ def test_exportacao_do_servidor_neutraliza_tab_e_retorno_no_inicio():
     assert celula_segura("\t=1+1") == "'\t=1+1"
     assert celula_segura("\r=1") == "'\r=1"
     assert celula_segura("chat") == "chat"
+
+
+def test_auditoria_declara_que_nao_detecta_remocao_do_fim(tmp_path):
+    """Auditoria de 13/10/2026: sem ancora fora da tabela, apagar os eventos
+    MAIS RECENTES mantem `integra: True`. O metodo dizia so que nao protege
+    contra "reescrita integral" -- prometia mais do que a cadeia entrega."""
+    banco = Banco(tmp_path / "aud.db")
+    banco.migrar()
+    for i in range(3):
+        banco.auditar("dev", "acao", str(i))
+    with banco._conectar() as conexao:
+        conexao.execute("DELETE FROM auditoria_eventos WHERE id = (SELECT MAX(id) FROM auditoria_eventos)")
+
+    relatorio = banco.auditoria()
+
+    assert relatorio["integra"] is True  # o limite: a remocao do fim passa
+    assert "mais recentes" in relatorio["metodo"]

@@ -1054,7 +1054,7 @@ class Banco:
         for l in linhas:
             integra = integra and l["anterior"] == anterior and hashlib.sha256((anterior + l["payload"]).encode()).hexdigest() == l["assinatura"]
             anterior = l["assinatura"]
-        return {"integra": integra, "total": len(linhas), "eventos": [json.loads(l["payload"]) for l in linhas[-200:]], "metodo": "encadeamento SHA-256; nao e assinatura nem protege contra reescrita integral"}
+        return {"integra": integra, "total": len(linhas), "eventos": [json.loads(l["payload"]) for l in linhas[-200:]], "metodo": "encadeamento SHA-256; nao e assinatura, nao protege contra reescrita integral e nao detecta a remocao dos eventos mais recentes (nao ha ancora fora da tabela)"}
 
     def listar(self) -> list[dict]:
         with self._conectar() as conexao:
