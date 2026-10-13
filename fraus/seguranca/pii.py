@@ -86,7 +86,12 @@ TOKENS_MARCADORES = frozenset(marcador.strip("[]") for marcador in MARCADORES.va
 # Formato do CPF: 11 digitos, com ou sem os separadores usuais. A validacao
 # do digito verificador acontece depois, em `_cpf_valido`.
 _CPF = re.compile(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")
-_EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
+# Partes LIMITADAS ao que o RFC 5321 ja limita (64 no local, 63 por rotulo).
+# Com `+` sem teto, cada posicao de inicio em "a.a.a..." engolia o resto do
+# texto e recuava tudo: 50 mil caracteres custavam ~26 s, alcancaveis pelo
+# cliente final via webhook (auditoria de 13/10/2026). Com o teto, cada
+# tentativa custa no maximo 64 passos e a censura fica linear.
+_EMAIL = re.compile(r"\b[\w.+-]{1,64}@[\w-]{1,63}(?:\.[\w-]{1,63})+\b")
 # Telefone BR: +55 opcional, DDD opcional entre parenteses, 8 ou 9 digitos.
 #
 # `(?<!\d)` e `(?!\d)` NAO sao decoracao, e `\b` no lugar deles nao serve:
