@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from fraus.cortesia import e_so_cortesia
+from fraus.cortesia import e_so_cortesia, e_vazia
 
 Autor = Literal["cliente", "bot", "humano"]
 
@@ -69,7 +69,11 @@ class Conversa(BaseModel):
         cortesia ("ok, obrigado", "valeu") nao tem sinal: a mesma formula fecha
         atendimento bom e ruim. Ver `fraus/cortesia.py`.
         """
-        return any(not e_so_cortesia(m.texto) for m in self.mensagens_cliente)
+        # Fala vazia tambem nao e sinal: e_so_cortesia("") e False, e o texto
+        # vazio saia promotor (auditoria de 13/10/2026).
+        return any(
+            not e_so_cortesia(m.texto) and not e_vazia(m.texto) for m in self.mensagens_cliente
+        )
 
     @property
     def motivo_sem_sinal(self) -> Literal["sem_fala_do_cliente", "so_cortesia"] | None:
@@ -79,7 +83,7 @@ class Conversa(BaseModel):
         obrigado", e para ela nao precisar reimplementar a regra da cortesia em
         TypeScript (invariante 3: regra derivada mora no servidor).
         """
-        if not self.tem_fala_cliente:
+        if all(e_vazia(m.texto) for m in self.mensagens_cliente):
             return "sem_fala_do_cliente"
         if not self.tem_sinal_cliente:
             return "so_cortesia"

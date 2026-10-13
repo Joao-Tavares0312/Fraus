@@ -41,5 +41,15 @@ def normalizar_fala(texto: str) -> str:
     return " ".join(limpo.split())
 
 
+def e_vazia(texto: str) -> bool:
+    """So espaco e caractere invisivel (ZWJ, ZWSP...): o cliente nao disse nada.
+
+    Pontuacao e emoji NAO sao vazio -- sao sinal de estilo e de emoji.
+    """
+    return not "".join(
+        c for c in texto if unicodedata.category(c) not in ("Cf", "Cc", "Zs", "Zl", "Zp")
+    )
+
+
 def e_so_cortesia(texto: str) -> bool:
     return normalizar_fala(texto) in FORMULAS_DE_CORTESIA
