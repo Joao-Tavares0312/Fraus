@@ -21,7 +21,7 @@ from fraus.api.esquemas import PedidoImportacao, PedidoPreviaImportacao
 from fraus.api.identidade import (PREFIXO_ANALISE, PREFIXO_ARQUIVO, id_pelo_caminho,
                                    no_dia_ja_gravado)
 from fraus.api.rotas.analise import resumo_da_previa
-from fraus.api.periodo import no_recorte, recorte_ou_400
+from fraus.api.periodo import recorte_ou_400
 from fraus.api.repontuacao import RepontuacaoEmAndamento
 from fraus.contestacao import contestacao
 from fraus.indicadores import nota_0_10

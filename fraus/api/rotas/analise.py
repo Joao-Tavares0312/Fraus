@@ -5,7 +5,6 @@ com horarios reais e lote atomico. As duas portas avulsas preservam seu contrato
 """
 
 import json
-import hashlib
 import threading
 import weakref
 from collections import Counter

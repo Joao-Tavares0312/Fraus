@@ -28,7 +28,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from fraus.api.caminhos import (CAMINHO_BANCO, CAMINHO_CHAVES, CAMINHO_FUSOR,
+from fraus.api.caminhos import (CAMINHO_CHAVES, CAMINHO_FUSOR,
                                 DESTINO_BANCO,
                                 CAMINHO_MODELO_EMOCAO, CAMINHO_MODELO_IRONIA,
                                 CAMINHO_MODELO_TEXTO, CAMINHO_ONNX_EMOCAO,
