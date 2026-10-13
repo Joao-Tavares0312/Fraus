@@ -24,8 +24,12 @@ sozinho; a execucao parada segura o lock ate o heartbeat vencer, e alguem
 precisa pedir de novo. Cada pedido avanca; nenhum se perde.
 """
 
+import logging
 import threading
+import time
 from datetime import datetime, timedelta, timezone
+
+_logger = logging.getLogger("fraus.repontuacao")
 
 
 class RepontuacaoEmAndamento(RuntimeError):
@@ -129,6 +133,19 @@ class Repontuacao:
             final, erro = "falhou", f"{type(falha).__name__}: {falha}"
         with self._trava:
             self._estado.update(estado=final, erro=erro, concluido_em=_agora())
-        ctx.banco.atualizar_trabalho(
-            self.NOME_TRABALHO, estado=final, erro=erro, agora=_agora()
-        )
+        # FORA do `try` acima, e por isso com retentativa propria: uma queda
+        # momentanea do pooler aqui matava a thread e deixava a linha
+        # 'rodando' -- GET mentia e POST dava 409 ate o heartbeat vencer
+        # (auditoria de 13/10/2026). Esgotadas as tentativas, o heartbeat de
+        # 15 min continua sendo a rede de seguranca.
+        for tentativa in range(3):
+            try:
+                ctx.banco.atualizar_trabalho(
+                    self.NOME_TRABALHO, estado=final, erro=erro, agora=_agora()
+                )
+                break
+            except Exception:  # noqa: BLE001 - banco instavel; ver acima
+                if tentativa == 2:
+                    _logger.exception("repontuacao: estado final nao gravado")
+                    break
+                time.sleep(0.5 * (tentativa + 1))
