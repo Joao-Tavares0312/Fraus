@@ -99,6 +99,8 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
     pedacos e cada pedaco viraria uma predicao separada.
     """
     mensagens: list[Mensagem] = []
+    # As linhas CRUAS de cada fala, censuradas uma vez no fim (ver abaixo).
+    brutos: list[list[str]] = []
     horas: list[str | None] = []
     ignorados: list[str] = []
 
@@ -106,7 +108,10 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
         if not linha.strip():
             continue
 
-        achado = LINHA.match(linha)
+        # Sem o espaco inicial: o `^\s*` de LINHA disputava esses espacos com
+        # o autor e com o `\s*` antes do `:`, e 8 mil espacos levavam ~7,7 s
+        # (auditoria de 13/10/2026).
+        achado = LINHA.match(linha.lstrip())
         autor = _autor_de(achado.group("autor")) if achado else None
 
         if autor is None:
@@ -117,12 +122,13 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
                 # caia numa linha de continuacao -- a armadilha que esta task
                 # existe para fechar. Qualquer origem NOVA de dado real
                 # precisa da mesma chamada.
-                anterior = mensagens[-1]
-                mensagens[-1] = anterior.model_copy(
-                    update={
-                        "texto": censurar_pii(f"{anterior.texto}\n{linha.strip()}")
-                    }
-                )
+                #
+                # A censura acontece UMA VEZ por fala, sobre o texto juntado,
+                # no fim do laco: recensurar o acumulado a cada linha era
+                # O(linhas x tamanho) -- 12 kB levavam ~8,7 s (auditoria de
+                # 13/10/2026) -- e censurar so a linha nova perderia PII que
+                # atravessa a quebra de linha.
+                brutos[-1].append(linha.strip())
             elif achado and achado.group("autor").strip():
                 ignorados.append(achado.group("autor").strip()[:40])
             continue
@@ -137,7 +143,15 @@ def ler(texto: str, inicio: datetime) -> Transcricao:
         mensagens.append(
             Mensagem(autor=autor, texto=censurar_pii(conteudo), enviada_em=inicio)
         )
+        brutos.append([conteudo])
         horas.append(_horario_de(achado.group("hora")))
+
+    # Falas com continuacao: o texto final e o juntado, censurado de uma vez.
+    mensagens = [
+        mensagem if len(linhas) == 1
+        else mensagem.model_copy(update={"texto": censurar_pii("\n".join(linhas))})
+        for mensagem, linhas in zip(mensagens, brutos)
+    ]
 
     tem_tempo = any(hora is not None for hora in horas)
 

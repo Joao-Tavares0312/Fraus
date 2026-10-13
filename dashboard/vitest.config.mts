@@ -12,9 +12,13 @@
  * alguem precisar montar componente, troque para `jsdom` e adicione a
  * dependencia AI, nao antes.
  */
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // `@` como no tsconfig: os testes de rota (`lib/rotas-locais.test.ts`)
+  // importam `app/api/**/route.ts`, que resolvem `@/lib/...`.
+  resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
   // Componentes puros (sem hook, sem estado) como o SegmentoLED renderizam em
   // `react-dom/server` mesmo em node, entao entram na suite sem jsdom.
   test: {

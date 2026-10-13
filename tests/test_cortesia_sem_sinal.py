@@ -94,3 +94,17 @@ def test_a_api_entrega_o_motivo_na_lista(tmp_path):
     linha = cliente.get("/conversas").json()[0]
     assert linha["score"] is None
     assert linha["motivo_sem_sinal"] == "so_cortesia"
+
+
+@pytest.mark.parametrize("texto", ["", "   ", "‍", "​ \n"])
+def test_fala_vazia_do_cliente_nao_e_sinal(texto):
+    """Auditoria de 13/10/2026: `e_so_cortesia("")` era False, entao texto
+    vazio contava como sinal e /ingestao devolvia score 90, promotor. Nao e
+    cortesia: e o cliente nao ter dito nada."""
+    conversa = _conversa(texto)
+    assert conversa.tem_sinal_cliente is False
+    assert conversa.motivo_sem_sinal == "sem_fala_do_cliente"
+
+
+def test_emoji_sozinho_continua_sendo_sinal():
+    assert _conversa("😡").tem_sinal_cliente is True

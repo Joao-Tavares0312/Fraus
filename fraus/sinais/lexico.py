@@ -25,7 +25,6 @@ le "adorei o produto".
 
 import csv
 import re
-import unicodedata
 from functools import lru_cache
 from pathlib import Path
 

@@ -7,8 +7,9 @@ tem contrapartida visível na interface.
 ## Limitações operacionais do deploy gratuito
 
 A hospedagem da API deixou de ser pendência em 17/09/2026, mas “publicada” não
-significa “sem limites”. A função ONNX tem cerca de 1,46 GB e usa Large
-Functions na Vercel. Depois de esfriar, o primeiro `/saude` observado levou
+significa “sem limites”. A função ONNX tem cerca de 1,95 GB (pacote
+publicado em 30/09/2026; eram 1,46 GB em 17/09) e usa Large Functions na
+Vercel. Depois de esfriar, o primeiro `/saude` observado levou
 10,8 s; requisições seguintes foram rápidas, mas não há garantia de latência.
 
 **Cold start e "motor aquecendo".** A API é serverless: cada instância tem o
@@ -64,9 +65,10 @@ Nenhum corpus público de review em português tem timestamps de diálogo. O
 simulador (`fraus/ingest/simulador.py`) gera conversas determinísticas com
 latências calibradas por literatura de live chat.
 
-**E isso tem uma consequência medida, não hipotética.** As features de latência
+**E isso teve uma consequência medida, não hipotética.** As features de latência
 não têm teto, e o corpus nunca passou de minutos (medianas de 5/30/200 s). Numa
-conversa com **3 horas** de espera, medida em 08/09/2026 contra a API real:
+conversa com **3 horas** de espera, medida em 08/09/2026 contra a API real, com
+o fusor da época (em segundos crus):
 
 ```
 latencia_primeira_resposta_s   -85,405
@@ -80,10 +82,17 @@ O tempo pesa **20× o texto**, e a conversa sai em `4,4e-24`. O peso *por
 unidade* continua pequeno (0,12–0,16); o que explode é o **z-score** que entra
 no `StandardScaler`.
 
-O conserto de verdade — `log1p` ou winsorização antes do scaler — exige
-retreino. Enquanto ele não vem, [`GET /saude/deriva`](referencia/diagnostico.md)
-torna o caso **visível**: contra o fusor real, essa conversa dá `|z| = 124,9`
-em `latencia_mediana_s`, contra um limiar de 4.
+**Conserto em 15/09/2026:** as quatro features de espera entram no vetor em
+`log1p` (`FEATURES_EM_LOG`, em `fraus/fusor.py`), o fusor foi retreinado nessa
+escala e `Fusor.carregar` recusa artefato treinado em segundos crus. A
+winsorização no p99 foi medida e recusada: fazia 3 h pesarem o mesmo que
+10 min. Com `log1p` o relógio ainda pesa mais quanto maior a espera, mas cada
+vez mais devagar — 3 h pesam 2,1× o texto, não mais 20× (medições em
+[Treinamento](treinamento.md)). O que continua valendo é a origem sintética do
+sinal: espera muito acima do treino segue fora da distribuição, e
+[`GET /saude/deriva`](referencia/diagnostico.md) torna o caso **visível** (com o
+fusor em segundos crus, essa conversa dava `|z| = 124,9` em
+`latencia_mediana_s`, contra um limiar de 4).
 
 ---
 

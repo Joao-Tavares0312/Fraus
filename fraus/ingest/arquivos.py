@@ -266,11 +266,20 @@ def _tabela_do_docx(dados: bytes) -> list[list[str]] | None:
     return melhor
 
 
+# Teto de saida de cada fluxo comprimido do PDF. O padrao do pypdf e 75 MB: um
+# arquivo de ~72 KB que infla ate la prendia uma thread por 14-18 s de CPU em
+# /analisar/* (auditoria de 13/10/2026). Uma pagina de transcricao fica na casa
+# dos kilobytes; 5 MB e folga de sobra e recusa a bomba em milissegundos.
+TETO_FLUXO_PDF = 5_000_000
+
+
 def _texto_do_pdf(dados: bytes) -> str:
     try:
+        import pypdf.filters
         from pypdf import PdfReader
     except ImportError as erro:  # pragma: no cover
         raise ArquivoIlegivelError("suporte a pdf indisponivel neste servidor") from erro
+    pypdf.filters.ZLIB_MAX_OUTPUT_LENGTH = TETO_FLUXO_PDF
     try:
         leitor = PdfReader(io.BytesIO(dados))
         if leitor.is_encrypted:

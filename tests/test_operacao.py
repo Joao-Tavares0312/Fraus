@@ -193,3 +193,91 @@ def test_documento_concorrente_nao_perde_acoes_e_auditoria_detecta_alteracao(tmp
     with banco._conectar() as conexao:
         conexao.execute("UPDATE auditoria_eventos SET payload = ? WHERE id = 1", ('{"ator":"alterado"}',))
     assert not banco.auditoria()["integra"]
+
+
+def test_laboratorio_recusa_fusor_candidato_incompativel_com_503(ambiente, tmp_path, monkeypatch):
+    """Auditoria de 13/10/2026: `FusorIncompativelError` herda de RuntimeError,
+    e a rota so capturava FileNotFoundError/ValueError -- o candidato fora do
+    contrato de 39 features virava 500 em vez do 503 que explica o motivo."""
+    import joblib
+
+    from fraus.fusor import NOMES_FEATURES, Fusor
+
+    cli, _banco, h, _u = ambiente
+    nomes = NOMES_FEATURES[:-2]
+    velho = Fusor()
+    velho._pipeline.fit([[0.0] * len(nomes)] * 4, [0, 1, 2, 1])
+    caminho = tmp_path / "candidato_velho.joblib"
+    joblib.dump(velho._pipeline, caminho)
+    monkeypatch.setenv("FRAUS_FUSOR_CANDIDATO", str(caminho))
+    r = cli.post("/operacao/laboratorio/comparar", headers=h["usuario"], json={"conversa_ids": ["c1"]})
+    assert r.status_code == 503, r.text
+    assert "incompativel" in r.json()["detail"]
+
+
+def test_jornada_ordena_contatos_pelo_instante_e_nao_pelo_texto_do_offset(ambiente):
+    """Auditoria de 13/10/2026: os contatos eram ordenados pela string ISO, e
+    10:00-03:00 (13h UTC, o mais recente) vinha antes de 12:00+00:00 -- a
+    resolucao declarada saia do contato errado."""
+    cli, banco, h, _u = ambiente
+    recente = conversa("jA").model_copy(update={
+        "iniciada_em": datetime(2026, 9, 20, 10, tzinfo=timezone(timedelta(hours=-3))),
+        "feedback_declarado": -1})
+    antiga = conversa("jB").model_copy(update={
+        "iniciada_em": datetime(2026, 9, 20, 12, tzinfo=timezone.utc),
+        "feedback_declarado": 1})
+    banco.salvar(recente, 30, "detrator")
+    banco.salvar(antiga, 90, "promotor")
+    r = cli.post("/operacao/jornadas", headers=h["dev"], json={"referencia": "cliente-123", "conversa_ids": ["jA", "jB"]})
+    assert r.status_code in (200, 201), r.text
+    referencia = r.json()["referencia"]
+
+    jornada = next(j for j in cli.get("/operacao/jornadas", headers=h["dev"]).json()["jornadas"]
+                   if j["referencia"] == referencia)
+
+    assert [c["id"] for c in jornada["contatos"]] == ["jB", "jA"]
+    assert jornada["resolucao_declarada"] is False
+
+
+def test_exportacao_do_servidor_leva_contestada_e_sai_em_ordem(ambiente):
+    """Auditoria de 13/10/2026: a API (/conversas) e o CSV da tela marcam a
+    contestacao; o CSV de /operacao/exportar nao, e saia sem ordem."""
+    import csv as _csv
+    import io as _io
+
+    cli, banco, h, _u = ambiente
+    elogio = conversa("z-elogio", texto="perfeito, adorei", dia=-1)  # humano respondeu em 300 s
+    banco.salvar(elogio, 99, "promotor")
+
+    r = cli.get("/operacao/exportar", headers=h["dev"])
+    assert r.status_code == 200, r.text
+    linhas = list(_csv.DictReader(_io.StringIO(r.text)))
+
+    assert [linha["id"] for linha in linhas] == ["z-elogio", "c1", "c2"]
+    marca = {linha["id"]: linha["contestada"] for linha in linhas}
+    assert marca == {"z-elogio": "sim", "c1": "", "c2": ""}
+
+
+def test_exportacao_do_servidor_neutraliza_tab_e_retorno_no_inicio():
+    from fraus.api.rotas.operacao import celula_segura
+
+    assert celula_segura("\t=1+1") == "'\t=1+1"
+    assert celula_segura("\r=1") == "'\r=1"
+    assert celula_segura("chat") == "chat"
+
+
+def test_auditoria_declara_que_nao_detecta_remocao_do_fim(tmp_path):
+    """Auditoria de 13/10/2026: sem ancora fora da tabela, apagar os eventos
+    MAIS RECENTES mantem `integra: True`. O metodo dizia so que nao protege
+    contra "reescrita integral" -- prometia mais do que a cadeia entrega."""
+    banco = Banco(tmp_path / "aud.db")
+    banco.migrar()
+    for i in range(3):
+        banco.auditar("dev", "acao", str(i))
+    with banco._conectar() as conexao:
+        conexao.execute("DELETE FROM auditoria_eventos WHERE id = (SELECT MAX(id) FROM auditoria_eventos)")
+
+    relatorio = banco.auditoria()
+
+    assert relatorio["integra"] is True  # o limite: a remocao do fim passa
+    assert "mais recentes" in relatorio["metodo"]

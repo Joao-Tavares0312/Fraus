@@ -60,7 +60,10 @@ sinal; o intervalo AW(3,T) mede incerteza amostral, não a calibração do model
 Simulações e diferenças antes/depois não demonstram causalidade.
 
 Para comparar fusores, configure `FRAUS_FUSOR_CANDIDATO` com o arquivo de um
-artefato compatível no servidor. Nada é promovido ou repontuado automaticamente.
+artefato compatível no servidor. Sem a variável, com arquivo ausente ou com um
+candidato fora do contrato de 39 features (ou treinado em segundos crus), o
+laboratório responde **503** nomeando o motivo. Nada é promovido ou repontuado
+automaticamente.
 Os testes locais podem usar `scripts/validar_operacao_real.py` e
 `dashboard/scripts/validar-operacao-playwright.mjs` (dados temporários).
 
@@ -185,15 +188,20 @@ propósito: a régua misturada é propriedade do banco, não da semana que se ol
 `POST /conversas/repontuar` zera a divergência. **Limitação declarada:** ele roda
 os três BERTimbau de novo por conversa — o vetor é de 39 features e o fusor exige
 as 39, então não existe recalcular só as três léxicas e as cinco de emoji. Em
-dezenas de atendimentos são segundos; em milhares vira trabalho de fila, e a fila
-não existe. A rota é **síncrona de propósito**: uma fila que ninguém observa
-seria pior que uma espera que se vê.
+dezenas de atendimentos são segundos; em milhares, minutos. Por isso a rota
+responde **202** na hora e roda em **segundo plano**, um trabalho por vez:
+`GET /conversas/repontuar` devolve `total`, `feitas`, `estado` e `erro`, e a
+tela mostra a barra — uma espera que se vê, sem prender a conexão. Pedir de novo
+com uma em andamento dá **409**. O estado e a trava moram no banco; uma
+execução interrompida retoma só o que ainda está na régua anterior
+(`fraus/api/repontuacao.py`).
 
 ```
 GET    /lexico/curado          lista os termos curados
 POST   /lexico/curado          cadastra ou EDITA (tipo, termo, peso, motivo)
 DELETE /lexico/curado/{id}     revoga — o termo volta a valer o léxico base
-POST   /conversas/repontuar    repontua o banco inteiro com o léxico vigente
+POST   /conversas/repontuar    202: repontua o banco inteiro em segundo plano (409 se já roda)
+GET    /conversas/repontuar    progresso da última repontuação (404 se nunca houve)
 ```
 
 ## Stack
@@ -262,18 +270,41 @@ Variáveis de ambiente reconhecidas:
 |---|---|---|
 | `FRAUS_CAMINHO_MODELO_TEXTO` | `modelos/bertimbau-satisfacao` | modelo de texto |
 | `FRAUS_CAMINHO_FUSOR` | `modelos/fusor.joblib` | regressão logística de fusão |
+| `FRAUS_CAMINHO_MODELO_EMOCAO` / `_IRONIA` | `modelos/bertimbau-emocao` / `modelos/bertimbau-ironia` | as outras duas cabeças no backend Torch |
+| `FRAUS_BACKEND` | `torch` | quem executa as cabeças: `torch` (`modelos/`), `onnx` (`modelos-onnx/`) ou `onnx-multitarefa`; valor desconhecido é erro no boot, sem detecção nem fallback |
+| `FRAUS_CAMINHO_ONNX_TEXTO` / `_EMOCAO` / `_IRONIA` | `modelos-onnx/bertimbau-satisfacao` / `-emocao` / `-ironia` | os grafos ONNX de cada cabeça, com `FRAUS_BACKEND=onnx` |
+| `FRAUS_CAMINHO_ONNX_MULTITAREFA` | `modelos-onnx/bertimbau-multitarefa` | o grafo único de `FRAUS_BACKEND=onnx-multitarefa` |
+| `FRAUS_CAMINHO_ONNX_LAYA` | `modelos-onnx/laya-ironia` | o Laya em ONNX, com `FRAUS_IRONIA_BACKEND=laya-onnx` (o caminho de produção) |
+| `FRAUS_CAMINHO_METRICAS` / `_EMOCAO` / `_IRONIA` | `modelos/bertimbau-satisfacao/metricas.json` / `modelos/metricas_emocao.json` / `modelos/metricas_ironia.json` | métricas dos notebooks lidas por `/modelo`; ausentes, viram `null` |
+| `FRAUS_CAMINHO_COMPARACAO` | `modelos/comparacao_modelos.json` | laudo local BERTimbau × Laya do notebook 07; quando existe, vence o versionado em `fraus/dados/` |
+| `FRAUS_FUSOR_CANDIDATO` | (nenhum) | `.joblib` que o Laboratório de Operação compara com o fusor vigente; sem ela, ou incompatível, a comparação responde 503. Nunca é promovido |
+| `FRAUS_INFERENCIAS_SIMULTANEAS` | `1` | quantas passadas de modelo rodam ao mesmo tempo, somando as três cabeças |
+| `FRAUS_ONNX_THREADS` | `0` | threads por passada ONNX; `0` deixa o runtime escolher |
+| `FRAUS_AQUECER` | `1` | `0` desliga o aquecimento do motor em segundo plano no boot |
 | `FRAUS_IRONIA_BACKEND` | `padrao` | `laya` troca somente a cabeça de ironia pelo Laya multilíngue (PyTorch; exige `uv sync --extra laya`); `laya-onnx` usa o Laya exportado para ONNX, que é o valor de produção |
 | `FRAUS_LAYA_REVISAO` | `55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851` | revisão imutável do checkpoint Laya |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
+| `FRAUS_DATABASE_URL` | (nenhum) | URL PostgreSQL (Supabase em produção); definida, **vence** `FRAUS_CAMINHO_BANCO` |
 | `FRAUS_POSTGRES_MIN_CONEXOES` | `0` | mínimo do pool por instância; zero evita reservar conexão em função fria |
 | `FRAUS_POSTGRES_MAX_CONEXOES` | `2` | máximo do pool por instância serverless (1–20) |
 | `FRAUS_POSTGRES_TIMEOUT_S` | `10` | segundos máximos esperando conexão do pool (0,1–60) |
 | `FRAUS_RAIZ_IMPORTACAO` | `dados_brutos` | **única** pasta de onde `POST /conversas/importar` pode ler |
 | `FRAUS_CAMINHO_CHAVES` | `.fraus-chaves.txt` | onde a **primeira subida** grava a mestra e a chave de acesso que ela gera. Única cópia em claro delas; fora do git, e criado com permissão **`0600`** — só o dono lê (em POSIX; no Windows quem manda é a ACL herdada da pasta) |
-| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra, uma chave de acesso ou um **token de sessão** — exceto `POST /ingestao` (chave de fonte), o webhook (assinatura própria) e as públicas (`/saude`, `/acesso/estado`, `/auth/estado`, `/auth/registrar`, `/auth/entrar`) |
-| `FRAUS_JWT_SEGREDO` | (nenhum) | assina o **JWT de sessão** do login de usuário (`POST /auth/entrar`). Sem ela, o login responde 503 dizendo o que falta, `/auth/estado` anuncia `disponivel: false` e a dashboard abre **sem exigir login** — o modo aberto local, mesmo contrato da API sem mestra |
-| `FRAUS_CODIGO_CONVITE` | (nenhum) | o código exigido para **criar conta** em `POST /auth/registrar`. Sem ela o cadastro fica **aberto** — o certo para uso local, e perigoso quando a API está publicada: ver *A porta destrancada*, logo abaixo. Não confundir com a de baixo: esta decide **se** a conta pode nascer; `FRAUS_CODIGO_DEV` decide **com qual papel** |
+| `FRAUS_CHAVE_MESTRA` | (nenhum) | a mestra vinda do ambiente. Definida, ela é a **única** mestra: a gravada no banco **deixa de valer** enquanto a variável existir (ver *Precedência*, abaixo). Sem ela e sem mestra no banco, a API é aberta (uso local), com aviso no boot. Com qualquer uma das duas, toda rota exige `Authorization: Bearer` — a mestra, uma chave de acesso ou um **token de sessão** — exceto `POST /ingestao` (chave de fonte), o webhook (assinatura própria) e as públicas (`/saude`, `/saude/prontidao`, `/acesso/estado`, `/auth/estado`, `/auth/registrar`, `/auth/entrar`, a prévia de convite e o link do anotador — lista completa em *Precedência*, abaixo) |
+| `FRAUS_JWT_SEGREDO` | (nenhum) | assina o **JWT de sessão** do login de usuário (`POST /auth/entrar`). Precisa ter **pelo menos 32 bytes**: mais curta, a API não sobe (`validar_configuracao_de_producao`, em qualquer ambiente). Sem ela, o login responde 503 dizendo o que falta, `/auth/estado` anuncia `disponivel: false` e a dashboard abre **sem exigir login** — o modo aberto local, mesmo contrato da API sem mestra |
+| `FRAUS_CODIGO_CONVITE` | (nenhum) | o código exigido para **criar conta** em `POST /auth/registrar`. Sem ela (e fora de `FRAUS_AMBIENTE=producao`, que recusa subir) o cadastro fica **aberto** — o certo para uso local, e perigoso quando a API está publicada: ver *A porta destrancada*, logo abaixo. Não confundir com a de baixo: esta decide **se** a conta pode nascer; `FRAUS_CODIGO_DEV` decide **com qual papel** |
 | `FRAUS_CODIGO_DEV` | (nenhum) | o código de convite que permite um cadastro nascer com papel **`dev`** (administra Integrações, Modelo, Configurações, importação e léxico). Sem ela, nenhum cadastro nasce dev — todo mundo nasce `usuario` (analista: Visão geral e Atendimentos). Código errado é 403 explícito, nunca rebaixamento silencioso |
+| `FRAUS_AMBIENTE` | (nenhum) | `producao` (ou `production`/`prod`) faz a API **recusar subir** sem `FRAUS_CHAVE_MESTRA`, `FRAUS_JWT_SEGREDO`, `FRAUS_CODIGO_CONVITE` e `FRAUS_DATABASE_URL` apontando para PostgreSQL — o aviso da porta destrancada vira recusa (`validar_configuracao_de_producao`, em `fraus/api/main.py`) |
+| `FRAUS_CHAVE_ACESSO` | (nenhum) | na **dashboard**, a credencial que o proxy apresenta (ver *Dashboard*). Na **API**, se definida, também é aceita como chave de acesso — sem linha no banco, então `DELETE /acesso/chaves/{id}` não a revoga |
+| `FRAUS_ORIGENS` | `localhost` e `127.0.0.1` nas portas 3000 e 3001 | origens liberadas no CORS, separadas por vírgula; nunca `*` |
+
+Variáveis lidas só por scripts de operação e pelo CI, não pela API:
+
+| Variável | Padrão | O que faz |
+|---|---|---|
+| `FRAUS_SMOKE_URL` / `FRAUS_SMOKE_TOKEN` | (nenhum) | URL HTTPS e credencial de `scripts/smoke_deploy.py`, que confere `/saude` depois do deploy da API (o workflow `api-deploy.yml` as define) |
+| `FRAUS_MEDIR_TOKEN` | (nenhum) | credencial que `scripts/medir_latencia_deploy.py` manda em `Authorization`, ao lado de `FRAUS_MEDIR_URL` |
+| `FRAUS_DASHBOARD_URL` | `https://fraus-one.vercel.app` | base dos links que `scripts/criar_link_anotacao.py` imprime. **Não confundir** com `FRAUS_URL_DASHBOARD`, lida pelo `mkdocs.yml` para o link "← Dashboard" do site |
 
 #### A porta destrancada — leia antes de publicar a API
 
@@ -306,7 +337,9 @@ ATENCAO: a API responde 401 para anonimo, mas o CADASTRO esta aberto.
 
 Continua sendo **aviso, não recusa de subir**: cadastro aberto é o
 comportamento certo em `localhost`, que é o uso declarado do projeto. O que
-faltava era a frase, não a tranca.
+faltava era a frase, não a tranca. A exceção é declarada: com
+`FRAUS_AMBIENTE=producao`, a API **não sobe** sem mestra, `FRAUS_JWT_SEGREDO`,
+`FRAUS_CODIGO_CONVITE` e `FRAUS_DATABASE_URL` em PostgreSQL.
 
 #### A autenticação já vem ligada
 
@@ -395,8 +428,16 @@ sobreviver a reiniciar o processo.
 > **não é**. Fixado em `tests/test_autenticacao_runtime.py`, nos dois sentidos.
 
 `GET /acesso/estado` responde `{"ligada": ..., "origem": "ambiente"|"banco"|null}`
-e é a **única** rota que continua pública com a autenticação ligada — a tela
-precisa dela justamente quando ainda não há credencial para apresentar.
+e continua pública com a autenticação ligada — a tela precisa dela justamente
+quando ainda não há credencial para apresentar. Não é a única: o middleware
+(`ISENTAS` em `fraus/api/seguranca.py`) também deixa passar sem
+`Authorization` `/saude`, `/saude/prontidao`, `/auth/estado`,
+`/auth/registrar` e `/auth/entrar`; a prévia `GET /operacao/convites/{token}`;
+o link do anotador (`GET /anotacao/{token}`, `POST /anotacao/{token}/respostas`
+e `POST /anotacao/grupos/{token}/entrar`); e o preflight `OPTIONS`. Duas rotas
+de escrita também escapam do middleware, mas têm credencial própria:
+`POST /ingestao` (chave de fonte `frs_`) e `POST /integracoes/webhook/{id}`
+(assinatura HMAC).
 
 **Desligar não é botão.** Um controle que baixa a defesa numa tela sem login não
 tem contrapartida de risco aceitável: desligar é apagar a variável e a linha
@@ -416,6 +457,17 @@ Pelas rotas, o mesmo: `GET /acesso/chaves` lista, `POST` emite e
 revogada leva 401. Se uma chave de acesso vazar, revogue-a sem trocar a mestra;
 se a **mestra** vazar, troque-a: as chaves de acesso continuam valendo, quem
 perde o posto é só ela.
+
+**Uma credencial fica fora do painel:** se a própria API tiver
+`FRAUS_CHAVE_ACESSO` no ambiente, esse valor também é aceito como chave de
+acesso (`acesso_autorizado`, em `fraus/api/seguranca.py`), comparado em claro e
+sem linha no banco. `DELETE /acesso/chaves/{id}` não o alcança: revogá-lo é
+apagar ou trocar a variável e reiniciar a API.
+
+A chave de acesso **não é somente leitura**, apesar do nome: fora a gestão de
+chaves (`/acesso/chaves`, chave e segredo de fonte), que exige a mestra, ela lê
+e escreve todo o resto — configurações, léxico, importação, fontes, acesso de
+usuários. Guarde-a como credencial de operador.
 
 **Se a mestra se perdeu**, ela não volta — o banco guarda só o hash. Além da
 saída pelo ambiente (`FRAUS_CHAVE_MESTRA` vence a gravada), há o comando que
@@ -473,6 +525,15 @@ curl -X POST 127.0.0.1:8000/ingestao \
         {"autor":"bot","texto":"vou verificar","enviada_em":"2026-08-14T10:00:12-03:00"}
       ]}'
 ```
+
+O corpo é `PedidoIngestao` (`fraus/api/esquemas.py`): `id` e `mensagens`
+(1 a 500, cada uma com `autor`, `texto` e `enviada_em` timezone-aware) são
+obrigatórios; `encerrada_em`, `escalou_para_humano`, `feedback_declarado`
+(`-1` ou `1`: o voto que o próprio cliente deu, se a plataforma o coleta) e
+`comentario_feedback` (até 1.000 caracteres) são opcionais. O voto declarado
+não entra no score: `/indicadores` só o compara com a categoria inferida
+(`concordancia_com_feedback`). `encerrada_em` sem fuso, ou anterior à última
+mensagem, leva **422**. Não há campo de canal, score, nota nem categoria.
 
 **No PowerShell esse comando não roda** — e falha de um jeito que não parece
 falha de shell. `curl` ali é **alias de `Invoke-WebRequest`**, que não conhece
@@ -583,8 +644,9 @@ O contrato:
   mudar um espaço muda a assinatura.
 - **Corpo:** o mesmo contrato de `POST /ingestao` (`PedidoIngestao`) — `id`,
   `mensagens` (com `autor`, `texto`, `enviada_em` timezone-aware) e os campos
-  opcionais `encerrada_em`/`escalou_para_humano`. O canal não entra: é o da
-  fonte cadastrada.
+  opcionais `encerrada_em` (com fuso e não anterior à última mensagem),
+  `escalou_para_humano`, `feedback_declarado` (`-1`/`1`) e
+  `comentario_feedback`. O canal não entra: é o da fonte cadastrada.
 
 Exemplo de assinar em Python, curto o bastante para colar direto — a chave
 HMAC é o **base64 decodificado** do segredo, não a string `whsec_...` inteira
@@ -626,7 +688,8 @@ depois autoridade, depois parse, nunca o contrário:
 | **200** | reentrega: mesmo `webhook-id` já **aceito** antes para esta fonte — o Standard Webhooks manda a plataforma retentar diante de qualquer resposta fora de 2xx, então responder erro a uma reentrega legítima poria a integração em laço |
 | **400** | corpo fora do contrato, `webhook-timestamp` fora da janela de 5 minutos, ou um dos três cabeçalhos ausente |
 | **401** | assinatura não confere |
-| **403** | fonte cadastrada e desativada |
+| **429** | teto de 120 entregas por minuto da fonte atingido, contado depois da assinatura; traz `Retry-After` |
+| **403** | fonte cadastrada com tipo diferente de `webhook`, ou desativada — conferido só depois da assinatura |
 | **404** | `fonte_id` inexistente |
 | **503** | variável de ambiente ausente, ou com valor que não é um segredo válido |
 
@@ -670,14 +733,14 @@ uvicorn de pé e a mestra ligada. Sai com código 1 se algo divergir.
 ```bash
 cd dashboard
 npm install
-npm run dev      # http://localhost:3000
+npm run dev      # http://127.0.0.1:3000 (só local; ver *Modo local*)
 npm run build    # build de produção
 ```
 
 A dashboard não fala com a API direto: toda chamada de `lib/api.ts` sai por um
 proxy no servidor Next (`app/api/fraus/[...caminho]/route.ts`), que repassa
 método, corpo, query string e status para `FRAUS_API_URL` (padrão
-`http://127.0.0.1:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
+`http://localhost:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
 quando a instalação não tem login. A chave de acesso nunca toca o navegador.
 
 ```bash
@@ -690,7 +753,8 @@ De onde sai a credencial que o proxy apresenta à API, em ordem
 1. a **sessão do usuário** (JWT no cookie `httpOnly` `fraus_sessao`), quando há
    login;
 2. `FRAUS_CHAVE_ACESSO`, a credencial declarada do deploy;
-3. o cookie `httpOnly` de quem ligou a autenticação pela tela;
+3. o cookie `httpOnly` `fraus_acesso` de quem ligou a autenticação pela tela
+   (vale também com login ligado; **Sair** apaga ele junto com a sessão);
 4. o arquivo de chaves que a API grava na primeira subida.
 
 **Os degraus 2 e 4 só valem em instalação sem login.** Onde a API tem usuários
@@ -725,6 +789,12 @@ filho do servidor Next, mostra "subindo…" e recarrega a tela sozinho quando
 cd dashboard && npm run dev
 ```
 
+O `npm run dev` escuta **só em `127.0.0.1`** (`next dev -H 127.0.0.1`, em
+`dashboard/package.json`): sem login, o proxy empresta a chave técnica a quem
+chegar, e escutar na rede entregaria a API a qualquer máquina da LAN. Quem
+precisa abrir a dashboard na rede deve ligar o login (`FRAUS_JWT_SEGREDO` na
+API) antes de trocar o host.
+
 **Em produção (`npm run build && npm run start`) o botão some por padrão.**
 `FRAUS_MODO_LOCAL` é o override explícito nos dois sentidos: `=1` liga mesmo
 num build de produção (raro, e por isso exige o passo extra), `=0` desliga
@@ -733,8 +803,10 @@ mesmo em dev, para testar a dashboard como ela se comporta publicada.
 **Não habilite isso num deploy real.** É uma rota HTTP que executa um comando —
 em uso local é conveniência, publicada é execução remota de código. Ela existe
 sob cinco travas: desligada por padrão fora de desenvolvimento (sem ela
-responde **404**, não 403 — quem não deveria saber que ela existe não
-descobre); comando **literal** no código-fonte, sem nada vindo da requisição e
+`GET`, `POST` e `DELETE` respondem **404**, não 403 — quem não deveria saber
+que ela existe não descobre; até 13/10/2026 o `GET` respondia 200 com o comando
+e o caminho do log. A exceção é a quinta trava: `POST`/`DELETE` de outro site
+leva 403 antes do 404); comando **literal** no código-fonte, sem nada vindo da requisição e
 sem shell; uma instância por vez (consulta `/saude` antes de subir e confere se
 o processo lembrado ainda está vivo); a API subida escuta apenas em
 `127.0.0.1`; e **só a própria dashboard pode chamá-la** — requisição de outro
@@ -753,7 +825,12 @@ desligou.
 
 A subida **não abre janela de terminal**. O `stdout` da API vai para
 `dashboard/.fraus-api.log`, que é onde olhar quando ela falha — o motivo mais
-comum é modelo ausente em `modelos/`, que derruba o boot por design.
+comum é modelo ausente em `modelos/`. Desde o provedor preguiçoso
+(`fraus/api/motor_preguicoso.py`) isso **não derruba o boot**: a API sobe,
+`/saude` responde (`"motor": "real"`, mas `"estado_motor": "erro"`),
+`/saude/prontidao` responde **503**, e a primeira rota que precisa do modelo
+falha alto com o erro memorizado — sem predição substituta. Olhe o
+`estado_motor`, não o `motor`.
 
 ### 6. Produção: dashboard e API separadas
 
@@ -773,8 +850,11 @@ Os dois projetos Vercel usam o mesmo repositório, mas têm configurações
 independentes: [`dashboard/vercel.json`](dashboard/vercel.json) impede o build
 do front de herdar o comando da API; [`vercel.json`](vercel.json) prepara a
 função Python. Durante o build, `scripts/preparar_modelos_vercel.py` baixa um
-ZIP privado, confere o SHA-256, recusa *path traversal*, valida os três grafos
-ONNX, tokenizadores e fusor, e só então permite o deploy.
+ZIP privado, confere o SHA-256, recusa *path traversal* e confere a
+**presença** dos três grafos ONNX, das configurações, dos tokenizadores e do
+fusor (e do manifesto do Laya), e só então permite o deploy. Ele não abre os
+grafos nem carrega o fusor: um `fusor.joblib` fora do contrato passa no build e
+só é recusado em runtime, por `Fusor.carregar`.
 
 O runtime usa satisfação e emoção em ONNX fp32. A ironia BERTimbau vai
 quantizada em int8 no pacote, mas em produção quem lê ironia é o Laya sem
@@ -859,7 +939,9 @@ navegador, e requisição de servidor não faz preflight de CORS.
   redeployar. Para um endereço fixo, é preciso túnel nomeado com domínio.
 - **Defina `FRAUS_CHAVE_MESTRA` ANTES de abrir o túnel.** Sem ela a API sobe
   aberta, e o túnel publica na internet uma API que grava no seu banco. Com ela,
-  quem chegar no endereço esbarra em **401** — em toda rota menos duas, que têm
+  quem chegar no endereço esbarra em **401** — exceto nas rotas públicas
+  listadas em *Precedência* (saúde, estado da autenticação, cadastro e login,
+  prévia de convite, link do anotador) e nas duas de escrita que têm
   credencial própria e por isso não passam pela chave: `POST /ingestao` (chave
   de fonte `frs_`) e `POST /integracoes/webhook/{fonte_id}` (assinatura HMAC).
 - **A rota do webhook é anônima por desenho, e continua sendo uma porta pública
@@ -871,9 +953,12 @@ navegador, e requisição de servidor não faz preflight de CORS.
   aberto, qualquer um pode **chamar** `/integracoes/webhook/{id}` e gerar
   tentativas recusadas. Publique sabendo disso, e guarde o segredo com o mesmo
   cuidado da chave mestra.
-- A mestra protege a **API**, não a **dashboard**: a dashboard publicada não tem
-  login, e quem tem o link lê os dados por ela. Para demonstrar com atendimento
-  real, ligue também a **Vercel Deployment Protection**.
+- A mestra protege a **API**, não a **dashboard**: sem `FRAUS_JWT_SEGREDO` na
+  API, a dashboard abre **sem login** e o proxy apresenta a
+  `FRAUS_CHAVE_ACESSO` por quem chegar — quem tem o link lê os dados por ela.
+  Para demonstrar com atendimento real, ligue o login (`FRAUS_JWT_SEGREDO`
+  e `FRAUS_CODIGO_CONVITE` na API), como na produção, ou a **Vercel
+  Deployment Protection**.
 - **Feche o túnel quando terminar** (`Ctrl+C`).
 
 **Sem a API no ar, o deploy não quebra.** Todas as telas são `force-dynamic` e
@@ -909,13 +994,15 @@ ausente no venv; `uv sync --extra dev` resolve).
 
 #### P0 — ameaça a banca
 
-- [ ] **Decidir o domínio do tempo no score.** Com 3 h de espera, a latência
-  pesa −85 contra +4,6 do texto (z-score explode fora da distribuição de
-  treino). Opções: teto na latência, escala log (ambas com retreino do fusor)
-  ou declarar como limitação. **Medido** por
-  `scripts/medir_dominio_do_tempo.py`: o relógio empata com o texto em **411 s
-  (6,9 min)** — 4 desvios acima da média do treino — e manda dali em diante,
-  sem teto. Detalhe em `docs/handoff.md` §7.
+- [x] **Decidir o domínio do tempo no score** — **feito em 15/09/2026**: as
+  quatro features de espera entram no vetor em `log1p` (`FEATURES_EM_LOG`,
+  dentro de `vetorizar`), o fusor foi retreinado e `Fusor.carregar` recusa
+  artefato treinado em segundos crus. O teto p99 foi medido e recusado (fazia
+  3 h pesarem o mesmo que 10 min). O achado de origem: com 3 h de espera, a
+  latência pesava −85 contra +4,6 do texto, e o relógio empatava com o texto
+  em **411 s (6,9 min)** (`scripts/medir_dominio_do_tempo.py`); com `log1p` o
+  empate passa a 613 s e 3 h pesam 2,1× o texto, não mais 20×. Medições em
+  [docs/treinamento.md](docs/treinamento.md) e `docs/handoff.md`.
 - [ ] **Ironia ainda sai promotor** quando o relógio não contradiz — limite da
   cabeça de texto, hoje marcado pela contestação. Declarar ou atacar.
 - [ ] **Retreinar a cabeça de ironia** (`notebooks/04_treino_ironia.ipynb`) e
@@ -963,8 +1050,10 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
   (coluna que parseia como data, poucos valores distintos = autor, texto longo
   = mensagem, cardinalidade em blocos = id) + atribuição húngara.
 - [x] **Data ambígua** — **feita em 14/09/2026** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
-  interpretação com menos saltos negativos na ordem das mensagens; empate =
-  confirmação obrigatória. Data sem fuso vira **aviso visível**, nunca naive
+  interpretação com menos saltos negativos na ordem das mensagens; no empate,
+  assume **dia/mês e avisa** (a prévia expõe `data_ambigua` e a tela permite
+  escolher a ordem), mas **não bloqueia**: registrar e importar gravam com
+  dia/mês se ninguém escolher. Data sem fuso vira **aviso visível**, nunca naive
   silencioso (invariante 6). Sem horário, sem nota (§3.2 do handoff).
 - [x] **Perfis de mapeamento** — **feito em 14/09/2026**: tabela
   `perfis_mapeamento` (só nomes de coluna e papéis, nunca conteúdo), chave =
@@ -1127,9 +1216,12 @@ Em ordem, com o detalhe em [Pendências](#pendências):
    `scikit-learn` no `pyproject.toml`, e remover `content/fraus` da raiz.
 
 Fora de escopo por decisão, não por falta de tempo: **k8s** (o deploy atual é
-serverless e não justifica um orquestrador) e **login de usuário** na dashboard — o cookie da
-autenticação é meio caminho, e dizer o contrário seria o mesmo tipo de mentira
-que o projeto existe para não cometer.
+serverless e não justifica um orquestrador). O **login de usuário**, que já
+esteve nesta lista, existe: e-mail e senha em `POST /auth/entrar`
+(`fraus/api/rotas/auth.py`), JWT no cookie `httpOnly` `fraus_sessao` da
+dashboard, papéis `dev`/`usuario` e cadastro por código de convite — e está
+ligado em produção. Sem `FRAUS_JWT_SEGREDO` ele fica desligado e a dashboard
+abre sem login, que é o modo local.
 
 ## Limitações conhecidas
 
@@ -1144,10 +1236,11 @@ que o projeto existe para não cometer.
   (`fra_...`) gerada por ela via `POST /acesso/chaves`. A **chave de fonte**
   (`frs_...`) existente continua sendo a única credencial aceita em
   `POST /ingestao` — as duas não se substituem, porque a rota só escreve e uma
-  segunda credencial não compraria segurança a mais. `GET /acesso/estado` é a
-  única rota que permanece **pública** com a autenticação ligada, e devolve
+  segunda credencial não compraria segurança a mais. `GET /acesso/estado`
+  permanece **pública** com a autenticação ligada, e devolve
   apenas se ela está ligada e de onde vem a mestra: sem dica, sem hash, sem
-  data. `POST /acesso/mestra` fica alcançável enquanto a API está aberta, e é
+  data. Ela não é a única pública — a lista inteira está em *Precedência*,
+  acima. `POST /acesso/mestra` fica alcançável enquanto a API está aberta, e é
   assim que se liga a autenticação sem terminal. Como ela **não** nasce aberta,
   essa janela não é mais o primeiro uso: ela só existe nos dois casos acima
   (mestra apagada, ou escrita do arquivo falhada) — e nesses, **quem chegar
@@ -1157,7 +1250,11 @@ que o projeto existe para não cometer.
   exige a mestra atual e responde 409 a qualquer outra credencial. Gerenciar
   chaves (criar,
   listar, revogar — tanto de acesso quanto de fonte) é privilégio exclusivo da
-  mestra; uma chave de acesso que tenta recebe **403**. Sem a mestra definida,
+  mestra; uma chave de acesso que tenta recebe **403**. Fora disso a chave de
+  acesso **não é somente leitura**: ela escreve configurações, léxico,
+  importação, fontes e acesso de usuários — o proxy da dashboard a usa para
+  escrever no modo local —, e deve ser guardada com o cuidado de credencial de
+  operador. Sem a mestra definida,
   não exponha a API na internet: a raiz configurável (`FRAUS_RAIZ_IMPORTACAO`)
   limita o estrago da importação, não substitui autenticação. As origens
   liberadas para o navegador continuam sendo uma **lista explícita**
@@ -1226,11 +1323,15 @@ que o projeto existe para não cometer.
   ou a curadoria. A mudança de 0,5 para 0,75 não precisou dele: o banco estava
   vazio quando ela foi feita.
 
-  **O aviso de régua misturada, porém, só enxerga a versão do léxico.** A
-  conversa grava com qual versão do léxico curado foi pontuada, e é isso que a
-  contagem de `/indicadores` compara — o peso do neutro não é versionado, então
-  mudá-lo mistura duas réguas **sem que nenhuma tela avise**. É a razão a mais
-  para ele continuar constante e não virar botão.
+  **O aviso de régua misturada, porém, não enxerga o peso do neutro.** A
+  conversa grava com qual versão do léxico curado e com qual **régua** foi
+  pontuada — desde 15/09/2026, a régua é o hash dos pesos do fusor somado ao da
+  regra de cortesia (`regua_do_fusor`, em `fraus/motor.py`) —, e é isso que a
+  contagem `pontuadas_com_regua_antiga` de `/indicadores` compara: curadoria,
+  retreino do fusor e troca da cortesia avisam. O peso do neutro não entra
+  nesse hash (`Fusor.assinatura`), então mudá-lo mistura duas réguas **sem que
+  nenhuma tela avise**. É a razão a mais para ele continuar constante e não
+  virar botão.
 - **O fusor é treinado em conversas sintéticas.** Nenhum corpus público de
   resenha PT-BR tem timestamps de diálogo: latência, escalação e abandono saem
   de distribuições calibradas por literatura de live chat. O texto é real, o
@@ -1251,7 +1352,10 @@ que o projeto existe para não cometer.
   os +2,78 de `texto_prob_satisfeito_media`.
 
   **Quanto a conversa pontua depende do relógio**, e isto foi medido em
-  08/09/2026 contra a API real, com a mesma fala e só a latência variando:
+  08/09/2026 contra a API real, com a mesma fala e só a latência variando — com
+  o fusor **anterior** ao `log1p` de 15/09/2026, que comprimiu a espera longa;
+  a medição da frase canônica com a escala vigente está em
+  [docs/treinamento.md](docs/treinamento.md):
 
   | latência | score | nota | categoria | contestada |
   |---:|---:|---:|---|---|
@@ -1411,8 +1515,11 @@ invariante 7 pede falha alta e explícita; o comportamento cumpria a metade
 
 **Consertado:** `Fusor.carregar` compara `n_features_in_` com
 `len(NOMES_FEATURES)` e levanta `FusorIncompativelError` nomeando os dois
-números e apontando o notebook. Artefato desatualizado agora derruba a API na
-subida. `vetorizar` também passou a recusar chave EXTRA, não só chave faltando.
+números e apontando o notebook. Artefato desatualizado falha **na carga**, não
+mais na primeira pontuação. Desde o provedor preguiçoso essa carga não é a
+subida: a API sobe, `/saude/prontidao` responde 503 com `estado_motor: "erro"`,
+e toda rota que precisa do modelo propaga o mesmo erro — nenhuma pontua com o
+artefato errado. `vetorizar` também passou a recusar chave EXTRA, não só chave faltando.
 
 O retreino com 38 features rodou no mesmo dia: **acurácia 0,943**, F1-macro
 0,944, contra 0,947 do fusor de 40. A queda é o resultado saudável — as duas
@@ -1512,7 +1619,7 @@ o seu arquivo, e é nele que se mexe:
 | `api/seguranca.py` | as duas credenciais — chave de acesso/mestra e chave de fonte — e o middleware |
 | `api/periodo.py` | validação do recorte `de`/`ate`, pontas inclusivas |
 | `api/caminhos.py` | caminhos configuráveis por ambiente + contenção da importação |
-| `api/rotas/` | um módulo por domínio: `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso` (estado, mestra e chaves), `ingestao`, `modelo`, `analise` |
+| `api/rotas/` | um módulo por domínio (16): `saude`, `conversas`, `indicadores`, `configuracoes`, `integracoes`, `acesso` (estado, mestra e chaves), `ingestao`, `modelo`, `analise`, `grafo`, `lexico` (léxico curado), `perfis` (perfis de mapeamento), `webhook`, `auth` (cadastro, login e `/auth/eu`), `operacao` (as sete abas de Operação e os convites) e `anotacao` (régua de ironia) |
 
 As dependências chegam por injeção, não por fechamento léxico — é o que
 permite a rota morar fora do arquivo que constrói o app.

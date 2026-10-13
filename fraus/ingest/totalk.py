@@ -170,8 +170,9 @@ def converter(
             ignoradas.append(
                 LinhaIgnorada(
                     numero_linha=numero_linha,
-                    motivo=f"'Mensagem/Quem enviou' fora do padrao "
-                           f"'De: X Para: Y': {linha['Mensagem/Quem enviou']!r}",
+                    # Sem o valor: e nome, e-mail ou telefone de gente real, e o
+                    # motivo e gravado (auditoria de 13/10/2026).
+                    motivo="'Mensagem/Quem enviou' fora do padrao 'De: X Para: Y'",
                 )
             )
             continue
@@ -180,9 +181,12 @@ def converter(
             enviada_em = _data_do_export(
                 (linha["Mensagem/Data de criação"] or "").strip()
             )
-        except ValueError as erro:
+        except ValueError:
             ignoradas.append(
-                LinhaIgnorada(numero_linha=numero_linha, motivo=f"data invalida: {erro}")
+                LinhaIgnorada(
+                    numero_linha=numero_linha,
+                    motivo=f"data invalida em 'Mensagem/Data de criação' (esperado {FORMATO_DATA})",
+                )
             )
             continue
         if enviada_em.tzinfo is None:
@@ -255,10 +259,6 @@ def converter(
         agentes_detectados=sorted(agentes),
         mensagens_sem_prefixo=sem_prefixo,
     )
-
-
-def converter_texto(conteudo: str, **kwargs) -> ResultadoTotalk:
-    return converter(io.StringIO(conteudo, newline=""), **kwargs)
 
 
 def para_csv_canonico(conversas: list[Conversa]) -> str:

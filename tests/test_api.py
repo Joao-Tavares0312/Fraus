@@ -1406,3 +1406,18 @@ def test_conversa_sem_fala_do_cliente_nao_e_evidencia_fraca_e_sim_ausencia(
     resumo = cliente_com_sinal.get("/conversas").json()[0]
     assert resumo["score"] is None
     assert resumo["evidencia_fraca"] is None
+
+
+@pytest.mark.parametrize("reservado", ["fonte:1:atendimento-1", "analise:abc", "arquivo:x:1"])
+def test_importacao_recusa_id_com_prefixo_reservado_ao_servidor(cliente, tmp_path, reservado):
+    """Auditoria de 13/10/2026: um arquivo com conversa_id `fonte:1:...`
+    sobrescrevia a conversa entregue pela integracao (upsert por id) e
+    trocava o canal dela. Esses prefixos so o servidor gera."""
+    caminho = tmp_path / "reservado.csv"
+    caminho.write_text(CSV.replace("c1,", f"{reservado},"), encoding="utf-8")
+
+    resposta = cliente.post("/conversas/importar", json={"caminho": str(caminho)})
+
+    assert resposta.status_code == 400, resposta.text
+    assert "reservado" in resposta.json()["detail"]
+    assert cliente.get("/conversas").json() == []

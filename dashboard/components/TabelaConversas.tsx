@@ -80,7 +80,7 @@ export type LinhaConversa = {
 const colunas = legacyCreateColumnHelper<LinhaConversa>();
 
 /** Caracteres que fazem o Excel/Sheets tratar a celula como FORMULA. */
-const GATILHOS_DE_FORMULA = ["=", "+", "-", "@"];
+const GATILHOS_DE_FORMULA = ["=", "+", "-", "@", "\t", "\r"];
 
 /**
  * Escapa um campo para CSV.
@@ -89,7 +89,7 @@ const GATILHOS_DE_FORMULA = ["=", "+", "-", "@"];
  * ingerido, entao um campo como `=HYPERLINK(...)` viraria formula executavel
  * ao abrir a planilha.
  */
-function escaparCampo(campo: string): string {
+export function escaparCampo(campo: string): string {
   const seguro = GATILHOS_DE_FORMULA.some((gatilho) => campo.startsWith(gatilho))
     ? `'${campo}`
     : campo;

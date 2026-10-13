@@ -60,3 +60,21 @@ def test_cold_start_e_inferencia_aparecem_no_log_e_no_header(tmp_path, caplog):
     assert evento["carga_modelo_ms"] >= 0
     assert evento["inferencia_ms"] > 0
     assert "bom" not in caplog.records[-1].message
+
+
+def test_rotas_de_autenticacao_publicam_so_o_total(tmp_path):
+    """Auditoria de 13/10/2026: em /auth/entrar, e-mail cadastrado roda uma
+    consulta a mais (o hash da senha), e `consulta_db` no Server-Timing
+    separava "conta existe" de "nao existe" sem o ruido do scrypt -- a
+    enumeracao que a recusa uniforme e o scrypt sem conta existem para impedir.
+    O log estruturado continua com o detalhe."""
+    banco = Banco(tmp_path / "fraus.db")
+    banco.migrar()
+    app = criar_app(banco, _Motor(), tmp_path, jwt_segredo="segredo-jwt-de-teste-observabilidade-1")
+    cliente = TestClient(app)
+
+    resposta = cliente.post("/auth/entrar", json={"email": "ninguem@empresa.com", "senha": "senha-errada-123"})
+
+    assert resposta.status_code == 401
+    assert resposta.headers["server-timing"].startswith("total;dur=")
+    assert "consulta_db" not in resposta.headers["server-timing"]

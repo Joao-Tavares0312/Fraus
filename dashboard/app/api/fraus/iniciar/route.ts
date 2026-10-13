@@ -329,6 +329,11 @@ function ultimaFalhaDoLog(): string | null {
 
 /** A tela pergunta ANTES de desenhar o botão: sem isto ela ofereceria um 404. */
 export async function GET(): Promise<Response> {
+  // A trava 1 vale para a leitura tambem: desligada, a rota nao existe. Ate
+  // 13/10/2026 o GET respondia 200 em producao com o argv e o caminho do log.
+  if (!modoLocalLigado()) {
+    return Response.json({ detail: "não encontrado" }, { status: 404 });
+  }
   const motivo = indisponivel();
   const nosso = nossoProcesso();
   return Response.json({

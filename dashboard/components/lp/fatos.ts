@@ -38,8 +38,3 @@ export const FAMILIAS_DO_VETOR = [
   { chave: "estilo", rotulo: "Estilo", qtd: 6, leitura: "Caixa alta, pontuação, alongamento, palavrão e censura." },
   { chave: "incongruencia", rotulo: "Incongruência", qtd: 6, leitura: "Emoji contra texto, contraste, hipérbole, aspas e elogio contra situação negativa." },
 ] as const;
-
-/** Em duas casas ("07", "00"), como o LED e a telemetria os mostram. */
-export function emDuasCasas(n: number): string {
-  return String(n).padStart(2, "0");
-}

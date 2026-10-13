@@ -63,7 +63,9 @@ As rotas abaixo têm prefixo `/operacao` na API e passam pelo proxy da dashboard
 Escala, replay e cenários não regravam a conversa original. Simulação e
 comparação antes/depois não demonstram causalidade. Comparar fusores depende
 de `FRAUS_FUSOR_CANDIDATO` apontando para um `.joblib` compatível com as **39
-features**; não promove o candidato nem repontua o banco. A configuração desse
+features**; sem ela, ou com candidato ausente ou incompatível, a rota
+responde 503 (o incompatível dava 500 até 13/10/2026). Não promove o
+candidato nem repontua o banco. A configuração desse
 artefato em produção não foi confirmada nesta entrega.
 
 Código: `fraus/operacao.py`, `fraus/api/rotas/operacao.py` e
@@ -120,11 +122,17 @@ ficha antiga ou incompleta: mostra erro recuperável.
 - Sessões revalidam usuário ativo, papel e versão do JWT no banco. Revogar
   sessões incrementa a versão e invalida tokens anteriores.
 - Exportação temporária: até **480 minutos**. A dashboard autoriza a ação por
-  `POST /exportacao/autorizar`; `GET /exportar` gera resumo CSV sem transcrição
-  completa e neutraliza fórmulas em células. A política controla a exportação
-  do produto, não a cópia de conteúdo visível.
+  `POST /exportacao/autorizar` e **monta o CSV no navegador**, a partir das
+  linhas já carregadas na tabela (tempos, desfecho, nota, categoria e
+  `contestada`, com fórmulas neutralizadas). `GET /exportar` existe na API —
+  resumo CSV sem transcrição, com a coluna `contestada` e fórmulas
+  neutralizadas —, mas a tela não o usa; serve a quem chama a API direto. A
+  política controla a exportação do produto, não a cópia de conteúdo visível.
+  *(Corrigido em 13/10/2026: a versão anterior dizia que a dashboard exportava
+  por `GET /exportar`.)*
 - A cadeia SHA-256 detecta quebra dos vínculos; não é assinatura externa e não
-  protege contra reescrita integral do banco por quem o controla.
+  protege contra reescrita integral do banco por quem o controla — nem
+  detecta a remoção dos eventos mais recentes (auditoria de 13/10/2026).
 
 ## Desenvolvimento e QA
 

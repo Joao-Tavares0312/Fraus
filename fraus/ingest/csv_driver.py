@@ -6,7 +6,6 @@ depois: esta e a segunda porta de entrada do sistema (a outra e
 """
 
 import csv
-import io
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import datetime
@@ -36,21 +35,18 @@ def carregar_csv(caminho: Path) -> ResultadoIngestao:
         return carregar_linhas(arquivo)
 
 
-def carregar_texto(conteudo: str) -> ResultadoIngestao:
-    """Mesma leitura, a partir do CONTEUDO do CSV em vez de um caminho.
+def _data(valor: str, numero_linha: int) -> datetime:
+    """`fromisoformat` sem levar o valor para a mensagem de erro.
 
-    Existe para a analise avulsa: o arquivo chega no corpo da requisicao, e
-    interpretado em memoria e nunca toca o disco. E por isso que ela nao viola
-    a decisao que recusa upload na tela de Integracoes -- ali o problema era
-    abrir superficie de ESCRITA numa API sem autenticacao; aqui nada e gravado,
-    nem no banco nem em arquivo.
-
-    A regra de leitura e literalmente a mesma funcao de `carregar_csv`: um
-    segundo parser para o mesmo formato acabaria aceitando coisas diferentes
-    das que a importacao aceita, e a analise avulsa passaria a discordar do que
-    entra no banco.
+    O ValueError do `fromisoformat` repete a string recebida -- numa coluna
+    deslocada, CPF ou e-mail de cliente, gravados como motivo de rejeicao.
     """
-    return carregar_linhas(io.StringIO(conteudo, newline=""))
+    try:
+        return datetime.fromisoformat(valor)
+    except ValueError:
+        raise ValueError(
+            f"a linha {numero_linha} tem 'enviada_em' ilegivel (esperado ISO-8601 com fuso)"
+        ) from None
 
 
 def _exigir(linha: dict, coluna: str, numero_linha: int) -> str:
@@ -94,14 +90,23 @@ def carregar_linhas(arquivo: Iterable[str]) -> ResultadoIngestao:
             mensagem = Mensagem(
                 autor=_exigir(linha, "autor", numero_linha),
                 texto=censurar_pii(_exigir(linha, "texto", numero_linha)),
-                enviada_em=datetime.fromisoformat(
-                    _exigir(linha, "enviada_em", numero_linha)
-                ),
+                enviada_em=_data(_exigir(linha, "enviada_em", numero_linha), numero_linha),
             )
             conversa_id = _exigir(linha, "conversa_id", numero_linha)
             canal = _exigir(linha, "canal", numero_linha)
             escalou = _exigir(linha, "escalou_para_humano", numero_linha)
-        except (ValueError, ValidationError) as erro:
+        except ValidationError as erro:
+            # So `loc` e `type`: o texto do erro do Pydantic embute o valor
+            # recebido, e o motivo e gravado no banco (armadilha 10 do
+            # handoff; auditoria de 13/10/2026).
+            onde = "; ".join(
+                f"{'.'.join(str(parte) for parte in e['loc']) or 'linha'}: {e['type']}"
+                for e in erro.errors()
+            )
+            rejeitadas.append(LinhaRejeitada(numero_linha=numero_linha, motivo=f"linha {numero_linha}: {onde}"))
+            continue
+        except ValueError as erro:
+            # `_exigir` e `_data` so nomeiam coluna e linha, nunca o valor.
             rejeitadas.append(LinhaRejeitada(numero_linha=numero_linha, motivo=str(erro)))
             continue
 

@@ -1,11 +1,14 @@
-"""Chave de ACESSO: autoriza a leitura da API inteira, nao uma fonte.
+"""Chave de ACESSO: credencial de operador da API inteira, nao de uma fonte.
 
 Mesmo desenho de fraus/credencial.py (segredo sorteado, hash no banco,
 mostrada uma vez) com prefixo proprio -- `fra_` contra `frs_` -- porque os
 papeis nao se misturam: chave de fonte so empurra atendimento para dentro
-(`POST /ingestao`), chave de acesso le todo o resto. Uma chave de um papel
-apresentada no lugar do outro falha na leitura do prefixo, antes de qualquer
-consulta ao banco.
+(`POST /ingestao`), chave de acesso le e ESCREVE todo o resto (configuracoes,
+lexico, importacao, fontes, acesso de usuarios) -- nao e somente leitura. So
+a gestao de chaves (`/acesso/chaves`, chave e segredo de fonte) exige a
+mestra (`exigir_mestra`), e o proxy da dashboard usa esta chave para escrever
+no modo local. Uma chave de um papel apresentada no lugar do outro falha na
+leitura do prefixo, antes de qualquer consulta ao banco.
 """
 
 import secrets

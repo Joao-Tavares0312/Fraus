@@ -392,3 +392,17 @@ def test_containment_de_conjunto_vazio_e_ausencia_nao_zero():
     inicializacao em vez de afirmacao.
     """
     assert containment_rate([]) is None
+
+
+@pytest.mark.parametrize(
+    "faixas",
+    [
+        {"promotor": (0, 6), "neutro": (7, 8), "detrator": (9, 10)},
+        {"neutro": (0, 0), "detrator": (1, 6), "promotor": (7, 10)},
+    ],
+)
+def test_faixas_fora_da_ordem_detrator_neutro_promotor_sao_recusadas(faixas):
+    """Auditoria de 13/10/2026: cobertura e contiguidade passavam com as
+    categorias invertidas, e dez conversas de score 100 davam NPS -100."""
+    with pytest.raises(ValueError, match="ordem"):
+        validar_faixas_nps(faixas)

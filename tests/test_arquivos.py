@@ -212,6 +212,54 @@ def test_pdf_sem_texto_extraivel_explica_que_nao_ha_ocr():
     assert "OCR" in str(erro.value)
 
 
+def _pdf_com_fluxo_inflado(saida_bytes: int) -> bytes:
+    """PDF de uma pagina cujo fluxo FlateDecode infla para `saida_bytes`, com
+    um byte corrompido perto do fim -- o que joga o pypdf no fallback que
+    descompacta byte a byte ate o teto de saida."""
+    import zlib
+
+    conteudo = b"BT /F1 12 Tf 10 10 Td (oi) Tj ET\n" + b" " * saida_bytes
+    comprimido = bytearray(zlib.compress(conteudo, 9))
+    comprimido[-12] ^= 0xFF
+    objetos = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R"
+        b" /Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length %d /Filter /FlateDecode >>\nstream\n" % len(comprimido)
+        + bytes(comprimido) + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    saida = io.BytesIO()
+    saida.write(b"%PDF-1.4\n")
+    posicoes = []
+    for numero, objeto in enumerate(objetos, 1):
+        posicoes.append(saida.tell())
+        saida.write(b"%d 0 obj\n" % numero + objeto + b"\nendobj\n")
+    xref = saida.tell()
+    saida.write(b"xref\n0 %d\n0000000000 65535 f \n" % (len(objetos) + 1))
+    for posicao in posicoes:
+        saida.write(b"%010d 00000 n \n" % posicao)
+    saida.write(b"trailer << /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objetos) + 1, xref))
+    return saida.getvalue()
+
+
+def test_pdf_com_fluxo_inflado_e_recusado_rapido():
+    """Auditoria de 13/10/2026: um PDF de ~72 KB cujo fluxo infla para 74 MB
+    prendia uma thread por ~14-18 s de CPU (e 75 MB de RAM) por requisicao em
+    /analisar/*, porque o teto de saida do pypdf e 75 MB. Transcricao nao chega
+    perto disso; o teto proprio recusa em milissegundos."""
+    import time
+
+    dados = _pdf_com_fluxo_inflado(74_000_000)
+    assert len(dados) < 200_000  # cabe no teto de upload de /analisar/arquivo
+
+    inicio = time.perf_counter()
+    with pytest.raises(ArquivoIlegivelError):
+        extrair("bomba.pdf", dados)
+    assert time.perf_counter() - inicio < 3
+
+
 # ---------------------------------------------------------------------------
 # docx com TABELA: a coluna de horario nao pode virar prosa
 

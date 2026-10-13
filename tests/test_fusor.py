@@ -418,3 +418,23 @@ def test_feature_constante_no_treino_nao_estoura_o_z():
     fusor = _fusor_treinado()
     z = fusor.z_das_features(_features())
     assert all(valor == valor for valor in z.values())  # nenhum NaN
+
+
+@pytest.mark.parametrize("rotulos", [[1, 2, 3, 2], [0, 1, 1, 0]])
+def test_carregar_recusa_fusor_com_classes_fora_de_0_1_2(tmp_path, rotulos):
+    """Invariante 8, auditoria de 13/10/2026: rotulos 1-based carregavam e
+    pontuavam ao contrario (satisfeita 11, insatisfeita 74,8); duas classes
+    so carregavam. A carga conferia features e escala, nao as classes."""
+    import joblib
+
+    fusor = Fusor()
+    from fraus.fusor import ESCALA_DO_TEMPO
+
+    fusor._pipeline.fit([[float(i)] * len(NOMES_FEATURES) for i in range(4)], rotulos)
+    # Escala certa, para a recusa vir das CLASSES e nao da escala do tempo.
+    fusor._pipeline.fraus_escala_do_tempo = ESCALA_DO_TEMPO
+    caminho = tmp_path / "artefato.joblib"
+    joblib.dump(fusor._pipeline, caminho)
+
+    with pytest.raises(FusorIncompativelError, match=r"classes \["):
+        Fusor.carregar(caminho)

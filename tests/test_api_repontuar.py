@@ -209,3 +209,24 @@ def test_defasadas_do_banco_seguem_a_mesma_regra_da_contagem(tmp_path):
     # Sem regua vigente (motor duble) so o lexico conta.
     assert banco.ids_defasadas(0, None) == set()
     assert banco.ids_defasadas(1, None) == {"antiga", "sem-regua", "em-dia"}
+
+
+def test_queda_momentanea_do_banco_no_fim_nao_prende_o_trabalho_em_rodando(tmp_path, monkeypatch):
+    """Auditoria de 13/10/2026: a gravacao FINAL do estado ficava fora do
+    `try`; se o pooler caisse nela, a thread morria e a linha seguia
+    'rodando' -- GET mostrava rodando e POST dava 409 por 15 minutos."""
+    cliente, banco = _cliente(tmp_path)
+    banco.salvar(_conversa("c1"), 50.0, "neutro", lexico_versao=0)
+    original = banco.atualizar_trabalho
+    falhas = {"restantes": 1}
+
+    def instavel(nome, **campos):
+        if "estado" in campos and falhas["restantes"]:
+            falhas["restantes"] -= 1
+            raise ConnectionError("pooler fora do ar")
+        return original(nome, **campos)
+
+    monkeypatch.setattr(banco, "atualizar_trabalho", instavel)
+    assert cliente.post("/conversas/repontuar").status_code == 202
+
+    assert _aguardar(cliente)["estado"] == "concluido"

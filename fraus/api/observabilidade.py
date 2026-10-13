@@ -50,7 +50,12 @@ class _Observabilidade:
                 status = mensagem["status"]
                 total = (perf_counter() - inicio) * 1000
                 partes = [f'total;dur={total:.1f}']
-                for nome in ("espera_pool", "consulta_db", "carga_modelo", "inferencia"):
+                # Em /auth/* o detalhe delata se o e-mail tem conta: a conta
+                # existente custa uma consulta a mais (auditoria de 13/10/2026).
+                # O log abaixo continua com ele.
+                detalhes = () if str(scope.get("path", "")).startswith("/auth/") else (
+                    "espera_pool", "consulta_db", "carga_modelo", "inferencia")
+                for nome in detalhes:
                     if nome in metricas:
                         partes.append(f'{nome};dur={metricas[nome]:.1f}')
                 cabecalhos = list(mensagem.get("headers") or [])

@@ -1,3 +1,5 @@
+import pytest
+
 from fraus.seguranca.pii import censurar_pii
 
 
@@ -79,3 +81,15 @@ def test_prosa_com_rua_solta_nao_e_mascarada_como_endereco():
         == "andei pela avenida inteira e cheguei enrolado demorou "
         "45 minutos no total 2026"
     )
+
+
+@pytest.mark.parametrize("texto", ["a." * 25_000, "a-" * 25_000, "a." * 25_000 + "@"])
+def test_censura_de_email_e_linear_no_tamanho_da_fala(texto):
+    """Auditoria de 13/10/2026: `[\\w.+-]+` recuava o resto do texto a cada
+    posicao de inicio -- 50 mil caracteres levavam ~26 s, e o cliente final
+    do chatbot alcanca isso sem credencial nenhuma, pelo webhook."""
+    import time
+
+    inicio = time.perf_counter()
+    censurar_pii(texto)
+    assert time.perf_counter() - inicio < 1.0

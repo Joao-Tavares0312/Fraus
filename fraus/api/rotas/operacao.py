@@ -15,9 +15,11 @@ from pydantic import BaseModel, Field, model_validator
 
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.motor_preguicoso import motor_e_real
-from fraus.fusor import Fusor
+from fraus.contestacao import contestacao
+from fraus.fusor import Fusor, FusorIncompativelError
 from fraus.indicadores import nps_com_intervalo, nota_0_10
 from fraus.operacao import descobrir_temas, limitar_esperas, simular_escala
+from fraus.resumo import resumir
 from fraus.seguranca.pii import censurar_pii
 
 router = APIRouter(prefix="/operacao")
@@ -285,10 +287,12 @@ def jornadas(de: str | None = None, ate: str | None = None, ctx: Contexto = Depe
     grupos = {}
     for c, s in ctx.registros_do_recorte(de, ate):
         if c.id in vinculos:
-            grupos.setdefault(vinculos[c.id], []).append(ficha(ctx, c, s))
+            grupos.setdefault(vinculos[c.id], []).append((c.iniciada_em, ficha(ctx, c, s)))
     saida = []
-    for referencia, contatos in grupos.items():
-        contatos.sort(key=lambda c: (c["iniciada_em"], c["id"]))
+    for referencia, pares in grupos.items():
+        # Pelo INSTANTE, nao pelo texto ISO: offsets diferentes ordenam errado
+        # como string (auditoria de 13/10/2026).
+        contatos = [f for _, f in sorted(pares, key=lambda par: (par[0], par[1]["id"]))]
         saida.append({"referencia": referencia, "contatos": contatos,
             "recontatos": max(0, len(contatos) - 1), "canais": sorted({c["canal"] for c in contatos}),
             "resolucao_declarada": contatos[-1]["feedback"] == 1 if contatos[-1]["feedback"] is not None else None})
@@ -424,7 +428,9 @@ def comparar(pedido: ComparacaoModelos, ctx: Contexto = Depends(obter_contexto))
         raise HTTPException(503, "configure FRAUS_FUSOR_CANDIDATO no servidor com o arquivo de um fusor compativel")
     try:
         candidato = Fusor.carregar(Path(caminho))
-    except (FileNotFoundError, ValueError) as erro:
+    # FusorIncompativelError herda de RuntimeError: sem ela aqui, o candidato
+    # fora do contrato de 39 features virava 500 (auditoria de 13/10/2026).
+    except (FileNotFoundError, ValueError, FusorIncompativelError) as erro:
         raise HTTPException(503, "o fusor candidato nao esta disponivel ou e incompativel com o contrato vigente") from erro
     curadoria = ctx.curadoria_vigente()
     resultados = []
@@ -496,17 +502,26 @@ def autorizar_exportacao(de: str | None = None, ate: str | None = None, ctx: Con
     return {"autorizada": True}
 
 
+def celula_segura(valor):
+    """Neutraliza formula de planilha em campo de origem externa (lista da
+    OWASP: = + - @ e tambem tab e retorno, que o Excel pula antes de ler)."""
+    return "'" + valor if isinstance(valor, str) and valor.startswith(("=", "+", "-", "@", "\t", "\r")) else valor
+
+
 @router.get("/exportar")
 def exportar(de: str | None = None, ate: str | None = None, ctx: Contexto = Depends(obter_contexto)):
     exigir_exportacao(ctx)
-    registros = ctx.registros_do_recorte(de, ate)
+    # Ordem pelo instante (e id no empate): `todas()` nao promete ordem, e o
+    # texto ISO com offsets diferentes ordena errado (auditoria de 13/10/2026).
+    registros = sorted(ctx.registros_do_recorte(de, ate), key=lambda r: (r[0].iniciada_em, r[0].id))
     arquivo = io.StringIO()
     escritor = csv.writer(arquivo)
-    escritor.writerow(["id", "canal", "iniciada_em", "score_inferido_estimativa", "nota_inferida_estimativa", "categoria"])
+    escritor.writerow(["id", "canal", "iniciada_em", "score_inferido_estimativa", "nota_inferida_estimativa", "categoria", "contestada"])
     for c, s in registros:
         f = ficha(ctx, c, s)
-        # Neutraliza formulas de planilha em campos de origem externa.
         valores = [f[k] if f[k] is not None else "" for k in ("id", "canal", "iniciada_em", "score", "nota", "categoria")]
-        escritor.writerow(["'" + v if isinstance(v, str) and v.startswith(("=", "+", "-", "@")) else v for v in valores])
+        # A mesma marca da API e do CSV da tela: a ressalva sai junto do numero.
+        valores.append("sim" if contestacao(s, resumir(c)["latencia_mediana_s"]) else "")
+        escritor.writerow([celula_segura(v) for v in valores])
     ctx.banco.auditar(ator(ctx), "exportar_recorte", f"{de or '*'}:{ate or '*'}")
     return Response(arquivo.getvalue(), media_type="text/csv", headers={"Content-Disposition": 'attachment; filename="fraus-operacao.csv"'})

@@ -91,14 +91,19 @@ def principal() -> int:
         VARIAVEL: segredo,
     }
     print(f"subindo a API real em {base} (banco temporario em {temporario})...")
+    # Log em ARQUIVO, nao em PIPE: ninguem le o pipe enquanto o script roda, e
+    # com tracebacks o buffer de 64 KB enchia e o uvicorn parava de responder
+    # no meio das conferencias (auditoria de 13/10/2026).
+    log = temporario / "uvicorn.log"
+    saida = log.open("w", encoding="utf-8")
     servidor = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "fraus.api.main:app", "--port", str(args.porta)],
-        cwd=RAIZ, env=ambiente, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        cwd=RAIZ, env=ambiente, stdout=saida, stderr=subprocess.STDOUT, text=True,
     )
     try:
         for _ in range(180):
             if servidor.poll() is not None:
-                print(servidor.stdout.read()[-2000:])
+                print(log.read_text(encoding="utf-8")[-2000:])
                 print("a API nao subiu -- confira se os tres modelos estao em modelos/")
                 return 1
             try:
@@ -108,6 +113,21 @@ def principal() -> int:
                 time.sleep(1)
         else:
             print("a API nao respondeu /saude em 3 minutos")
+            return 1
+
+        # O motor e preguicoso: `/saude` so dispara a carga. "motor: real" com
+        # `estado_motor: erro` e modelo AUSENTE, e o script aceitava isso como
+        # motor real (auditoria de 13/10/2026). Quem diz se da para pontuar e
+        # a prontidao -- espera ela ficar pronta ou dar erro.
+        for _ in range(180):
+            st, prontidao = chamar(base, "GET", "/saude/prontidao")
+            estado = (prontidao.get("detail") or prontidao).get("estado_motor") if isinstance(prontidao, dict) else None
+            if st == 200 or estado == "erro":
+                break
+            time.sleep(1)
+        if st != 200:
+            print(f"o motor nao ficou pronto ({estado}) -- confira se os tres modelos estao em modelos/")
+            print(log.read_text(encoding="utf-8")[-2000:])
             return 1
 
         c = Conferencia()
@@ -179,6 +199,7 @@ def principal() -> int:
             servidor.wait(timeout=15)
         except subprocess.TimeoutExpired:
             servidor.kill()
+        saida.close()
         # O temporario guarda a mestra e a chave de acesso geradas: nao fica.
         shutil.rmtree(temporario, ignore_errors=True)
 

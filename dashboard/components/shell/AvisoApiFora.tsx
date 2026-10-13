@@ -73,7 +73,8 @@ export function AvisoApiFora() {
     if (estado !== "fora-do-ar" || modo !== null) return;
     let vivo = true;
     fetch("/api/fraus/iniciar", { cache: "no-store" })
-      .then((resposta) => resposta.json())
+      // 404 e a rota desligada (producao): mesma leitura do `catch` abaixo.
+      .then((resposta) => (resposta.ok ? resposta.json() : Promise.reject(resposta.status)))
       .then((dado: ModoLocal) => {
         if (vivo) setModo(dado);
       })

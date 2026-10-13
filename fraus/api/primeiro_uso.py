@@ -38,7 +38,10 @@ CABECALHO = """# Credenciais da API do Fraus -- geradas na primeira subida.
 # banco guarda apenas o hash delas, e apagar isto aqui as perde para sempre.
 #
 # chave_mestra  administra: emite e revoga chaves de acesso, e troca a si mesma.
-# chave_acesso  apenas le. E a que a dashboard apresenta.
+# chave_acesso  credencial de operador: le e ESCREVE quase tudo (configuracoes,
+#               lexico, importacao, fontes, acesso de usuarios). So a gestao de
+#               chaves (de acesso e de fonte, e o segredo do webhook) exige a
+#               mestra. E a que a dashboard apresenta -- guarde como a mestra.
 #
 # Perdeu a mestra? `uv run python scripts/resetar_mestra.py` reabre a API para
 # ligar de novo -- as chaves de acesso continuam valendo.
