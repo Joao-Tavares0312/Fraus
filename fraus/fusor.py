@@ -463,4 +463,19 @@ class Fusor:
                 "scripts/retreinar_fusor_local.py --promover) e substitua "
                 "o artefato. Ver docs/treinamento.md."
             )
+        # Invariante 8: o score busca probabilidade PELO ROTULO (0, 1, 2).
+        # Rotulo 1-based ou em texto carregava e pontuava ao contrario, e um
+        # artefato sem um dos polos nunca dava a nota daquele lado (auditoria
+        # de 13/10/2026). O caso binario [0, 2] e suportado por desenho.
+        classes = [c.item() if hasattr(c, "item") else c
+                   for c in fusor._pipeline.named_steps["modelo"].classes_]
+        if not set(classes) <= {INSATISFEITO, NEUTRO, SATISFEITO} or not {
+            INSATISFEITO, SATISFEITO
+        } <= set(classes):
+            raise FusorIncompativelError(
+                f"Fusor em {caminho} foi treinado com classes {classes}; o "
+                "contrato e 0 insatisfeito, 1 neutro, 2 satisfeito, com os dois "
+                "polos presentes. Retreine notebooks/02_treino_fusor.ipynb. "
+                "Ver docs/treinamento.md."
+            )
         return fusor
