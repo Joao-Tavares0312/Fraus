@@ -1380,16 +1380,6 @@ export type PerfilMapeamento = {
 };
 
 /**
- * Analisa um arquivo de conversa SEM gravar nada.
- *
- * O conteudo vai no corpo e e interpretado em memoria: nada entra no banco,
- * nada toca o disco. E o que separa esta chamada da importacao -- aqui se
- * pergunta "o que o modelo acha disto?", nao "passe a contar isto no NPS".
- */
-export const analisarArquivo = (csv: string) =>
-  proteger(escrever<ResultadoAnalise>("/analisar", "POST", { csv }));
-
-/**
  * Analisa um arquivo -- csv, xlsx, json, txt (WhatsApp ou prosa), docx ou pdf.
  *
  * Vai como multipart e nao como JSON porque planilha e PDF nao sao texto:
@@ -1414,18 +1404,12 @@ export async function previaUpload(
   return proteger(enviarArquivo<PreviaLeitura>("/analisar/previa", arquivo, opcoes, ESPERA_ESCRITA_MS));
 }
 
-export const listarPerfisMapeamento = () =>
-  proteger(buscar<PerfilMapeamento[]>("/perfis-mapeamento"));
-
 export const salvarPerfilMapeamento = (perfil: {
   nome: string;
   colunas: string[];
   papeis: MapeamentoConfirmado;
   ordem_data: OrdemData | null;
 }) => proteger(escrever<PerfilMapeamento>("/perfis-mapeamento", "POST", perfil));
-
-export const apagarPerfilMapeamento = (id: number) =>
-  proteger(escrever<void>(`/perfis-mapeamento/${id}`, "DELETE"));
 
 async function enviarArquivo<T>(
   rota: string,

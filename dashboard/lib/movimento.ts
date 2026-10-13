@@ -83,12 +83,3 @@ export const aberturaDeAparato: Variants = {
   aberto: { height: "auto", opacity: 1 },
 };
 
-/**
- * O ESTADO TROCANDO no mesmo lugar: esqueleto -> dado, periodo antigo ->
- * periodo novo. So opacidade, sem deslocamento: o dado novo nasce onde o
- * antigo estava, porque o lugar na pagina e o mesmo e mover sugeriria que nao.
- */
-export const trocaDeEstado: Variants = {
-  saindo: { opacity: 0 },
-  presente: { opacity: 1 },
-};

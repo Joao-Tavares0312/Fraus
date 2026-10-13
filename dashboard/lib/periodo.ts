@@ -28,8 +28,6 @@ export type Periodo = {
   ate: string | null;
 };
 
-export const PERIODO_TOTAL: Periodo = { de: null, ate: null };
-
 const FORMATO_DIA = /^\d{4}-\d{2}-\d{2}$/;
 
 function normalizar(valor: string | string[] | undefined): string | null {
