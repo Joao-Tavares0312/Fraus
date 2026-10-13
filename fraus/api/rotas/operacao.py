@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.motor_preguicoso import motor_e_real
-from fraus.fusor import Fusor
+from fraus.fusor import Fusor, FusorIncompativelError
 from fraus.indicadores import nps_com_intervalo, nota_0_10
 from fraus.operacao import descobrir_temas, limitar_esperas, simular_escala
 from fraus.seguranca.pii import censurar_pii
@@ -424,7 +424,9 @@ def comparar(pedido: ComparacaoModelos, ctx: Contexto = Depends(obter_contexto))
         raise HTTPException(503, "configure FRAUS_FUSOR_CANDIDATO no servidor com o arquivo de um fusor compativel")
     try:
         candidato = Fusor.carregar(Path(caminho))
-    except (FileNotFoundError, ValueError) as erro:
+    # FusorIncompativelError herda de RuntimeError: sem ela aqui, o candidato
+    # fora do contrato de 39 features virava 500 (auditoria de 13/10/2026).
+    except (FileNotFoundError, ValueError, FusorIncompativelError) as erro:
         raise HTTPException(503, "o fusor candidato nao esta disponivel ou e incompativel com o contrato vigente") from erro
     curadoria = ctx.curadoria_vigente()
     resultados = []

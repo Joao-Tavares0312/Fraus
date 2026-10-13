@@ -193,3 +193,23 @@ def test_documento_concorrente_nao_perde_acoes_e_auditoria_detecta_alteracao(tmp
     with banco._conectar() as conexao:
         conexao.execute("UPDATE auditoria_eventos SET payload = ? WHERE id = 1", ('{"ator":"alterado"}',))
     assert not banco.auditoria()["integra"]
+
+
+def test_laboratorio_recusa_fusor_candidato_incompativel_com_503(ambiente, tmp_path, monkeypatch):
+    """Auditoria de 13/10/2026: `FusorIncompativelError` herda de RuntimeError,
+    e a rota so capturava FileNotFoundError/ValueError -- o candidato fora do
+    contrato de 39 features virava 500 em vez do 503 que explica o motivo."""
+    import joblib
+
+    from fraus.fusor import NOMES_FEATURES, Fusor
+
+    cli, _banco, h, _u = ambiente
+    nomes = NOMES_FEATURES[:-2]
+    velho = Fusor()
+    velho._pipeline.fit([[0.0] * len(nomes)] * 4, [0, 1, 2, 1])
+    caminho = tmp_path / "candidato_velho.joblib"
+    joblib.dump(velho._pipeline, caminho)
+    monkeypatch.setenv("FRAUS_FUSOR_CANDIDATO", str(caminho))
+    r = cli.post("/operacao/laboratorio/comparar", headers=h["usuario"], json={"conversa_ids": ["c1"]})
+    assert r.status_code == 503, r.text
+    assert "incompativel" in r.json()["detail"]
