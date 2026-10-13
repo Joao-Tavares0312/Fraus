@@ -8,7 +8,7 @@ porta para o cliente escolher a propria nota.
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from fraus.modelos import Mensagem
 
@@ -133,3 +133,20 @@ class PedidoIngestao(BaseModel):
     escalou_para_humano: bool = False
     feedback_declarado: Literal[-1, 1] | None = None
     comentario_feedback: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def _encerramento_coerente(self) -> "PedidoIngestao":
+        """Encerramento com fuso e nao antes da ultima fala.
+
+        Antes de 13/10/2026 os dois passavam: o naive nunca foi conferido aqui
+        (so nas mensagens), e o encerramento adiantado virava `duracao_s`
+        negativa na lista e duracao zero no vetor -- sem erro nenhum.
+        """
+        if self.encerrada_em is None:
+            return self
+        if self.encerrada_em.tzinfo is None or self.encerrada_em.utcoffset() is None:
+            raise ValueError("encerrada_em precisa de fuso horario (timezone-aware)")
+        ultima = max(m.enviada_em for m in self.mensagens)
+        if self.encerrada_em < ultima:
+            raise ValueError("encerrada_em nao pode ser anterior a ultima mensagem")
+        return self
