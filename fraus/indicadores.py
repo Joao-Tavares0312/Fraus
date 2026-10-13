@@ -87,6 +87,14 @@ def validar_faixas_nps(faixas: dict[str, tuple[int, int]]) -> None:
             )
 
     ordenadas = sorted(faixas.items(), key=lambda item: item[1][0])
+    # Cobrir 0..10 sem buraco nao basta: promotor em 0-6 e detrator em 9-10
+    # passava e invertia o NPS inteiro (auditoria de 13/10/2026).
+    ordem = [nome for nome, _ in ordenadas]
+    if ordem != ["detrator", "neutro", "promotor"]:
+        raise ValueError(
+            f"as faixas precisam seguir a ordem detrator, neutro, promotor "
+            f"da nota menor para a maior; vieram {', '.join(ordem)}"
+        )
     primeira, (inicio, _) = ordenadas[0][0], ordenadas[0][1]
     if inicio != NOTA_MINIMA:
         raise ValueError(
