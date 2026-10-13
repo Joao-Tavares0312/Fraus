@@ -53,6 +53,20 @@ def carregar_texto(conteudo: str) -> ResultadoIngestao:
     return carregar_linhas(io.StringIO(conteudo, newline=""))
 
 
+def _data(valor: str, numero_linha: int) -> datetime:
+    """`fromisoformat` sem levar o valor para a mensagem de erro.
+
+    O ValueError do `fromisoformat` repete a string recebida -- numa coluna
+    deslocada, CPF ou e-mail de cliente, gravados como motivo de rejeicao.
+    """
+    try:
+        return datetime.fromisoformat(valor)
+    except ValueError:
+        raise ValueError(
+            f"a linha {numero_linha} tem 'enviada_em' ilegivel (esperado ISO-8601 com fuso)"
+        ) from None
+
+
 def _exigir(linha: dict, coluna: str, numero_linha: int) -> str:
     """O valor da coluna, recusando a linha que acabou antes dela.
 
@@ -94,14 +108,23 @@ def carregar_linhas(arquivo: Iterable[str]) -> ResultadoIngestao:
             mensagem = Mensagem(
                 autor=_exigir(linha, "autor", numero_linha),
                 texto=censurar_pii(_exigir(linha, "texto", numero_linha)),
-                enviada_em=datetime.fromisoformat(
-                    _exigir(linha, "enviada_em", numero_linha)
-                ),
+                enviada_em=_data(_exigir(linha, "enviada_em", numero_linha), numero_linha),
             )
             conversa_id = _exigir(linha, "conversa_id", numero_linha)
             canal = _exigir(linha, "canal", numero_linha)
             escalou = _exigir(linha, "escalou_para_humano", numero_linha)
-        except (ValueError, ValidationError) as erro:
+        except ValidationError as erro:
+            # So `loc` e `type`: o texto do erro do Pydantic embute o valor
+            # recebido, e o motivo e gravado no banco (armadilha 10 do
+            # handoff; auditoria de 13/10/2026).
+            onde = "; ".join(
+                f"{'.'.join(str(parte) for parte in e['loc']) or 'linha'}: {e['type']}"
+                for e in erro.errors()
+            )
+            rejeitadas.append(LinhaRejeitada(numero_linha=numero_linha, motivo=f"linha {numero_linha}: {onde}"))
+            continue
+        except ValueError as erro:
+            # `_exigir` e `_data` so nomeiam coluna e linha, nunca o valor.
             rejeitadas.append(LinhaRejeitada(numero_linha=numero_linha, motivo=str(erro)))
             continue
 
