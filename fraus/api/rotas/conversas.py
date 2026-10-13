@@ -18,7 +18,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fraus.api.caminhos import resolver_dentro_da_raiz
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import PedidoImportacao, PedidoPreviaImportacao
-from fraus.api.identidade import id_pelo_caminho, no_dia_ja_gravado
+from fraus.api.identidade import (PREFIXO_ANALISE, PREFIXO_ARQUIVO, id_pelo_caminho,
+                                   no_dia_ja_gravado)
 from fraus.api.rotas.analise import resumo_da_previa
 from fraus.api.periodo import no_recorte, recorte_ou_400
 from fraus.api.repontuacao import RepontuacaoEmAndamento
@@ -145,6 +146,19 @@ def importar(
         )
 
     conversas = resultado.conversas
+    # Prefixos que SO o servidor gera (integracao, analise, arquivo sem id):
+    # um arquivo que os trouxesse sobrescreveria, pelo upsert por id, a
+    # conversa de outra origem -- e trocaria o canal dela (auditoria de
+    # 13/10/2026).
+    reservados = (PREFIXO_ANALISE, PREFIXO_ARQUIVO, "fonte:")
+    if any(c.id.startswith(reservados) for c in conversas):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{caminho.name} traz conversa_id com prefixo reservado ao "
+                f"servidor ({', '.join(reservados)}). Renomeie esses ids."
+            ),
+        )
     if resultado.id_do_arquivo:
         # O arquivo nao trouxe id: o leitor devolveu "conversa" (ou o nome do
         # arquivo), e gravar assim faria o proximo arquivo apagar este.
