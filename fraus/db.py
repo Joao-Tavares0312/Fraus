@@ -1104,11 +1104,20 @@ class Banco:
         if limite is not None:
             paginacao = " LIMIT ? OFFSET ?"
             parametros.extend((limite, deslocamento))
+        elif deslocamento:
+            # Sem limite o deslocamento era ignorado, e o BancoComEscopo o
+            # aplicava -- dev e usuario viam paginas diferentes. O SQLite so
+            # aceita OFFSET depois de LIMIT; -1 e "sem teto" para ele.
+            paginacao = " OFFSET ?" if self._postgres else " LIMIT -1 OFFSET ?"
+            parametros.append(deslocamento)
         with self._conectar() as conexao:
             linhas = conexao.execute(
                 "SELECT id, canal, iniciada_em, score, categoria, payload FROM conversas"
                 + onde
-                + f" ORDER BY {self._ordem('iniciada_em')} DESC"
+                # `id` desempata: com `iniciada_em` igual (lote importado,
+                # relogio de minuto) o Postgres nao garante a mesma ordem entre
+                # paginas e perdia/repetia linhas (auditoria de 13/10/2026).
+                + f" ORDER BY {self._ordem('iniciada_em')} DESC, {self._ordem('id')} DESC"
                 + paginacao,
                 tuple(parametros),
             ).fetchall()
