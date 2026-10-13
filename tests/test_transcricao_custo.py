@@ -20,6 +20,15 @@ def test_linha_com_muito_espaco_antes_do_texto_e_linear():
     assert time.perf_counter() - inicio < 0.5
 
 
+def test_muitas_linhas_de_continuacao_nao_recensuram_o_acumulado():
+    """Cada continuacao recensurava a fala inteira ja acumulada: 4 mil linhas
+    (12 kB) levavam ~8,7 s."""
+    inicio = time.perf_counter()
+    lida = transcricao.ler("Cliente: oi\n" + "ab\n" * 4000, INICIO)
+    assert time.perf_counter() - inicio < 1.0
+    assert lida.mensagens[0].texto.count("ab") == 4000
+
+
 def test_pii_que_atravessa_a_quebra_de_linha_continua_censurada():
     lida = transcricao.ler("Cliente: meu cpf e\n529.982.247-25 e o email\nfulano@exemplo.com", INICIO)
     texto = lida.mensagens[0].texto
