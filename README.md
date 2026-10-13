@@ -934,13 +934,15 @@ ausente no venv; `uv sync --extra dev` resolve).
 
 #### P0 — ameaça a banca
 
-- [ ] **Decidir o domínio do tempo no score.** Com 3 h de espera, a latência
-  pesa −85 contra +4,6 do texto (z-score explode fora da distribuição de
-  treino). Opções: teto na latência, escala log (ambas com retreino do fusor)
-  ou declarar como limitação. **Medido** por
-  `scripts/medir_dominio_do_tempo.py`: o relógio empata com o texto em **411 s
-  (6,9 min)** — 4 desvios acima da média do treino — e manda dali em diante,
-  sem teto. Detalhe em `docs/handoff.md` §7.
+- [x] **Decidir o domínio do tempo no score** — **feito em 15/09/2026**: as
+  quatro features de espera entram no vetor em `log1p` (`FEATURES_EM_LOG`,
+  dentro de `vetorizar`), o fusor foi retreinado e `Fusor.carregar` recusa
+  artefato treinado em segundos crus. O teto p99 foi medido e recusado (fazia
+  3 h pesarem o mesmo que 10 min). O achado de origem: com 3 h de espera, a
+  latência pesava −85 contra +4,6 do texto, e o relógio empatava com o texto
+  em **411 s (6,9 min)** (`scripts/medir_dominio_do_tempo.py`); com `log1p` o
+  empate passa a 613 s e 3 h pesam 2,1× o texto, não mais 20×. Medições em
+  [docs/treinamento.md](docs/treinamento.md) e `docs/handoff.md`.
 - [ ] **Ironia ainda sai promotor** quando o relógio não contradiz — limite da
   cabeça de texto, hoje marcado pela contestação. Declarar ou atacar.
 - [ ] **Retreinar a cabeça de ironia** (`notebooks/04_treino_ironia.ipynb`) e
@@ -1276,7 +1278,10 @@ que o projeto existe para não cometer.
   os +2,78 de `texto_prob_satisfeito_media`.
 
   **Quanto a conversa pontua depende do relógio**, e isto foi medido em
-  08/09/2026 contra a API real, com a mesma fala e só a latência variando:
+  08/09/2026 contra a API real, com a mesma fala e só a latência variando — com
+  o fusor **anterior** ao `log1p` de 15/09/2026, que comprimiu a espera longa;
+  a medição da frase canônica com a escala vigente está em
+  [docs/treinamento.md](docs/treinamento.md):
 
   | latência | score | nota | categoria | contestada |
   |---:|---:|---:|---|---|
