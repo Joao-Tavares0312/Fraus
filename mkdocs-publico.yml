@@ -34,6 +34,10 @@ exclude_docs: |
   superpowers/
   notas/
 
+  # Relatorios de auditoria: listam vulnerabilidades e decisoes ainda abertas,
+  # com arquivo e linha. Publicar antes de corrigir e entregar o mapa.
+  auditoria/
+
   # Estado, pendencias e a secao "a porta destrancada". Este e o arquivo cuja
   # publicacao contradiz diretamente a decisao de manter o repositorio
   # privado: ele descreve a arquitetura de autenticacao pelo lado de dentro.

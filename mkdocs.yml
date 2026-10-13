@@ -91,6 +91,7 @@ markdown_extensions:
 not_in_nav: |
   superpowers/
   notas/
+  auditoria/
   colab.md
 
 nav:

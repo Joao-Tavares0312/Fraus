@@ -114,6 +114,7 @@ FORA_DO_PUBLICO = {
     "hospedagem.md": "nomes de variavel de segredo e topologia de deploy",
     "deploy-vercel.md": "topologia de producao e a tabela de variaveis de segredo",
     "cloud-run.md": "roteiro de deploy: Secret Manager, bucket e topologia",
+    "auditoria/": "relatorios de auditoria com vulnerabilidades ainda abertas",
 }
 
 
@@ -245,7 +246,7 @@ def _slug(titulo: str) -> str:
 
 def _paginas_publicas() -> list[Path]:
     """Os `.md` que o recorte publico constroi."""
-    fora = {"superpowers", "notas"}
+    fora = {"superpowers", "notas", "auditoria"}
     arquivos = {p.strip("/") for p in _bloco_exclude_docs() if p.endswith(".md")}
     return [
         p
