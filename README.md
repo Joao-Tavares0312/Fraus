@@ -420,8 +420,16 @@ sobreviver a reiniciar o processo.
 > **não é**. Fixado em `tests/test_autenticacao_runtime.py`, nos dois sentidos.
 
 `GET /acesso/estado` responde `{"ligada": ..., "origem": "ambiente"|"banco"|null}`
-e é a **única** rota que continua pública com a autenticação ligada — a tela
-precisa dela justamente quando ainda não há credencial para apresentar.
+e continua pública com a autenticação ligada — a tela precisa dela justamente
+quando ainda não há credencial para apresentar. Não é a única: o middleware
+(`ISENTAS` em `fraus/api/seguranca.py`) também deixa passar sem
+`Authorization` `/saude`, `/saude/prontidao`, `/auth/estado`,
+`/auth/registrar` e `/auth/entrar`; a prévia `GET /operacao/convites/{token}`;
+o link do anotador (`GET /anotacao/{token}`, `POST /anotacao/{token}/respostas`
+e `POST /anotacao/grupos/{token}/entrar`); e o preflight `OPTIONS`. Duas rotas
+de escrita também escapam do middleware, mas têm credencial própria:
+`POST /ingestao` (chave de fonte `frs_`) e `POST /integracoes/webhook/{id}`
+(assinatura HMAC).
 
 **Desligar não é botão.** Um controle que baixa a defesa numa tela sem login não
 tem contrapartida de risco aceitável: desligar é apagar a variável e a linha
@@ -441,6 +449,17 @@ Pelas rotas, o mesmo: `GET /acesso/chaves` lista, `POST` emite e
 revogada leva 401. Se uma chave de acesso vazar, revogue-a sem trocar a mestra;
 se a **mestra** vazar, troque-a: as chaves de acesso continuam valendo, quem
 perde o posto é só ela.
+
+**Uma credencial fica fora do painel:** se a própria API tiver
+`FRAUS_CHAVE_ACESSO` no ambiente, esse valor também é aceito como chave de
+acesso (`acesso_autorizado`, em `fraus/api/seguranca.py`), comparado em claro e
+sem linha no banco. `DELETE /acesso/chaves/{id}` não o alcança: revogá-lo é
+apagar ou trocar a variável e reiniciar a API.
+
+A chave de acesso **não é somente leitura**, apesar do nome: fora a gestão de
+chaves (`/acesso/chaves`, chave e segredo de fonte), que exige a mestra, ela lê
+e escreve todo o resto — configurações, léxico, importação, fontes, acesso de
+usuários. Guarde-a como credencial de operador.
 
 **Se a mestra se perdeu**, ela não volta — o banco guarda só o hash. Além da
 saída pelo ambiente (`FRAUS_CHAVE_MESTRA` vence a gravada), há o comando que
@@ -695,14 +714,14 @@ uvicorn de pé e a mestra ligada. Sai com código 1 se algo divergir.
 ```bash
 cd dashboard
 npm install
-npm run dev      # http://localhost:3000
+npm run dev      # http://127.0.0.1:3000 (só local; ver *Modo local*)
 npm run build    # build de produção
 ```
 
 A dashboard não fala com a API direto: toda chamada de `lib/api.ts` sai por um
 proxy no servidor Next (`app/api/fraus/[...caminho]/route.ts`), que repassa
 método, corpo, query string e status para `FRAUS_API_URL` (padrão
-`http://127.0.0.1:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
+`http://localhost:8000`), anexando `Authorization: Bearer ${FRAUS_CHAVE_ACESSO}`
 quando a instalação não tem login. A chave de acesso nunca toca o navegador.
 
 ```bash
@@ -715,7 +734,8 @@ De onde sai a credencial que o proxy apresenta à API, em ordem
 1. a **sessão do usuário** (JWT no cookie `httpOnly` `fraus_sessao`), quando há
    login;
 2. `FRAUS_CHAVE_ACESSO`, a credencial declarada do deploy;
-3. o cookie `httpOnly` de quem ligou a autenticação pela tela;
+3. o cookie `httpOnly` `fraus_acesso` de quem ligou a autenticação pela tela
+   (vale também com login ligado; **Sair** apaga ele junto com a sessão);
 4. o arquivo de chaves que a API grava na primeira subida.
 
 **Os degraus 2 e 4 só valem em instalação sem login.** Onde a API tem usuários
@@ -750,6 +770,12 @@ filho do servidor Next, mostra "subindo…" e recarrega a tela sozinho quando
 cd dashboard && npm run dev
 ```
 
+O `npm run dev` escuta **só em `127.0.0.1`** (`next dev -H 127.0.0.1`, em
+`dashboard/package.json`): sem login, o proxy empresta a chave técnica a quem
+chegar, e escutar na rede entregaria a API a qualquer máquina da LAN. Quem
+precisa abrir a dashboard na rede deve ligar o login (`FRAUS_JWT_SEGREDO` na
+API) antes de trocar o host.
+
 **Em produção (`npm run build && npm run start`) o botão some por padrão.**
 `FRAUS_MODO_LOCAL` é o override explícito nos dois sentidos: `=1` liga mesmo
 num build de produção (raro, e por isso exige o passo extra), `=0` desliga
@@ -758,8 +784,10 @@ mesmo em dev, para testar a dashboard como ela se comporta publicada.
 **Não habilite isso num deploy real.** É uma rota HTTP que executa um comando —
 em uso local é conveniência, publicada é execução remota de código. Ela existe
 sob cinco travas: desligada por padrão fora de desenvolvimento (sem ela
-responde **404**, não 403 — quem não deveria saber que ela existe não
-descobre); comando **literal** no código-fonte, sem nada vindo da requisição e
+`GET`, `POST` e `DELETE` respondem **404**, não 403 — quem não deveria saber
+que ela existe não descobre; até 13/10/2026 o `GET` respondia 200 com o comando
+e o caminho do log. A exceção é a quinta trava: `POST`/`DELETE` de outro site
+leva 403 antes do 404); comando **literal** no código-fonte, sem nada vindo da requisição e
 sem shell; uma instância por vez (consulta `/saude` antes de subir e confere se
 o processo lembrado ainda está vivo); a API subida escuta apenas em
 `127.0.0.1`; e **só a própria dashboard pode chamá-la** — requisição de outro
@@ -884,7 +912,9 @@ navegador, e requisição de servidor não faz preflight de CORS.
   redeployar. Para um endereço fixo, é preciso túnel nomeado com domínio.
 - **Defina `FRAUS_CHAVE_MESTRA` ANTES de abrir o túnel.** Sem ela a API sobe
   aberta, e o túnel publica na internet uma API que grava no seu banco. Com ela,
-  quem chegar no endereço esbarra em **401** — em toda rota menos duas, que têm
+  quem chegar no endereço esbarra em **401** — exceto nas rotas públicas
+  listadas em *Precedência* (saúde, estado da autenticação, cadastro e login,
+  prévia de convite, link do anotador) e nas duas de escrita que têm
   credencial própria e por isso não passam pela chave: `POST /ingestao` (chave
   de fonte `frs_`) e `POST /integracoes/webhook/{fonte_id}` (assinatura HMAC).
 - **A rota do webhook é anônima por desenho, e continua sendo uma porta pública
@@ -896,9 +926,12 @@ navegador, e requisição de servidor não faz preflight de CORS.
   aberto, qualquer um pode **chamar** `/integracoes/webhook/{id}` e gerar
   tentativas recusadas. Publique sabendo disso, e guarde o segredo com o mesmo
   cuidado da chave mestra.
-- A mestra protege a **API**, não a **dashboard**: a dashboard publicada não tem
-  login, e quem tem o link lê os dados por ela. Para demonstrar com atendimento
-  real, ligue também a **Vercel Deployment Protection**.
+- A mestra protege a **API**, não a **dashboard**: sem `FRAUS_JWT_SEGREDO` na
+  API, a dashboard abre **sem login** e o proxy apresenta a
+  `FRAUS_CHAVE_ACESSO` por quem chegar — quem tem o link lê os dados por ela.
+  Para demonstrar com atendimento real, ligue o login (`FRAUS_JWT_SEGREDO`
+  e `FRAUS_CODIGO_CONVITE` na API), como na produção, ou a **Vercel
+  Deployment Protection**.
 - **Feche o túnel quando terminar** (`Ctrl+C`).
 
 **Sem a API no ar, o deploy não quebra.** Todas as telas são `force-dynamic` e
@@ -1154,9 +1187,12 @@ Em ordem, com o detalhe em [Pendências](#pendências):
    `scikit-learn` no `pyproject.toml`, e remover `content/fraus` da raiz.
 
 Fora de escopo por decisão, não por falta de tempo: **k8s** (o deploy atual é
-serverless e não justifica um orquestrador) e **login de usuário** na dashboard — o cookie da
-autenticação é meio caminho, e dizer o contrário seria o mesmo tipo de mentira
-que o projeto existe para não cometer.
+serverless e não justifica um orquestrador). O **login de usuário**, que já
+esteve nesta lista, existe: e-mail e senha em `POST /auth/entrar`
+(`fraus/api/rotas/auth.py`), JWT no cookie `httpOnly` `fraus_sessao` da
+dashboard, papéis `dev`/`usuario` e cadastro por código de convite — e está
+ligado em produção. Sem `FRAUS_JWT_SEGREDO` ele fica desligado e a dashboard
+abre sem login, que é o modo local.
 
 ## Limitações conhecidas
 
@@ -1171,10 +1207,11 @@ que o projeto existe para não cometer.
   (`fra_...`) gerada por ela via `POST /acesso/chaves`. A **chave de fonte**
   (`frs_...`) existente continua sendo a única credencial aceita em
   `POST /ingestao` — as duas não se substituem, porque a rota só escreve e uma
-  segunda credencial não compraria segurança a mais. `GET /acesso/estado` é a
-  única rota que permanece **pública** com a autenticação ligada, e devolve
+  segunda credencial não compraria segurança a mais. `GET /acesso/estado`
+  permanece **pública** com a autenticação ligada, e devolve
   apenas se ela está ligada e de onde vem a mestra: sem dica, sem hash, sem
-  data. `POST /acesso/mestra` fica alcançável enquanto a API está aberta, e é
+  data. Ela não é a única pública — a lista inteira está em *Precedência*,
+  acima. `POST /acesso/mestra` fica alcançável enquanto a API está aberta, e é
   assim que se liga a autenticação sem terminal. Como ela **não** nasce aberta,
   essa janela não é mais o primeiro uso: ela só existe nos dois casos acima
   (mestra apagada, ou escrita do arquivo falhada) — e nesses, **quem chegar
@@ -1184,7 +1221,11 @@ que o projeto existe para não cometer.
   exige a mestra atual e responde 409 a qualquer outra credencial. Gerenciar
   chaves (criar,
   listar, revogar — tanto de acesso quanto de fonte) é privilégio exclusivo da
-  mestra; uma chave de acesso que tenta recebe **403**. Sem a mestra definida,
+  mestra; uma chave de acesso que tenta recebe **403**. Fora disso a chave de
+  acesso **não é somente leitura**: ela escreve configurações, léxico,
+  importação, fontes e acesso de usuários — o proxy da dashboard a usa para
+  escrever no modo local —, e deve ser guardada com o cuidado de credencial de
+  operador. Sem a mestra definida,
   não exponha a API na internet: a raiz configurável (`FRAUS_RAIZ_IMPORTACAO`)
   limita o estrago da importação, não substitui autenticação. As origens
   liberadas para o navegador continuam sendo uma **lista explícita**
