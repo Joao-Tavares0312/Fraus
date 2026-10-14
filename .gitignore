@@ -11,7 +11,12 @@ node_modules/
 .next/
 .superpowers/
 .claude/
-.test-temp-vercel-new/
+.test-temp*/
+.api-vercel
+
+# Pacotes de modelo (~1 GB) gerados por scripts/gerenciar_artefatos.py
+# empacotar (docs/deploy-vercel.md). Mesma regra de modelos/.
+/dist/
 
 # Credenciais geradas na primeira subida da API. Unica copia em claro delas.
 .fraus-chaves.txt
@@ -29,6 +34,7 @@ node_modules/
 # versionados. Site commitado envelhece em silencio e vira a versao que
 # estranho le enquanto o repositorio ja mudou.
 /site/
+/site-pdf/
 # Gerado por scripts/reunir_docs.py a partir de dashboard/DESIGN.md. Nao e
 # fonte: e copia de build, e commitar a copia daria duas versoes do mesmo
 # documento divergindo.
