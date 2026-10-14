@@ -340,6 +340,8 @@ METODO_CONTRAFACTUAL = (
 #   `c1/atribuicao` como se fosse um id.
 # - as irmas de caminho fixo (`/conversas/repontuar`) continuam declaradas
 #   ACIMA destas duas. Rota GET nova sob `/conversas/` entra la em cima tambem.
+# - `GET /conversas/{id}/confianca` mora no router de confianca, incluido ANTES
+#   deste em `main.py`; do contrario o detalhe `:path` a engoliria como id.
 #
 # O que sobra e declarado: o DETALHE de um id externo que termine em
 # `/atribuicao` cai na rota de atribuicao.

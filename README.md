@@ -1296,6 +1296,11 @@ abre sem login, que é o modo local.
   (refaz a nota mudando só a espera; recusa o que sai de `|z| ≤ 4`) e
   `GET /indicadores/drivers` (efeito médio por família numa amostra com
   semente, padrão 50 e teto 200). Limites em `docs/limitacoes.md`.
+- A confiança do fusor sai de duas rotas somente leitura: `GET /conversas/{id}/confianca`
+  (conjunto conformal e marcador de abstenção) e `GET /indicadores/confianca`
+  (agregado pelo critério do conjunto). Sem artefato calibrado para a régua
+  vigente respondem 503; a abstenção só marca e a conversa segue no NPS e no CSAT.
+  Números ainda não medidos (ver `docs/cartao-do-modelo.md`).
 - A atribuição por sentença sai de `GET /conversas/{id}/atribuicao`, que
   devolve a probabilidade **por mensagem** do classificador de texto — a
   transcrição marca a fala com o que o modelo achou dela, não só evidência

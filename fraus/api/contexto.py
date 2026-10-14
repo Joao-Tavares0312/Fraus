@@ -50,6 +50,8 @@ class Contexto:
     codigo_convite: str | None = None
     usuario_id: int | None = None
     papel: str | None = None
+    # `None` = usar `CAMINHO_CONFORMAL`; os testes injetam o deles.
+    caminho_conformal: Path | None = None
 
     def autenticacao_ligada(self) -> bool:
         """Se alguma mestra existe -- do ambiente ou gravada pela tela."""
@@ -96,6 +98,22 @@ class Contexto:
         """Assinatura do motor servindo (`Motor.regua`); `None` para duble."""
         regua = getattr(self.motor, "regua", None)
         return regua() if callable(regua) else None
+
+    def conformal_vigente(self) -> dict:
+        """Artefato conformal conferido contra a regua vigente, ou `ConformalIndisponivel`.
+
+        Sem regua (duble) nao ha o que conferir: falha ANTES de abrir o arquivo,
+        para que um artefato sem regua nunca case com um motor sem regua.
+        """
+        from fraus.api.caminhos import CAMINHO_CONFORMAL
+        from fraus.conformal import ConformalIndisponivel, carregar_conformal
+
+        regua = self.regua_vigente()
+        if regua is None:
+            raise ConformalIndisponivel(
+                "confiança conformal exige o motor real e um artefato calibrado "
+                "para a régua vigente")
+        return carregar_conformal(self.caminho_conformal or CAMINHO_CONFORMAL, regua)
 
     def categoria_de(self, score: float | None, faixas: dict) -> str | None:
         """Categoria DERIVADA NA LEITURA do score gravado e da faixa vigente.

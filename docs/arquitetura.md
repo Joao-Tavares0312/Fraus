@@ -154,6 +154,23 @@ das três grava; o score, a nota e a categoria gravados não mudam. A lógica de
 texto fica em `fraus/explicacao.py`; os limites estão em
 [Limitações](limitacoes.md).
 
+## Confiança: conjunto conformal e abstenção
+
+Duas rotas somente leitura, que não gravam e não alteram score, nota nem
+categoria: `GET /conversas/{id}/confianca` (conjunto de classes e o marcador de
+abstenção da conversa) e `GET /indicadores/confianca` (agregado, só pelo
+critério do conjunto; conversas de outra régua ficam fora e vêm contadas em
+`defasadas`). A lógica pura está em `fraus/conformal.py`; as métricas de
+calibração, em `fraus/calibracao.py`.
+
+O artefato é `fraus/dados/conformal_fusor.json`, versionado, fora de `modelos/`,
+chaveado pela régua (`regua_do_fusor`: fusor mais regra de cortesia). Contrato
+de falha: sem artefato, artefato malformado ou régua diferente da vigente, as
+duas rotas respondem **503 com o motivo**; no detalhe, uma conversa pontuada por
+outra régua responde 409. Conjunto vazio conta como abstenção. Conversa sem
+score tem conjunto `null` e não entra na contagem. Indicadores e demais rotas
+não dependem do artefato. Limites em [Limitações](limitacoes.md).
+
 ## Onde cada coisa mora
 
 | caminho | responsabilidade |

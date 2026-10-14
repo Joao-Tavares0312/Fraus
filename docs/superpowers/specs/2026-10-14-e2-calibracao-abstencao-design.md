@@ -119,6 +119,25 @@ avaliação de 150:
 - O sinal de tempo foi treinado em dado sintético.
 - O `n` de calibração é pequeno, e por isso o IC acompanha cada número.
 
+## Desvios aceitos
+
+Registrados na entrega, em relação ao desenho acima:
+
+- **Exposição por duas rotas próprias** (`GET /conversas/{id}/confianca` e
+  `GET /indicadores/confianca`), e não na lista de conversas.
+- **O agregado usa só o critério de conjunto**; o critério de deriva
+  (`|z| > 4`) não é aplicado nele.
+- **Artefato chaveado pela régua** (`regua_do_fusor`: fusor mais regra de
+  cortesia) em vez de `Fusor.assinatura()`.
+- **Conjunto vazio conta como abstenção** (critério `conjunto_vazio`).
+- **Mínimo de 5 exemplos por classe em cada metade** nos scripts: escolha de
+  projeto, sem procedência na literatura.
+- **Mediana do bootstrap** impressa, com nota de viés.
+- **Desvio de TDD na Tarefa 4:** a primeira passada não teve RED; registrado
+  com honestidade.
+- **Nenhum número medido:** fusor log1p ausente na máquina de desenvolvimento
+  em 14/10/2026; a tabela de aceitação fica "não verificado".
+
 ## Fora de escopo
 
 - Aplicar recalibração.

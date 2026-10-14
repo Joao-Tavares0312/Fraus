@@ -45,6 +45,25 @@ e ECE por cabeça (`modelos/calibracao.json`), mas nada em `fraus/` consome esse
 arquivo. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
 IC nenhum, e por isso a ressalva está impressa junto do número, não só aqui.
 
+**Calibração e conjunto conformal do fusor (E2).** Nada recalibra em runtime e
+o score gravado não muda. O que existe agora é um *conjunto conformal*
+(Mondrian, por classe, sobre o score já gravado) e um marcador de abstenção
+("leitura sem confiança suficiente"), mais os instrumentos que medem a
+calibração (`fraus/calibracao.py`, `scripts/medir_calibracao.py`,
+`scripts/medir_abstencao.py`). A garantia é só esta: cobertura ≥ alvo **por
+classe**, sob permutabilidade com o conjunto de calibração. Ela **não vale**
+sob mudança de distribuição — e atendimento real é mudança de distribuição em
+relação ao holdout sintético do B2W —, e o sinal de tempo do fusor é sintético.
+A abstenção só marca: a conversa **continua no NPS e no CSAT**. Sem artefato
+calibrado para a régua vigente as rotas respondem 503, nunca um conjunto vazio
+fingindo confiança. Os números de ECE, cobertura e acurácia por abstenção ainda
+**não foram medidos**: não verificado — fusor log1p ausente na máquina de
+desenvolvimento em 14/10/2026. Por conversa, basta uma feature rara longe da
+média de treino (|z| > 4; por exemplo, features binárias com prevalência de
+treino abaixo de ~6%, ou contagens de turnos acima da faixa do simulador) para
+disparar o critério "deriva"; em tráfego real, portanto, ele deve disparar
+com frequência — honesto por construção, não medido.
+
 O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
 para cada extremo e 1,5 para neutros, com variância dividida por `n + 2`,
 conforme [Turk, Cinderich e McNeill (2026)](https://doi.org/10.3390/stats9020045).

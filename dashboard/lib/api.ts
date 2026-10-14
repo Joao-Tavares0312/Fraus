@@ -949,6 +949,58 @@ export const obterAtribuicao = (id: string) =>
     buscar<Atribuicao>(`/conversas/${encodeURIComponent(id)}/atribuicao`),
   );
 
+/** Resposta de `GET /conversas/{id}/confianca`. Conjunto e abstencao sao do servidor. */
+export type Confianca = {
+  conversa_id: string;
+  score: number | null;
+  conjunto: number[] | null;
+  rotulos_conjunto: string[] | null;
+  abstencao: boolean | null;
+  criterios: string[];
+  features_fora_da_faixa: string[] | null;
+  /** true quando a conversa excede o orcamento e o servidor pulou a deriva. */
+  deriva_nao_avaliada?: boolean;
+  motivo?: string;
+  alvo: number;
+  garantia: string;
+  metodo: string;
+};
+
+/**
+ * Leitura da confianca conformal. Diferente de `buscar`, preserva o `detail`
+ * do 503/409: ele diz o que falta (artefato ausente, outra regua) e a tela o
+ * mostra. O status viaja junto para a tela escolher a frase.
+ */
+export async function obterConfianca(id: string): Promise<Resultado<Confianca>> {
+  const rota = `/conversas/${encodeURIComponent(id)}/confianca`;
+  try {
+    const resposta = await fetch(urlDaApi(rota), {
+      cache: "no-store",
+      headers: await cabecalhosDaApi(),
+      signal: AbortSignal.timeout(ESPERA_LEITURA_MS),
+    });
+    if (falhouNoProxy(resposta.status)) {
+      return { ok: false, erro: `${MARCA_API_FORA} ${urlDaApi("")}` };
+    }
+    if (!resposta.ok) {
+      const corpo = (await resposta.json().catch(() => null)) as
+        | { detail?: unknown }
+        | null;
+      return {
+        ok: false,
+        erro:
+          typeof corpo?.detail === "string"
+            ? corpo.detail
+            : `${rota} respondeu ${resposta.status}`,
+        status: resposta.status,
+      };
+    }
+    return { ok: true, dado: (await resposta.json()) as Confianca };
+  } catch (erro) {
+    return { ok: false, erro: mensagemDeErro(erro) };
+  }
+}
+
 export const obterModelo = () => proteger(buscar<FichaModelo>("/modelo"));
 
 /** Uma pagina do lexicon de emoji. `busca` casa o emoji exato, como a API faz. */

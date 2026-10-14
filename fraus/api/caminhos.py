@@ -40,6 +40,8 @@ CAMINHO_MODELO_TEXTO = artefato("FRAUS_CAMINHO_MODELO_TEXTO", "modelos/bertimbau
 CAMINHO_MODELO_EMOCAO = artefato("FRAUS_CAMINHO_MODELO_EMOCAO", "modelos/bertimbau-emocao")
 CAMINHO_MODELO_IRONIA = artefato("FRAUS_CAMINHO_MODELO_IRONIA", "modelos/bertimbau-ironia")
 CAMINHO_FUSOR = artefato("FRAUS_CAMINHO_FUSOR", "modelos/fusor.joblib")
+# Calibracao conformal do fusor: medicao versionada em `fraus/dados/`, nao peso.
+CAMINHO_CONFORMAL = artefato("FRAUS_CONFORMAL", "fraus/dados/conformal_fusor.json")
 
 # QUEM EXECUTA os tres BERTimbau: "torch" (os checkpoints de `modelos/`) ou
 # "onnx" (os grafos de `modelos-onnx/`, sem torch instalado). Nao ha deteccao

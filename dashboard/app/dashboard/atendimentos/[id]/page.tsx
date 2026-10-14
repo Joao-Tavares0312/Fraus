@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import {
   obterAtribuicao,
+  obterConfianca,
   obterConfiguracoes,
   obterConversa,
 } from "@/lib/api";
@@ -21,6 +22,7 @@ import { EstadoVazio } from "@/components/EstadoVazio";
 import { ResumoDoAtendimento } from "@/components/atendimentos/ResumoDoAtendimento";
 import { Painel } from "@/components/Painel";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
+import { SeloConfianca } from "@/components/SeloConfianca";
 import { PorQueEstaNota } from "@/components/PorQueEstaNota";
 import { Transcricao } from "@/components/Transcricao";
 import { idDaRota } from "@/lib/rota";
@@ -38,10 +40,11 @@ export default async function PaginaDoAtendimento(
 
   // As duas leituras sao independentes de proposito: se a atribuicao falhar,
   // so os paineis dela mostram falha -- a transcricao continua na tela.
-  const [resultado, resultadoAtribuicao, configuracoes] = await Promise.all([
+  const [resultado, resultadoAtribuicao, configuracoes, resultadoConfianca] = await Promise.all([
     obterConversa(id),
     obterAtribuicao(id),
     obterConfiguracoes(),
+    obterConfianca(id),
   ]);
 
   const limiares = limiaresDe(
@@ -120,6 +123,8 @@ export default async function PaginaDoAtendimento(
           respostas={respostas}
           duracao={duracao}
         />
+
+        <SeloConfianca resultado={resultadoConfianca} />
 
         <Painel
           titulo="Transcrição"

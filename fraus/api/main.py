@@ -45,7 +45,7 @@ from fraus.api.limites import (TETO_CORPO,  # TETO_CORPO reexportado para os tes
                                registrar_cabecalhos_de_seguranca,
                                registrar_middleware_de_corpo)
 from fraus.api.esquemas import TIPOS_DE_FONTE  # reexportado: os testes o importam daqui
-from fraus.api.rotas import (acesso, analise, anotacao, auth, configuracoes, conversas,
+from fraus.api.rotas import (confianca, acesso, analise, anotacao, auth, configuracoes, conversas,
                              grafo, indicadores, ingestao, integracoes, lexico, perfis,
                              modelo, saude, webhook, operacao)
 # Reexportados: os testes os importam daqui desde antes da quebra em modulos,
@@ -154,6 +154,7 @@ def criar_app(
     jwt_segredo: str | None = None,
     codigo_dev: str | None = None,
     codigo_convite: str | None = None,
+    caminho_conformal: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Fraus", version="0.1.0")
 
@@ -172,6 +173,7 @@ def criar_app(
         # exigiria uma string vazia para cadastrar, que e pior do que nao
         # exigir nada -- pareceria fechado e estaria aberto.
         codigo_convite=codigo_convite or None,
+        caminho_conformal=Path(caminho_conformal) if caminho_conformal is not None else None,
     )
     # Como as rotas alcancam o contexto: `Depends(obter_contexto)` le daqui.
     app.state.contexto = ctx
@@ -235,6 +237,8 @@ def criar_app(
     registrar_observabilidade(app)
 
     app.include_router(saude.router)
+    # ANTES de `conversas`: o detalhe `/conversas/{id:path}` engoliria `/confianca`.
+    app.include_router(confianca.router)
     app.include_router(conversas.router)
     app.include_router(indicadores.router)
     app.include_router(configuracoes.router)

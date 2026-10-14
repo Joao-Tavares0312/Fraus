@@ -58,6 +58,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/divisao.py` | divisão treino/teste por autor dos notebooks 04 e 07, com conferência que falha alto |
 | `fraus/comparacao_modelos.py` | comparação pareada BERTimbau × Laya e o laudo; versionado em `fraus/dados/comparacao_modelos.json` |
 | `fraus/fatias.py` | avaliação por fatia (parte pura); `scripts/avaliar_por_fatias.py` alimenta `docs/cartao-do-modelo.md` |
+| `fraus/conformal.py` | conjunto conformal Mondrian sobre o score gravado e abstenção; artefato `fraus/dados/conformal_fusor.json` chaveado pela régua |
+| `fraus/calibracao.py` | ECE/MCE/classwise com bootstrap — instrumento de medição, nada recalibra em runtime |
 | `fraus/api/repontuacao.py` | repontuar em segundo plano, com progresso e 409 se já rodando |
 | `scripts/retreinar_fusor_local.py` | reproduz o notebook 02 em CPU e só grava o fusor com `--promover` |
 | `fraus/api/rotas/lexico.py` | cadastrar, listar e revogar termo curado |
