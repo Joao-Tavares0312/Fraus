@@ -53,7 +53,7 @@ def _xlsx(linhas: list[list]) -> bytes:
 # formatos que trazem horario: recebem nota
 
 
-def test_csv_no_formato_do_fraus(cliente_nao_usado=None):
+def test_csv_no_formato_do_fraus():
     extracao = extrair("conversa.csv", CSV_FRAUS.encode("utf-8"))
     assert len(extracao.conversas) == 1
     assert extracao.tem_tempo is True

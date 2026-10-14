@@ -3,7 +3,6 @@
 O motor falso respeita o contrato minimo que as rotas usadas aqui exigem.
 """
 
-from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 

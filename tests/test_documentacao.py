@@ -115,6 +115,7 @@ FORA_DO_PUBLICO = {
     "deploy-vercel.md": "topologia de producao e a tabela de variaveis de segredo",
     "cloud-run.md": "roteiro de deploy: Secret Manager, bucket e topologia",
     "auditoria/": "relatorios de auditoria com vulnerabilidades ainda abertas",
+    "limpeza/": "inventarios de limpeza do repositorio, com arquivo e linha",
 }
 
 

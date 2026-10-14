@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fraus.grafo import TODAS_AS_CAMADAS, montar_grafo
+from fraus.grafo import montar_grafo
 from fraus.indicadores import FAIXAS_NPS
 from fraus.modelos import Conversa, Mensagem
 

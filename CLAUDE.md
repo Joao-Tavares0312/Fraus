@@ -124,14 +124,15 @@ uv run mkdocs build --strict --config-file mkdocs-publico.yml   # o que vai pro 
 ```
 
 **O repositório é privado e o site é público**, e a fronteira entre os dois é
-`mkdocs-publico.yml`: ele exclui `superpowers/`, `notas/`, `handoff.md` e
-`hospedagem.md`, e desliga o `show_source` (que embute o **corpo das funções**
+`mkdocs-publico.yml`: ele exclui `superpowers/`, `notas/`, `auditoria/`,
+`limpeza/`, `handoff.md`, `hospedagem.md`, `colab.md`, `deploy-vercel.md` e
+`cloud-run.md`, e desliga o `show_source` (que embute o **corpo das funções**
 no HTML). `not_in_nav` **não** exclui do build — só silencia o aviso. Guardas
 em `tests/test_documentacao.py` e no workflow.
 
 O **PDF** não sai no `mkdocs.yml` do dia a dia: ele usa WeasyPrint, que exige
 as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
-(`INHERIT` do principal) e roda só no CI Linux — ver `.github/workflows/docs.yml`.
+(`INHERIT` do `mkdocs-publico.yml`) e roda só no CI Linux — ver `.github/workflows/docs.yml`.
 
 ---
 
@@ -216,5 +217,7 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
 - `docs/notas/2026-10-02-treino-laya.md` — treino do Laya: resultado, decisão de não promover e bibliografia
 - `docs/ironia.md` — por que o IDPT entrega o rótulo, como treinar o Laya só em ironia e a régua de pares mínimos; medições em `docs/notas/2026-10-08-ironia-corpus.md`
 - `docs/deploy-vercel.md` — procedimento interno; dashboard e API publicam separadamente
+- `docs/auditoria/2026-10-13-relatorio.md` — auditoria de 13/10/2026: features, bugs e segurança
+- `docs/limpeza/2026-10-14-inventario.md` — inventário de limpeza do repositório, com o que saiu e o que ficou
 - `docs/conformidade.md` — EU AI Act: o que obriga e o que **proíbe** (não pontuar atendente)
 - `mkdocs.yml` — site interno; `mkdocs-publico.yml` define o recorte publicado

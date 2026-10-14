@@ -7,7 +7,7 @@ data malformada e 400 nomeando o parametro -- mesmo contrato do
 /serie-temporal, que ja pagou essas decisoes.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient

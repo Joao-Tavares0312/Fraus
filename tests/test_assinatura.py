@@ -4,7 +4,6 @@ Testes do modulo PURO: sem HTTP e sem banco. O porteiro da rota que usa isto
 esta em tests/test_webhook.py.
 """
 
-import base64
 
 import pytest
 

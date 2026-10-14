@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 
 from fraus.ingest.csv_driver import carregar_csv

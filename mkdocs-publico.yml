@@ -38,6 +38,9 @@ exclude_docs: |
   # com arquivo e linha. Publicar antes de corrigir e entregar o mapa.
   auditoria/
 
+  # Inventarios de limpeza: mesmo motivo -- arquivo, linha e decisao aberta.
+  limpeza/
+
   # Estado, pendencias e a secao "a porta destrancada". Este e o arquivo cuja
   # publicacao contradiz diretamente a decisao de manter o repositorio
   # privado: ele descreve a arquitetura de autenticacao pelo lado de dentro.
