@@ -116,6 +116,49 @@ marcador**, não pragmática. É por isso que ela **não entra na nota** desde
 04/09/2026 e que a interface a mostra com ressalva, nunca como veredito. A lista
 completa, fala a fala, sai do script.
 
+## Calibração e conformal do fusor
+
+O fusor tem agora conjunto conformal (Mondrian por classe, sobre o score
+gravado) e instrumentos de calibração. O holdout B2W de 300 conversas é
+dividido em calibração (150) e avaliação (150), estratificado, com semente
+fixa. **Nenhum número abaixo foi medido**: o fusor log1p vigente não está na
+máquina de desenvolvimento em 14/10/2026. O cache de features do holdout
+(900 de treino, 300 de teste; só as cabeças do BERTimbau, sem treinar nada) já
+foi extraído localmente e fica fora do repositório; a medição está pronta para
+rodar quando o fusor estiver presente.
+
+Comandos, nesta ordem (nenhum usa `--promover`):
+
+```bash
+# 1. gera o cache. O script extrai as features, grava o cache e treina um fusor
+#    SÓ EM MEMÓRIA; sem --promover não escreve nada em modelos/.
+uv run --with pandas python scripts/retreinar_fusor_local.py --cache features-fusor.json
+# 2. artefato conformal (só --gravar escreve fraus/dados/conformal_fusor.json)
+uv run python scripts/calibrar_conformal.py --cache features-fusor.json [--alvo 0.9] [--gravar]
+# 3. ECE/MCE/classwise com bootstrap, reliability diagram e ECE por fatia
+uv run --with matplotlib python scripts/medir_calibracao.py --cache features-fusor.json --png docs/diferenciais/img/calibracao.png
+# 4. curva cobertura x acurácia por abstenção
+uv run python scripts/medir_abstencao.py --cache features-fusor.json
+```
+
+| Medida | Valor |
+|---|---|
+| ECE (top-1) | não verificado — fusor log1p ausente na máquina de desenvolvimento em 14/10/2026 |
+| MCE | não verificado — idem |
+| ECE por classe | não verificado — idem |
+| ECE por fatia (falas, latência, emoji, escalou; "n/d" abaixo de 5 exemplos) | não verificado — idem |
+| Cobertura empírica no alvo de 90% (total e por classe) | não verificado — idem |
+| Acurácia das conversas que não abstêm (só o critério do conjunto; a rota de detalhe também abstém por deriva) | não verificado — idem |
+| Taxa de abstenção no alvo de 90% | não verificado — idem |
+
+Garantia: cobertura ≥ alvo **por classe**, sob permutabilidade com o conjunto de
+calibração; **não vale** sob mudança de distribuição (atendimento real ≠ holdout
+sintético); o sinal de tempo do fusor é sintético. Com 150 exemplos de
+avaliação a cobertura tem granularidade de cerca de 2 a 3 pontos percentuais.
+Os scripts exigem no mínimo 5 exemplos por classe em cada metade (escolha de
+projeto, sem procedência na literatura), e a mediana do bootstrap é impressa
+com uma nota de viés.
+
 ## Limitações que valem para tudo acima
 
 - **Tempo sintético.** Latência, escalação e abandono do treino do fusor vêm de

@@ -1,5 +1,6 @@
 import { Fragment } from "react";
-import type { DetalheConversa } from "@/lib/api";
+import type { DetalheConversa, Sinalizador } from "@/lib/api";
+import { ROTULO_SINALIZADOR } from "./Sinalizadores";
 import {
   latenciasAnotadas,
   rotulosLatencia,
@@ -90,11 +91,14 @@ export function Transcricao({
   conversa,
   marcas,
   limiares,
+  sinalizadores,
 }: {
   conversa: DetalheConversa;
   marcas: Map<number, MarcaAtribuicao>;
   /** Limiares vigentes de latencia, lidos de `GET /configuracoes`. */
   limiares: LimiaresLatencia;
+  /** Sinalizadores por regra (E5); `null`/ausente = nada a destacar. */
+  sinalizadores?: Sinalizador[] | null;
 }) {
   const rotulos = rotulosLatencia(limiares);
   const latencias = new Map(
@@ -107,6 +111,7 @@ export function Transcricao({
         const doCliente = mensagem.autor === "cliente";
         const latencia = latencias.get(indice);
         const marca = marcas.get(indice);
+        const regrasAqui = (sinalizadores ?? []).filter((s) => s.evidencia.includes(indice));
         const severidade =
           latencia === undefined
             ? null
@@ -164,6 +169,12 @@ export function Transcricao({
                 <span className="num text-[0.6875rem] text-muted-foreground">
                   {formatarHora(mensagem.enviada_em)}
                 </span>
+                {regrasAqui.length > 0 ? (
+                  <span className="text-[0.6875rem] text-warning-rich-text">
+                    <span aria-hidden>⚑ </span>
+                    {regrasAqui.map((s) => ROTULO_SINALIZADOR[s.regra] ?? s.regra).join(" · ")}
+                  </span>
+                ) : null}
               </div>
 
               <p

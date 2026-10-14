@@ -162,6 +162,7 @@ def test_replay_cenario_e_comparacao_nao_gravam(ambiente, tmp_path, monkeypatch)
     antes = [(c.model_dump(), s) for c, s in banco.todas()]
     r = cli.get("/operacao/replay/c1", headers=h["usuario"])
     assert r.status_code == 200 and len(r.json()["pontos"]) == 2
+    assert set(r.json()["deterioracao"]) >= {"indice_virada", "falas_ate_o_fim", "segundos_ate_o_fim", "motivo", "criterio", "rotulo"}
     r = cli.post("/operacao/laboratorio/cenario", headers=h["usuario"], json={"conversa_id": "c1", "espera_maxima_s": 30})
     assert r.status_code == 200, r.text
     assert r.json()["mensagens_cenario"][-1]["enviada_em"] == (BASE + timedelta(seconds=30)).isoformat().replace("+00:00", "Z")

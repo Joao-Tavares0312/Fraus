@@ -17,17 +17,21 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from fraus.api.caminhos import resolver_dentro_da_raiz
 from fraus.api.contexto import Contexto, obter_contexto
-from fraus.api.esquemas import PedidoImportacao, PedidoPreviaImportacao
+from fraus.api.esquemas import PedidoContrafactual, PedidoImportacao, PedidoPreviaImportacao
 from fraus.api.identidade import (PREFIXO_ANALISE, PREFIXO_ARQUIVO, id_pelo_caminho,
                                    no_dia_ja_gravado)
 from fraus.api.rotas.analise import resumo_da_previa
+from fraus.api.rotas.operacao import exigir_orcamento, exigir_real
 from fraus.api.periodo import recorte_ou_400
 from fraus.api.repontuacao import RepontuacaoEmAndamento
 from fraus.contestacao import contestacao
+from fraus.deriva import LIMIAR_Z
 from fraus.indicadores import nota_0_10
 from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
 from fraus.ingest.mapeador import ORDENS_DE_DATA
+from fraus.operacao import ajustar_primeira_resposta, limitar_esperas
 from fraus.resumo import resumir
+from fraus.sinalizadores import REGRAS, sinalizadores
 
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o CSV inteiro.
@@ -249,6 +253,7 @@ def listar(
     ate: str | None = None,
     limite: int | None = None,
     deslocamento: int = 0,
+    sinalizador: str | None = None,
     ctx: Contexto = Depends(obter_contexto),
 ) -> list[dict]:
     """Lista de atendimentos com a ficha operacional de cada um.
@@ -261,23 +266,45 @@ def listar(
 
     `de`/`ate` recortam por dia de inicio, pontas INCLUSIVAS -- o mesmo
     contrato do /serie-temporal. Sem filtro, a lista inteira, como sempre.
+
+    `sinalizador` mantem so as conversas em que a regra (uma de `REGRAS`)
+    disparou; regra desconhecida e 400. Como o sinalizador e derivado na
+    leitura, a paginacao vale DEPOIS do filtro.
     """
     inicio, fim = recorte_ou_400(de, ate)
     if limite is not None and not 1 <= limite <= 500:
         raise HTTPException(status_code=400, detail="limite precisa estar entre 1 e 500")
     if deslocamento < 0:
         raise HTTPException(status_code=400, detail="deslocamento nao pode ser negativo")
+    if sinalizador is not None and sinalizador not in REGRAS:
+        raise HTTPException(
+            status_code=400,
+            detail="sinalizador desconhecido; use um de: " + ", ".join(REGRAS),
+        )
     # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
     # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
     faixas = ctx.faixas_vigentes()
+    de_iso = inicio.isoformat() if inicio else None
+    ate_iso = fim.isoformat() if fim else None
+    if sinalizador is None:
+        return [
+            _com_derivacoes(linha["score"], ctx.categoria_de(linha["score"], faixas), linha, conversa)
+            for linha, conversa in ctx.banco.listar_com_conversa(
+                de=de_iso, ate=ate_iso, limite=limite, deslocamento=deslocamento,
+            )
+        ]
+    # O sinalizador e DERIVADO NA LEITURA: nao ha coluna para o banco filtrar.
+    # Pagina DEPOIS de filtrar -- paginar antes faria a pagina 2 pular
+    # conversas sinalizadas que cairam na pagina 1 do banco inteiro.
+    lidas = ctx.banco.listar_com_conversa(de=de_iso, ate=ate_iso)
+    marcadas = [
+        (linha, conversa) for linha, conversa in lidas
+        if any(s["regra"] == sinalizador for s in sinalizadores(conversa) or [])
+    ]
+    fim_slice = (deslocamento + limite) if limite is not None else None
     return [
         _com_derivacoes(linha["score"], ctx.categoria_de(linha["score"], faixas), linha, conversa)
-        for linha, conversa in ctx.banco.listar_com_conversa(
-            de=inicio.isoformat() if inicio else None,
-            ate=fim.isoformat() if fim else None,
-            limite=limite,
-            deslocamento=deslocamento,
-        )
+        for linha, conversa in marcadas[deslocamento:fim_slice]
     ]
 
 
@@ -292,6 +319,8 @@ def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
     `resumir` acabou de derivar dos timestamps. Nenhum dos dois custa uma
     chamada de modelo, e nenhum dos dois esta persistido como veredito -- por
     isso a marca vale retroativamente para o que ja esta no banco.
+
+    Os `sinalizadores` (E5) seguem a mesma regra: derivados da conversa, nada gravado.
     """
     ficha = resumir(conversa)
     return {
@@ -300,8 +329,29 @@ def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
         "nota": nota_0_10(score) if score is not None else None,
         **ficha,
         "contestacao": contestacao(score, ficha["latencia_mediana_s"]),
+        "sinalizadores": sinalizadores(conversa),
         "motivo_sem_sinal": conversa.motivo_sem_sinal,
     }
+
+
+def _exigir_regua_vigente(ctx, conversa_id):
+    versoes = ctx.banco.regua_da_conversa(conversa_id)
+    vigente = (ctx.curadoria_vigente().versao, ctx.regua_vigente())
+    if versoes != vigente:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "a conversa foi pontuada com outra versao do lexico ou do modelo; "
+                "repontue antes de gerar uma explicacao, para nao explicar uma nota "
+                "historica com sinais atuais"
+            ),
+        )
+
+
+METODO_CONTRAFACTUAL = (
+    "sensibilidade da previsão a uma alteração controlada do relógio; não mede efeito "
+    "real no cliente; nenhum score gravado é alterado; o sinal de tempo do fusor foi "
+    "treinado em dados sintéticos")
 
 
 # AS DUAS ROTAS POR ID USAM `:path`, E A ORDEM DELAS E CONTRATO (02/10/2026).
@@ -317,9 +367,60 @@ def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
 #   `c1/atribuicao` como se fosse um id.
 # - as irmas de caminho fixo (`/conversas/repontuar`) continuam declaradas
 #   ACIMA destas duas. Rota GET nova sob `/conversas/` entra la em cima tambem.
+# - `GET /conversas/{id}/confianca` mora no router de confianca, incluido ANTES
+#   deste em `main.py`; do contrario o detalhe `:path` a engoliria como id.
 #
 # O que sobra e declarado: o DETALHE de um id externo que termine em
 # `/atribuicao` cai na rota de atribuicao.
+@router.post("/conversas/{conversa_id:path}/contrafactual")
+def contrafactual(conversa_id: str, pedido: PedidoContrafactual,
+                  ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """E se a espera tivesse sido outra? So dentro da faixa de treino (|z| <= 4)."""
+    exigir_real(ctx)
+    achado = ctx.banco.buscar(conversa_id)
+    if achado is None:
+        raise HTTPException(404, "conversa nao encontrada")
+    original = achado[0]
+    if not original.tem_sinal_cliente:
+        raise HTTPException(422, "sem sinal do cliente: nao ha nota para comparar")
+    _exigir_regua_vigente(ctx, conversa_id)
+    exigir_orcamento([original])
+    try:
+        alterada = (ajustar_primeira_resposta(original, pedido.primeira_resposta_s)
+                    if pedido.primeira_resposta_s is not None
+                    else limitar_esperas(original, pedido.espera_maxima_s))
+    except ValueError as erro:
+        raise HTTPException(422, str(erro)) from erro
+    if alterada is None:
+        raise HTTPException(422, "a conversa nao tem par cliente -> resposta para ajustar")
+    r = ctx.motor.comparar_cenario(original, alterada, ctx.curadoria_vigente())
+    def _fora(z: dict) -> list[str]:
+        return sorted(nome for nome, valor in z.items() if abs(valor) > LIMIAR_Z)
+
+    # A origem e a hipotese tem culpas diferentes: se a conversa JA nasce fora
+    # da faixa, nenhuma hipotese sobre ela e respondida; culpar a hipotese
+    # mandaria o analista ajustar o numero errado.
+    fora_original = _fora(r["z_antes"])
+    if fora_original:
+        raise HTTPException(422, (
+            f"a conversa original ja esta fora da faixa de treino (|z| > {LIMIAR_Z:g}) em: "
+            f"{', '.join(fora_original)}; o modelo nao foi treinado com esses valores, "
+            "entao nenhuma hipotese sobre ela e respondida"))
+    fora_hipotese = _fora(r["z_depois"])
+    if fora_hipotese:
+        raise HTTPException(422, (
+            f"a hipotese leva a conversa para fora da faixa de treino (|z| > {LIMIAR_Z:g}) em: "
+            f"{', '.join(fora_hipotese)}; extrapolar seria inventar a resposta"))
+    faixas = ctx.faixas_vigentes()
+
+    def ficha(score):
+        return {"score": score, "nota": nota_0_10(score), "categoria": ctx.categoria_de(score, faixas)}
+
+    return {"conversa_id": original.id, "antes": ficha(r["antes"]), "depois": ficha(r["depois"]),
+            "delta_score": r["depois"] - r["antes"], "hipotese": pedido.model_dump(exclude_none=True),
+            "metodo": METODO_CONTRAFACTUAL}
+
+
 @router.get("/conversas/{conversa_id:path}/atribuicao")
 def atribuir(
     conversa_id: str, ctx: Contexto = Depends(obter_contexto)
@@ -335,17 +436,7 @@ def atribuir(
     if achado is None:
         raise HTTPException(status_code=404, detail="conversa nao encontrada")
     conversa, score, _categoria_gravada = achado
-    versoes = ctx.banco.regua_da_conversa(conversa_id)
-    vigente = (ctx.curadoria_vigente().versao, ctx.regua_vigente())
-    if versoes != vigente:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "a conversa foi pontuada com outra versao do lexico ou do modelo; "
-                "repontue antes de gerar uma explicacao, para nao explicar uma nota "
-                "historica com sinais atuais"
-            ),
-        )
+    _exigir_regua_vigente(ctx, conversa_id)
     atribuicao = ctx.motor.atribuir_conversa(
         conversa, curadoria=ctx.curadoria_vigente()
     )
@@ -357,6 +448,9 @@ def atribuir(
         "mensagens": atribuicao["mensagens"],
         "importancias": atribuicao["importancias"],
         "contribuicoes": atribuicao["contribuicoes"],
+        # Decomposicao exata, efeito por familia e frases por template. `get`
+        # porque motor duble de teste nao a produz; `None` e "nao ha".
+        "explicacao": atribuicao.get("explicacao"),
         # Quais campos das mensagens sao LEITURA e nao entram no score.
         # Vem do motor, nao de uma constante daqui: um motor sem as cabecas
         # de emocao/ironia devolve lista vazia, e a tela nao promete um

@@ -26,7 +26,7 @@ Os notebooks 03 e 04 sao **independentes entre si e do 01** — treinam cabecas 
 
 O sinal lexico (`fraus/sinais/lexico.py`) **nao tem notebook**: o SentiLex-PT nao e treinado, e recurso pronto, versionado em `fraus/dados/sentilex_pt02.csv`. Ver [Sinal lexico](#sinal-lexico-sentilex-pt02) no fim.
 
-**Os dois artefatos sao obrigatorios para o app real subir.** `fraus/api/main.py` carrega o classificador e o fusor no boot e propaga o erro sem fallback — servir predicao sem modelo carregado e pior do que estar fora do ar. Com so um dos dois, o unico servidor que sobe e `scripts/api_demo.py`, que usa motor duble e nao serve para producao.
+**As tres cabecas BERTimbau e o `fusor.joblib` sao obrigatorios para servir predicao.** `fraus/api/main.py` sobe sem carrega-los: o `ProvedorDeMotor` carrega tudo na primeira rota de modelo (ou no aquecimento) e propaga o erro sem fallback — servir predicao sem modelo carregado e pior do que estar fora do ar. `scripts/api_demo.py` usa o motor real quando os pesos estao no disco e so cai no motor duble, anunciado no boot e em `/saude`, quando falta um artefato; ele nao serve para producao.
 
 O treino roda inteiramente no Google Colab, fora deste repositorio — nao ha teste automatizado local para essas etapas.
 

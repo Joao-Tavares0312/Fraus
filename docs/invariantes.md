@@ -119,8 +119,12 @@ sai absurda **em silêncio**.
 
 ## 7. Modelo ausente é falha alta e explícita
 
-**A regra.** Sem fallback, sem motor dublê silencioso. A API não sobe sem os
-três modelos treinados.
+**A regra.** Sem fallback, sem motor dublê silencioso. Nenhuma predição sai sem
+os três modelos treinados e o fusor. A API sobe sem carregá-los (o
+`ProvedorDeMotor`, em `fraus/api/motor_preguicoso.py`, carrega na primeira rota
+que exige o motor), mas a falha de carga é memorizada e sobe de novo em toda
+chamada, e `GET /saude/prontidao` responde 503 enquanto o motor não está
+`pronto`. Não existe queda para dublê.
 
 **Por que existe.** Servir predição sem modelo carregado é **pior que estar fora
 do ar**: a interface não distingue número real de número sintético.
@@ -131,8 +135,9 @@ ar" durante um dia inteiro enquanto **todo número da tela era sintético** — 
 pesos por feature saíam numa progressão 0,2 / 0,25 / 0,3 e passavam por
 coeficiente de regressão logística.
 
-**Onde mora.** `Fusor.carregar` (valida `n_features_in_`), `GET /saude`
-(`"motor": "real" | "duble"`), e `GET /saude/deriva`, que recusa diagnosticar
+**Onde mora.** `Fusor.carregar` (valida `n_features_in_`), `ProvedorDeMotor`
+(`fraus/api/motor_preguicoso.py`), `GET /saude` (`"motor": "real" | "duble"` e
+`"estado_motor"`), `GET /saude/prontidao`, e `GET /saude/deriva`, que recusa diagnosticar
 com dublê pela mesma lógica.
 
 ---

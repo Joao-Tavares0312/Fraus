@@ -34,6 +34,12 @@ class FusorFalso:
     def importancias(self):
         return {}
 
+    def decompor(self, features):
+        return {"referencia": 1, "eixos": [], "score": 42.0}
+
+    def efeitos_por_familia(self, features):
+        return {}
+
 
 def _conversa():
     t = datetime(2026, 8, 13, 10, tzinfo=timezone.utc)

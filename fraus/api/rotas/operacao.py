@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, model_validator
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.motor_preguicoso import motor_e_real
 from fraus.contestacao import contestacao
+from fraus.deterioracao import deterioracao
 from fraus.fusor import Fusor, FusorIncompativelError
 from fraus.indicadores import nps_com_intervalo, nota_0_10
 from fraus.operacao import descobrir_temas, limitar_esperas, simular_escala
@@ -391,7 +392,8 @@ def replay(identificador: str, ctx: Contexto = Depends(obter_contexto)):
             "virada": bool(delta is not None and abs(delta) >= 10)})
         anterior = score
     return {"conversa_id": identificador, "pontos": pontos, "criterio_virada": 10,
-        "metodo": "estimativa por prefixo; cada fala e lida isoladamente uma vez, sem falas futuras. Virada = variacao de pelo menos 10 pontos; nao e explicacao causal"}
+        "metodo": "estimativa por prefixo; cada fala e lida isoladamente uma vez, sem falas futuras. Virada = variacao de pelo menos 10 pontos; nao e explicacao causal",
+        "deterioracao": deterioracao(scores, conversa, faixas)}
 
 
 @router.post("/laboratorio/cenario")

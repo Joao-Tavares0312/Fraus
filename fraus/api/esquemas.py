@@ -39,6 +39,18 @@ class PedidoAjusteFonte(EntradaEstrita):
     variavel_segredo: str | None = None
 
 
+class PedidoContrafactual(EntradaEstrita):
+    """Uma hipotese de espera por vez -- duas juntas nao diriam qual moveu a nota."""
+    primeira_resposta_s: float | None = Field(default=None, ge=0, le=86400)
+    espera_maxima_s: float | None = Field(default=None, gt=0, le=86400)
+
+    @model_validator(mode="after")
+    def _exatamente_uma(self):
+        if (self.primeira_resposta_s is None) == (self.espera_maxima_s is None):
+            raise ValueError("informe exatamente uma hipotese: primeira_resposta_s ou espera_maxima_s")
+        return self
+
+
 class PedidoImportacao(BaseModel):
     caminho: str  # unico campo aceito: veredito nunca vem do cliente
 

@@ -1,6 +1,10 @@
 import { cabecalhosDaApi, urlDaApi, type Categoria, type IntervaloNps, type Resultado } from "./api";
 
-export type Tema = { id: string; termos: string[]; conversa_ids: string[]; total: number; recentes: number; anteriores: number; taxa_atual: number | null; taxa_anterior: number | null; emergente: boolean; nps: number | null; intervalo: IntervaloNps | null };
+export type Tema = { id: string; termos: string[]; conversa_ids: string[]; total: number; recentes: number; anteriores: number; taxa_atual: number | null; taxa_anterior: number | null; emergente: boolean; nps: number | null; intervalo: IntervaloNps | null; impacto?: ImpactoTema };
+/** Impacto do tema no NPS inferido (E6). `impacto_nps` null = n abaixo do mínimo, nunca 0. */
+export type ImpactoTema = { impacto_nps: number | null; ic_inferior: number | null; ic_superior: number | null; n_tema: number; n_resto: number; sem_sinal_tema: number; minimo: number; motivo: string | null; rotulo: string };
+/** Virada retrospectiva no replay (E6). Ausente = API anterior ao E6. */
+export type Deterioracao = { indice_virada: number | null; falas_ate_o_fim: number | null; segundos_ate_o_fim: number | null; motivo: string | null; criterio: string; rotulo: string };
 export type Radar = { temas: Tema[]; amostra: number; truncadas: number; janela: { de: string; ate: string; base_atual: number; base_anterior: number } | null; metodo?: string };
 export type PapelNaEquipe = "proprietario" | "gestor" | "membro";
 export type Equipe = { id: string; nome: string; membros: number[]; competencias: string[]; canais: string[]; papeis: Record<string, PapelNaEquipe>; meu_papel?: PapelNaEquipe; integrantes?: { id: number; nome: string; papel: PapelNaEquipe }[] };
@@ -10,7 +14,7 @@ export type Contato = { id: string; canal: string; iniciada_em: string; score: n
 export type Jornada = { referencia: string; contatos: Contato[]; recontatos: number; canais: string[]; resolucao_declarada: boolean | null };
 export type Problema = { id: string; titulo: string; conversa_ids: string[]; equipe_id: string | null; responsavel_id: number | null; prazo: string; termos: string[]; estado: string; acoes: { em: string; ator: string; acao: string; estado: string }[]; medicao: { antes: IntervaloNps | null; depois: IntervaloNps | null; delta_nps: number | null; criterio: string } };
 export type PontoReplay = { indice: number; autor: string; texto: string; enviada_em: string; score: number | null; nota: number | null; categoria: Categoria | null; delta: number | null; virada: boolean };
-export type Replay = { conversa_id: string; pontos: PontoReplay[]; metodo: string };
+export type Replay = { conversa_id: string; pontos: PontoReplay[]; metodo: string; deterioracao?: Deterioracao };
 export type Cenario = { original: Contato; cenario: Contato; delta_score: number | null; mensagens_cenario: { autor: string; texto: string; enviada_em: string }[]; metodo: string };
 export type Comparacao = { resultados: { atual: Contato; candidato: Contato; mudou_categoria: boolean }[]; fatias: { canal: string; n: number; mudaram: number }[]; metodo: string };
 export type UsuarioAcesso = { id: number; nome: string; papel: string; ativo: boolean; canais: string[]; configurado: boolean; equipe_id: string | null; exporta_ate: string | null; exportacao_liberada: boolean };

@@ -47,7 +47,7 @@ tocar em sinal, fusor ou indicador.
 | **texto** | P(insatisfeito/neutro/satisfeito) por mensagem | o sinal principal — o único fine-tunado para a tarefa |
 | **emoji** | polaridade e **posição relativa** | emoji no fim da conversa não vale o mesmo que no começo |
 | **tempo** | latências, escalação, abandono | espera longa degrada satisfação (literatura de live chat) |
-| **emoção** | 7 de Ekman + desprezo derivado | raiva e frustração distinguem *tipos* de insatisfação |
+| **emoção** | 6 emoções básicas de Ekman + neutro, e desprezo derivado de raiva + nojo | raiva e frustração distinguem *tipos* de insatisfação |
 | **léxico** | SentiLex-PT02 com escopo de negação | âncora determinística, auditável, imune a retreino |
 | **estilo** | caixa alta, alongamento, palavrão, censura | intensidade que o classificador de sentença perde |
 | **incongruência** | elogio convivendo com situação negativa | é o que alcança a frase canônica do projeto |
@@ -56,7 +56,7 @@ tocar em sinal, fusor ou indicador.
 
 | | |
 |---|---|
-| **Backend dos modelos** | `FRAUS_BACKEND=torch` (padrão) ou `onnx` — os mesmos checkpoints, sem torch em runtime no segundo |
+| **Backend dos modelos** | `FRAUS_BACKEND=torch` (padrão), `onnx` — os mesmos checkpoints, sem torch em runtime — ou `onnx-multitarefa` (candidato, não promovido); valor desconhecido é erro de boot |
 | **Cabeça de ironia** | `FRAUS_IRONIA_BACKEND`: `padrao` (BERTimbau), `laya` ou `laya-onnx` — troca só a leitura por mensagem; a ironia não entra no score |
 | **Motor** | carregado por um provedor preguiçoso (`ProvedorDeMotor`): `frio` → `carregando` → `pronto` ou `erro`, sem fallback para dublê |
 | **Aquecimento** | a carga começa em segundo plano no boot e a cada `GET /saude`; `GET /saude/prontidao` só dá 200 com o motor pronto |
@@ -142,6 +142,53 @@ sequenceDiagram
     API-->>T: estado final
 ```
 
+## A explicação da nota
+
+`GET /conversas/{id}/atribuicao` devolve também o campo `explicacao`: a
+decomposição exata do fusor (intercepto e contribuições por feature, somando no
+logit), o efeito por família e frases geradas por template — nenhum LLM. Duas
+rotas completam o E1: `POST /conversas/{id}/contrafactual` refaz a nota
+mudando só o relógio (e recusa o que sai de `|z| ≤ 4`) e
+`GET /indicadores/drivers` agrega os efeitos numa amostra com semente. Nenhuma
+das três grava; o score, a nota e a categoria gravados não mudam. A lógica de
+texto fica em `fraus/explicacao.py`; os limites estão em
+[Limitações](limitacoes.md).
+
+## Confiança: conjunto conformal e abstenção
+
+Duas rotas somente leitura, que não gravam e não alteram score, nota nem
+categoria: `GET /conversas/{id}/confianca` (conjunto de classes e o marcador de
+abstenção da conversa) e `GET /indicadores/confianca` (agregado, só pelo
+critério do conjunto; conversas de outra régua ficam fora e vêm contadas em
+`defasadas`). A lógica pura está em `fraus/conformal.py`; as métricas de
+calibração, em `fraus/calibracao.py`.
+
+O artefato é `fraus/dados/conformal_fusor.json`, versionado, fora de `modelos/`,
+chaveado pela régua (`regua_do_fusor`: fusor mais regra de cortesia). Contrato
+de falha: sem artefato, artefato malformado ou régua diferente da vigente, as
+duas rotas respondem **503 com o motivo**; no detalhe, uma conversa pontuada por
+outra régua responde 409. Conjunto vazio conta como abstenção. Conversa sem
+score tem conjunto `null` e não entra na contagem. Indicadores e demais rotas
+não dependem do artefato. Limites em [Limitações](limitacoes.md).
+
+## Sinalizadores por regra
+
+`sinalizadores` é derivado na leitura, em `_com_derivacoes`, por
+`fraus/sinalizadores.py`: cinco regras de risco sobre a estrutura da conversa,
+sem gravar coluna nem chave de payload e sem ler o texto ou o relógio da fala
+humana. Conversa sem fala do cliente devolve `null` (não avaliada), nunca lista
+vazia. `GET /conversas?sinalizador=<regra>` filtra e só então pagina. Limites em
+[Limitações](limitacoes.md).
+
+## Impacto por tema e deterioração
+
+`GET /operacao/radar` traz, em cada tema, o impacto no NPS inferido com IC por
+bootstrap (`fraus/impacto.py`): associação, não causa, nulo abaixo de 30
+conversas com sinal em cada lado. `GET /operacao/replay/{id}` traz o início
+retrospectivo da deterioração (`fraus/deterioracao.py`, campo `indice_virada`) sobre os scores por prefixo que o replay
+já calcula: derivada na leitura, nada gravado, nunca alerta ao vivo. Limites em
+[Limitações](limitacoes.md).
+
 ## Onde cada coisa mora
 
 | caminho | responsabilidade |
@@ -152,6 +199,7 @@ sequenceDiagram
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex |
 | `fraus/fusor.py` | `NOMES_FEATURES` (39) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, contenção, falso containment, série |
+| `fraus/explicacao.py` | frases por template a partir da decomposição do fusor, e os drivers agregados |
 | `fraus/evidencia.py` | evidência fraca — a cabeça tracejada |
 | `fraus/deriva.py` | deriva de distribuição — a invariante 10 em runtime |
 | `fraus/cortesia.py` | "ok, obrigado" sozinho é sem sinal, não promotor |

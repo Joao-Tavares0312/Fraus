@@ -39,8 +39,10 @@ proveniência. Apresentar como NPS declarado seria falso.
 
 **O intervalo de confiança cobre a incerteza AMOSTRAL, não a do modelo.** Ele
 responde "quantas conversas sustentam este número"; ele **não** responde "o
-quanto o modelo pode estar errado" — isso exigiria calibração, que ainda não
-existe. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
+quanto o modelo pode estar errado" — isso exigiria calibração aplicada no
+runtime, que ainda não existe: `notebooks/05_calibracao.ipynb` mede temperatura
+e ECE por cabeça (`modelos/calibracao.json`), mas nada em `fraus/` consome esse
+arquivo. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
 IC nenhum, e por isso a ressalva está impressa junto do número, não só aqui.
 
 O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
@@ -56,6 +58,64 @@ exibição, não uma garantia de precisão a partir de 30. A série diária e o
 campo `nps` da API preservam o agregado observado; `nps_intervalo.nps` é o
 campo que autoriza a exibição do ponto no cartão. Sem intervalo (API antiga
 ou falha do endpoint), a dashboard preserva o agregado disponível.
+
+### Calibração e conjunto conformal do fusor (E2)
+
+Nada recalibra em runtime e
+o score gravado não muda. O que existe agora é um *conjunto conformal*
+(Mondrian, por classe, sobre o score já gravado) e um marcador de abstenção
+("leitura sem confiança suficiente"), mais os instrumentos que medem a
+calibração (`fraus/calibracao.py`, `scripts/medir_calibracao.py`,
+`scripts/medir_abstencao.py`). A garantia é só esta: cobertura ≥ alvo **por
+classe**, sob permutabilidade com o conjunto de calibração. Ela **não vale**
+sob mudança de distribuição — e atendimento real é mudança de distribuição em
+relação ao holdout sintético do B2W —, e o sinal de tempo do fusor é sintético.
+A abstenção só marca: a conversa **continua no NPS e no CSAT**. Sem artefato
+calibrado para a régua vigente as rotas respondem 503, nunca um conjunto vazio
+fingindo confiança. Os números de ECE, cobertura e acurácia por abstenção ainda
+**não foram medidos**: não verificado — fusor log1p ausente na máquina de
+desenvolvimento em 14/10/2026. Por conversa, basta uma feature rara longe da
+média de treino (|z| > 4; por exemplo, features binárias com prevalência de
+treino abaixo de ~6%, ou contagens de turnos acima da faixa do simulador) para
+disparar o critério "deriva"; em tráfego real, portanto, ele deve disparar
+com frequência — honesto por construção, não medido.
+
+### Sinalizadores por regra (E5)
+
+Cinco regras de superfície, derivadas na
+leitura e sem gravar nada: `loop_do_bot`, `cliente_repete`,
+`pedido_de_humano_ignorado`, `escalada_tardia` e `abandono`. Três limitações
+valem para todas. (1) São heurísticas: resposta legitimamente repetida
+("posso ajudar em algo mais?") dispara `loop_do_bot` sem ser defeito. (2) O
+léxico de pedido de humano é fechado (`atendente`, `humano`, `humana`,
+`pessoa`, `operador`, `falar com alguém`) e casa por palavra inteira: pedido em
+outras palavras passa em branco, e o plural ("atendentes", "pessoas",
+"humanos") **não** casa (falso negativo declarado); já "a pessoa que me
+atendeu" conta como pedido (falso positivo declarado). (3) Os limiares (0,85,
+0,7, "mais de 2" respostas, N = 3) são **sem procedência** e não foram medidos em dado real; o `detalhe` de cada
+achado diz isso. No `abandono`, o falso positivo comum é a despedida do bot
+depois que o cliente já resolveu e saiu. Nenhuma regra lê o texto nem o relógio
+da fala do atendente: só a presença e a posição da primeira fala humana contam, e o
+autor da última mensagem (usado pelo `abandono`); o texto e o relógio da fala
+humana nunca são lidos para julgar, porque o Fraus não pontua atendentes. Os casos construídos (15) **verificam a
+implementação, não medem qualidade**; precisão e recall em dado real: **não
+verificado — fonte da amostra anotada pendente**.
+
+### Impacto por tema e deterioração (E6)
+
+O impacto de um tema é a diferença
+entre o NPS inferido das conversas do tema e o do resto do recorte, com IC por
+bootstrap: é **associação, não causa**. Exige no mínimo 30 conversas com sinal
+nos dois lados; abaixo disso o impacto é nulo, nunca 0. O tema vem de TF-IDF com
+DBSCAN e é instável com pouco dado. A deterioração acha, numa conversa
+**encerrada**, o início da deterioração (`indice_virada`): a mensagem a partir da qual a estimativa por prefixo fica detratora
+e não volta. É **retrospectiva e em lote, nunca alerta ao vivo**. O lead time em
+dado sintético não prevê o de produção, e o simulador não gera trajetória (cada
+conversa sorteia as falas do cliente de um só rótulo), então a medição feita nele
+é artefato do gerador. Não há margem em torno do limiar: uma estimativa que oscila perto da fronteira de detrator marca o início com uma variação pequena (na demonstração, de cerca de 67 para 61 pontos). O início da deterioração não aumenta o recall sobre o score final; ela
+só acrescenta lead time. Medição com o fusor real: **não verificado — fusor
+log1p ausente em 14/10/2026** (`scripts/medir_deterioracao.py` sai com código 2
+e diz isso).
 
 ---
 
@@ -134,6 +194,30 @@ esvaziaria o indicador em silêncio se o limiar estivesse mal calibrado.
 
 O limiar de score em 95 é o único número do projeto **sem procedência**, e está
 declarado assim no código e na spec. O de tempo vem de IJHCI 2025.
+
+---
+
+## A explicação é do modelo, não do cliente
+
+O "por que esta nota" desmonta o que o **fusor** fez, e isso tem limites que a
+tela não deve esconder:
+
+- **O efeito por família não soma a nota.** A soma exata mora no eixo do logit
+  (intercepto + contribuições = log da razão entre classes); o score é uma
+  projeção não linear desses logits. Os pontos por família são uma leitura
+  aproximada, e a tela os trata como tal.
+- **Contribuição é associação, não causa.** Um peso alto diz o que o modelo
+  aprendeu a associar ao rótulo, não o que faria o cliente mudar de opinião.
+- **"Faixa de treino" quer dizer `|z| ≤ 4`** sobre média e desvio do scaler
+  (o mesmo limiar de `fraus/deriva.py`). O artefato não guarda mínimo nem
+  máximo, então o contrafactual de espera recusa o que sai dessa faixa.
+- **O sinal de tempo é sintético**, e por isso o contrafactual de espera herda a
+  limitação da seção acima: é uma hipótese sobre o modelo, não uma previsão.
+- **Os drivers são uma amostra com semente** (padrão 50 conversas, teto 200),
+  cada uma custando uma passagem de modelo. O intervalo vem de bootstrap sobre
+  a amostra e mede incerteza amostral, não erro do modelo. O teto limita só o
+  número de conversas, não de mensagens: uma amostra de conversas longas numa
+  instância fria pode se aproximar do tempo limite do proxy.
 
 ---
 

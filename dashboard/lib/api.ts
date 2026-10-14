@@ -179,6 +179,24 @@ export type Contestacao = {
   limiar_s: number;
 };
 
+/**
+ * Regras do E5, na ordem de `fraus.sinalizadores.REGRAS`. Derivadas na leitura;
+ * o limiar vem escrito em `detalhe` pelo servidor e a tela nunca o redigita.
+ */
+export type RegraSinalizador =
+  | "loop_do_bot"
+  | "cliente_repete"
+  | "pedido_de_humano_ignorado"
+  | "escalada_tardia"
+  | "abandono";
+
+export type Sinalizador = {
+  regra: RegraSinalizador;
+  /** Índices (base 0) das mensagens que dispararam a regra. Nunca fala humana. */
+  evidencia: number[];
+  detalhe: string;
+};
+
 export type ResumoConversa = {
   id: string;
   canal: string;
@@ -216,6 +234,13 @@ export type ResumoConversa = {
 
   /** `null` na esmagadora maioria dos atendimentos -- ver `Contestacao`. */
   contestacao: Contestacao | null;
+
+  /**
+   * Sinalizadores por regra (E5). `null` = não avaliado (sem fala do cliente),
+   * diferente de `[]` = nada disparou. AUSENTE = API anterior ao E5: a tela
+   * diz "indisponível nesta versão da API", nunca "não avaliado".
+   */
+  sinalizadores?: Sinalizador[] | null;
 
   /**
    * POR QUE nao ha nota, derivado no servidor (`Conversa.motivo_sem_sinal`).
@@ -322,9 +347,42 @@ export type MensagemAtribuida = {
   } | null;
 };
 
+export type ItemDeExplicacao = {
+  familia: string;
+  rotulo: string;
+  pontos: number;
+  detalhe: string | null;
+};
+
+/** `explicacao` de `GET /conversas/{id}/atribuicao`: decomposicao exata no
+ * servidor; o front so desenha (invariante 3 -- nada e recalculado aqui). */
+export type Explicacao = {
+  frases: string[];
+  contra: ItemDeExplicacao[];
+  a_favor: ItemDeExplicacao[];
+  aviso: string;
+  efeitos: Record<string, number>;
+  decomposicao: { referencia: number; score: number; eixos: unknown[] };
+  familia_da_feature: Record<string, string>;
+};
+
+export type FichaDeNota = { score: number; nota: number; categoria: Categoria };
+
+/** Resposta de `POST /conversas/{id}/contrafactual`. */
+export type Contrafactual = {
+  conversa_id: string;
+  antes: FichaDeNota;
+  depois: FichaDeNota;
+  delta_score: number;
+  hipotese: Record<string, number>;
+  metodo: string;
+};
+
 /** Resposta de `GET /conversas/{id}/atribuicao`. */
 export type Atribuicao = {
   conversa_id: string;
+  /** Ausente em API antiga; `null` quando nao ha fala do cliente. */
+  explicacao?: Explicacao | null;
   /** Os mesmos score/nota/categoria de `/conversas/{id}`: gravados na importacao. */
   score: number | null;
   nota: number | null;
@@ -916,6 +974,58 @@ export const obterAtribuicao = (id: string) =>
     buscar<Atribuicao>(`/conversas/${encodeURIComponent(id)}/atribuicao`),
   );
 
+/** Resposta de `GET /conversas/{id}/confianca`. Conjunto e abstencao sao do servidor. */
+export type Confianca = {
+  conversa_id: string;
+  score: number | null;
+  conjunto: number[] | null;
+  rotulos_conjunto: string[] | null;
+  abstencao: boolean | null;
+  criterios: string[];
+  features_fora_da_faixa: string[] | null;
+  /** true quando a conversa excede o orcamento e o servidor pulou a deriva. */
+  deriva_nao_avaliada?: boolean;
+  motivo?: string;
+  alvo: number;
+  garantia: string;
+  metodo: string;
+};
+
+/**
+ * Leitura da confianca conformal. Diferente de `buscar`, preserva o `detail`
+ * do 503/409: ele diz o que falta (artefato ausente, outra regua) e a tela o
+ * mostra. O status viaja junto para a tela escolher a frase.
+ */
+export async function obterConfianca(id: string): Promise<Resultado<Confianca>> {
+  const rota = `/conversas/${encodeURIComponent(id)}/confianca`;
+  try {
+    const resposta = await fetch(urlDaApi(rota), {
+      cache: "no-store",
+      headers: await cabecalhosDaApi(),
+      signal: AbortSignal.timeout(ESPERA_LEITURA_MS),
+    });
+    if (falhouNoProxy(resposta.status)) {
+      return { ok: false, erro: `${MARCA_API_FORA} ${urlDaApi("")}` };
+    }
+    if (!resposta.ok) {
+      const corpo = (await resposta.json().catch(() => null)) as
+        | { detail?: unknown }
+        | null;
+      return {
+        ok: false,
+        erro:
+          typeof corpo?.detail === "string"
+            ? corpo.detail
+            : `${rota} respondeu ${resposta.status}`,
+        status: resposta.status,
+      };
+    }
+    return { ok: true, dado: (await resposta.json()) as Confianca };
+  } catch (erro) {
+    return { ok: false, erro: mensagemDeErro(erro) };
+  }
+}
+
 export const obterModelo = () => proteger(buscar<FichaModelo>("/modelo"));
 
 /** Uma pagina do lexicon de emoji. `busca` casa o emoji exato, como a API faz. */
@@ -960,6 +1070,104 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
         );
       }
       return (await resposta.json()) as Simulacao;
+    })(),
+  );
+}
+
+/**
+ * "E se a espera tivesse sido outra?" Chamada do NAVEGADOR, como `simularTexto`.
+ * Exatamente UMA chave no corpo. Nao grava nada; o 422 (fora da faixa de
+ * treino, sem par cliente->resposta) volta com o `detail` do servidor.
+ */
+export async function simularContrafactual(
+  id: string,
+  corpo: { primeira_resposta_s: number } | { espera_maxima_s: number },
+): Promise<Resultado<Contrafactual>> {
+  return proteger(
+    (async () => {
+      const rota = `/conversas/${encodeURIComponent(id)}/contrafactual`;
+      const resposta = await fetch(urlDaApi(rota), {
+        method: "POST",
+        headers: await cabecalhosDaApi({ "Content-Type": "application/json" }),
+        body: JSON.stringify(corpo),
+        cache: "no-store",
+      });
+      if (!resposta.ok) {
+        const detalhe = (await resposta.json().catch(() => null)) as
+          | { detail?: unknown }
+          | null;
+        throw new Error(
+          typeof detalhe?.detail === "string"
+            ? detalhe.detail
+            : `${rota} respondeu ${resposta.status}`,
+        );
+      }
+      return (await resposta.json()) as Contrafactual;
+    })(),
+  );
+}
+
+/** Um grupo (detratores ou promotores) de uma familia: `null` = sem dado, nunca 0. */
+export type GrupoDeDrivers = {
+  n: number;
+  media: number | null;
+  ic: [number, number] | null;
+};
+
+export type FamiliaDeDrivers = {
+  familia: string;
+  detratores: GrupoDeDrivers;
+  promotores: GrupoDeDrivers;
+};
+
+/** Resposta de `GET /indicadores/drivers`. */
+export type Drivers = {
+  recorte: { de: string | null; ate: string | null; canal: string | null };
+  n_pedido: number;
+  amostra: number;
+  elegiveis: number;
+  sem_sinal: number;
+  defasadas: number;
+  semente: number;
+  eixo: string;
+  familias: FamiliaDeDrivers[];
+  rotulo: string;
+  metodo: string;
+};
+
+/**
+ * Drivers do recorte: chamada do NAVEGADOR e so por clique, porque cada
+ * conversa da amostra custa uma passagem de modelo. O 503 do dublê e o 400
+ * voltam com o `detail` do servidor.
+ */
+export async function obterDrivers(params: {
+  de?: string | null;
+  ate?: string | null;
+  n?: number;
+}): Promise<Resultado<Drivers>> {
+  return proteger(
+    (async () => {
+      const consulta = new URLSearchParams();
+      if (params.de) consulta.set("de", params.de);
+      if (params.ate) consulta.set("ate", params.ate);
+      if (params.n !== undefined) consulta.set("n", String(params.n));
+      const texto = consulta.toString();
+      const rota = `/indicadores/drivers${texto ? `?${texto}` : ""}`;
+      const resposta = await fetch(urlDaApi(rota), {
+        headers: await cabecalhosDaApi(),
+        cache: "no-store",
+      });
+      if (!resposta.ok) {
+        const detalhe = (await resposta.json().catch(() => null)) as
+          | { detail?: unknown }
+          | null;
+        throw new Error(
+          typeof detalhe?.detail === "string"
+            ? detalhe.detail
+            : `${rota} respondeu ${resposta.status}`,
+        );
+      }
+      return (await resposta.json()) as Drivers;
     })(),
   );
 }

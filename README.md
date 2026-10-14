@@ -204,6 +204,19 @@ POST   /conversas/repontuar    202: repontua o banco inteiro em segundo plano (4
 GET    /conversas/repontuar    progresso da última repontuação (404 se nunca houve)
 ```
 
+## Diferenciais
+
+Seis entregas foram planejadas em 14/10/2026. Quatro entraram: E1, E2, E5 e E6. O E3 espera aprovação de schema e o E4 foi descartado. Tudo é derivado na leitura, sem LLM e sem alterar a nota gravada.
+
+| entrega | o que faz | onde |
+|---|---|---|
+| E1 | "Por que esta nota": decomposição exata do fusor, contrafactual de espera e drivers agregados | `fraus/explicacao.py`, `GET /indicadores/drivers`, `POST /conversas/{id}/contrafactual` |
+| E2 | Conjunto conformal por classe sobre o score gravado, abstenção e instrumentos de calibração | `fraus/conformal.py`, `fraus/calibracao.py`, `GET /conversas/{id}/confianca` |
+| E5 | Cinco sinalizadores por regra, que nunca leem a fala do atendente | `fraus/sinalizadores.py`, `GET /conversas?sinalizador=` |
+| E6 | Impacto do tema no NPS inferido, com IC, e o início retrospectivo da deterioração no Replay | `fraus/impacto.py`, `fraus/deterioracao.py` |
+
+As medições no fusor real estão **não verificadas**: o fusor `log1p` não estava na máquina de desenvolvimento. Os scripts estão prontos. Ver o [relatório](docs/diferenciais/relatorio.md), o [roteiro da demonstração](docs/diferenciais/roteiro-demo.md) e o que os [concorrentes](docs/diferenciais/concorrentes.md) fazem, com fonte e data. O mais próximo, o Intercom CX Score, também infere sem pesquisa e explica por motivos.
+
 ## Stack
 
 Python 3.11 · transformers + torch/ONNX Runtime (CPU) · scikit-learn · FastAPI ·
@@ -220,6 +233,7 @@ vence RAG em acurácia e latência[^3].
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
 - [Treinamento](docs/treinamento.md) — os notebooks do Colab, os corpora de cada sinal, os artefatos que eles produzem e o registro do vazamento que matou o primeiro fusor
 - [Deploy gratuito](docs/deploy-vercel.md) — dashboard e API na Vercel, modelos no Oracle Object Storage e estado no Supabase
+- [Diferenciais — relatório](docs/diferenciais/relatorio.md) — o que entrou em E1, E2, E5 e E6, o que foi medido e o que não foi verificado
 - [Limitações conhecidas](docs/limitacoes.md) — limites científicos e operacionais que permanecem
 - [Integração com o Tars](docs/integracao-tars.md) — sincronização idempotente entre os projetos, sem banco compartilhado
 
@@ -1126,8 +1140,8 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 #### P2
 
 - [x] ~~Agregados de léxico por classe e tempo mediano~~ — já existiam (`/lexico`, `/indicadores`, com recorte `de`/`ate`); o item estava desatualizado.
-- [ ] Decisões: empresa fictícia, pin do `scikit-learn==1.6.1`, remover
-  `content/fraus` da raiz.
+- [ ] Decisões: empresa fictícia. (O pin do `scikit-learn==1.6.1` e a remoção
+  de `content/fraus` da raiz já foram feitos — ver [Pendências](#pendências).)
 
 ### Entregue
 
@@ -1135,7 +1149,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
 | **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável e, desde 04/09/2026, não pontua mais** — ver pendência 1 |
-| **Fusor** | ✅ ⚠️ | **contrato em 39 features desde 04/09/2026** e **artefato em dia desde 08/09/2026**: `n_features_in_ = 39`, classes `[0 1 2]`, acurácia **0,950** e F1-macro **0,950** (contra 0,943 do fusor de 38). A API real sobe. O ⚠️ é outro: `incongruencia_situacao_negativa` entrou para alcançar a frase canônica e **não a alcançou** — ela continua saindo promotor sempre que o relógio não a contradiz — medido em 08/09/2026: 99,69 com 181 s de espera, 99,21 com 300 s (item 0 de [Falta](#falta)). A feature não nasceu morta — peso −0,193 no eixo satisfeito−insatisfeito —, só não é suficiente. Confira qualquer artefato com `uv run python scripts/conferir_fusor.py` |
+| **Fusor** | ✅ ⚠️ | **contrato em 39 features desde 04/09/2026** e **artefato em dia desde 08/09/2026**: `n_features_in_ = 39`, classes `[0 1 2]`, acurácia **0,950** e F1-macro **0,950** (contra 0,943 do fusor de 38); regerado com a espera em `log1p` em 15/09/2026: acurácia **0,947** e F1-macro **0,947**. A API real sobe. O ⚠️ é outro: `incongruencia_situacao_negativa` entrou para alcançar a frase canônica e **não a alcançou** — ela continua saindo promotor sempre que o relógio não a contradiz — medido em 08/09/2026: 99,69 com 181 s de espera, 99,21 com 300 s (item 0 de [Falta](#falta)). A feature não nasceu morta — peso −0,193 no eixo satisfeito−insatisfeito —, só não é suficiente. Confira qualquer artefato com `uv run python scripts/conferir_fusor.py` |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -1153,7 +1167,7 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 | **Equipes e convites** | ✅ | proprietário/gestor/membro, links com validade e limite, revogação e aceite transacional com JWT; escopo por canais e proteção do último proprietário |
 | **Escopo e auditoria** | ✅ | filtros por canal antes da paginação, exportação temporária, versão de sessão revalidada e eventos encadeados por hash |
 | **Hospedagem da aplicação real** | ✅ | dois projetos Vercel; pacote Python de **1,95 GB** em 30/09/2026; ONNX no build e Supabase persistente; rotas de Operação e proxy verificados; API tem publicação separada |
-| **Suíte** | ✅ | CI da `main` em 30/09/2026: **1.091 passed, 4 skipped, 1 deselected** em cada dialeto (SQLite e PostgreSQL); **163 testes** no front (20 arquivos), TypeScript e build aprovados |
+| **Suíte** | ✅ | rodada local em 14/10/2026 (a partir da `main` em `cdaa9e2`): `uv run pytest -q` com **1.395 passed, 7 skipped, 1 deselected**; **351 testes** no front (42 arquivos) |
 
 ### Falta
 
@@ -1164,7 +1178,8 @@ Em ordem, com o detalhe em [Pendências](#pendências):
    maravilhoso, so esperei 3 horas"`, sai **promotor sempre que o relógio não a
    contradiz** — 99,69 com 181 s de espera, 99,21 com 300 s, medidos em
    08/09/2026 contra a API real. (Com três horas *dentro do log* o relógio já
-   derruba o score sozinho, para 0,00; os 99,9 são o caso rápido, que é real e
+   derruba o score sozinho — com o fusor em `log1p` de 15/09/2026, para 7,0
+   (nota 1, detrator), não mais para 0,00; os 99,9 são o caso rápido, que é real e
    comum — o cliente ironiza sobre uma espera ocorrida **fora** daquele
    atendimento. Desde 08/09/2026 a faixa do meio carrega a **contestação**, ver
    [Limitações conhecidas](#limitações-conhecidas).)
@@ -1212,8 +1227,9 @@ Em ordem, com o detalhe em [Pendências](#pendências):
    ironia obriga a retreinar o fusor de novo.
 3. **Fixar a empresa fictícia** do trabalho — ela define volume, canais e o que
    conta como bom tempo de resposta na apresentação.
-4. **Decisões em aberto** — tema claro para projetor de banca, pin do
-   `scikit-learn` no `pyproject.toml`, e remover `content/fraus` da raiz.
+4. **Decisões em aberto** — tema claro para projetor de banca. (O pin do
+   `scikit-learn` no `pyproject.toml` e a remoção de `content/fraus` da raiz já
+   foram feitos.)
 
 Fora de escopo por decisão, não por falta de tempo: **k8s** (o deploy atual é
 serverless e não justifica um orquestrador). O **login de usuário**, que já
@@ -1288,6 +1304,17 @@ abre sem login, que é o modo local.
   de cada linha já vem derivada em `GET /conversas`. A agregação do servidor
   ainda varre as conversas do recorte em memória (uma consulta, não N), o que é
   o custo certo no volume do trabalho (dezenas de atendimentos).
+- A explicação da nota viaja no campo `explicacao` de `GET /conversas/{id}/atribuicao`
+  (decomposição exata do fusor, efeito por família, frases por template). Duas
+  rotas a completam, sem gravar nada: `POST /conversas/{id}/contrafactual`
+  (refaz a nota mudando só a espera; recusa o que sai de `|z| ≤ 4`) e
+  `GET /indicadores/drivers` (efeito médio por família numa amostra com
+  semente, padrão 50 e teto 200). Limites em `docs/limitacoes.md`.
+- A confiança do fusor sai de duas rotas somente leitura: `GET /conversas/{id}/confianca`
+  (conjunto conformal e marcador de abstenção) e `GET /indicadores/confianca`
+  (agregado pelo critério do conjunto). Sem artefato calibrado para a régua
+  vigente respondem 503; a abstenção só marca e a conversa segue no NPS e no CSAT.
+  Números ainda não medidos (ver `docs/cartao-do-modelo.md`).
 - A atribuição por sentença sai de `GET /conversas/{id}/atribuicao`, que
   devolve a probabilidade **por mensagem** do classificador de texto — a
   transcrição marca a fala com o que o modelo achou dela, não só evidência
@@ -1367,7 +1394,8 @@ abre sem login, que é o modo local.
   | 1800 s | 17,19 | 2 | detrator | — |
   | 10800 s | 0,00 | 0 | detrator | — |
 
-  Com as três horas **dentro do log**, o relógio já derruba o score sozinho. Os
+  Com as três horas **dentro do log**, o relógio já derruba o score sozinho
+  (com o fusor vigente, para 7,0 · nota 1 · detrator, não mais 0,00). Os
   99,9 são o caso rápido — real e comum: o cliente abre um atendimento novo e
   ironiza sobre uma espera que aconteceu **fora** daquele log.
 
@@ -1465,7 +1493,8 @@ São duas coisas distintas, e as duas estão feitas.
 **O contrato subiu — feito em 21/08/2026.** O vetor é de **35 features**, das
 sete famílias — texto, emoji, tempo, emoção, léxico, ironia e estilo. As
 quatro últimas passaram a entrar no vetor quando os notebooks 03 e 04 ficaram
-prontos; `sinais_fora_do_score` continua existindo no payload, mas vem vazio.
+prontos; `sinais_fora_do_score` continua existindo no payload, e na época vinha
+vazio (desde 04/09/2026, quando a ironia saiu do vetor, ele leva `["prob_ironia"]`).
 Isso é código: `montar_features`, `vetorizar` e `NOMES_FEATURES`.
 
 **O fusor foi retreinado em 24/08/2026** e o descompasso acabou. Por três dias

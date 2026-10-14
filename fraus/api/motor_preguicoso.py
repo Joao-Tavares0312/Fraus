@@ -123,6 +123,8 @@ class ProvedorDeMotor:
             "simular_texto",
             "deriva_da_amostra",
             "eixo_global",
+            "comparar_cenario",
+            "contribuicao_por_familia",
         }:
             return atributo
 

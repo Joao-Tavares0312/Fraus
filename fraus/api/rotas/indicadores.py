@@ -6,10 +6,14 @@ a dashboard fazia. O recorte de periodo acontece aqui, no servidor, com as
 duas pontas INCLUSIVAS.
 """
 
-from fastapi import APIRouter, Depends
+import random
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from fraus.api.contexto import Contexto, obter_contexto
+from fraus.api.motor_preguicoso import motor_e_real
 from fraus.api.periodo import no_recorte, recorte_ou_400
+from fraus.explicacao import ROTULO_ASSOCIACAO, SEMENTE_DRIVERS, drivers
 from fraus.indicadores import (calcular_csat, calcular_nps, containment_rate,
                                contidos_com_score, falso_containment,
                                lexico_por_classe, nps_com_intervalo,
@@ -131,3 +135,42 @@ def serie_temporal(
         "ate": fim.isoformat() if fim else None,
         "pontos": serie_diaria(registros, ctx.faixas_vigentes()),
     }
+
+
+AMOSTRA_DRIVERS, TETO_DRIVERS = 50, 200
+METODO_DRIVERS = (
+    "média da contribuição por família no eixo log(P(satisfeito)/P(insatisfeito)), em "
+    "detratores e promotores de uma amostra sorteada por semente; IC 95% por bootstrap "
+    "(1.000 reamostras). Cada conversa da amostra custa uma passagem de modelo. "
+    "O sinal de tempo do fusor foi treinado em dados sintéticos.")
+
+
+@router.get("/indicadores/drivers")
+def drivers_do_recorte(de: str | None = None, ate: str | None = None, canal: str | None = None,
+                       n: int = AMOSTRA_DRIVERS, ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """O que mais puxa detratores e promotores -- associacao no modelo, nao causa."""
+    if n < 1 or n > TETO_DRIVERS:
+        raise HTTPException(400, f"n precisa estar entre 1 e {TETO_DRIVERS}: cada conversa custa "
+                                 "uma passagem completa de modelo em CPU.")
+    if not motor_e_real(ctx.motor):
+        raise HTTPException(503, "drivers exigem o motor real; o dublê não tem coeficientes.")
+    registros = ctx.registros_do_recorte(de, ate)
+    if canal is not None:
+        registros = [r for r in registros if r[0].canal == canal]
+    curadoria = ctx.curadoria_vigente()
+    defasadas = ctx.banco.ids_defasadas(curadoria.versao, ctx.regua_vigente())
+    com_score = [(c, s) for c, s in registros if s is not None]
+    elegiveis = sorted(((c, s) for c, s in com_score if c.id not in defasadas), key=lambda r: r[0].id)
+    amostra = random.Random(SEMENTE_DRIVERS).sample(elegiveis, min(n, len(elegiveis)))
+    faixas = ctx.faixas_vigentes()
+    linhas = []
+    for conversa, score in amostra:
+        por_familia = ctx.motor.contribuicao_por_familia(conversa, curadoria)
+        if por_familia is not None:
+            linhas.append((ctx.categoria_de(score, faixas), por_familia))
+    return {"recorte": {"de": de, "ate": ate, "canal": canal}, "n_pedido": n,
+            "amostra": len(linhas), "elegiveis": len(elegiveis),
+            "sem_sinal": len(registros) - len(com_score),
+            "defasadas": len(com_score) - len(elegiveis), "semente": SEMENTE_DRIVERS,
+            "eixo": "log(P(satisfeito)/P(insatisfeito))", "familias": drivers(linhas),
+            "rotulo": ROTULO_ASSOCIACAO, "metodo": METODO_DRIVERS}
