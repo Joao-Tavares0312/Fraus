@@ -171,6 +171,15 @@ outra régua responde 409. Conjunto vazio conta como abstenção. Conversa sem
 score tem conjunto `null` e não entra na contagem. Indicadores e demais rotas
 não dependem do artefato. Limites em [Limitações](limitacoes.md).
 
+## Sinalizadores por regra
+
+`sinalizadores` é derivado na leitura, em `_com_derivacoes`, por
+`fraus/sinalizadores.py`: cinco regras de risco sobre a estrutura da conversa,
+sem gravar coluna nem chave de payload e sem ler o texto ou o relógio da fala
+humana. Conversa sem fala do cliente devolve `null` (não avaliada), nunca lista
+vazia. `GET /conversas?sinalizador=<regra>` filtra e só então pagina. Limites em
+[Limitações](limitacoes.md).
+
 ## Onde cada coisa mora
 
 | caminho | responsabilidade |

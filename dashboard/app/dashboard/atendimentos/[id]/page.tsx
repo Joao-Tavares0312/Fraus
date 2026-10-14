@@ -24,6 +24,7 @@ import { Painel } from "@/components/Painel";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { SeloConfianca } from "@/components/SeloConfianca";
 import { PorQueEstaNota } from "@/components/PorQueEstaNota";
+import { Sinalizadores } from "@/components/Sinalizadores";
 import { Transcricao } from "@/components/Transcricao";
 import { idDaRota } from "@/lib/rota";
 
@@ -128,13 +129,15 @@ export default async function PaginaDoAtendimento(
 
         <Painel
           titulo="Transcrição"
-          legenda="Fala do cliente em cartão com filete âmbar — é o que foi dito. Resposta do bot ou do atendente recuada, em contorno tracejado. A espera do cliente é um intervalo tracejado antes de cada resposta, com o comprimento proporcional ao tempo (a régua é o limiar de degradação vigente) e o tempo em display; o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala."
+          legenda="Fala do cliente em cartão com filete âmbar — é o que foi dito. Resposta do bot ou do atendente recuada, em contorno tracejado. A espera do cliente é um intervalo tracejado antes de cada resposta, com o comprimento proporcional ao tempo (a régua é o limiar de degradação vigente) e o tempo em display; o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala. O sinal ⚑ marca a mensagem que disparou um sinalizador por regra."
           semPadding
         >
+          <Sinalizadores sinalizadores={conversa.sinalizadores} />
           <Transcricao
             conversa={conversa}
             marcas={marcas}
             limiares={limiares}
+            sinalizadores={conversa.sinalizadores}
           />
         </Painel>
 

@@ -179,6 +179,24 @@ export type Contestacao = {
   limiar_s: number;
 };
 
+/**
+ * Regras do E5, na ordem de `fraus.sinalizadores.REGRAS`. Derivadas na leitura;
+ * o limiar vem escrito em `detalhe` pelo servidor e a tela nunca o redigita.
+ */
+export type RegraSinalizador =
+  | "loop_do_bot"
+  | "cliente_repete"
+  | "pedido_de_humano_ignorado"
+  | "escalada_tardia"
+  | "abandono";
+
+export type Sinalizador = {
+  regra: RegraSinalizador;
+  /** Índices (base 0) das mensagens que dispararam a regra. Nunca fala humana. */
+  evidencia: number[];
+  detalhe: string;
+};
+
 export type ResumoConversa = {
   id: string;
   canal: string;
@@ -216,6 +234,13 @@ export type ResumoConversa = {
 
   /** `null` na esmagadora maioria dos atendimentos -- ver `Contestacao`. */
   contestacao: Contestacao | null;
+
+  /**
+   * Sinalizadores por regra (E5). `null` = não avaliado (sem fala do cliente),
+   * diferente de `[]` = nada disparou. AUSENTE = API anterior ao E5: a tela
+   * diz "indisponível nesta versão da API", nunca "não avaliado".
+   */
+  sinalizadores?: Sinalizador[] | null;
 
   /**
    * POR QUE nao ha nota, derivado no servidor (`Conversa.motivo_sem_sinal`).

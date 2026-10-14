@@ -31,6 +31,7 @@ from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
 from fraus.ingest.mapeador import ORDENS_DE_DATA
 from fraus.operacao import ajustar_primeira_resposta, limitar_esperas
 from fraus.resumo import resumir
+from fraus.sinalizadores import REGRAS, sinalizadores
 
 # Quantos motivos de rejeicao a resposta carrega. O relato existe para o
 # operador entender o que ficou de fora, nao para devolver o CSV inteiro.
@@ -252,6 +253,7 @@ def listar(
     ate: str | None = None,
     limite: int | None = None,
     deslocamento: int = 0,
+    sinalizador: str | None = None,
     ctx: Contexto = Depends(obter_contexto),
 ) -> list[dict]:
     """Lista de atendimentos com a ficha operacional de cada um.
@@ -264,23 +266,45 @@ def listar(
 
     `de`/`ate` recortam por dia de inicio, pontas INCLUSIVAS -- o mesmo
     contrato do /serie-temporal. Sem filtro, a lista inteira, como sempre.
+
+    `sinalizador` mantem so as conversas em que a regra (uma de `REGRAS`)
+    disparou; regra desconhecida e 400. Como o sinalizador e derivado na
+    leitura, a paginacao vale DEPOIS do filtro.
     """
     inicio, fim = recorte_ou_400(de, ate)
     if limite is not None and not 1 <= limite <= 500:
         raise HTTPException(status_code=400, detail="limite precisa estar entre 1 e 500")
     if deslocamento < 0:
         raise HTTPException(status_code=400, detail="deslocamento nao pode ser negativo")
+    if sinalizador is not None and sinalizador not in REGRAS:
+        raise HTTPException(
+            status_code=400,
+            detail="sinalizador desconhecido; use um de: " + ", ".join(REGRAS),
+        )
     # A `nota` sai daqui derivada no SERVIDOR, junto com score e categoria:
     # e a mesma conversao de `/conversas/{id}`, e a dashboard so a exibe.
     faixas = ctx.faixas_vigentes()
+    de_iso = inicio.isoformat() if inicio else None
+    ate_iso = fim.isoformat() if fim else None
+    if sinalizador is None:
+        return [
+            _com_derivacoes(linha["score"], ctx.categoria_de(linha["score"], faixas), linha, conversa)
+            for linha, conversa in ctx.banco.listar_com_conversa(
+                de=de_iso, ate=ate_iso, limite=limite, deslocamento=deslocamento,
+            )
+        ]
+    # O sinalizador e DERIVADO NA LEITURA: nao ha coluna para o banco filtrar.
+    # Pagina DEPOIS de filtrar -- paginar antes faria a pagina 2 pular
+    # conversas sinalizadas que cairam na pagina 1 do banco inteiro.
+    lidas = ctx.banco.listar_com_conversa(de=de_iso, ate=ate_iso)
+    marcadas = [
+        (linha, conversa) for linha, conversa in lidas
+        if any(s["regra"] == sinalizador for s in sinalizadores(conversa) or [])
+    ]
+    fim_slice = (deslocamento + limite) if limite is not None else None
     return [
         _com_derivacoes(linha["score"], ctx.categoria_de(linha["score"], faixas), linha, conversa)
-        for linha, conversa in ctx.banco.listar_com_conversa(
-            de=inicio.isoformat() if inicio else None,
-            ate=fim.isoformat() if fim else None,
-            limite=limite,
-            deslocamento=deslocamento,
-        )
+        for linha, conversa in marcadas[deslocamento:fim_slice]
     ]
 
 
@@ -295,6 +319,8 @@ def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
     `resumir` acabou de derivar dos timestamps. Nenhum dos dois custa uma
     chamada de modelo, e nenhum dos dois esta persistido como veredito -- por
     isso a marca vale retroativamente para o que ja esta no banco.
+
+    Os `sinalizadores` (E5) seguem a mesma regra: derivados da conversa, nada gravado.
     """
     ficha = resumir(conversa)
     return {
@@ -303,6 +329,7 @@ def _com_derivacoes(score, categoria, base: dict, conversa) -> dict:
         "nota": nota_0_10(score) if score is not None else None,
         **ficha,
         "contestacao": contestacao(score, ficha["latencia_mediana_s"]),
+        "sinalizadores": sinalizadores(conversa),
         "motivo_sem_sinal": conversa.motivo_sem_sinal,
     }
 

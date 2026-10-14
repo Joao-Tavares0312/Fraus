@@ -64,6 +64,25 @@ treino abaixo de ~6%, ou contagens de turnos acima da faixa do simulador) para
 disparar o critério "deriva"; em tráfego real, portanto, ele deve disparar
 com frequência — honesto por construção, não medido.
 
+**Sinalizadores por regra (E5).** Cinco regras de superfície, derivadas na
+leitura e sem gravar nada: `loop_do_bot`, `cliente_repete`,
+`pedido_de_humano_ignorado`, `escalada_tardia` e `abandono`. Três limitações
+valem para todas. (1) São heurísticas: resposta legitimamente repetida
+("posso ajudar em algo mais?") dispara `loop_do_bot` sem ser defeito. (2) O
+léxico de pedido de humano é fechado (`atendente`, `humano`, `humana`,
+`pessoa`, `operador`, `falar com alguém`) e casa por palavra inteira: pedido em
+outras palavras passa em branco, e o plural ("atendentes", "pessoas",
+"humanos") **não** casa (falso negativo declarado); já "a pessoa que me
+atendeu" conta como pedido (falso positivo declarado). (3) Os limiares (0,85,
+0,7, "mais de 2" respostas, N = 3) são **sem procedência** e não foram medidos em dado real; o `detalhe` de cada
+achado diz isso. No `abandono`, o falso positivo comum é a despedida do bot
+depois que o cliente já resolveu e saiu. Nenhuma regra lê o texto nem o relógio
+da fala do atendente: só a presença e a posição da primeira fala humana contam, e o
+autor da última mensagem (usado pelo `abandono`); o texto e o relógio da fala
+humana nunca são lidos para julgar, porque o Fraus não pontua atendentes. Os casos construídos (15) **verificam a
+implementação, não medem qualidade**; precisão e recall em dado real: **não
+verificado — fonte da amostra anotada pendente**.
+
 O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
 para cada extremo e 1,5 para neutros, com variância dividida por `n + 2`,
 conforme [Turk, Cinderich e McNeill (2026)](https://doi.org/10.3390/stats9020045).

@@ -1,6 +1,6 @@
 # E5 — Sinalizadores por regras ("Spotlight" sem LLM)
 
-> Estado: **aguardando aprovação**. Faz parte de
+> Estado: **aprovado em 14/10/2026**. Faz parte de
 > [Diferenciais](2026-10-14-diferenciais-visao-geral.md).
 
 ## Objetivo
@@ -68,6 +68,22 @@ Simulador mais casos construídos. A amostra anotada fica pendente de fonte.
   legitimamente repetida (por exemplo, "posso ajudar em algo mais?").
 - O léxico de pedido de humano é fechado.
 - Os limiares não foram medidos em dado real.
+
+## Desvios aceitos
+
+Decisões do plano que detalham ou se afastam do texto acima:
+
+1. Um achado por regra por conversa; a `evidencia` reúne todos os índices, ordenados, e a lista sai na ordem fixa de `REGRAS`.
+2. `loop_do_bot` exige pelo menos 3 tokens na resposta do bot (limiar novo, sem procedência); "não consecutivas" foi lido como haver ao menos uma fala do cliente entre as duas respostas.
+3. Léxico de pedido de humano fechado: `atendente`, `humano`, `humana`, `pessoa`, `operador`, `falar com alguem`, por palavra inteira sobre a fala normalizada.
+4. `pedido_de_humano_ignorado` e `escalada_tardia` são disjuntos (sem fala humana depois do pedido e ≥ 3 respostas do bot, contra fala humana depois do pedido e ≥ 4 respostas do bot); a fala humana não entra na `evidencia`.
+5. `abandono` reaproveita `features_tempo(conversa)["abandonou"]` e a evidência é a última fala do cliente; o falso positivo comum é a despedida do bot, e isso é declarado.
+6. "Sem fala do cliente" é `not conversa.tem_fala_cliente`; conversa só de cortesia é avaliada, porque o cliente falou.
+7. O filtro pagina depois de filtrar; regra desconhecida responde 400.
+8. O controle de filtro na lista de atendimentos fica fora desta entrega; só a API e o destaque na transcrição entram.
+9. Os casos construídos moram em `fraus/dados/casos_sinalizadores.py`, a mesma fonte para testes e script; verificam a implementação, não medem qualidade.
+10. A amostra anotada fica pendente de fonte; o script aceita `--anotada arquivo.jsonl` e, sem ela, imprime "não verificado — fonte pendente".
+11. Ajuste de pontuação no texto "não avalia o atendente" (o plano contradizia o teste).
 
 ## Fora de escopo
 
