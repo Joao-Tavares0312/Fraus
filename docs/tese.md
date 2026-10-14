@@ -44,6 +44,8 @@ que não responde.
 - **Não decide nada sozinha.** Nenhuma saída aciona ação sobre ninguém.
 - **Não pontua atendentes** — ver [Conformidade](conformidade.md).
 - **Não é infalível, e diz onde falha.** O sinal de tempo é treinado em dados
-  sintéticos; a cabeça de ironia é pouco confiável e por isso não pontua; fora
-  da faixa de latência do treino o relógio domina a nota. Tudo isso está em
+  sintéticos; a cabeça de ironia é pouco confiável e por isso não pontua; a
+  espera entra em `log1p` desde 15/09/2026 e pesa cada vez mais devagar
+  (3 h ≈ 2,1× o texto), mas fora da faixa do treino continua fora da
+  distribuição, e `GET /saude/deriva` mostra isso. Tudo isso está em
   [Limitações](limitacoes.md), com número.

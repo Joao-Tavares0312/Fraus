@@ -47,7 +47,7 @@ tocar em sinal, fusor ou indicador.
 | **texto** | P(insatisfeito/neutro/satisfeito) por mensagem | o sinal principal — o único fine-tunado para a tarefa |
 | **emoji** | polaridade e **posição relativa** | emoji no fim da conversa não vale o mesmo que no começo |
 | **tempo** | latências, escalação, abandono | espera longa degrada satisfação (literatura de live chat) |
-| **emoção** | 7 de Ekman + desprezo derivado | raiva e frustração distinguem *tipos* de insatisfação |
+| **emoção** | 6 emoções básicas de Ekman + neutro, e desprezo derivado de raiva + nojo | raiva e frustração distinguem *tipos* de insatisfação |
 | **léxico** | SentiLex-PT02 com escopo de negação | âncora determinística, auditável, imune a retreino |
 | **estilo** | caixa alta, alongamento, palavrão, censura | intensidade que o classificador de sentença perde |
 | **incongruência** | elogio convivendo com situação negativa | é o que alcança a frase canônica do projeto |
@@ -56,7 +56,7 @@ tocar em sinal, fusor ou indicador.
 
 | | |
 |---|---|
-| **Backend dos modelos** | `FRAUS_BACKEND=torch` (padrão) ou `onnx` — os mesmos checkpoints, sem torch em runtime no segundo |
+| **Backend dos modelos** | `FRAUS_BACKEND=torch` (padrão), `onnx` — os mesmos checkpoints, sem torch em runtime — ou `onnx-multitarefa` (candidato, não promovido); valor desconhecido é erro de boot |
 | **Cabeça de ironia** | `FRAUS_IRONIA_BACKEND`: `padrao` (BERTimbau), `laya` ou `laya-onnx` — troca só a leitura por mensagem; a ironia não entra no score |
 | **Motor** | carregado por um provedor preguiçoso (`ProvedorDeMotor`): `frio` → `carregando` → `pronto` ou `erro`, sem fallback para dublê |
 | **Aquecimento** | a carga começa em segundo plano no boot e a cada `GET /saude`; `GET /saude/prontidao` só dá 200 com o motor pronto |

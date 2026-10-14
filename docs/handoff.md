@@ -408,7 +408,7 @@ artefato compatível; sua presença em produção não foi confirmada.
 | | |
 |---|---|
 | Testes históricos das branches | **1.057 passed, 1 deselected** (Python) · **144** (front, 17 arquivos) na branch do redesign; ~1.060 e 148 na branch do cold start. A entrega final de Operação passou com **1.091** por dialeto e **163** no front; veja §2 |
-| Modelos | os três em `modelos/`, 1,3 GB, **fora do git**; fusor em dia (39 features, acurácia 0,950) |
+| Modelos | os três em `modelos/`, 1,3 GB, **fora do git**; fusor em dia (39 features, espera em `log1p` desde 15/09/2026, acurácia 0,947) |
 | API real | `uv run python -m uvicorn fraus.api.main:app --port 8001 --reload --reload-dir fraus` → confira `/saude` e `/saude/prontidao` |
 | API de demonstração | `uv run python scripts/api_demo.py` → :8000. Motor real se houver pesos (senão dublê, dito no boot); banco = snapshot `dados_demo/fraus-demo.db`. **Não é produção**: banco descartável e sem chave |
 | Dashboard | `cd dashboard && npm run dev` (ou `npm run build && npx next start`) |
@@ -491,14 +491,18 @@ acompanhado pela publicação da API atualizada; o fluxo manual está em
 
 **Não suba `scripts/api_demo.py` achando que é a API de produção.** Ele usa
 banco temporário sem autenticação, e cai no **motor dublê** se os pesos não
-estiverem no disco — aí devolve números sintéticos com cara de predição e a
-dashboard não distingue. Uma sessão já perdeu um dia inteiro com isso, inclusive
+estiverem no disco — aí devolve números sintéticos com cara de predição. Antes
+de 04/09/2026 a dashboard não distinguia; hoje `/saude` declara
+`"motor":"duble"` e a barra lateral escreve "motor dublê — números sintéticos".
+Uma sessão já perdeu um dia inteiro com isso, inclusive
 os pesos por feature, que saíam numa progressão `0,2 / 0,25 / 0,3` e passavam
 por peso de regressão. (Desde 30/09/2026 o padrão é o motor real quando há
 pesos; o boot imprime qual subiu.)
 
 **Como saber em qual você está, em uma linha:** `curl -s :8001/saude` responde
-`{"status":"ok","motor":"real"}` ou `"motor":"duble"`. Desde a PR #32 os
+`{"status":"ok","motor":"real","estado_motor":"pronto"}` ou `"motor":"duble"`
+(`estado_motor` passa por `frio`/`carregando` antes do primeiro uso, e `erro`
+se a carga falhou). Desde a PR #32 os
 caminhos dos artefatos ancoram na raiz do projeto, então o diretório de onde
 você lança o uvicorn não decide mais o motor — mas confira mesmo assim.
 

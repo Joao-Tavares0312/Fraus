@@ -506,7 +506,7 @@ services:
 ```bash
 docker compose up -d
 docker compose logs -f        # espere "motor":"real"
-curl -s localhost:8000/saude  # {"status":"ok","motor":"real"}
+curl -s localhost:8000/saude  # {"status":"ok","motor":"real","estado_motor":"pronto"}
 ```
 
 > **Se disser `"motor":"duble"`, pare.** Os modelos não foram encontrados, e a
@@ -583,7 +583,7 @@ Teste de verdade — `sudo reboot`, espere dois minutos, e:
 curl -s https://api.seu-dominio.com/saude
 ```
 
-Se responder `{"status":"ok","motor":"real"}`, acabou.
+Se responder `{"status":"ok","motor":"real","estado_motor":"pronto"}`, acabou.
 
 ---
 

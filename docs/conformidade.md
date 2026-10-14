@@ -9,8 +9,8 @@
 
 ## 1. Por que este documento existe
 
-`fraus/sinais/emocao.py` classifica **sete emoções** (as de Ekman) e deriva
-**desprezo** da díade raiva + nojo. O Regulamento (UE) 2024/1689 define
+`fraus/sinais/emocao.py` classifica **sete classes** — as seis emoções básicas
+de Ekman mais neutro — e deriva **desprezo** da díade raiva + nojo. O Regulamento (UE) 2024/1689 define
 “sistema de reconhecimento de emoções” como inferência baseada em **dados
 biométricos**. O Fraus recebe texto de chat, não imagem, voz ou outro dado
 biométrico; portanto não deve ser apresentado como enquadrado automaticamente
@@ -76,7 +76,7 @@ Onde o Fraus já está, hoje, em relação a cada uma:
 | Obrigação | Estado no Fraus |
 |---|---|
 | **Supervisão humana** | o sistema não decide nada. O analista curou o léxico (`sinais/curadoria.py`), move as faixas de NPS (`PUT /configuracoes`) e lê os transcritos. Nenhuma saída aciona ação automática sobre ninguém |
-| **Logging** | `entregas_webhook` registra toda entrega e toda recusa, com veredito e motivo. É o embrião da trilha de auditoria |
+| **Logging** | `entregas_webhook` registra toda entrega e toda recusa, com veredito e motivo; `auditoria_eventos` guarda eventos encadeados por SHA-256. O encadeamento detecta alteração no meio da cadeia, mas não a remoção dos eventos mais recentes nem a reescrita integral (não há âncora fora da tabela) |
 | **Transparência** | etiqueta de estimativa em todo número inferido; limitações declaradas em tela e em `docs/treinamento.md` |
 | **Monitoramento pós-mercado** | `GET /saude/deriva` reporta quais features estão fora da faixa de distribuição em que o modelo foi treinado |
 | **Avaliação de conformidade** | não feita. É trabalho de quem for colocar isto em produção comercial, e está fora do escopo do TCC |
@@ -94,8 +94,10 @@ está de pé e do que não está.
   positivo. Continua sendo exibida, com a ressalva colada.
 - **O sinal de tempo é treinado em dados sintéticos**, calibrados por
   literatura, porque nenhum corpus público em português tem timestamps de
-  diálogo. Fora da faixa de latência do treino, o relógio domina a nota — é
-  limitação medida e declarada, e `GET /saude/deriva` a torna visível.
+  diálogo. Desde 15/09/2026 a espera entra em `log1p` e pesa cada vez mais
+  devagar (3 h ≈ 2,1× o texto), mas espera fora da faixa do treino continua
+  fora da distribuição — é limitação medida e declarada, e
+  `GET /saude/deriva` a torna visível.
 - **Desprezo não é classe treinada**; é derivado da díade raiva + nojo.
 - **Ausência de dado nunca vira zero.** Conversa sem fala do cliente sai "sem
   sinal", em toda superfície.

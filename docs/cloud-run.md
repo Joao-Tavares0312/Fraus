@@ -75,7 +75,7 @@ Invoke-RestMethod https://SUA-API.run.app/saude
 O resultado precisa conter:
 
 ```json
-{"status":"ok","motor":"real"}
+{"status":"ok","motor":"real","estado_motor":"pronto"}
 ```
 
 Se aparecer `motor: duble`, pare: servir previsão sem os três modelos viola a

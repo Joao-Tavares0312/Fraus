@@ -171,7 +171,8 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
    arquivo que está errado, e ele governa toda sessão de agente.
    `montar_features` exige DOIS classificadores (texto, emoção); o `Motor`
    continua exigindo os TRÊS (a ironia entra na leitura por mensagem, não no
-   vetor), e a API não sobe sem os três modelos treinados.
+   vetor), e nenhuma predição sai sem os três modelos treinados — a API sobe,
+   mas o motor preguiçoso falha alto na primeira rota que o exige.
 10. **Corpus de treino não pode entregar o rótulo.** Faixa de latência disjunta
     por classe fez o primeiro fusor marcar 99,3% lendo só o relógio, com o
     BERTimbau apagado. Distribuição por rótulo se sobrepõe; feature constante no
@@ -199,19 +200,20 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
   porque nenhum corpus público de review em português tem timestamps de diálogo.
   Isso é limitação declarada, não segredo.
 - Estado vazio **nomeia o que falta**. Nunca preencha com número simulado.
-- **A família `emocao_*` faz do Fraus um sistema de reconhecimento de emoção**
-  pela letra do EU AI Act — com obrigação de informar quem está exposto
-  (Art. 50(3), em vigor desde 02/08/2026) e uma fronteira que o produto não
-  cruza: **o Fraus não pontua atendentes**, porque reconhecimento de emoção no
-  local de trabalho é proibido desde fev/2025. "Score de performance por
-  atendente" é violação, não feature. Escopo, base legal e o que já está de pé
-  em [docs/conformidade.md](docs/conformidade.md).
+- **A família `emocao_*` lê emoção em texto**, e isso pede cuidado com o
+  EU AI Act sem afirmar enquadramento automático: a definição de sistema de
+  reconhecimento de emoção do Act exige dados biométricos, e o Fraus lê texto,
+  então não deve ser apresentado como automaticamente dentro desse escopo. A
+  fronteira do produto é dura mesmo assim: **o Fraus não pontua atendentes**.
+  "Score de performance por atendente" é violação de política, não feature.
+  Escopo, base legal e o que já está de pé em
+  [docs/conformidade.md](docs/conformidade.md).
 
 ## Documentos
 
 - `docs/superpowers/specs/2026-08-13-dolos-design.md` — spec, decisões e ~35 referências
 - `docs/superpowers/plans/2026-08-13-dolos-implementacao.md` — plano de implementação
-- `docs/treinamento.md` — os dois notebooks e os artefatos
+- `docs/treinamento.md` — os notebooks de treino, calibração e Laya, e os artefatos
 - `dashboard/DESIGN.md` — sistema de design da interface
 - `docs/notas/2026-09-30-operacao-producao.md` — análise persistida, Operação, convites e evidências da publicação
 - `docs/notas/2026-10-02-treino-laya.md` — treino do Laya: resultado, decisão de não promover e bibliografia
