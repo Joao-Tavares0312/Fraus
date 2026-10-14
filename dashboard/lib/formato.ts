@@ -57,10 +57,6 @@ export function formatarComSinal(valor: number, casas = 2): string {
   return `${valor > 0 ? "+" : "−"}${formatarNumero(arredondado, casas)}`;
 }
 
-export function formatarPercentual(valor: number): string {
-  return `${NUMERO.format(valor)}%`;
-}
-
 /** NPS vive em [-100, 100]: o sinal e informacao, entao sempre aparece. */
 export function formatarNps(valor: number): string {
   // `Math.round(-0.4) / 10` e ZERO NEGATIVO, e o Intl escreve "-0": um NPS com
@@ -145,12 +141,6 @@ export function formatarHora(iso: string): string {
     minute: "2-digit",
     second: "2-digit",
   });
-}
-
-/** Rotulo curto de eixo: 05/08 */
-export function formatarDiaCurto(dia: string): string {
-  const [, mes, resto] = dia.split("-");
-  return `${resto}/${mes}`;
 }
 
 /**
