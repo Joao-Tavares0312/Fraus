@@ -24,7 +24,7 @@ o proprio arquivo.
 """
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fraus.db import Banco

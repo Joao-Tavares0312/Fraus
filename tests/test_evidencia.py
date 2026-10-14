@@ -18,7 +18,6 @@ calibracao que nao existe.
 
 from datetime import datetime, timezone
 
-import pytest
 
 from fraus.evidencia import (PALAVRAS_MINIMAS, evidencia_fraca,
                              motivos_de_evidencia_fraca)

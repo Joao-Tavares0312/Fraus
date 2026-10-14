@@ -4,8 +4,7 @@ import pytest
 
 from fraus.indicadores import (FAIXAS_NPS, calcular_csat, calcular_nps,
                                categoria_nps, containment_rate,
-                               falso_containment, N_MINIMO_NPS,
-                               nps_com_intervalo, nota_0_10,
+                               falso_containment, nps_com_intervalo, nota_0_10,
                                serie_diaria, validar_faixas_nps)
 from fraus.fusor import PESO_NEUTRO_NO_SCORE
 from fraus.modelos import Conversa, Mensagem

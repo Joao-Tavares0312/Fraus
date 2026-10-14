@@ -1,6 +1,5 @@
 import json
 
-import pytest
 
 from fraus.sinais.emocao import NOMES_EMOCOES
 from fraus.sinais.emocao_laya import (

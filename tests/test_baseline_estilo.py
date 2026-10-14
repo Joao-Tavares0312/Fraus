@@ -1,4 +1,3 @@
-import pytest
 
 from fraus.baseline_estilo import (NOMES_TRACOS, TRACOS_BINARIOS, BaselineEstilo,
                                    tracos_de_superficie)

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from fraus.avaliacao_ironia import (CAMINHO_META_REGUA, CAMINHO_REGUA_PARES, FraseDaRegua,
+from fraus.avaliacao_ironia import (CAMINHO_REGUA_PARES, FraseDaRegua,
                                     carregar_regua_pares, impressao_dos_rotulos,
                                     variantes_de_invariancia)
 from fraus.divisao import impressao_dos_textos
