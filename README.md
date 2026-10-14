@@ -204,6 +204,19 @@ POST   /conversas/repontuar    202: repontua o banco inteiro em segundo plano (4
 GET    /conversas/repontuar    progresso da última repontuação (404 se nunca houve)
 ```
 
+## Diferenciais
+
+Seis entregas foram planejadas em 14/10/2026. Quatro entraram: E1, E2, E5 e E6. O E3 espera aprovação de schema e o E4 foi descartado. Tudo é derivado na leitura, sem LLM e sem alterar a nota gravada.
+
+| entrega | o que faz | onde |
+|---|---|---|
+| E1 | "Por que esta nota": decomposição exata do fusor, contrafactual de espera e drivers agregados | `fraus/explicacao.py`, `GET /indicadores/drivers`, `POST /conversas/{id}/contrafactual` |
+| E2 | Conjunto conformal por classe sobre o score gravado, abstenção e instrumentos de calibração | `fraus/conformal.py`, `fraus/calibracao.py`, `GET /conversas/{id}/confianca` |
+| E5 | Cinco sinalizadores por regra, que nunca leem a fala do atendente | `fraus/sinalizadores.py`, `GET /conversas?sinalizador=` |
+| E6 | Impacto do tema no NPS inferido, com IC, e o início retrospectivo da deterioração no Replay | `fraus/impacto.py`, `fraus/deterioracao.py` |
+
+As medições no fusor real estão **não verificadas**: o fusor `log1p` não estava na máquina de desenvolvimento. Os scripts estão prontos. Ver o [relatório](docs/diferenciais/relatorio.md), o [roteiro da demonstração](docs/diferenciais/roteiro-demo.md) e o que os [concorrentes](docs/diferenciais/concorrentes.md) fazem, com fonte e data. O mais próximo, o Intercom CX Score, também infere sem pesquisa e explica por motivos.
+
 ## Stack
 
 Python 3.11 · transformers + torch/ONNX Runtime (CPU) · scikit-learn · FastAPI ·
@@ -220,6 +233,7 @@ vence RAG em acurácia e latência[^3].
 - [Plano de implementação](docs/superpowers/plans/2026-08-13-dolos-implementacao.md) — 10 tasks
 - [Treinamento](docs/treinamento.md) — os notebooks do Colab, os corpora de cada sinal, os artefatos que eles produzem e o registro do vazamento que matou o primeiro fusor
 - [Deploy gratuito](docs/deploy-vercel.md) — dashboard e API na Vercel, modelos no Oracle Object Storage e estado no Supabase
+- [Diferenciais — relatório](docs/diferenciais/relatorio.md) — o que entrou em E1, E2, E5 e E6, o que foi medido e o que não foi verificado
 - [Limitações conhecidas](docs/limitacoes.md) — limites científicos e operacionais que permanecem
 - [Integração com o Tars](docs/integracao-tars.md) — sincronização idempotente entre os projetos, sem banco compartilhado
 

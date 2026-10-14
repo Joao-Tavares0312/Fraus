@@ -24,6 +24,22 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 
 ---
 
+## 2.00 Diferenciais — branch `diferenciais/2026-10-14`, 14/10/2026
+
+**Onde parou.** As entregas E1, E2, E5 e E6 estão no branch, cada uma num commit único. Os commits por tarefa estão nos branches locais `e1-por-tarefa`, `e2-por-tarefa`, `e5-por-tarefa` e `e6-por-tarefa`. Nada foi enviado ao remoto e nada foi publicado. O estado completo está em [Diferenciais — relatório](diferenciais/relatorio.md).
+
+**O que falta, nesta ordem:**
+
+1. **Fusor `log1p` em `modelos/`.** O artefato que estava disponível é o antigo, em segundos crus, e é recusado. Com o fusor certo, rode os scripts da seção "Reproduzir" do relatório e troque os "não verificado" pelos números.
+2. **`scripts/calibrar_conformal.py --gravar`.** Sem esse artefato, as rotas de confiança respondem 503.
+3. **E3 (nota declarada).** Exige aprovação de schema.
+4. **Amostra anotada dos sinalizadores (E5).** A fonte é decisão do João.
+5. **PR e deploy.** A API e a dashboard são publicadas separadamente; ver a seção 2.
+
+**Antes de falar de concorrentes**, leia [concorrentes](diferenciais/concorrentes.md). O Intercom CX Score também infere sem pesquisa, explica por motivos e não avalia atendente.
+
+---
+
 ## 2.0 Para retomar — Laya e ironia, 02/10/2026
 
 **Onde parou:** o código está na `main` (PRs #80 e #81, mesclados em

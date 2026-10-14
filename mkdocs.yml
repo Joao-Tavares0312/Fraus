@@ -124,6 +124,10 @@ nav:
   - Encolher os modelos: encolhimento.md
   - Limitações conhecidas: limitacoes.md
   - Cartão do modelo: cartao-do-modelo.md
+  - Diferenciais:
+      - Relatório de entrega: diferenciais/relatorio.md
+      - Concorrentes: diferenciais/concorrentes.md
+      - Roteiro da demonstração: diferenciais/roteiro-demo.md
   - Referência de código:
       - Indicadores: referencia/indicadores.md
       - Modelo canônico: referencia/modelos.md
