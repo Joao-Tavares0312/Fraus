@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import type { ContextoOperacao } from "./ConsoleOperacao";
 import { ConvitesEquipe } from "./Convites";
 import { Campo, Carregamento, Caso, FaixaNps, GRADE, LINHA, lista, Medida, Numero, PILHA, SelecionarConversas, useAcao, useRecurso } from "./comum";
+import { ImpactoTema } from "./ImpactoTema";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
 
 export function RadarOperacao({ sufixo, investigar }: ContextoOperacao & { investigar: (tema: Tema) => void }) {
@@ -23,7 +24,7 @@ export function RadarOperacao({ sufixo, investigar }: ContextoOperacao & { inves
       {!r.dado.temas.length ? <EstadoVazio titulo="Ainda não há temas recorrentes" explicacao="O radar precisa de pelo menos duas conversas com vocabulário semelhante. Analise e salve mais conversas ou amplie o período." /> : r.dado.temas.map((t) => <article key={t.id} className="border-t border-linha pt-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3"><h3 className="font-medium text-dito-texto">{t.termos.join(" · ")}</h3><span className="rotulo-instrumento">{t.emergente ? "↑ Tema em crescimento" : "Tema recorrente"}</span></div>
         <div className={`${GRADE} my-4`}><Medida nome="Ocorrências recentes" valor={t.recentes} /><Medida nome="Taxa recente" valor={t.taxa_atual === null ? null : t.taxa_atual * 100} casas={1} unidade="%" /><Medida nome="Taxa anterior" valor={t.taxa_anterior === null ? null : t.taxa_anterior * 100} casas={1} unidade="%" /></div>
-        <details className="text-sm"><summary className="cursor-pointer">Evidências e NPS estimado</summary><div className="mt-4 flex flex-col gap-3"><FaixaNps titulo="NPS do tema" intervalo={t.intervalo} />{t.conversa_ids.slice(0, 50).map((id) => <Caso key={id} id={id} sufixo={sufixo} />)}{t.conversa_ids.length > 50 ? <p>Exibindo as primeiras 50 evidências.</p> : null}</div></details>
+        <details className="text-sm"><summary className="cursor-pointer">Evidências e NPS estimado</summary><div className="mt-4 flex flex-col gap-3"><FaixaNps titulo="NPS do tema" intervalo={t.intervalo} /><ImpactoTema impacto={t.impacto} />{t.conversa_ids.slice(0, 50).map((id) => <Caso key={id} id={id} sufixo={sufixo} />)}{t.conversa_ids.length > 50 ? <p>Exibindo as primeiras 50 evidências.</p> : null}</div></details>
         <Button className="mt-4" variant="outline" onClick={() => investigar(t)}><IconeDeAcao acao="abrir" />Abrir investigação com evidências</Button>
       </article>)}
     </div>}

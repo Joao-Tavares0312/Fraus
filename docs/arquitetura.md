@@ -180,6 +180,15 @@ humana. Conversa sem fala do cliente devolve `null` (não avaliada), nunca lista
 vazia. `GET /conversas?sinalizador=<regra>` filtra e só então pagina. Limites em
 [Limitações](limitacoes.md).
 
+## Impacto por tema e deterioração
+
+`GET /operacao/radar` traz, em cada tema, o impacto no NPS inferido com IC por
+bootstrap (`fraus/impacto.py`): associação, não causa, nulo abaixo de 30
+conversas com sinal em cada lado. `GET /operacao/replay/{id}` traz o início
+retrospectivo da deterioração (`fraus/deterioracao.py`, campo `indice_virada`) sobre os scores por prefixo que o replay
+já calcula: derivada na leitura, nada gravado, nunca alerta ao vivo. Limites em
+[Limitações](limitacoes.md).
+
 ## Onde cada coisa mora
 
 | caminho | responsabilidade |

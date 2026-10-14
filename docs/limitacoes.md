@@ -45,7 +45,23 @@ e ECE por cabeça (`modelos/calibracao.json`), mas nada em `fraus/` consome esse
 arquivo. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
 IC nenhum, e por isso a ressalva está impressa junto do número, não só aqui.
 
-**Calibração e conjunto conformal do fusor (E2).** Nada recalibra em runtime e
+O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
+para cada extremo e 1,5 para neutros, com variância dividida por `n + 2`,
+conforme [Turk, Cinderich e McNeill (2026)](https://doi.org/10.3390/stats9020045).
+Isso evita intervalo de largura zero quando todas as conversas pertencem à
+mesma categoria. O NPS pontual e a contagem continuam sendo os observados;
+o ajuste só participa dos limites do intervalo.
+
+Abaixo de **30 atendimentos com sinal** o cartão principal e a leitura do
+intervalo ocultam o ponto estimado e mostram o `n`. Esse corte é uma regra de
+exibição, não uma garantia de precisão a partir de 30. A série diária e o
+campo `nps` da API preservam o agregado observado; `nps_intervalo.nps` é o
+campo que autoriza a exibição do ponto no cartão. Sem intervalo (API antiga
+ou falha do endpoint), a dashboard preserva o agregado disponível.
+
+### Calibração e conjunto conformal do fusor (E2)
+
+Nada recalibra em runtime e
 o score gravado não muda. O que existe agora é um *conjunto conformal*
 (Mondrian, por classe, sobre o score já gravado) e um marcador de abstenção
 ("leitura sem confiança suficiente"), mais os instrumentos que medem a
@@ -64,7 +80,9 @@ treino abaixo de ~6%, ou contagens de turnos acima da faixa do simulador) para
 disparar o critério "deriva"; em tráfego real, portanto, ele deve disparar
 com frequência — honesto por construção, não medido.
 
-**Sinalizadores por regra (E5).** Cinco regras de superfície, derivadas na
+### Sinalizadores por regra (E5)
+
+Cinco regras de superfície, derivadas na
 leitura e sem gravar nada: `loop_do_bot`, `cliente_repete`,
 `pedido_de_humano_ignorado`, `escalada_tardia` e `abandono`. Três limitações
 valem para todas. (1) São heurísticas: resposta legitimamente repetida
@@ -83,19 +101,21 @@ humana nunca são lidos para julgar, porque o Fraus não pontua atendentes. Os c
 implementação, não medem qualidade**; precisão e recall em dado real: **não
 verificado — fonte da amostra anotada pendente**.
 
-O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
-para cada extremo e 1,5 para neutros, com variância dividida por `n + 2`,
-conforme [Turk, Cinderich e McNeill (2026)](https://doi.org/10.3390/stats9020045).
-Isso evita intervalo de largura zero quando todas as conversas pertencem à
-mesma categoria. O NPS pontual e a contagem continuam sendo os observados;
-o ajuste só participa dos limites do intervalo.
+### Impacto por tema e deterioração (E6)
 
-Abaixo de **30 atendimentos com sinal** o cartão principal e a leitura do
-intervalo ocultam o ponto estimado e mostram o `n`. Esse corte é uma regra de
-exibição, não uma garantia de precisão a partir de 30. A série diária e o
-campo `nps` da API preservam o agregado observado; `nps_intervalo.nps` é o
-campo que autoriza a exibição do ponto no cartão. Sem intervalo (API antiga
-ou falha do endpoint), a dashboard preserva o agregado disponível.
+O impacto de um tema é a diferença
+entre o NPS inferido das conversas do tema e o do resto do recorte, com IC por
+bootstrap: é **associação, não causa**. Exige no mínimo 30 conversas com sinal
+nos dois lados; abaixo disso o impacto é nulo, nunca 0. O tema vem de TF-IDF com
+DBSCAN e é instável com pouco dado. A deterioração acha, numa conversa
+**encerrada**, o início da deterioração (`indice_virada`): a mensagem a partir da qual a estimativa por prefixo fica detratora
+e não volta. É **retrospectiva e em lote, nunca alerta ao vivo**. O lead time em
+dado sintético não prevê o de produção, e o simulador não gera trajetória (cada
+conversa sorteia as falas do cliente de um só rótulo), então a medição feita nele
+é artefato do gerador. Não há margem em torno do limiar: uma estimativa que oscila perto da fronteira de detrator marca o início com uma variação pequena (na demonstração, de cerca de 67 para 61 pontos). O início da deterioração não aumenta o recall sobre o score final; ela
+só acrescenta lead time. Medição com o fusor real: **não verificado — fusor
+log1p ausente em 14/10/2026** (`scripts/medir_deterioracao.py` sai com código 2
+e diz isso).
 
 ---
 

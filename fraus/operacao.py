@@ -8,6 +8,7 @@ from datetime import timedelta
 from statistics import median
 
 from fraus.fuso import no_fuso_do_produto
+from fraus.impacto import impacto_nps
 from fraus.indicadores import calcular_nps, nps_com_intervalo
 from fraus.sinais.tempo import RESPONDENTES
 
@@ -60,6 +61,7 @@ def descobrir_temas(registros, faixas):
             grupos[int(classe)].append(i)
     nomes = vetor.get_feature_names_out()
     temas = []
+    todos_scores = [r[1] for r in registros]
     for indices in grupos.values():
         pesos = np.asarray(matriz[indices].mean(axis=0)).ravel()
         termos = [str(nomes[i]) for i in pesos.argsort()[::-1][:4] if pesos[i] > 0]
@@ -68,16 +70,23 @@ def descobrir_temas(registros, faixas):
         taxa_atual = recentes / n_atual if n_atual else None
         taxa_anterior = anteriores / n_anterior if n_anterior else None
         scores = [registros[i][1] for i in indices if registros[i][1] is not None]
+        scores_tema = [todos_scores[i] for i in indices]
+        no_tema = set(indices)
+        # impacto_nps ja devolve null com as contagens quando um lado tem menos de
+        # N_MINIMO_NPS; o resto sai da lista unica, sem reindexar os registros.
+        resto = [s for i, s in enumerate(todos_scores) if i not in no_tema]
         temas.append({"id": hashlib.sha256("|".join(sorted(termos)).encode()).hexdigest()[:16],
             "termos": termos, "conversa_ids": [registros[i][0].id for i in indices],
             "total": len(indices), "recentes": recentes, "anteriores": anteriores,
             "taxa_atual": taxa_atual, "taxa_anterior": taxa_anterior,
             "emergente": bool(recentes >= 3 and n_anterior >= 5 and taxa_atual is not None and taxa_atual > 2 * taxa_anterior),
-            "nps": calcular_nps(scores, faixas), "intervalo": nps_com_intervalo(scores, faixas)})
+            "nps": calcular_nps(scores, faixas), "intervalo": nps_com_intervalo(scores, faixas),
+            "impacto": impacto_nps(scores_tema, resto, faixas)})
     return {"temas": sorted(temas, key=lambda t: (-t["emergente"], -t["recentes"], -t["total"], t["id"])),
         "amostra": len(registros), "truncadas": truncadas,
         "janela": {"de": inicio.isoformat(), "ate": fim.isoformat(), "base_atual": n_atual, "base_anterior": n_anterior},
-        "metodo": "TF-IDF e agrupamento por similaridade de vocabulario; alerta: >=3 recentes, >=5 na base anterior e taxa superior ao dobro"}
+        "metodo": "TF-IDF e agrupamento por similaridade de vocabulario; alerta: >=3 recentes, >=5 na base anterior e taxa superior ao dobro"
+                  "; impacto = NPS do tema menos NPS do resto do recorte, IC 95% por bootstrap (1.000 reamostras), associação, não causa"}
 
 
 def simular_escala(registros, turnos, duracao_s, custo_hora):
