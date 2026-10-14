@@ -321,3 +321,102 @@ Ferramentas da Etapa A:
   `vercel.json`, `pyproject.toml`, `package.json` e o JSON dos notebooks;
 - `deptry` não foi rodado de novo: nenhum candidato muda dependência, e o
   resultado de ontem continua válido.
+
+---
+
+# Resultado da Etapa B (14/10/2026)
+
+Aprovado: L1, L2, L3, L4, L5 e L7, com o P8 dentro do L1. **Recusado: L6.** O
+Cloud Run e a Oracle ficam, porque o dono ainda quer testar a Oracle. As
+perguntas sem resposta explícita (P3, P4, P5, P6) ficaram do lado conservador:
+nada foi excluído por elas.
+
+## Antes × depois
+
+| medida | antes | depois |
+|---|---|---|
+| arquivos rastreados | 652 | **648** (−6 removidos, +2 docs novos: este inventário e `docs/superpowers/README.md`) |
+| bytes rastreados | 18 630 KB | **16 950 KB** (−1,6 MB) |
+| linhas (`git diff --shortstat origin/main`) | — | 30 arquivos, **+415 / −1833** (as +415 são quase todas destes dois docs novos) |
+| dependências Python / npm | — | inalteradas: nenhuma ficou órfã |
+| `.next/static` (bundle) | 3,2 MB | 3,2 MB |
+| pacote da API (`fraus/`) | 2,5 MB | 2,5 MB (nenhum arquivo de `fraus/` saiu) |
+| `pytest` | 1393 passed, 7 skipped, 167 s | **1395 passed**, 7 skipped, 155 s (variação de máquina, não efeito da limpeza). Um dos +2 é a guarda nova de `limpeza/` no site público; o outro não identifiquei (o `--extra docs` foi sincronizado entre as duas medições e é a causa provável) |
+| vitest | 42 arquivos / 351 testes | 42 / 351 |
+| `next build` com cache | 13,6 s | 17,1 s (ruído; build limpo: 60 s) |
+| `npm audit` | 9 high (dev), 0 em produção | igual |
+| OpenAPI | 76 caminhos | **idêntico** (`diff` vazio) |
+
+## O que saiu
+
+| commit | lote | conteúdo |
+|---|---|---|
+| `bad4d82` | L1 | `docs/assets/fraus-logo.svg` fora do índice; `.gitignore` cobre `/dist/`, `/site-pdf/`, `.test-temp*/`, `.api-vercel`; `mkdocs-publico.yml` exclui `limpeza/`, com guarda nova em `test_documentacao.py` (escrita antes e vista falhando) |
+| `5669c75` | L2 | `studio_small_06_1k.hdr` (1,6 MB) e `ATTRIBUTION.md`; `PROVENIENCIA.md` registra a remoção |
+| `e136a00` | L3 | `formatarPercentual`, `formatarDiaCurto` e a lista `VENDORIZADOS` do eslint (5 arquivos inexistentes); `eslint` exit 0 antes e depois |
+| `bae5618` | L4 | 12 imports `F401` e o parâmetro `cliente_nao_usado` em `tests/`; nenhum assert mudou |
+| `c303168` | L5 | `scripts/anotacao_ironia/index.html`, `frases.json` e `scripts/gerar_anotacao_ironia.py` (1756 linhas). `frases_para_anotacao` fica: `ordem_do_anotador` a usa na rota `/anotacao` |
+| `395cea6` | L7 | correções de docs: `treinamento.md` (notebooks 04 a 07), `CLAUDE.md` (herança do PDF, lista de exclusões, relatório da auditoria linkado), cabeçalho do `Dockerfile`, `.env.local.example` |
+| `65d8441` | L7 | `docs/superpowers/README.md`: status das 43 specs e planos (nada movido) |
+
+Depois de cada lote rodaram: `pytest`, smoke, diff do OpenAPI, `tsc`, vitest e
+`next build`. Os do L7 rodaram também os dois `mkdocs build --strict`. Nenhum
+lote precisou de `git revert`.
+
+## Verificação final
+
+- `pytest -q`: 1395 passed, 7 skipped.
+- `git diff origin/main -- tests`: só imports, o parâmetro e a guarda nova.
+  Nenhum `assert`, `def test` ou `skip` removido.
+- Smoke e `conferir_fusor.py`: **mesma falha pré-existente de ambiente**. Esta
+  máquina não tem os pesos: o smoke para em `/saude/prontidao` 503, e o
+  `conferir_fusor` sai com 1 em "AUSENTE: modelos/importancias.json". Nenhum
+  arquivo de `modelos/`, `NOMES_FEATURES`, `PESO_NEUTRO_NO_SCORE` ou da cabeça
+  de ironia foi tocado (o `git diff --stat` não lista nenhum).
+- `tsc` exit 0; vitest 351; build ok; `npm audit --omit=dev` = 0.
+- Achados que sobram nas ferramentas, todos com decisão registrada:
+  - **ruff F401:** 7 restantes, os 6 reexports de `api/main.py` (doc de 13/10)
+    e a fixture `ambiente`;
+  - **knip:** `validar-operacao-playwright.mjs`, `@vgpu/wgsl-std`, `pngjs` e
+    `jiti` (doc de 13/10), mais exports listados lá e no item C9;
+  - **vulture:** a tabela de 13/10 continua valendo; o único item novo
+    (`cliente_nao_usado`) saiu.
+- `git status`: só `reports/` e `research_notes/` untracked (não tocados).
+  Nenhum banco, segredo ou artefato de modelo.
+
+## Mantido por dúvida
+
+- **C8:** o teste duplicado em `test_sinal_estilo.py`. Pela regra 6, teste só
+  sai junto com o código que cobre.
+- **C9:** `dominanteDaTela`.
+- **P4:** `icon-32.png` e `icon-512.png`.
+- **Reportados:**
+  - `scripts/converter_totalk.py`;
+  - `docs/social-preview.png`;
+  - `docs/colab.md`: cita `scripts/treinar.py`, que não existe, e um WSL de
+    outra máquina. Corrigir exige saber o comando certo, por isso ficou;
+  - os 13 `MotorFalso`;
+  - os três caminhos de ingestão;
+  - os handlers repetidos do proxy.
+- **L6:** Cloud Run e Oracle, por decisão do dono.
+
+## Ações manuais fora do repositório
+
+- **Nenhuma de segurança.** A2 não achou segredo nem dado real versionado, e
+  não há histórico para limpar.
+- **Opcional:** conferir se `docs/social-preview.png` ainda é a imagem
+  configurada no GitHub.
+- **Opcional (P5):** comprimir os pôsteres de `lp-nova/` (7,9 MB, PNG RGBA) no
+  `npm run posteres`. É o único ganho grande de peso que sobrou, e é mudança
+  de pipeline, não exclusão.
+- **Ambiente:** recriar o `.venv` em 3.11 (hoje 3.14.7), se a versão
+  declarada no `CLAUDE.md` importa para a banca.
+
+## Recomendação
+
+**Mesclar.** A mudança é pequena, sem efeito no contrato HTTP, no bundle, no
+pacote da API nem nos modelos, e cada lote passou a verificação inteira. Ela
+não resolve a sensação de "649 arquivos": a medição mostrou que quase tudo
+está vivo. O que reduz carga cognitiva daqui em diante é estrutural: o índice
+de `docs/superpowers/` (feito) e, se você quiser, a consolidação dos dublês de
+teste e a compressão dos pôsteres.
