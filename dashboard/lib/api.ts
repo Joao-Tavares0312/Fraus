@@ -322,9 +322,42 @@ export type MensagemAtribuida = {
   } | null;
 };
 
+export type ItemDeExplicacao = {
+  familia: string;
+  rotulo: string;
+  pontos: number;
+  detalhe: string | null;
+};
+
+/** `explicacao` de `GET /conversas/{id}/atribuicao`: decomposicao exata no
+ * servidor; o front so desenha (invariante 3 -- nada e recalculado aqui). */
+export type Explicacao = {
+  frases: string[];
+  contra: ItemDeExplicacao[];
+  a_favor: ItemDeExplicacao[];
+  aviso: string;
+  efeitos: Record<string, number>;
+  decomposicao: { referencia: number; score: number; eixos: unknown[] };
+  familia_da_feature: Record<string, string>;
+};
+
+export type FichaDeNota = { score: number; nota: number; categoria: Categoria };
+
+/** Resposta de `POST /conversas/{id}/contrafactual`. */
+export type Contrafactual = {
+  conversa_id: string;
+  antes: FichaDeNota;
+  depois: FichaDeNota;
+  delta_score: number;
+  hipotese: Record<string, number>;
+  metodo: string;
+};
+
 /** Resposta de `GET /conversas/{id}/atribuicao`. */
 export type Atribuicao = {
   conversa_id: string;
+  /** Ausente em API antiga; `null` quando nao ha fala do cliente. */
+  explicacao?: Explicacao | null;
   /** Os mesmos score/nota/categoria de `/conversas/{id}`: gravados na importacao. */
   score: number | null;
   nota: number | null;
@@ -960,6 +993,104 @@ export async function simularTexto(texto: string): Promise<Resultado<Simulacao>>
         );
       }
       return (await resposta.json()) as Simulacao;
+    })(),
+  );
+}
+
+/**
+ * "E se a espera tivesse sido outra?" Chamada do NAVEGADOR, como `simularTexto`.
+ * Exatamente UMA chave no corpo. Nao grava nada; o 422 (fora da faixa de
+ * treino, sem par cliente->resposta) volta com o `detail` do servidor.
+ */
+export async function simularContrafactual(
+  id: string,
+  corpo: { primeira_resposta_s: number } | { espera_maxima_s: number },
+): Promise<Resultado<Contrafactual>> {
+  return proteger(
+    (async () => {
+      const rota = `/conversas/${encodeURIComponent(id)}/contrafactual`;
+      const resposta = await fetch(urlDaApi(rota), {
+        method: "POST",
+        headers: await cabecalhosDaApi({ "Content-Type": "application/json" }),
+        body: JSON.stringify(corpo),
+        cache: "no-store",
+      });
+      if (!resposta.ok) {
+        const detalhe = (await resposta.json().catch(() => null)) as
+          | { detail?: unknown }
+          | null;
+        throw new Error(
+          typeof detalhe?.detail === "string"
+            ? detalhe.detail
+            : `${rota} respondeu ${resposta.status}`,
+        );
+      }
+      return (await resposta.json()) as Contrafactual;
+    })(),
+  );
+}
+
+/** Um grupo (detratores ou promotores) de uma familia: `null` = sem dado, nunca 0. */
+export type GrupoDeDrivers = {
+  n: number;
+  media: number | null;
+  ic: [number, number] | null;
+};
+
+export type FamiliaDeDrivers = {
+  familia: string;
+  detratores: GrupoDeDrivers;
+  promotores: GrupoDeDrivers;
+};
+
+/** Resposta de `GET /indicadores/drivers`. */
+export type Drivers = {
+  recorte: { de: string | null; ate: string | null; canal: string | null };
+  n_pedido: number;
+  amostra: number;
+  elegiveis: number;
+  sem_sinal: number;
+  defasadas: number;
+  semente: number;
+  eixo: string;
+  familias: FamiliaDeDrivers[];
+  rotulo: string;
+  metodo: string;
+};
+
+/**
+ * Drivers do recorte: chamada do NAVEGADOR e so por clique, porque cada
+ * conversa da amostra custa uma passagem de modelo. O 503 do dublê e o 400
+ * voltam com o `detail` do servidor.
+ */
+export async function obterDrivers(params: {
+  de?: string | null;
+  ate?: string | null;
+  n?: number;
+}): Promise<Resultado<Drivers>> {
+  return proteger(
+    (async () => {
+      const consulta = new URLSearchParams();
+      if (params.de) consulta.set("de", params.de);
+      if (params.ate) consulta.set("ate", params.ate);
+      if (params.n !== undefined) consulta.set("n", String(params.n));
+      const texto = consulta.toString();
+      const rota = `/indicadores/drivers${texto ? `?${texto}` : ""}`;
+      const resposta = await fetch(urlDaApi(rota), {
+        headers: await cabecalhosDaApi(),
+        cache: "no-store",
+      });
+      if (!resposta.ok) {
+        const detalhe = (await resposta.json().catch(() => null)) as
+          | { detail?: unknown }
+          | null;
+        throw new Error(
+          typeof detalhe?.detail === "string"
+            ? detalhe.detail
+            : `${rota} respondeu ${resposta.status}`,
+        );
+      }
+      return (await resposta.json()) as Drivers;
     })(),
   );
 }

@@ -103,6 +103,21 @@ para a banca usam o fusor real, que exige os pesos.
 - "Faixa de treino" é `|z| ≤ 4` sobre a média e o desvio do scaler.
 - O teto de 200 conversas faz dos drivers uma estimativa por amostra.
 
+## Desvios aceitos
+
+Decididos no plano e registrados aqui; onde divergem do desenho acima, vale esta seção.
+
+1. **A explicação viaja dentro de `GET /conversas/{id}/atribuicao`** (campo novo `explicacao`), e não numa rota própria.
+   - A atribuição já recalcula as features, e uma rota a mais pagaria o BERTimbau duas vezes.
+   - Campo novo numa resposta sem `response_model` não muda o OpenAPI.
+2. **Drivers ficam em `GET /indicadores/drivers`**, com amostra padrão de 50 e teto de 200 (o mesmo desenho de `/saude/deriva`).
+   - O filtro por **tema** sai do E1: tema é calculado na hora pelo Radar, e o impacto por tema é o E6.
+3. **O painel de drivers fica na Visão geral, atrás de um botão.** `/modelo/*` é só de `dev` (`fraus/api/seguranca.py:248`), e cada conversa da amostra custa uma passagem de modelo, então o painel não carrega sozinho.
+4. **O contrafactual de primeira resposta recusa (422)** quando o alvo poria a resposta antes de uma fala anterior do cliente, porque reordenar a conversa inventaria outra conversa.
+5. **Os testes de front usam `renderToStaticMarkup`**, sem biblioteca nova de teste de componente.
+6. **O campo do contrafactual é `espera_maxima_s`** (como no laboratório), não `teto_espera_s`; o pedido é estrito e recusa campo desconhecido com 422.
+7. **`familia_da_feature` vai na resposta, mas o front ainda deriva a família por prefixo** em `dashboard/lib/derivacoes.ts`; a troca fica para depois (as duas regras concordam hoje).
+
 ## Fora de escopo
 
 - Explicação por LLM.

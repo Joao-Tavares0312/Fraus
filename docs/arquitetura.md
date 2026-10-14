@@ -142,6 +142,18 @@ sequenceDiagram
     API-->>T: estado final
 ```
 
+## A explicação da nota
+
+`GET /conversas/{id}/atribuicao` devolve também o campo `explicacao`: a
+decomposição exata do fusor (intercepto e contribuições por feature, somando no
+logit), o efeito por família e frases geradas por template — nenhum LLM. Duas
+rotas completam o E1: `POST /conversas/{id}/contrafactual` refaz a nota
+mudando só o relógio (e recusa o que sai de `|z| ≤ 4`) e
+`GET /indicadores/drivers` agrega os efeitos numa amostra com semente. Nenhuma
+das três grava; o score, a nota e a categoria gravados não mudam. A lógica de
+texto fica em `fraus/explicacao.py`; os limites estão em
+[Limitações](limitacoes.md).
+
 ## Onde cada coisa mora
 
 | caminho | responsabilidade |
@@ -152,6 +164,7 @@ sequenceDiagram
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex |
 | `fraus/fusor.py` | `NOMES_FEATURES` (39) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, contenção, falso containment, série |
+| `fraus/explicacao.py` | frases por template a partir da decomposição do fusor, e os drivers agregados |
 | `fraus/evidencia.py` | evidência fraca — a cabeça tracejada |
 | `fraus/deriva.py` | deriva de distribuição — a invariante 10 em runtime |
 | `fraus/cortesia.py` | "ok, obrigado" sozinho é sem sinal, não promotor |

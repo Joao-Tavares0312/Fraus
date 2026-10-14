@@ -210,3 +210,25 @@ def test_indicadores_respondem_com_o_motor_ainda_frio(tmp_path):
     assert resposta.status_code == 200, resposta.text
     assert resposta.json()["pontuadas_com_regua_antiga"] == 0
     assert provedor.estado == "frio"
+
+
+def test_comparar_cenario_e_contribuicao_por_familia_entram_na_medicao(monkeypatch):
+    medidos = []
+
+    def medir_falso(nome, operacao):
+        medidos.append(nome)
+        return operacao()
+
+    monkeypatch.setattr("fraus.api.motor_preguicoso.medir", medir_falso)
+
+    class MotorComMetodos(MotorRealFalsificado):
+        def comparar_cenario(self, *args):
+            return "cmp"
+
+        def contribuicao_por_familia(self, *args):
+            return "fam"
+
+    provedor = ProvedorDeMotor(MotorComMetodos)
+    assert provedor.comparar_cenario(1, 2, None) == "cmp"
+    assert provedor.contribuicao_por_familia(1, None) == "fam"
+    assert medidos.count("inferencia") == 2

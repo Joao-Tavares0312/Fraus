@@ -76,6 +76,7 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/api/rotas/analise.py` | análise avulsa e `POST /analisar/registrar`, que salva apenas o lote analisado |
 | `fraus/api/main.py` | FastAPI: `criar_app` (fábrica) e `app` (lazy, PEP 562) |
 | `fraus/evidencia.py` | evidência fraca (a cabeça tracejada) — observável, nunca probabilidade |
+| `fraus/explicacao.py` | frases por template sobre `Fusor.decompor` e os drivers agregados — o texto nunca sai de modelo |
 | `fraus/deriva.py` | deriva de distribuição — a invariante 10 como alarme de runtime |
 | `dashboard/` | Next.js — ver `dashboard/DESIGN.md` |
 | `notebooks/` | treino no Colab (BERTimbau, depois fusor) |

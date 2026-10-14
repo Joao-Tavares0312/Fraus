@@ -9,6 +9,7 @@ from statistics import median
 
 from fraus.fuso import no_fuso_do_produto
 from fraus.indicadores import calcular_nps, nps_com_intervalo
+from fraus.sinais.tempo import RESPONDENTES
 
 TETO_RADAR = 1500
 
@@ -130,6 +131,31 @@ def simular_escala(registros, turnos, duracao_s, custo_hora):
         "custo": round(horas_por_dia * dias_no_recorte * custo_hora, 2), "dias": dias, "previsao": previsao,
         "hipoteses": {"duracao_s": duracao_s, "custo_hora": custo_hora, "turnos": turnos},
         "metodo": "simulacao FCFS sobre chegadas historicas; a previsao usa so dias com registros, sem afirmar dias vazios nem prever satisfacao; horarios no fuso registrado"}
+
+
+def ajustar_primeira_resposta(conversa, alvo_s):
+    """Cenario: a PRIMEIRA resposta chega `alvo_s` depois da primeira fala do
+    cliente; dela em diante tudo anda junto, preservando os intervalos seguintes.
+
+    `None` quando nao ha par cliente -> resposta (nao ha o que ajustar).
+    `ValueError` quando o alvo poria a resposta antes de uma fala que ja
+    aconteceu: reordenar a conversa seria inventar outra conversa.
+    """
+    mensagens = conversa.mensagens
+    i = next((k for k, m in enumerate(mensagens) if m.autor == "cliente"), None)
+    if i is None:
+        return None
+    j = next((k for k in range(i + 1, len(mensagens)) if mensagens[k].autor in RESPONDENTES), None)
+    if j is None:
+        return None
+    novo = mensagens[i].enviada_em + timedelta(seconds=alvo_s)
+    if novo < mensagens[j - 1].enviada_em:
+        raise ValueError("a primeira resposta nao pode chegar antes de uma fala anterior do cliente")
+    deslocamento = mensagens[j].enviada_em - novo
+    alteradas = mensagens[:j] + [m.model_copy(update={"enviada_em": m.enviada_em - deslocamento})
+                                 for m in mensagens[j:]]
+    encerrada = conversa.encerrada_em - deslocamento if conversa.encerrada_em else None
+    return conversa.model_copy(update={"mensagens": alteradas, "encerrada_em": encerrada})
 
 
 def limitar_esperas(conversa, teto_s):

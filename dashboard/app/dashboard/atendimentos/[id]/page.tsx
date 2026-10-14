@@ -21,6 +21,7 @@ import { EstadoVazio } from "@/components/EstadoVazio";
 import { ResumoDoAtendimento } from "@/components/atendimentos/ResumoDoAtendimento";
 import { Painel } from "@/components/Painel";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
+import { PorQueEstaNota } from "@/components/PorQueEstaNota";
 import { Transcricao } from "@/components/Transcricao";
 import { idDaRota } from "@/lib/rota";
 
@@ -222,12 +223,19 @@ export default async function PaginaDoAtendimento(
                 endpoint="GET /conversas/{id}/atribuicao"
               />
             ) : (
-              <PainelContribuicoes
-                contribuicoes={atribuicao.contribuicoes}
-                sinaisForaDoScore={atribuicao.sinais_fora_do_score}
-                totalDeFeatures={Object.keys(atribuicao.importancias).length}
-                motivoSemSinal={conversa.motivo_sem_sinal}
-              />
+              <>
+                <PorQueEstaNota
+                  conversaId={conversa.id}
+                  explicacao={atribuicao.explicacao ?? null}
+                  comSinal={atribuicao.contribuicoes !== null}
+                />
+                <PainelContribuicoes
+                  contribuicoes={atribuicao.contribuicoes}
+                  sinaisForaDoScore={atribuicao.sinais_fora_do_score}
+                  totalDeFeatures={Object.keys(atribuicao.importancias).length}
+                  motivoSemSinal={conversa.motivo_sem_sinal}
+                />
+              </>
             )}
           </Painel>
         </div>

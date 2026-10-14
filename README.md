@@ -1290,6 +1290,12 @@ abre sem login, que é o modo local.
   de cada linha já vem derivada em `GET /conversas`. A agregação do servidor
   ainda varre as conversas do recorte em memória (uma consulta, não N), o que é
   o custo certo no volume do trabalho (dezenas de atendimentos).
+- A explicação da nota viaja no campo `explicacao` de `GET /conversas/{id}/atribuicao`
+  (decomposição exata do fusor, efeito por família, frases por template). Duas
+  rotas a completam, sem gravar nada: `POST /conversas/{id}/contrafactual`
+  (refaz a nota mudando só a espera; recusa o que sai de `|z| ≤ 4`) e
+  `GET /indicadores/drivers` (efeito médio por família numa amostra com
+  semente, padrão 50 e teto 200). Limites em `docs/limitacoes.md`.
 - A atribuição por sentença sai de `GET /conversas/{id}/atribuicao`, que
   devolve a probabilidade **por mensagem** do classificador de texto — a
   transcrição marca a fala com o que o modelo achou dela, não só evidência

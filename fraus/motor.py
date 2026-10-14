@@ -11,13 +11,16 @@ import threading
 import time
 
 from fraus.deriva import resumo_de_deriva
-from fraus.fusor import Fusor, montar_features
+from fraus.explicacao import explicar
+from fraus.fusor import (NOMES_FEATURES, Fusor, familia_da_feature,
+                         montar_features)
 from fraus.sinais.emocao import (NOMES_EMOCOES, ClassificadorEmocao,
                                  desprezo_derivado)
 from fraus.sinais.emoji import emojis_com_posicao, score_do_emoji
 from fraus.sinais.estilo import estilo_da_mensagem
 from fraus.sinais.ironia import IRONICO, ClassificadorIronia
 from fraus.sinais.palavras import pesos_das_palavras, vocabulario
+from fraus.sinais.tempo import latencias_da_conversa
 from fraus.sinais.texto import (INSATISFEITO, NEUTRO, SATISFEITO,
                                 ClassificadorTexto)
 
@@ -334,7 +337,7 @@ class Motor:
                 }
             )
 
-        contribuicoes = features = None
+        contribuicoes = features = explicacao = None
         if conversa.tem_sinal_cliente:
             # A MESMA curadoria que pontua: se a atribuicao usasse outro lexico
             # que o score, a tela explicaria a nota com evidencia que nao a
@@ -343,11 +346,21 @@ class Motor:
             # nao roda os modelos de novo.
             features = montar_features(conversa, texto, emocao, curadoria)
             contribuicoes = self._fusor.contribuicoes(features)
+            # Decomposicao exata do mesmo vetor que pontuou: o texto sai de
+            # template sobre os efeitos por familia, nunca de modelo.
+            efeitos = self._fusor.efeitos_por_familia(features)
+            explicacao = {
+                "decomposicao": self._fusor.decompor(features),
+                "efeitos": efeitos,
+                "familia_da_feature": {n: familia_da_feature(n) for n in NOMES_FEATURES},
+                **explicar(efeitos, features, ha_latencia=bool(latencias_da_conversa(conversa))),
+            }
 
         return {
             "mensagens": mensagens,
             "importancias": self._fusor.importancias(),
             "contribuicoes": contribuicoes,
+            "explicacao": explicacao,
             # Ate 20/08/2026 esta lista trazia ["emocao", "prob_ironia"]: os dois
             # vinham na resposta mas nao entravam no score. Desde o contrato de
             # 35 features (21/08/2026) ate 03/09/2026 as duas cabecas ENTRAVAM
@@ -363,6 +376,14 @@ class Motor:
             # que e outra coisa.
             "sinais_fora_do_score": ["prob_ironia"],
         }, features
+
+    def comparar_cenario(self, original, alterada, curadoria=None) -> dict:
+        """Score e z das duas versoes. So o RELOGIO muda entre elas."""
+        f_antes = montar_features(original, self._classificador, self._emocao, curadoria)
+        f_depois = montar_features(alterada, self._classificador, self._emocao, curadoria)
+        return {"antes": self._fusor.pontuar(f_antes), "depois": self._fusor.pontuar(f_depois),
+                "z_antes": self._fusor.z_das_features(f_antes),
+                "z_depois": self._fusor.z_das_features(f_depois)}
 
     def deriva_da_amostra(self, conversas, curadoria=None) -> dict | None:
         """Quais features desta amostra sairam da faixa de treino do fusor.
@@ -389,6 +410,19 @@ class Motor:
             if conversa.tem_sinal_cliente
         ]
         return resumo_de_deriva(zs, self._fusor.distribuicao_de_treino())
+
+    def contribuicao_por_familia(self, conversa, curadoria=None) -> dict | None:
+        """Soma da contribuicao por familia no eixo satisfeito x insatisfeito."""
+        if not conversa.tem_sinal_cliente:
+            return None
+        features = montar_features(conversa, self._classificador, self._emocao, curadoria)
+        eixos = self._fusor.decompor(features)["eixos"]
+        eixo = next((e for e in eixos if e["classe"] == SATISFEITO), None)
+        if eixo is None:
+            raise RuntimeError(
+                "o fusor nao tem o eixo da classe satisfeito (2): nao ha como "
+                "decompor satisfeito x insatisfeito; retreine com as tres classes")
+        return eixo["por_familia"]
 
     def regua(self) -> str | None:
         """Com qual regua este motor pontua: os pesos do fusor MAIS a regra da cortesia.

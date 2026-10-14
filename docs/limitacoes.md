@@ -139,6 +139,30 @@ declarado assim no código e na spec. O de tempo vem de IJHCI 2025.
 
 ---
 
+## A explicação é do modelo, não do cliente
+
+O "por que esta nota" desmonta o que o **fusor** fez, e isso tem limites que a
+tela não deve esconder:
+
+- **O efeito por família não soma a nota.** A soma exata mora no eixo do logit
+  (intercepto + contribuições = log da razão entre classes); o score é uma
+  projeção não linear desses logits. Os pontos por família são uma leitura
+  aproximada, e a tela os trata como tal.
+- **Contribuição é associação, não causa.** Um peso alto diz o que o modelo
+  aprendeu a associar ao rótulo, não o que faria o cliente mudar de opinião.
+- **"Faixa de treino" quer dizer `|z| ≤ 4`** sobre média e desvio do scaler
+  (o mesmo limiar de `fraus/deriva.py`). O artefato não guarda mínimo nem
+  máximo, então o contrafactual de espera recusa o que sai dessa faixa.
+- **O sinal de tempo é sintético**, e por isso o contrafactual de espera herda a
+  limitação da seção acima: é uma hipótese sobre o modelo, não uma previsão.
+- **Os drivers são uma amostra com semente** (padrão 50 conversas, teto 200),
+  cada uma custando uma passagem de modelo. O intervalo vem de bootstrap sobre
+  a amostra e mede incerteza amostral, não erro do modelo. O teto limita só o
+  número de conversas, não de mensagens: uma amostra de conversas longas numa
+  instância fria pode se aproximar do tempo limite do proxy.
+
+---
+
 ## O que não dá para consertar sem corpus de atendimento real
 
 Duas coisas ficam condicionadas ao mesmo recurso que não existe publicamente em

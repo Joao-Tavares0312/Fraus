@@ -119,6 +119,23 @@ NOMES_FEATURES = [
     "incongruencia_situacao_negativa",
 ]
 
+# As SETE familias do vetor, na ordem de NOMES_FEATURES. Derivadas do NOME,
+# nao digitadas de novo: o tempo e a unica familia sem prefixo comum, e por
+# isso tem lista propria. O front recebe a familia do servidor em vez de
+# repetir esta regra em TypeScript.
+_FEATURES_DE_TEMPO = (
+    "latencia_mediana_s", "latencia_p90_s", "latencia_primeira_resposta_s",
+    "duracao_total_s", "qtd_turnos_cliente", "escalou", "abandonou",
+)
+
+
+def familia_da_feature(nome: str) -> str:
+    """Familia de sinal de uma feature do contrato."""
+    return "tempo" if nome in _FEATURES_DE_TEMPO else nome.split("_", 1)[0]
+
+
+FAMILIAS = tuple(dict.fromkeys(familia_da_feature(nome) for nome in NOMES_FEATURES))
+
 INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
 
 # Quanto P(neutro) vale no score 0-100. E o que faz a classe neutra do modelo
@@ -145,6 +162,29 @@ INSATISFEITO, NEUTRO, SATISFEITO = 0, 1, 2
 # e par. Com 0.65 daria `round(6.5)` = 6, de volta a detrator. A fronteira esta
 # fixada em tests/test_indicadores.py de proposito -- ela e fragil.
 PESO_NEUTRO_NO_SCORE = 0.75
+
+
+def _score_das_probabilidades(por_classe: dict) -> float:
+    """A projecao 0-100 das probabilidades por classe -- a UNICA copia da regra."""
+    score = 100.0 * (
+        por_classe.get(SATISFEITO, 0.0)
+        + PESO_NEUTRO_NO_SCORE * por_classe.get(NEUTRO, 0.0)
+    )
+    return max(0.0, min(100.0, score))
+
+
+def score_dos_logits(referencia: int, eixos: list[dict]) -> float:
+    """O score a partir dos logits contra a classe de referencia.
+
+    `P = softmax(0, l_1, l_2)`: e o que a regressao multinomial faz, so que
+    escrito com os numeros que a explicacao mostra. Existe para o teste provar
+    que a decomposicao REPRODUZ a nota, em vez de aproxima-la.
+    """
+    logits = {referencia: 0.0, **{eixo["classe"]: eixo["logit"] for eixo in eixos}}
+    maior = max(logits.values())
+    exponenciais = {classe: math.exp(valor - maior) for classe, valor in logits.items()}
+    total = sum(exponenciais.values())
+    return _score_das_probabilidades({c: v / total for c, v in exponenciais.items()})
 
 
 def montar_features(
@@ -278,12 +318,7 @@ class Fusor:
         """
         probabilidades = self._pipeline.predict_proba([vetorizar(features)])[0]
         classes = list(self._pipeline.named_steps["modelo"].classes_)
-        por_classe = dict(zip(classes, probabilidades))
-        score = 100.0 * (
-            por_classe.get(SATISFEITO, 0.0)
-            + PESO_NEUTRO_NO_SCORE * por_classe.get(NEUTRO, 0.0)
-        )
-        return max(0.0, min(100.0, score))
+        return _score_das_probabilidades(dict(zip(classes, probabilidades)))
 
     def prever(self, features: dict[str, float]) -> int:
         """Classe predita: 0 insatisfeito, 1 neutro ou 2 satisfeito."""
@@ -329,6 +364,64 @@ class Fusor:
         vetor_padronizado = escala.transform([vetorizar(features)])[0]
         contribuicoes = [d * v for d, v in zip(self._diferenca(), vetor_padronizado)]
         return dict(zip(NOMES_FEATURES, (float(v) for v in contribuicoes)))
+
+    def decompor(self, features: dict[str, float]) -> dict:
+        """A nota desmontada em parcelas que SOMAM, sem aproximacao.
+
+        A regressao multinomial tem, contra a classe de referencia (a menor,
+        insatisfeito), um eixo aditivo por classe:
+        `log(P_c / P_ref) = (b_c - b_ref) + soma_i (w_c - w_ref)_i * z_i`, com `z`
+        no espaco em que o fusor opera (espera em log1p, depois o scaler). O
+        score sai EXATAMENTE desses logits (`score_dos_logits`). No caso
+        binario o sklearn guarda uma linha so, que ja e classes_[1] contra
+        classes_[0].
+        """
+        modelo = self._pipeline.named_steps["modelo"]
+        z = self._pipeline.named_steps["escala"].transform([vetorizar(features)])[0]
+        classes = [int(c) for c in modelo.classes_]
+        if len(classes) == 2:
+            linhas = [(classes[1], modelo.intercept_[0], modelo.coef_[0])]
+        else:
+            linhas = [
+                (classe, modelo.intercept_[i] - modelo.intercept_[0], modelo.coef_[i] - modelo.coef_[0])
+                for i, classe in enumerate(classes) if i > 0
+            ]
+        eixos = []
+        for classe, intercepto, pesos in linhas:
+            contribuicoes = {nome: float(p * v) for nome, p, v in zip(NOMES_FEATURES, pesos, z)}
+            por_familia = dict.fromkeys(FAMILIAS, 0.0)
+            for nome, valor in contribuicoes.items():
+                por_familia[familia_da_feature(nome)] += valor
+            eixos.append({
+                "classe": classe,
+                "intercepto": float(intercepto),
+                "contribuicoes": contribuicoes,
+                "por_familia": por_familia,
+                "logit": float(intercepto) + sum(contribuicoes.values()),
+            })
+        return {"referencia": classes[0], "eixos": eixos, "score": score_dos_logits(classes[0], eixos)}
+
+    def score_com_familia_na_media(self, features: dict[str, float], familia: str) -> float:
+        """O score se esta familia estivesse na MEDIA do treino (z = 0).
+
+        E um recalculo exato, nao uma aproximacao -- mas nao aditivo: as
+        familias nao somam o score, porque o score nao e linear. A soma exata
+        mora no eixo de logit (`decompor`).
+        """
+        if familia not in FAMILIAS:
+            raise ValueError(f"familia fora do vetor: {familia!r}; as do vetor sao {FAMILIAS}")
+        modelo = self._pipeline.named_steps["modelo"]
+        z = self._pipeline.named_steps["escala"].transform([vetorizar(features)])[0].copy()
+        for i, nome in enumerate(NOMES_FEATURES):
+            if familia_da_feature(nome) == familia:
+                z[i] = 0.0
+        probabilidades = modelo.predict_proba([z])[0]
+        return _score_das_probabilidades(dict(zip(modelo.classes_, probabilidades)))
+
+    def efeitos_por_familia(self, features: dict[str, float]) -> dict[str, float]:
+        """Quantos pontos de score cada familia moveu nesta conversa, com sinal."""
+        atual = self.pontuar(features)
+        return {f: atual - self.score_com_familia_na_media(features, f) for f in FAMILIAS}
 
     def eixo_global(self) -> dict[str, float]:
         """Quanto cada feature empurra a nota NO MODELO INTEIRO, com sinal.

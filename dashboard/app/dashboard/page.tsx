@@ -43,6 +43,7 @@ import { FaixaIndicadores } from "@/components/FaixaIndicadores";
 import { GraficoNpsLatencia } from "@/components/GraficoNpsLatencia";
 import { NotaMetodologica } from "@/components/NotaMetodologica";
 import { Painel } from "@/components/Painel";
+import { PainelDrivers } from "@/components/PainelDrivers";
 import { PainelLexico } from "@/components/PainelLexico";
 import { PioresAtendimentos } from "@/components/PioresAtendimentos";
 
@@ -325,6 +326,10 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
             <PainelLexico classes={classes} />
           )}
         </Painel>
+
+        <PainelDrivers
+          key={`${periodoPedido.de}|${periodoPedido.ate}`}
+          de={periodoPedido.de} ate={periodoPedido.ate} />
 
         {/* A lista de "derivado na interface" agora so existe em FALHA de
             endpoint: no caminho feliz, serie, indicadores, tempo mediano e
