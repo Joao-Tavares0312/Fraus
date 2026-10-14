@@ -14,7 +14,11 @@
 | 1 | `notebooks/01_treino_bertimbau.ipynb` | `modelos/bertimbau-satisfacao/` — classificador de texto (3 classes), fine-tune do `neuralmind/bert-base-portuguese-cased` sobre o B2W-Reviews01 | **sim** | pronto |
 | 2 | `notebooks/02_treino_fusor.ipynb` | `modelos/fusor.joblib` e `modelos/importancias.json` — a regressao logistica que funde os sinais | nao | pronto |
 | 3 | `notebooks/03_treino_emocao.ipynb` | `modelos/bertimbau-emocao/` e `modelos/metricas_emocao.json` — classificador das sete classes de emocao | **sim** | pronto |
-| 4 | `notebooks/04_treino_ironia.ipynb` | `modelos/bertimbau-ironia/` e `modelos/metricas_ironia.json` — classificador binario de ironia | **sim** | pronto, **mas o corpus precisa ser solicitado** |
+| 4 | `notebooks/04_treino_ironia.ipynb` | `modelos/bertimbau-ironia/` e `modelos/metricas_ironia.json` — classificador binario de ironia | **sim** | pronto; o padrão (`ORIGEM = 'idpt_publico'`) baixa as fontes públicas originais, e o pedido aos organizadores do IDPT é alternativa |
+| 5 | `notebooks/05_calibracao.ipynb` | `modelos/calibracao.json` — temperatura por cabeça, sem retreinar; o runtime não a lê | **sim** | laudo |
+| 5 | `notebooks/05_treino_multitarefa.ipynb` | candidato ONNX com um encoder e três cabeças | **sim** | candidato, não promovido |
+| 6 | `notebooks/06_exportar_laya_onnx.ipynb` | ZIP do Laya em ONNX INT8 para o bundle externo da Vercel | nao | carregado quando `FRAUS_IRONIA_BACKEND=laya-onnx` (ver `deploy-vercel.md`) |
+| 7 | `notebooks/07_treino_laya.ipynb` | `modelos/laya-fraus` — fine-tune do Laya em emoção e ironia, comparado ao BERTimbau | **sim** | executado em 02/10/2026, não promovido |
 
 O notebook 02 **depende do artefato do 01**: ele carrega o BERTimbau treinado para extrair o sinal de texto de cada conversa. A primeira celula do 02 falha com erro explicito se `modelos/bertimbau-satisfacao` nao estiver no Drive.
 
@@ -681,7 +685,7 @@ A aba **Modelo → Ironia · Laya** chama somente essa cabeça e não persiste n
 altera notas. O tipo de pergunta usado é `choice` com chaves neutras, não
 `noul`, por causa do viés de rótulo documentado pelos próprios autores.
 
-#### Fine-tuning do Laya — notebook 07 (02/10/2026, ainda não executado)
+#### Fine-tuning do Laya — notebook 07 (executado em 02/10/2026, não promovido — ver `notas/2026-10-02-treino-laya.md`)
 
 O candidato acima responde a frio. `notebooks/07_treino_laya.ipynb` treina o
 mesmo checkpoint nas duas perguntas do Fraus — emoção (`PERGUNTA_EMOCAO`, em

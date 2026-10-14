@@ -1,5 +1,10 @@
 # API do Fraus, para hospedar onde houver disco e memoria de verdade.
 #
+# A PRODUCAO DE HOJE NAO USA ESTA IMAGEM: a API roda na Vercel (projeto
+# fraus-api), com backend ONNX e os pesos num bundle externo -- ver
+# docs/deploy-vercel.md. Esta imagem e a alternativa em container (Cloud Run,
+# VM), e o argumento abaixo vale para o backend torch.
+#
 # POR QUE NAO SERVERLESS (Vercel, Lambda, Cloud Functions): so o torch ocupa
 # 497 MB instalado, contra o teto de 250 MB de uma funcao da Vercel -- e os
 # tres BERTimbau somam mais 1,3 GB. Alem do tamanho, cada requisicao roda
