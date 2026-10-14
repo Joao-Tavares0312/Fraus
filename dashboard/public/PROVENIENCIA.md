@@ -38,11 +38,11 @@ na hora de gerar** a imagem. O produto em si serve as duas por `next/font`.
 
 - `public/fraus-logo.png` (640×640, RGB): só o `og:image` antigo o usava. Substituído
   por `og-fraus.png`.
+- `public/assets/hdri/studio_small_06_1k.hdr` e `public/assets/ATTRIBUTION.md`: o
+  mapa de ambiente CC0 da cena 3D da LP antiga. A cena saiu em `61db71d` (30/09) e
+  nenhum código os citava mais; removidos na limpeza de 14/10/2026.
 
 ## Não é desta rodada
 
-- `public/assets/hdri/` (mapa de ambiente CC0 da cena 3D da LP antiga): continua
-  referenciado enquanto a LP nova não o substitui. Quando a cena 3D sair, ele e o
-  `public/assets/ATTRIBUTION.md` ficam órfãos.
 - `docs/assets/fraus.css` (tema do site MkDocs) ainda descreve o mundo visual
   anterior.
