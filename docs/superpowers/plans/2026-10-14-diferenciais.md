@@ -19,17 +19,16 @@
 | E1 | por que esta nota + drivers | — | código e testes sim (fusor sintético); exemplos reais não |
 | E2 | calibração + conformal + abstenção | pesos + download B2W | código e testes sim; **medição não** |
 | E3 | declarado × inferido | **aprovação de schema** | sim (sintético ilustrativo) |
-| E4 | benchmark × LLM | chave, provedor, `precos.toml`; pesos | harness e testes sim (cliente falso); resultado não |
+| ~~E4~~ | benchmark × LLM | **descartado em 14/10/2026** | — |
 | E5 | sinalizadores | fonte da amostra anotada | sim |
 | E6 | tema × impacto + deterioração | — | código sim; medição do replay exige pesos |
 
-Corte se faltar tempo: **E1–E4**. Paralelizável com subagentes, cada um no seu
+Corte se faltar tempo: **E1–E3** (o E4 foi descartado). Paralelizável com subagentes, cada um no seu
 worktree, porque os arquivos são disjuntos:
 
 - **E1** em `fraus/fusor.py` e `fraus/explicacao.py`;
 - **E2** em `fraus/conformal.py` e `scripts/`;
 - **E5** em `fraus/sinalizadores.py`;
-- **E4** em `scripts/benchmark/`.
 
 O ponto de conflito é `_com_derivacoes` em `fraus/api/rotas/conversas.py`
 (E2 e E5). Esse ponto é integrado em série.
@@ -77,17 +76,7 @@ O ponto de conflito é `_com_derivacoes` em `fraus/api/rotas/conversas.py`
 4. Gerador ilustrativo, script de relatório e rota com escopo.
 5. Commit `feat(declarado): ...`.
 
-**E4.**
-
-1. Extra opcional `benchmark`, `.vercelignore` e a guarda de import de
-   `fraus/`.
-2. Cliente falso; testes de parsing, cache, bootstrap, custo e `--dry-run`.
-3. Prompts zero-shot e few-shot, variantes de robustez por semente.
-4. `precos.toml`, preenchido só com fonte e data verificadas no dia.
-5. Rodada real **somente** com chave e aprovação de custo (o `--dry-run`
-   mostra antes).
-6. `docs/diferenciais/benchmark.md` e PNGs.
-7. Commit `feat(benchmark): ...`.
+**E4.** Descartado pelo João em 14/10/2026.
 
 **E5.**
 

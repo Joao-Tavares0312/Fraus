@@ -1,7 +1,10 @@
 # E4 — Benchmark: Fraus × LLM genérico
 
-> Estado: **aguardando aprovação**. Depende do João para o provedor, os
-> modelos, a chave e os preços. Faz parte de
+> Estado: **descartado pelo João em 14/10/2026**, antes de qualquer código.
+> Fica registrado como alternativa recusada. Sem o benchmark, nenhum documento
+> ou slide compara o Fraus com LLM em número: a tese "sem LLM" se sustenta
+> pelo que é medido no próprio Fraus (explicação exata, calibração,
+> determinismo por construção), não por comparação. Faz parte de
 > [Diferenciais](2026-10-14-diferenciais-visao-geral.md).
 
 ## Objetivo

@@ -12,7 +12,7 @@
 4. **Conformidade por desenho:** nunca pontua atendente, roda em lote sobre
    conversa encerrada e não decide nada.
 
-Toda comparação externa é com **LLM genérico**, não com produto. A afirmação
+Sem o E4 (descartado em 14/10/2026), não há comparação numérica com LLM. A afirmação
 sobre concorrentes (Intercom Fin CX Score, Zendesk QA, Observe.AI/Medallia,
 Zenvia/Movidesk, Blip) vem de material de marketing de 14/10/2026 e **ainda
 não foi reverificada**. Antes de entrar em documento ou slide, cada uma ganha
@@ -34,7 +34,7 @@ CPU em `scripts/retreinar_fusor_local.py:147-183`.
   versão do pandas (ordem das linhas) e a diferença de float entre torch e
   ONNX. O cartão do modelo registra 0 de 180 categorias trocadas.
 - `retreinar_fusor_local.py --cache` grava `{xt, yt, xe, ye}` em JSON. As
-  entregas E2 e E4 partem desse cache, **sem retreinar nada** (o script só
+  entregas E2 (e o E4, antes de descartado) partem desse cache, **sem retreinar nada** (o script só
   grava o fusor com `--promover`, que não será usado).
 
 **O que é gravado e o que é derivado.** A tabela `conversas`
@@ -106,7 +106,7 @@ faltam `fusor.joblib`, `bertimbau-*` e `modelos-onnx/`.
 
 ## Bloqueios e decisões que dependem do João
 
-1. **Pesos locais (bloqueia as medições de E1, E2, E4 e E6).** O bundle sai
+1. **Pesos locais (bloqueia as medições de E1, E2 e E6).** O bundle sai
    do Oracle por `FRAUS_MODELOS_URL` + `FRAUS_MODELOS_SHA256`, ou do Drive.
    Baixá-lo é leitura, mas a regra 9 proíbe tocar no Oracle. Preciso que o
    João me entregue o ZIP ou autorize o download.
@@ -119,8 +119,7 @@ faltam `fusor.joblib`, `bertimbau-*` e `modelos-onnx/`.
    (ver E2).
 4. **Nota declarada (E3)** é schema novo, mesmo que entre só no `payload`
    JSON. Precisa de aprovação.
-5. **Benchmark (E4):** provedor e modelos de LLM, chave por variável de
-   ambiente, e os preços com fonte e data em `precos.toml`.
+5. **Benchmark (E4): descartado pelo João em 14/10/2026.**
 6. **Sinalizadores (E5):** quem anota a amostra à mão, e com qual material. O
    repositório não tem conversa real.
 

@@ -14,7 +14,7 @@ como concluídos.
 | spec | plano | assunto |
 |---|---|---|
 | `specs/2026-10-08-regua-pares-ironia-design.md` | `plans/2026-10-08-regua-pares-ironia.md` | régua de pares mínimos de ironia; anotação às cegas em curso (`docs/ironia.md`). A página de anotação do passo 5 do plano foi substituída pela rota `/anotar` e saiu do repositório em 14/10 |
-| `specs/2026-10-14-diferenciais-visao-geral.md` e `specs/2026-10-14-e1…e6-*` | `plans/2026-10-14-diferenciais.md` | diferenciais medidos (explicação exata, calibração/conformal, declarado × inferido, benchmark × LLM, sinalizadores, tema e deterioração); **aguardando aprovação** |
+| `specs/2026-10-14-diferenciais-visao-geral.md` e `specs/2026-10-14-e1…e6-*` | `plans/2026-10-14-diferenciais.md` | diferenciais medidos (explicação exata, calibração/conformal, declarado × inferido, sinalizadores, tema e deterioração; o benchmark × LLM foi descartado em 14/10); **aguardando aprovação** |
 
 ## Concluídos e vigentes
 
