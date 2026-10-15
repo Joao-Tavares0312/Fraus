@@ -19,7 +19,12 @@ export type MotivoRegime =
   | "quadros"
   | "bateria";
 export type Sinais = { temWebGpu: boolean; movimentoReduzido: boolean; falhouInit: boolean };
-export type EstadoRegime = { regime: Regime; motivo: MotivoRegime };
+export type EstadoRegime = {
+  regime: Regime;
+  motivo: MotivoRegime;
+  /** O device continua valido; so a animacao ambiental esta suspensa. */
+  pausa?: "repouso" | "aba-oculta";
+};
 
 export const PARTICULAS: Record<"vivo-alto" | "vivo-baixo", { desktop: number; celular: number }> = {
   "vivo-alto": { desktop: 120_000, celular: 16_000 },
@@ -49,11 +54,12 @@ const DESCRICAO: Record<MotivoRegime, string | null> = {
   bateria: "bateria baixa",
 };
 
-export function rotuloDoRegime(regime: Regime, motivo: MotivoRegime): string {
+export function rotuloDoRegime(regime: Regime, motivo: MotivoRegime, pausa?: EstadoRegime["pausa"]): string {
   const partes =
     regime === "poster" ? ["pôster"] : ["GPU", regime === "vivo-alto" ? "alto" : "baixo"];
   const descricao = DESCRICAO[motivo];
   if (descricao) partes.push(descricao);
+  if (regime !== "poster" && pausa) partes.push(pausa === "repouso" ? "em repouso" : "aba oculta");
   return partes.join(" · ");
 }
 
@@ -69,25 +75,38 @@ const QUADRO_ANOMALO_MS = 250;
  * Media movel de 120 quadros acima do orcamento por mais de 2 s seguidos.
  */
 export class SaudeDeQuadros {
-  private duracoes: number[] = [];
-  private lentoDesde = 0;
+  private duracoes = new Float64Array(JANELA_QUADROS);
+  private indice = 0;
+  private quantidade = 0;
+  private soma = 0;
+  private lentoDesde: number | null = null;
+
+  /** Pausa voluntaria nao e um quadro lento nem continuidade da janela. */
+  reiniciar() {
+    this.indice = 0;
+    this.quantidade = 0;
+    this.soma = 0;
+    this.lentoDesde = null;
+  }
 
   /** Registra um quadro; devolve true no quadro em que a descida deve acontecer. */
   registrar(ms: number, agora: number): boolean {
     if (ms > QUADRO_ANOMALO_MS) {
-      this.duracoes = [];
-      this.lentoDesde = 0;
+      this.reiniciar();
       return false;
     }
-    this.duracoes.push(ms);
-    if (this.duracoes.length > JANELA_QUADROS) this.duracoes.shift();
-    if (this.duracoes.length < JANELA_QUADROS) return false;
-    const media = this.duracoes.reduce((a, b) => a + b, 0) / this.duracoes.length;
+    if (this.quantidade === JANELA_QUADROS) this.soma -= this.duracoes[this.indice];
+    else this.quantidade++;
+    this.duracoes[this.indice] = ms;
+    this.soma += ms;
+    this.indice = (this.indice + 1) % JANELA_QUADROS;
+    if (this.quantidade < JANELA_QUADROS) return false;
+    const media = this.soma / this.quantidade;
     if (media <= ORCAMENTO_MS) {
-      this.lentoDesde = 0;
+      this.lentoDesde = null;
       return false;
     }
-    if (!this.lentoDesde) this.lentoDesde = agora;
+    if (this.lentoDesde === null) this.lentoDesde = agora;
     return agora - this.lentoDesde > 2000;
   }
 }

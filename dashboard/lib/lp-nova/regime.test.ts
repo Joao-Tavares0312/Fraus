@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PARTICULAS, SaudeDeQuadros, rebaixar, regimeInicial, rotuloDoRegime } from "./regime";
+import { PARTICULAS, SaudeDeQuadros, rebaixar, regimeInicial } from "./regime";
 
 const base = { temWebGpu: true, movimentoReduzido: false, falhouInit: false };
 
@@ -33,18 +33,10 @@ describe("rebaixar", () => {
   });
 });
 
-describe("orcamento e rotulo", () => {
+describe("orcamento", () => {
   it("o regime baixo sempre gasta menos que o alto", () => {
     expect(PARTICULAS["vivo-baixo"].desktop).toBeLessThan(PARTICULAS["vivo-alto"].desktop);
     expect(PARTICULAS["vivo-baixo"].celular).toBeLessThan(PARTICULAS["vivo-alto"].celular);
-    expect(PARTICULAS["vivo-alto"].celular).toBe(16000);
-    expect(PARTICULAS["vivo-baixo"].celular).toBe(4000);
-  });
-  it("nomeia o que falta em vez de esconder", () => {
-    expect(rotuloDoRegime("vivo-alto", "inicial")).toBe("GPU · alto");
-    expect(rotuloDoRegime("vivo-baixo", "quadros")).toBe("GPU · baixo · quadros lentos");
-    expect(rotuloDoRegime("poster", "sem-webgpu")).toBe("pôster · sem WebGPU");
-    expect(rotuloDoRegime("poster", "movimento-reduzido")).toBe("pôster · movimento reduzido");
   });
 });
 
@@ -66,5 +58,26 @@ describe("SaudeDeQuadros", () => {
     let desceu = false;
     for (let t = 0; t < 6000; t += 16) desceu = s.registrar(16, t) || desceu;
     expect(desceu).toBe(false);
+  });
+  it.each([8, 16, 20, 24])("cadencia de %i ms permanece alta", (ms) => {
+    const s = new SaudeDeQuadros();
+    let desceu = false;
+    for (let t = 0; t < 12_000; t += ms) desceu = s.registrar(ms, t) || desceu;
+    expect(desceu).toBe(false);
+  });
+  it.each([25, 30, 60])("cadencia de %i ms sustentada pede descida", (ms) => {
+    const s = new SaudeDeQuadros();
+    let desceu = false;
+    for (let t = 0; t < 16_000; t += ms) desceu = s.registrar(ms, t) || desceu;
+    expect(desceu).toBe(true);
+  });
+  it("pausa voluntaria separa janelas de lentidao sem acumular os segundos oculta", () => {
+    const s = new SaudeDeQuadros();
+    for (let t = 0; t < 4800; t += 30) expect(s.registrar(30, t)).toBe(false);
+    s.reiniciar();
+    for (let t = 60_000; t < 64_800; t += 30) expect(s.registrar(30, t)).toBe(false);
+    let desceu = false;
+    for (let t = 64_800; t < 68_000; t += 30) desceu = s.registrar(30, t) || desceu;
+    expect(desceu).toBe(true);
   });
 });

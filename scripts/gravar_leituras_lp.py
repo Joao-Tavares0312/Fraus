@@ -1,10 +1,10 @@
-"""Grava as leituras da LP nova (`/leitura`) com o motor REAL de producao.
+"""Grava as leituras da LP (`/`) com o motor REAL.
 
 A LP mostra o Fraus lendo cinco conversas sinteticas (`dados_lp/*.csv`). Um
 visitante anonimo nao pode chamar a API -- a analise exige credencial desde a
 PR #78 --, entao a leitura e feita UMA vez, aqui, e versionada com a
-procedencia: quando, contra qual API e com qual modelo. A tela escreve essa
-etiqueta; leitura sem lastro seria numero inventado.
+procedencia: quando, contra qual API e com qual hash das importancias do fusor.
+A tela delimita essa impressao parcial; ela nao identifica o pipeline completo.
 
 Usa `POST /analisar`, a rota que nao grava nada no banco.
 
@@ -98,16 +98,16 @@ def _pedir(api: str, token: str, caminho: str, corpo: dict | None = None) -> dic
         return json.loads(resposta.read())
 
 
-def identidade_do_modelo(ficha: dict) -> str:
-    """Impressao digital dos pesos do fusor que a API serviu.
+def impressao_das_importancias(ficha: dict) -> str:
+    """Hash parcial das importancias que a API serviu.
 
-    `GET /modelo` nao tem campo de versao, e inventar um ("v2") seria rotulo
-    sem lastro. Os pesos SAO o modelo que pontuou: o hash deles muda quando
-    o fusor muda, e mais nada muda o hash.
+    `GET /modelo` nao fornece uma identidade de todos os artefatos. Importancias
+    iguais podem vir de modelos ou pipelines diferentes; o hash nao identifica
+    os checkpoints, a escala ou o pre-processamento.
     """
     pesos = ficha.get("importancias")
     if not pesos:
-        raise LeituraRecusada("GET /modelo veio sem importancias; sem pesos nao ha identidade")
+        raise LeituraRecusada("GET /modelo veio sem importancias; sem elas nao ha impressao parcial")
     canonico = json.dumps(pesos, sort_keys=True, separators=(",", ":"))
     return "fusor:" + hashlib.sha256(canonico.encode("utf-8")).hexdigest()[:12]
 
@@ -125,7 +125,7 @@ def main() -> int:
         shas[id_] = hashlib.sha256(bruto).hexdigest()
         respostas[id_] = _pedir(api, token, "/analisar", {"csv": bruto.decode("utf-8"), "nome": f"{id_}.csv"})
         print(f"lida {id_}")
-    modelo = identidade_do_modelo(_pedir(api, token, "/modelo"))
+    modelo = impressao_das_importancias(_pedir(api, token, "/modelo"))
     agora = datetime.now(timezone.utc).isoformat(timespec="seconds")
     conjunto = montar_conjunto(respostas, modelo=modelo, agora=agora, api=api, shas=shas)
     # A pagina mostra quando o motor discorda do roteiro; aqui so avisa, sem

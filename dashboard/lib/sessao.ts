@@ -108,27 +108,39 @@ export async function usuarioDaSessao(): Promise<Usuario | null> {
   return sessao.estado === "logada" ? sessao.usuario : null;
 }
 
-/**
- * Se o login EXISTE nesta instalação (FRAUS_JWT_SEGREDO definida na API).
- *
- * A dashboard só exige login quando há como logar: sem o segredo, mandar o
- * modo aberto para a tela de entrar — que responderia 503 — trancaria a
- * instalação local para fora. Mesma filosofia da API aberta sem mestra.
- *
- * Em caso de dúvida (API fora do ar), a resposta é `false`: a dashboard abre
- * e o AvisoApiFora explica o que falta — melhor que um redirect para um login
- * que também não funcionaria.
- */
-export async function loginDisponivel(): Promise<boolean> {
+export type EstadoAutenticacao =
+  | { estado: "disponivel"; cadastroExigeCodigo: boolean }
+  | { estado: "desativado" }
+  | { estado: "indisponivel" };
+
+/** Configuração pública do login; falta de resposta não é modo aberto. */
+export async function estadoAutenticacao(): Promise<EstadoAutenticacao> {
   try {
     const resposta = await fetch(`${API}/auth/estado`, {
       cache: "no-store",
       signal: AbortSignal.timeout(ESPERA_SESSAO_MS),
     });
-    if (!resposta.ok) return false;
-    const corpo = (await resposta.json()) as { disponivel: boolean };
-    return corpo.disponivel === true;
+    if (!resposta.ok) return { estado: "indisponivel" };
+    const corpo: unknown = await resposta.json();
+    if (typeof corpo !== "object" || corpo === null) return { estado: "indisponivel" };
+    if ("disponivel" in corpo && corpo.disponivel === false) return { estado: "desativado" };
+    if (
+      "disponivel" in corpo && corpo.disponivel === true &&
+      "cadastro_exige_codigo" in corpo && typeof corpo.cadastro_exige_codigo === "boolean"
+    ) {
+      return { estado: "disponivel", cadastroExigeCodigo: corpo.cadastro_exige_codigo };
+    }
+    return { estado: "indisponivel" };
   } catch {
-    return false;
+    return { estado: "indisponivel" };
   }
+}
+
+/**
+ * O shell só exige login quando há como entrar. Na dúvida, permanece aberto
+ * sem dados e o AvisoApiFora explica a falha; não redireciona para outro erro.
+ * As páginas de acesso usam o estado completo para distinguir essa dúvida.
+ */
+export async function loginDisponivel(): Promise<boolean> {
+  return (await estadoAutenticacao()).estado === "disponivel";
 }

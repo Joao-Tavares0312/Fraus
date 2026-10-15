@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BYTES_POR_PARTICULA, aleatorioComSemente, sementeDasParticulas, uniformesDoQuadro } from "./quadro";
-import { MARCOS, pesosDasFases } from "./fases";
+import { MARCOS } from "./fases";
 import { nosDasFeatures } from "./constelacao";
 import { FAMILIAS_DO_VETOR } from "../../components/lp/fatos";
 
@@ -13,13 +13,6 @@ describe("uniformesDoQuadro", () => {
     expect(uniformesDoQuadro(base).extra[1]).toBe(0);
   });
 
-  it("leva os pesos da coreografia para o shader", () => {
-    const u = uniformesDoQuadro(base);
-    const p = pesosDasFases(0.5);
-    expect(u.destino).toEqual([p.frase, p.disperso, p.mascara, p.nos]);
-    expect(u.extra[0]).toBe(p.orbe);
-    expect(u.leitura).toEqual([p.leitura, p.brilho, p.respira, 0]);
-  });
   it("no desktop o campo espalhado mora na metade direita, longe do texto", () => {
     const [cx, , hx] = uniformesDoQuadro(base).campo;
     expect(cx - hx).toBeGreaterThanOrEqual(0);

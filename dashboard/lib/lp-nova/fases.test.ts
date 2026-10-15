@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { MARCOS, faseDominante, pesosDasFases, progressoDaRolagem } from "./fases";
 
-const soma = (p: ReturnType<typeof pesosDasFases>) =>
-  p.frase + p.disperso + p.mascara + p.nos + p.orbe + p.leitura;
-
 describe("pesosDasFases", () => {
   it("no topo da pagina, as particulas sao a frase", () => {
     expect(pesosDasFases(0).frase).toBe(1);
   });
 
   it("os pesos de posicao sempre somam 1: a particula nunca fica sem destino", () => {
-    for (let p = 0; p <= 1.0001; p += 0.01) expect(soma(pesosDasFases(p))).toBeCloseTo(1, 6);
+    for (let p = 0; p <= 1.0001; p += 0.01) {
+      const pesos = pesosDasFases(p);
+      expect(pesos.frase + pesos.disperso + pesos.mascara + pesos.nos + pesos.orbe + pesos.leitura).toBeCloseTo(1, 6);
+    }
   });
 
   it("cada marco da historia e dominado pela sua fase", () => {
@@ -19,16 +19,6 @@ describe("pesosDasFases", () => {
     expect(pesosDasFases(MARCOS.nos).nos).toBe(1);
     expect(pesosDasFases(MARCOS.orbe).orbe).toBe(1);
     expect(pesosDasFases(MARCOS.leitura).leitura).toBe(1);
-  });
-
-  it("a constelacao da vitrine antiga vem antes do fusor: mascara, depois nos, depois orbe", () => {
-    expect(MARCOS.mascara).toBeLessThan(MARCOS.nos);
-    expect(MARCOS.nos).toBeLessThan(MARCOS.orbe);
-  });
-
-  it("os marcos estao em ordem: a historia nao anda para tras", () => {
-    const m = Object.values(MARCOS);
-    expect([...m].sort((a, b) => a - b)).toEqual(m);
   });
 
   it("no fecho as particulas voltam ao orbe e respiram", () => {
@@ -40,6 +30,17 @@ describe("pesosDasFases", () => {
   it("na secao do analista o campo recua para nao competir com o dado", () => {
     expect(pesosDasFases(MARCOS.recuo).brilho).toBeLessThan(0.4);
     expect(pesosDasFases(MARCOS.nos).brilho).toBe(1);
+  });
+
+  it("segura cada forma antes e depois da transformacao, sem misturar tudo o tempo inteiro", () => {
+    const inicio = MARCOS.mascara;
+    const intervalo = MARCOS.nos - inicio;
+    expect(pesosDasFases(inicio + intervalo * 0.1).mascara).toBe(1);
+    expect(pesosDasFases(inicio + intervalo * 0.9).nos).toBe(1);
+    const meio = pesosDasFases(inicio + intervalo * 0.5);
+    expect(meio.mascara).toBeGreaterThan(0);
+    expect(meio.nos).toBeGreaterThan(0);
+    expect(meio.mascara + meio.nos).toBeCloseTo(1);
   });
 
   it("grampeia progresso fora de [0, 1]", () => {

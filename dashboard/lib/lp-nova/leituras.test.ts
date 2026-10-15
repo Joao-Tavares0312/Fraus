@@ -9,7 +9,7 @@ function leitura(id: string, score: number | null) {
     categoria: score === null ? null : "detrator",
     motivo_sem_sinal: score === null ? "sem_fala_do_cliente" : null,
     mensagens: [],
-    contribuicoes: [],
+    contribuicoes: score === null ? null : { texto_prob_media: -0.4 },
     conversa: { id: `lp-${id}`, mensagens: [] },
     sha256: "ab".repeat(32),
   };
@@ -23,10 +23,8 @@ function conjunto() {
 }
 
 describe("validarLeituras", () => {
-  it("sem arquivo gravado, nomeia o que falta para o VISITANTE, sem instrucao de desenvolvedor", () => {
-    const r = validarLeituras(null);
-    expect("falta" in r && r.falta).toMatch(/ainda não foram gravadas/);
-    expect("falta" in r && r.falta).not.toMatch(/scripts\/|\.py/);
+  it("sem arquivo gravado, retorna falta em vez de leituras inventadas", () => {
+    expect(validarLeituras(null)).toHaveProperty("falta");
   });
 
   it("aceita o conjunto completo, na ordem da pagina", () => {

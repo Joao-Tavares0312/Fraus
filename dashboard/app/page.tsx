@@ -7,14 +7,13 @@ import { Hero } from "@/components/lp-nova/secoes/Hero";
 import { Leituras } from "@/components/lp-nova/secoes/Leituras";
 import { Limites } from "@/components/lp-nova/secoes/Limites";
 import { Mascara } from "@/components/lp-nova/secoes/Mascara";
-import { Problema } from "@/components/lp-nova/secoes/Problema";
 import { Topo } from "@/components/lp-nova/secoes/Topo";
 import { carregarLeituras } from "@/lib/lp-nova/carregar";
 
 export const metadata: Metadata = {
   title: "Fraus — leia o que ficou nas entrelinhas",
   description:
-    "O Fraus mede a satisfação em atendimentos de chatbot sem perguntar nada ao cliente. Veja o motor ler cinco conversas.",
+    "O Fraus estima satisfação em atendimentos de chatbot, sem pesquisa e sem LLM em runtime. Conheça o método e seus limites.",
 };
 
 /**
@@ -33,7 +32,6 @@ export default async function PaginaInicial() {
       <Topo />
       <main>
         <Hero leitura={obrigado} />
-        <Problema />
         <Mascara leitura={obrigado} />
         <Leituras conjunto={conjunto} />
         <Analista />

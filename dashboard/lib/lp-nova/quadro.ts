@@ -75,7 +75,23 @@ export type EntradaQuadro = {
   rolagemPx: number;
 };
 
-export function uniformesDoQuadro(e: EntradaQuadro) {
+export type UniformesQuadro = {
+  tempo: number;
+  dt: number;
+  aspecto: number;
+  total: number;
+  destino: number[];
+  extra: number[];
+  leitura: number[];
+  foco: number[];
+  ponto: number[];
+  campo: number[];
+  fosforo: number[];
+  orbe: number[];
+  paleta: number[];
+};
+
+export function uniformesDoQuadro(e: EntradaQuadro): UniformesQuadro {
   const p = pesosDasFases(e.progresso);
   // Desktop: o orbe mora no terco direito, ao lado do texto. Celular: no alto.
   const foco = e.celular ? [0, 0.42] : [e.aspecto * 0.42, 0];
@@ -86,7 +102,7 @@ export function uniformesDoQuadro(e: EntradaQuadro) {
   // O orbe da vitrine antiga: o mesmo foco, mas raio e canto proprios.
   const o = estadoDoOrbe(p, e.cinza);
   const canto = e.celular ? [e.aspecto * 0.72, 0.82] : [e.aspecto * 0.84, 0.72];
-  const raioDoHero = e.celular ? 0.32 : 0.56;
+  const raioDoHero = e.celular ? 0.25 : 0.56;
   return {
     tempo: e.tempo,
     dt: e.dt,
@@ -106,7 +122,7 @@ export function uniformesDoQuadro(e: EntradaQuadro) {
     // Centro do orbe (xy), raio (z) e saturacao (w).
     orbe: [
       foco[0] + (canto[0] - foco[0]) * o.noCanto,
-      foco[1] + (canto[1] - foco[1]) * o.noCanto,
+      foco[1] + (canto[1] - foco[1]) * o.noCanto + (e.celular ? 0.13 * p.frase : 0),
       raioDoHero * o.escala,
       o.saturacao,
     ],

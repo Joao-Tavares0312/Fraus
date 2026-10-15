@@ -10,8 +10,8 @@ import { rotuloDoRegime, type EstadoRegime } from "@/lib/lp-nova/regime";
  *
  * Mede o progresso da rolagem (0 no topo, 1 no fim) e entrega a cena; as
  * secoes sao Server Components passados como `children`, legiveis antes de
- * qualquer JavaScript. O rotulo do regime fica sempre visivel: estado vazio
- * nomeia o que falta, e uma cena parada sem explicacao parece pagina quebrada.
+ * qualquer JavaScript. O diagnostico da cena fica em detalhe no rodape,
+ * sem competir com a leitura do produto.
  */
 const ContextoCena = createContext<{ definirHumor(humor: number, cinza: number): void }>({
   definirHumor() {},
@@ -43,11 +43,11 @@ function montar(
   alvoCanvas: HTMLCanvasElement,
   cena: { current: Cena | null },
   humor: { current: [number, number] },
+  preferencias: { celular: boolean; movimentoReduzido: boolean },
   aoMudarRegime: (estado: EstadoRegime) => void,
 ): () => void {
   const nova = iniciarCena(alvoCanvas, {
-    celular: window.matchMedia("(max-width: 899px)").matches,
-    movimentoReduzido: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    ...preferencias,
     frase: medirFrase(),
     aoMudarRegime,
   });
@@ -63,10 +63,13 @@ function montar(
     ancoras = [...document.querySelectorAll<HTMLElement>("[data-marco]")].flatMap((el) => {
       const marco = el.dataset.marco as keyof typeof MARCOS;
       if (!(marco in MARCOS)) return [];
+      const caixa = el.getBoundingClientRect();
+      // Descendentes de details fechado nao tem caixa: top=0 nao e ancora.
+      if (caixa.width <= 0 && caixa.height <= 0) return [];
       const y =
         marco === "fecho"
           ? document.documentElement.scrollHeight - window.innerHeight
-          : Math.max(0, el.getBoundingClientRect().top + window.scrollY - meio);
+          : Math.max(0, caixa.top + window.scrollY - meio);
       return [{ y: marco === "frase" ? 0 : y, p: MARCOS[marco] }];
     });
   };
@@ -78,25 +81,77 @@ function montar(
     const fase = faseDominante(progresso);
     if (raiz && raiz.dataset.fase !== fase) raiz.dataset.fase = fase;
   };
+  const atualizarLayout = () => {
+    ancorar();
+    medir();
+  };
   // Rotacao e resize mudam a caixa e o aspecto: a frase e refeita, com folga
   // para nao ressemear a cada pixel de um arrasto de janela.
   let espera = 0;
   const redimensionar = () => {
-    ancorar();
-    medir();
+    atualizarLayout();
     window.clearTimeout(espera);
     espera = window.setTimeout(() => nova.refazerFrase(medirFrase()), 200);
   };
-  ancorar();
-  medir();
+  atualizarLayout();
+  const observar = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(atualizarLayout);
+  if (raiz) observar?.observe(raiz);
+  document.addEventListener("toggle", atualizarLayout, { capture: true });
   window.addEventListener("scroll", medir, { passive: true });
   window.addEventListener("resize", redimensionar);
   return () => {
     window.removeEventListener("scroll", medir);
     window.removeEventListener("resize", redimensionar);
+    document.removeEventListener("toggle", atualizarLayout, { capture: true });
+    observar?.disconnect();
     window.clearTimeout(espera);
     nova.dispose();
-    cena.current = null;
+    if (cena.current === nova) cena.current = null;
+  };
+}
+
+/** Ciclo imperativo isolado do React para cobrir media/fontes e desmontagem. */
+export function acompanharCena(
+  alvo: HTMLCanvasElement,
+  cena: { current: Cena | null },
+  humor: { current: [number, number] },
+  aoMudarRegime: (estado: EstadoRegime | null) => void,
+) {
+  let desmontado = false;
+  const celular = window.matchMedia("(max-width: 899px)");
+  const movimento = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let fontesProntas = false;
+  let soltar = () => {};
+  const remontar = () => {
+    // Dispose e sincrono: o device antigo nao pode submeter outro quadro
+    // enquanto o novo aguarda import/init. Ler os dois media evita snapshots
+    // conflitantes quando resize e preferencia mudam no mesmo turno.
+    soltar();
+    soltar = () => {};
+    if (desmontado) return;
+    const preferencias = { celular: celular.matches, movimentoReduzido: movimento.matches };
+    if (!preferencias.movimentoReduzido) aoMudarRegime(null);
+    if (!fontesProntas && !preferencias.movimentoReduzido) return;
+    soltar = montar(alvo, cena, humor, preferencias, aoMudarRegime);
+  };
+  celular.addEventListener("change", remontar);
+  movimento.addEventListener("change", remontar);
+  // Reduce nao precisa esperar a fonte para interromper a GPU ou mostrar o
+  // poster. Cada remontagem mede a rolagem atual e reaplica o ultimo humor.
+  remontar();
+  // A frase so pode ser rasterizada com a fonte carregada: antes disso o
+  // canvas 2D mede a fonte reserva e as particulas nao caem nos glifos.
+  void document.fonts.ready.then(() => {
+    if (desmontado) return;
+    fontesProntas = true;
+    remontar();
+  });
+  return () => {
+    if (desmontado) return;
+    desmontado = true;
+    celular.removeEventListener("change", remontar);
+    movimento.removeEventListener("change", remontar);
+    soltar();
   };
 }
 
@@ -108,19 +163,7 @@ export function CenaLeitura({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!canvas.current) return;
-    const alvo = canvas.current;
-    let desmontado = false;
-    let soltar = () => {};
-    // A frase so pode ser rasterizada com a fonte carregada: antes disso o
-    // canvas 2D mede a fonte reserva e as particulas nao caem nos glifos.
-    void document.fonts.ready.then(() => {
-      if (desmontado) return;
-      soltar = montar(alvo, cena, humor, setEstado);
-    });
-    return () => {
-      desmontado = true;
-      soltar();
-    };
+    return acompanharCena(canvas.current, cena, humor, setEstado);
   }, []);
 
   const regime = estado?.regime;
@@ -139,11 +182,15 @@ export function CenaLeitura({ children }: { children: React.ReactNode }) {
       <div className="ln" data-regime={regime ?? "carregando"}>
         <canvas ref={canvas} aria-hidden className="ln-cena" />
         {children}
-        {estado && (
-          <p className="ln-regime" aria-live="polite">
-            {rotuloDoRegime(estado.regime, estado.motivo)}
-          </p>
-        )}
+        <div className="ln-wrap ln-diagnostico">
+          <details className="ln-detalhe">
+            <summary>Sobre a cena visual</summary>
+            <p className="ln-regime" role="status">
+              {estado ? rotuloDoRegime(estado.regime, estado.motivo, estado.pausa) : "Cena estática até a inicialização do navegador."}
+            </p>
+            <p>A cena é ilustrativa. Sua qualidade não altera a análise dos atendimentos.</p>
+          </details>
+        </div>
       </div>
     </ContextoCena.Provider>
   );

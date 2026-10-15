@@ -49,7 +49,7 @@ const CHAVES: ReadonlyArray<[number, Destino]> = [
 
 function suave(t: number): number {
   const x = Math.min(1, Math.max(0, t));
-  return x * x * (3 - 2 * x);
+  return x * x * x * (x * (x * 6 - 15) + 10);
 }
 
 function rampa(p: number, de: number, ate: number): number {
@@ -64,7 +64,10 @@ export function pesosDasFases(progresso: number): Pesos {
   while (i < CHAVES.length - 2 && p > CHAVES[i + 1][0]) i++;
   const [inicio, de] = CHAVES[i];
   const [fim, para] = CHAVES[i + 1];
-  const t = rampa(p, inicio, fim);
+  // Cada etapa segura a forma, transforma com aceleracao suave e assenta.
+  // A pausa pertence ao percurso do scroll, nao e uma espera que o bloqueia.
+  const intervalo = fim - inicio;
+  const t = rampa(p, inicio + intervalo * 0.18, fim - intervalo * 0.18);
   pesos[de] += 1 - t;
   pesos[para] += t;
 

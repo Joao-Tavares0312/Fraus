@@ -11,13 +11,13 @@ const TITULOS: Record<IdLeitura, { aba: string; tese: string }> = {
   obrigado: { aba: "O obrigado", tese: "Agradeceu e saiu sem solução." },
   ironia: { aba: "A ironia", tese: "Elogiou para reclamar." },
   espera: { aba: "A espera", tese: "Educado do início ao fim, esperando." },
-  promotor: { aba: "O promotor", tese: "Resolveu na hora, e o elogio é sincero." },
+  promotor: { aba: "O elogio", tese: "No roteiro, o problema foi resolvido e o cliente elogiou." },
   "sem-sinal": { aba: "Sem sinal", tese: "O cliente nunca escreveu." },
 };
 
 const ROTULO_SENTIDO = {
-  puxou_para_baixo: "puxou a nota para baixo",
-  puxou_para_cima: "puxou a nota para cima",
+  puxou_para_baixo: "inclinação textual negativa",
+  puxou_para_cima: "inclinação textual positiva",
   sem_inclinacao: "sem inclinação clara",
 } as const;
 
@@ -26,11 +26,11 @@ function porcentagem(v: number) {
 }
 
 /**
- * A CONVERSAO DA PAGINA: o visitante escolhe uma leitura e ve o Fraus ler.
+ * O visitante escolhe uma analise gravada de conversa sintetica.
  *
  * Tudo que aparece aqui veio do servidor na gravacao: nota, categoria e a
- * probabilidade por mensagem. As marcas saem de `marcasDaAtribuicao`, a MESMA
- * funcao da transcricao da dashboard -- uma fonte so para "o que puxou a nota".
+ * probabilidade por mensagem. As marcas usam o saldo do classificador textual,
+ * nao uma decomposicao da nota nem uma atribuicao causal por fala.
  * A cena de fundo muda de humor com a categoria escolhida.
  */
 export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) {
@@ -84,7 +84,7 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
                 <p className="ln-msg__texto">{m.texto}</p>
                 {marca && marca.sentido !== "sem_inclinacao" && (
                   <span className="ln-msg__marca">
-                    {ROTULO_SENTIDO[marca.sentido]} · {porcentagem(marca.probInsatisfeito)} insatisfeito
+                    {ROTULO_SENTIDO[marca.sentido]} · classificador de texto: {porcentagem(marca.probabilidade)} {marca.classe}
                   </span>
                 )}
               </li>
@@ -118,17 +118,19 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
           )}
           {decisivas.length > 0 && (
             <p className="ln-veredito__decisiva">
-              {decisivas.length === 1 ? "Uma fala decidiu." : `${decisivas.length} falas inclinaram a nota.`} A mais forte:{" "}
-              <q>{leitura.conversa.mensagens[decisivas[0].indice]?.texto}</q>
+              Maior inclinação no classificador de texto:{" "}
+              <q>{leitura.conversa.mensagens[decisivas[0].indice]?.texto}</q>. Esse destaque não mede o efeito isolado da fala na nota.
             </p>
           )}
         </aside>
       </div>
 
       <p className="ln-procedencia">
-        Leitura gravada pelo motor de produção em {dataDaGravacao(conjunto.procedencia.gravado_em)} · modelo{" "}
-        {conjunto.procedencia.modelo} · conversas sintéticas, escritas para esta página · nota é estimativa, não NPS
-        declarado.
+        Análise gravada em {dataDaGravacao(conjunto.procedencia.gravado_em)} · API: {conjunto.procedencia.api} · hash parcial
+        das importâncias: {conjunto.procedencia.modelo} (não identifica todos os modelos ou o pipeline).
+        Conversas sintéticas, escritas para esta página; nota estimada, não NPS declarado. As probabilidades por fala
+        são do classificador de texto; contribuições do fusor são termos na diferença entre logits de satisfeito e insatisfeito,
+        não pontos da nota.
       </p>
     </div>
   );
