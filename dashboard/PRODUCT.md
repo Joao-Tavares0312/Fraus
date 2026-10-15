@@ -19,10 +19,12 @@ cena de uso que governa o desenho.
 
 ## Product Purpose
 
-Medir satisfação em atendimentos por chatbot **sem perguntar nada ao cliente**.
-O produto existe porque a nota declarada mente: o cliente escreve "ok, obrigado
-🙂" e sai insatisfeito. Modelos que olham só características genéricas da
-conversa explicam ~10% da variância da satisfação declarada.
+Estimar satisfação em atendimentos por chatbot **sem perguntar nada ao cliente**.
+Um encerramento como "ok, obrigado 🙂" não basta para concluir satisfação ou
+insatisfação; o contexto pode trazer sinais diferentes. No estudo Springer 2025
+citado no projeto, variáveis genéricas explicaram cerca de 10% da variância da
+satisfação declarada, e variáveis de domínio elevaram esse valor a cerca de 27%.
+Esses resultados não medem desempenho do Fraus nem estabelecem um teto universal.
 
 Sucesso é o analista confiar no número o bastante para agir, sabendo com
 precisão o que nele é medido e o que é estimado.
@@ -41,9 +43,11 @@ estilo (caixa alta, pontuação, alongamento, palavrão e censura) e incongruên
 emoji×texto, marcador de contraste, hipérbole e aspas irônicas) — sem LLM
 em runtime.
 
-O que um produto vizinho não copia honestamente: a **atribuição**. Como o score
-de texto é por mensagem, o produto aponta *quais falas* puxaram a nota, em vez
-de devolver um número opaco.
+A **inspeção da leitura** separa dois objetos: probabilidades do classificador
+de texto por mensagem e contribuições das features no fusor. O destaque de uma
+fala mostra inclinação textual, não sua causa ou efeito isolado sobre a nota.
+As contribuições são termos na diferença entre logits de satisfeito e
+insatisfeito, não pontos da nota; a transformação em score é não linear.
 
 ## Operating Context
 
@@ -64,15 +68,20 @@ de devolver um número opaco.
   promotor) e limiares de latência de exibição (padrão 10 s / 60 s / 3 min).
 - Score e categoria são **sempre derivados no servidor**; a interface nunca
   recalcula nota.
-- **Sem LLM em runtime** — requisito do trabalho, não escolha de custo.
+- **Sem LLM em runtime** — a inferência roda em CPU e não envia conversas a APIs
+  de LLM. Isso não é garantia universal sobre hospedagem, armazenamento ou transporte.
+- **Não pontuar atendentes é política firme do produto.** A definição de
+  reconhecimento de emoção do EU AI Act exige dados biométricos; classificação
+  textual não implica enquadramento automático nessa definição.
 - Os artefatos treinados são obrigatórios no motor real. A gravação pela tela
   Analisar recusa motores de demonstração. Métricas ausentes ficam em estado vazio.
 - O sinal de tempo é treinado em conversas sintéticas, porque nenhum corpus
   público de review PT-BR tem timestamps de diálogo.
 - A classe neutra pura pontua 75 (peso 0,75 no fusor), vira nota 8 e entra
   na faixa neutra padrão. O NPS permanece uma estimativa. O intervalo usa
-  AW(3,T), e o cartão respeita a decisão do servidor de ocultar o ponto
-  quando há menos de 30 atendimentos com sinal.
+  AW(3,T) e mede incerteza amostral, não erro do classificador. O cartão oculta
+  o ponto com menos de 30 atendimentos com sinal. Latência e contenção são observadas;
+  não há promessa de intervalo em todo indicador.
 - Série temporal, léxico por classe, tempos e notas são derivados no servidor.
 - Equipes têm proprietário, gestor e membro. Convites possuem validade de uma
   a 168 horas, limite de usos e revogação. O token é guardado somente como hash.
@@ -87,8 +96,9 @@ de devolver um número opaco.
 ## Brand Commitments
 
 - Nome **Fraus**, a divindade romana da fraude — contraparte latina de
-  Ápate/Dolos, citada por Cícero entre a prole de Érebo e da Noite. O nome carrega a tese:
-  o cliente mente, o texto não.
+  Ápate/Dolos, citada por Cícero entre a prole de Érebo e da Noite. O nome remete
+  à diferença possível entre a cortesia do encerramento e os sinais do contexto,
+  não à certeza de que o cliente mente ou de que o texto revela seu estado real.
 - Logo: monograma **FR**, F branco e R dourado sobre preto (`#070707`).
 - Vinculante por decisão do usuário nesta sessão:
   - os **textos de honestidade** ("estimativa", "sem sinal", nota metodológica,
@@ -108,6 +118,10 @@ de devolver um número opaco.
 - A demonstração contém atendimentos sintéticos; uma instalação conectada recebe
   dados enviados pelo operador. Não afirmar desempenho em clientes reais sem
   validação independente. Intervalo amostral não mede erro do classificador.
+- Na LP, só há análises quando o snapshot validado foi gravado pelo motor real.
+  Sem ele, a página oferece método e limites, sem resultados ou escolha fictícia.
+  A procedência registra data, API e hash parcial das importâncias do fusor;
+  esse hash não identifica os checkpoints nem o pipeline completo.
 
 ## Product Principles
 

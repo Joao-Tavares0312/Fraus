@@ -6,15 +6,15 @@ const FALHAS = [
   {
     nome: "Pesquisa declarada",
     texto:
-      "Depende de resposta, e responde quem ficou muito irritado ou muito satisfeito. O cliente do meio, que resolveu com esforço ou desistiu, não aparece.",
+      "Depende de quem responde e pode deixar parte dos atendimentos sem avaliação. A ausência de resposta não diz como o cliente se sentiu.",
   },
   {
     nome: "Taxa de contenção",
-    texto: "Mede volume, não qualidade: sobe igual quando o bot resolve e quando o cliente desiste de tentar.",
+    texto: "Registra se houve transferência, não se o problema foi resolvido. Um atendimento contido também pode terminar em desistência.",
   },
   {
     nome: "Métricas genéricas",
-    texto: "Número de mensagens e intents previstos explicam cerca de 10% da variância da satisfação declarada.",
+    texto: "Nesse estudo, variáveis genéricas explicaram cerca de 10% da variância da satisfação declarada; com variáveis de domínio, cerca de 27%. Não são medidas de desempenho do Fraus nem um teto universal.",
     fonte: {
       href: "https://link.springer.com/article/10.1007/s41233-025-00071-8",
       rotulo: "Quality and User Experience, Springer, 2025",
@@ -24,12 +24,10 @@ const FALHAS = [
 
 export function Problema() {
   return (
-    <section data-marco="disperso" aria-labelledby="titulo-problema" className="ln-sec ln-problema">
-      <div className="ln-wrap">
-        <div className="ln-coluna">
-        <h2 id="titulo-problema" className="titulo-vitrine">
-          A nota declarada mente. E quase ninguém declara.
-        </h2>
+    <div className="ln-pesquisa">
+        <h3 id="titulo-problema">
+          O que a pesquisa ajuda a distinguir
+        </h3>
         <ul className="ln-linhas">
           {FALHAS.map((f) => (
             <li key={f.nome}>
@@ -48,8 +46,6 @@ export function Problema() {
             </li>
           ))}
         </ul>
-        </div>
-      </div>
-    </section>
+    </div>
   );
 }

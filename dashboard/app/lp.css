@@ -18,8 +18,11 @@
   color: var(--foreground);
 }
 .ln :focus-visible {
-  outline: 1px solid var(--primary);
+  outline: 2px solid var(--primary);
   outline-offset: 3px;
+}
+.ln [id] {
+  scroll-margin-top: 7rem;
 }
 
 .ln-cena {
@@ -36,7 +39,8 @@
 }
 .ln main,
 .ln-topo,
-.ln-rodape {
+.ln-rodape,
+.ln-diagnostico {
   position: relative;
   z-index: 1;
 }
@@ -50,13 +54,10 @@
 .ln-coluna {
   max-width: 44rem;
 }
-.ln-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+.ln-coluna,
+.ln-analista .ln-wrap,
+.ln-limites .ln-wrap {
+  background: var(--background);
 }
 
 .ln-rotulo {
@@ -76,7 +77,7 @@
   font-size: 1.0625rem;
   line-height: 1.7;
   max-width: 34rem;
-  color: color-mix(in oklch, var(--foreground) 82%, transparent);
+  color: var(--foreground);
 }
 .ln-dito {
   color: var(--dito-texto);
@@ -85,24 +86,35 @@
   color: var(--medido-texto);
 }
 
-/* --- posteres: sem cena viva (sem WebGPU, GPU recusou, movimento reduzido ou
-   sem JavaScript), cada momento-chave mostra o quadro renderizado do MESMO
-   WGSL por `scripts/renderizar-posteres.ts`. Com a cena viva, nada disso. */
-.ln:not([data-regime^="vivo"]) .ln-hero,
-.ln:not([data-regime^="vivo"]) .ln-fusor__preso,
-.ln:not([data-regime^="vivo"]) .ln-fecho {
+/* Os posteres da cena so entram no fallback. A materia estatica dos limites
+   nao e poster nem substitui o canvas; tambem aparece no regime vivo. */
+.ln[data-regime="poster"] .ln-hero,
+.ln[data-regime="poster"] .ln-fusor__preso,
+.ln[data-regime="poster"] .ln-fecho {
   background-repeat: no-repeat;
-  background-position: right center;
+  background-position: center top;
   background-size: cover;
 }
-.ln:not([data-regime^="vivo"]) .ln-hero {
-  background-image: url("/lp-nova/hero.png");
+.ln[data-regime="poster"] .ln-hero {
+  background-image: url("/lp-nova/hero.webp");
 }
-.ln:not([data-regime^="vivo"]) .ln-fusor__preso {
-  background-image: url("/lp-nova/mascara.png");
+.ln[data-regime="poster"] .ln-fusor__preso {
+  background-image: url("/lp-nova/mascara.webp");
 }
-.ln:not([data-regime^="vivo"]) .ln-fecho {
-  background-image: url("/lp-nova/fecho.png");
+.ln[data-regime="poster"] .ln-fecho {
+  background-image: url("/lp-nova/fecho.webp");
+}
+@media (scripting: none) {
+  .ln .ln-hero,
+  .ln .ln-fusor__preso,
+  .ln .ln-fecho {
+    background-repeat: no-repeat;
+    background-position: center top;
+    background-size: cover;
+  }
+  .ln .ln-hero { background-image: url("/lp-nova/hero.webp"); }
+  .ln .ln-fusor__preso { background-image: url("/lp-nova/mascara.webp"); }
+  .ln .ln-fecho { background-image: url("/lp-nova/fecho.webp"); }
 }
 
 /* --- botoes: a borda conica dourado -> magenta e o unico magenta fora da cena */
@@ -115,19 +127,32 @@
 .ln-botao {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
   height: 3rem;
-  padding: 0 1.6rem;
-  font-family: var(--fonte-mono);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding: 0 1.4rem;
+  border-radius: 11px;
+  font-family: var(--fonte-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  white-space: nowrap;
   color: var(--foreground);
   text-decoration: none;
   transition:
-    border-color 0.2s var(--ease-fluid),
-    color 0.2s var(--ease-fluid),
-    transform 0.2s var(--ease-fluid);
+    background-color 0.15s var(--ease-fluid),
+    border-color 0.15s var(--ease-fluid),
+    color 0.15s var(--ease-fluid),
+    transform 0.1s var(--ease-fluid);
+}
+.ln-botao svg,
+.ln-topo__acoes svg,
+.ln-detalhe summary svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke-width: 1.5;
 }
 @property --ln-giro {
   syntax: "<angle>";
@@ -139,7 +164,7 @@
   background:
     linear-gradient(var(--background), var(--background)) padding-box,
     conic-gradient(from var(--ln-giro), var(--primary), var(--atelie-halo), var(--primary)) border-box;
-  animation: ln-giro 6s linear infinite;
+  animation: ln-giro 6s linear 1;
 }
 .ln-botao--feixe:hover {
   color: var(--primary);
@@ -149,9 +174,18 @@
     --ln-giro: 360deg;
   }
 }
+.ln-botao--ouro {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.ln-botao--ouro:hover {
+  border-color: color-mix(in oklch, var(--primary) 90%, var(--foreground));
+  background: color-mix(in oklch, var(--primary) 90%, var(--foreground));
+}
 .ln-botao--contorno {
   border: 1px solid var(--linha);
-  background: color-mix(in oklch, var(--background) 60%, transparent);
+  background: var(--background);
 }
 .ln-botao--contorno:hover {
   border-color: var(--primary);
@@ -174,38 +208,63 @@
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  height: 3.25rem;
+  height: 4rem;
 }
 .ln-marca {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  font-family: var(--fonte-mono);
-  font-size: 0.8125rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  min-height: 44px;
+  font-family: var(--fonte-sans);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
   color: var(--foreground);
   text-decoration: none;
 }
 .ln-topo__nota {
   margin-left: auto;
-  font-family: var(--fonte-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--fonte-sans);
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
-.ln-topo__entrar {
-  font-family: var(--fonte-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--primary);
-  text-decoration: none;
+.ln-topo__acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
+.ln-topo__metodo,
+.ln-topo__entrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-family: var(--fonte-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--foreground);
+  text-decoration: none;
+  transition: background-color 0.15s var(--ease-fluid), border-color 0.15s var(--ease-fluid), color 0.15s var(--ease-fluid);
+}
+.ln-topo__entrar {
+  border-color: var(--linha);
+  color: var(--primary);
+}
+.ln-topo__metodo:hover,
 .ln-topo__entrar:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.3em;
+  background: var(--card);
+  border-color: var(--linha);
+}
+.ln-topo__metodo:active,
+.ln-topo__entrar:active {
+  color: var(--primary);
+  background: var(--muted);
 }
 
 /* --- hero ---------------------------------------------------------------- */
@@ -217,7 +276,7 @@
 }
 .ln-hero__miolo {
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 .ln-hero__titulo {
   font-size: clamp(2.8rem, min(6.4vw, 11vh), 6rem);
@@ -227,11 +286,21 @@
 .ln-hero__titulo .ln-medido {
   display: block;
 }
+.ln-hero__titulo,
+.ln-hero__prosa,
+.ln-hero .ln-botoes,
+.ln-fala__leitura {
+  width: fit-content;
+  background: var(--background);
+}
+.ln-hero .ln-botoes {
+  margin-top: 0.5rem;
+}
 .ln-fala {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1.25rem 2.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin: 0;
 }
 .ln-fala blockquote {
@@ -254,11 +323,9 @@
 .ln-fala__leitura {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1rem;
-  /* Quebra antes de chegar no orbe, que mora no terco direito. */
-  max-width: 22rem;
-  padding-left: 1.25rem;
-  border-left: 1px solid var(--linha);
+  max-width: 34rem;
 }
 .ln-hero__prosa {
   margin: 0;
@@ -287,12 +354,11 @@
   border-bottom: 1px solid var(--compasso);
 }
 .ln-linhas__nome {
-  font-family: var(--fonte-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--fonte-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
   color: var(--dito-texto);
-  padding-top: 0.3rem;
+  padding-top: 0.2rem;
 }
 .ln-linhas__texto {
   margin: 0;
@@ -301,9 +367,8 @@
   color: color-mix(in oklch, var(--foreground) 82%, transparent);
 }
 .ln-fonte {
-  font-family: var(--fonte-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
+  font-family: var(--fonte-sans);
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   text-underline-offset: 0.3em;
 }
@@ -311,58 +376,87 @@
   color: var(--primary);
 }
 
-/* --- fusor: o texto preso enquanto a cena junta os enxames ---------------- */
+/* --- caso: cena curta, texto no fluxo, aprofundamento sob demanda --------- */
 .ln-fusor {
-  height: 320svh;
   padding-block: 0;
 }
-.ln-marco {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
+.ln-fusor__preso {
+  padding-block: clamp(4rem, 8vw, 7rem);
 }
-.ln-marco--nos {
-  top: 34%;
-}
-.ln-marco--orbe {
-  top: 64%;
-}
-.ln-passos {
-  list-style: none;
-  margin: 2rem 0 0;
-  padding: 0;
+.ln-caso {
   display: grid;
-  gap: 1.5rem;
-  max-width: 34rem;
+  gap: 1.25rem;
+  max-width: 36rem;
 }
-.ln-passo {
-  display: grid;
-  gap: 0.4rem;
-  padding-left: 1rem;
-  border-left: 1px solid var(--compasso);
-  transition:
-    opacity 0.5s var(--ease-fluid),
-    border-color 0.5s var(--ease-fluid);
-}
-.ln-passo .ln-prosa {
+.ln-caso .ln-prosa,
+.ln-caso .ln-rotulo {
   margin: 0;
 }
-/* Com a cena viva, so o passo da fase atual fica aceso. Sem JS, todos. */
-.ln[data-fase] .ln-passo {
-  opacity: 0.32;
+.ln-caso__fala {
+  margin: 0;
+  padding-block: 1rem;
+  border-block: 1px solid var(--compasso);
+  color: var(--dito-texto);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
 }
-.ln[data-fase="mascara"] .ln-passo[data-passo="mascara"],
-.ln[data-fase="nos"] .ln-passo[data-passo="nos"],
-.ln[data-fase="orbe"] .ln-passo[data-passo="orbe"],
-.ln[data-fase="leitura"] .ln-passo[data-passo="orbe"] {
-  opacity: 1;
-  border-left-color: var(--linha);
+.ln-caso__fala p {
+  margin: 0;
 }
-.ln[data-fase="frase"] .ln-passo,
-.ln[data-fase="disperso"] .ln-passo[data-passo="mascara"] {
-  opacity: 1;
+.ln-detalhe {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-top: 2rem;
+  max-width: 48rem;
+  background: var(--background);
+}
+.ln-detalhe summary {
+  min-height: 44px;
+  padding: 1rem 1.25rem;
+  border-radius: 11px;
+  cursor: pointer;
+  font-family: var(--fonte-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--foreground);
+  transition: background-color 0.15s var(--ease-fluid), color 0.15s var(--ease-fluid);
+}
+.ln-detalhe summary::marker {
+  color: var(--primary);
+}
+.ln-detalhe summary:has(svg) {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  list-style: none;
+}
+.ln-detalhe summary:has(svg)::-webkit-details-marker {
+  display: none;
+}
+.ln-detalhe summary svg {
+  margin-left: auto;
+  color: var(--primary);
+}
+.ln-detalhe summary:hover {
+  background: var(--card);
+}
+.ln-detalhe summary:active {
+  color: var(--primary);
+}
+.ln-detalhe[open] summary {
+  margin-bottom: 0.75rem;
+}
+.ln-detalhe__corpo {
+  padding: 0 1.25rem 1.5rem;
+}
+.ln-detalhe__corpo .ln-prosa {
+  max-width: 65ch;
+}
+.ln-detalhe__corpo .ln-prosa:first-child {
+  margin-top: 0;
+}
+.ln-pesquisa {
+  margin-top: 2rem;
 }
 .ln-nota {
   display: flex;
@@ -379,63 +473,77 @@
 .ln-nota__puxou q {
   color: var(--dito-texto);
 }
-.ln-fusor__preso {
-  position: sticky;
-  top: 0;
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  padding-block: 5rem 3rem;
-}
 /* --- leituras: a conversao ------------------------------------------------ */
 .ln-leituras__titulo {
   max-width: 18ch;
 }
+.ln-leituras--ausentes {
+  padding-block: 0 2rem;
+}
 .ln-vazio {
-  max-width: 40rem;
-  padding: 1.5rem;
-  border: 1px dashed var(--linha);
-  font-family: var(--fonte-mono);
-  font-size: 0.8125rem;
-  line-height: 1.7;
+  max-width: 44rem;
+  margin: 0;
+  padding-block: 1.25rem;
+  border-block: 1px solid var(--compasso);
+  font-size: 0.9375rem;
+  line-height: 1.65;
   color: var(--muted-foreground);
-  background: color-mix(in oklch, var(--background) 90%, transparent);
+  background: var(--background);
+}
+.ln-vazio strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.ln-vazio a {
+  text-underline-offset: 0.2em;
 }
 .ln-seletor {
-  background: color-mix(in oklch, var(--background) 91%, transparent);
+  background: var(--background);
   border: 1px solid var(--linha);
-  box-shadow: 0 1px 0 oklch(0 0 0 / 30%);
+  border-radius: 12px;
 }
 .ln-abas {
   display: flex;
+  gap: 0.375rem;
+  padding: 0.5rem;
   overflow-x: auto;
-  border-bottom: 1px solid var(--linha);
+  border-bottom: 1px solid var(--compasso);
   scrollbar-width: thin;
-  scrollbar-color: var(--linha) transparent;
+  scrollbar-color: var(--linha) var(--background);
 }
 .ln-aba {
   flex: 0 0 auto;
-  padding: 1rem 1.4rem;
-  font-family: var(--fonte-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-family: var(--fonte-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
   color: var(--muted-foreground);
   background: none;
-  border: 0;
-  border-right: 1px solid var(--compasso);
-  box-shadow: inset 0 -1px 0 transparent;
   cursor: pointer;
   transition:
-    color 0.2s var(--ease-fluid),
-    box-shadow 0.2s var(--ease-fluid);
+    background-color 0.15s var(--ease-fluid),
+    border-color 0.15s var(--ease-fluid),
+    color 0.15s var(--ease-fluid);
 }
 .ln-aba:hover {
   color: var(--foreground);
+  background: var(--card);
 }
 .ln-aba[aria-selected="true"] {
   color: var(--foreground);
-  box-shadow: inset 0 -2px 0 var(--primary);
+  background: var(--muted);
+  border-color: var(--linha);
+}
+.ln-aba:focus-visible {
+  outline-offset: -3px;
+}
+.ln-aba:active {
+  color: var(--primary);
 }
 .ln-painel {
   display: grid;
@@ -600,6 +708,22 @@
 }
 
 /* --- limites ------------------------------------------------------------- */
+.ln-limites__abertura {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  margin-bottom: 3rem;
+}
+.ln-limites__abertura h2 {
+  max-width: 14ch;
+  margin: 0;
+}
+.ln-limites__materia {
+  aspect-ratio: 8 / 5;
+  border-radius: 12px;
+  background: #090909 url("/estudio-grafite.webp") center / cover no-repeat;
+}
 .ln-limites__lista {
   list-style: none;
   margin: 0;
@@ -618,12 +742,14 @@
 }
 .ln-limites__frase {
   margin: 0;
-  font-weight: 700;
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 /* --- fecho --------------------------------------------------------------- */
 .ln-fecho {
-  min-height: 90svh;
+  min-height: 70svh;
   display: flex;
   align-items: center;
 }
@@ -639,65 +765,90 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 2rem;
-  /* folga embaixo para o rotulo fixo do regime nao encostar no link */
-  padding-block: 1.5rem 2.75rem;
-  font-family: var(--fonte-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding-block: 1.5rem;
+  font-family: var(--fonte-sans);
+  font-size: 0.8125rem;
+  line-height: 1.6;
   color: var(--muted-foreground);
-}
-.ln-rodape__faixa a {
-  margin-left: auto;
-  color: var(--muted-foreground);
-  text-underline-offset: 0.3em;
-}
-.ln-rodape__faixa a:hover {
-  color: var(--primary);
 }
 
-.ln-regime {
-  position: fixed;
-  right: 1rem;
-  bottom: 0.75rem;
-  z-index: 4;
-  margin: 0;
-  font-family: var(--fonte-mono);
-  font-size: 0.625rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.ln-diagnostico {
+  padding-block: 0 1.5rem;
   color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  background: var(--background);
+}
+.ln-diagnostico .ln-detalhe {
+  margin-top: 0;
+}
+.ln-diagnostico summary {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+.ln-regime {
+  margin-block: 0 0.75rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  padding: 0 1.25rem 1.25rem;
 }
 
 /* --- celular: o orbe mora no alto, o texto embaixo dele ------------------- */
 @media (max-width: 899px) {
-  /* No celular o texto passa por baixo do orbe: os blocos ganham a superficie
-     quase opaca do Instrumento (DESIGN.md, ~90% do fundo) para ler. */
-  .ln-problema .ln-coluna,
+  /* A cena ocupa a faixa superior; texto usa o fundo opaco do Instrumento. */
   .ln-fusor .ln-coluna,
   .ln-analista .ln-wrap,
   .ln-limites .ln-wrap {
-    background: color-mix(in oklch, var(--background) 88%, transparent);
-    box-shadow: 0 0 0 1rem color-mix(in oklch, var(--background) 88%, transparent);
+    background: var(--background);
+    box-shadow: 0 0 0 1rem var(--background);
   }
-  .ln-hero,
+  .ln-hero {
+    align-items: flex-start;
+    padding-block: 36svh 3rem;
+  }
+  .ln-hero__miolo {
+    gap: 1rem;
+  }
+  .ln-hero .ln-botao {
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+  }
+  .ln-fala {
+    gap: 0.75rem;
+  }
+  .ln-fala__leitura {
+    gap: 0.5rem 1rem;
+  }
+  .ln-fala__leitura > :first-child {
+    flex-basis: 100%;
+  }
   .ln-fecho {
     align-items: flex-end;
-    padding-top: 46svh;
+    padding-top: 42svh;
+  }
+  .ln[data-regime="poster"] .ln-hero,
+  .ln[data-regime="poster"] .ln-fusor__preso,
+  .ln[data-regime="poster"] .ln-fecho {
+    background-size: 100% auto;
+  }
+  .ln[data-regime="poster"] .ln-hero { background-image: url("/lp-nova/hero-celular.webp"); }
+  .ln[data-regime="poster"] .ln-fusor__preso { background-image: url("/lp-nova/mascara-celular.webp"); }
+  .ln[data-regime="poster"] .ln-fecho { background-image: url("/lp-nova/fecho-celular.webp"); }
+  @media (scripting: none) {
+    .ln .ln-hero,
+    .ln .ln-fusor__preso,
+    .ln .ln-fecho { background-size: 100% auto; }
+    .ln .ln-hero { background-image: url("/lp-nova/hero-celular.webp"); }
+    .ln .ln-fusor__preso { background-image: url("/lp-nova/mascara-celular.webp"); }
+    .ln .ln-fecho { background-image: url("/lp-nova/fecho-celular.webp"); }
   }
   .ln-linhas li {
     grid-template-columns: 1fr;
     gap: 0.4rem;
   }
-  .ln-fusor {
-    height: auto;
-  }
   .ln-fusor__preso {
-    position: relative;
-    padding-top: 46svh;
-  }
-  .ln[data-fase] .ln-passo {
-    opacity: 1;
+    padding-top: 32svh;
   }
   .ln-painel {
     grid-template-columns: 1fr;
@@ -723,25 +874,53 @@
     border-left: 0;
     border-bottom: 1px solid var(--compasso);
   }
+  .ln-limites__abertura {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+  .ln-limites__abertura h2 {
+    max-width: 18ch;
+  }
+  .ln-limites__materia {
+    width: 100%;
+    max-width: 36rem;
+  }
   .ln-limites__lista li {
     grid-template-columns: 1fr;
   }
   .ln-topo__nota {
     display: none;
   }
-  .ln-topo__entrar {
+  .ln-topo__faixa {
+    gap: 0.5rem;
+  }
+  .ln-topo__acoes {
     margin-left: auto;
+    gap: 0.25rem;
+  }
+  .ln-topo__metodo,
+  .ln-topo__entrar {
+    padding-inline: 0.5rem;
+    font-size: 0.8125rem;
+  }
+  .ln-marca {
+    gap: 0.5rem;
+    font-size: 1rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ln-passo {
-    transition: none;
-  }
   .ln-botao--feixe {
     animation: none;
   }
   .ln-fala__texto {
+    transition: none;
+  }
+  .ln-botao,
+  .ln-topo__acoes a,
+  .ln-detalhe summary,
+  .ln-aba {
     transition: none;
   }
 }

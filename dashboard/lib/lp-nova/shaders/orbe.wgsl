@@ -5,7 +5,7 @@ import { Cena, DITO, MEDIDO, HALO, FUNDO } from "./comum.wgsl";
 // O FUNDO DA VITRINE ANTIGA, portado de GLSL (`FS_FUNDO` do antigo lib/vitrine/motor.ts):
 // o fosforo de um osciloscopio -- reticula, dois tracos (ambar do dito, azul do
 // medido), varredura, curvatura de CRT, vinheta, scanline e grao -- e por cima
-// o orbe de tres manchas. Os canais que a rolagem move vem de `lib/lp-nova/orbe.ts`.
+// uma esfera polida de fosforo. Os canais e a coreografia vem de `lib/lp-nova/orbe.ts`.
 
 fn h(p: vec2f) -> f32 { return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453); }
 
@@ -107,31 +107,59 @@ fn tela(a: vec3f, b: vec3f) -> vec3f { return 1.0 - (1.0 - a) * (1.0 - b); }
   let raio = max(cena.orbe.z, 1e-4);
   let q0 = (q - cena.orbe.xy) / raio;
   let d = length(q0);
-  if (d < 1.8) {
-    let sat = cena.orbe.w;
+  let borda = 2.0 / max(raio * r.y, 1.0);
+  let dentro = 1.0 - smoothstep(1.0 - borda, 1.0 + borda, d);
+  let sat = cena.orbe.w;
+  let w = cena.paleta.xyz;
+  // O halo fica fora da silhueta; nao lava a superficie nem a tipografia.
+  let halo = exp(-max(d - 1.0, 0.0) * 12.0) * (1.0 - dentro) * 0.075 * sat * w.z;
+  cor += HALO * halo;
+  if (d < 1.0 + borda) {
+    // Intersecao analitica com a esfera: volume e reflexo sem ray marching.
+    let z = sqrt(max(1.0 - dot(q0, q0), 0.0));
+    let normal = normalize(vec3f(q0, max(z, 0.001)));
+    // O dominio curva com a esfera. Sem sinal, fluxo e manchas param juntos.
+    let tempo = t * 0.08 * sat * cena.paleta.w;
+    let giro = tempo * 0.18;
+    let superficie = vec2f(
+      normal.x * cos(giro) + normal.z * sin(giro),
+      normal.y + normal.z * 0.28
+    );
+    let fluxo = fbm(superficie * 3.2 + vec2f(tempo * 0.3, -tempo * 0.16));
+    let camada = fbm(superficie * 6.0 + vec2f(fluxo * 1.5, tempo * 0.2));
+    let fase = (superficie.y + fluxo * 0.65 + camada * 0.12) * 24.0 + superficie.x * 4.0;
+    let faixa = 0.5 + 0.5 * sin(fase);
+    let filamento = smoothstep(0.72, 0.98, faixa);
+    let qq = superficie + (fluxo - 0.5) * vec2f(0.5, 0.7);
     let s = cena.paleta.w * 0.5;
-    let w = cena.paleta.xyz;
-    let qq = q0 + 0.22 * vec2f(fbm(q0 * 1.8 + t * 0.07), fbm(q0 * 1.8 - t * 0.09 + 3.1)) - 0.11;
-    let tau = 6.28318;
-    let a1 = s * vec2f(cos(t * tau / 14.0), sin(t * tau / 14.0));
-    let a2 = s * vec2f(cos(t * tau / 18.0 + 2.1), sin(t * tau / 18.0 + 2.1));
-    let a3 = s * vec2f(cos(-t * tau / 22.0 + 4.2), sin(-t * tau / 22.0 + 4.2));
-    var o = vec3f(0.02, 0.02, 0.03);
-    o = tela(o, DITO * w.x * exp(-dot(qq - a1, qq - a1) * 2.6));
-    o = tela(o, MEDIDO * w.y * exp(-dot(qq - a2, qq - a2) * 2.4));
-    o = tela(o, HALO * 0.85 * w.z * exp(-dot(qq - a3, qq - a3) * 3.2));
-    o = clamp(o, vec3f(0.0), vec3f(1.0));
-    o *= mix(0.3, 1.0, smoothstep(1.0, 0.35, d));
-    o += 0.08 * smoothstep(0.75, 1.0, d) * smoothstep(1.02, 0.98, d);
+    let a1 = s * vec2f(cos(tempo * 0.8), sin(tempo * 0.8));
+    let a2 = s * vec2f(cos(tempo * 0.62 + 2.1), sin(tempo * 0.62 + 2.1));
+    let a3 = s * vec2f(cos(-tempo * 0.5 + 4.2), sin(-tempo * 0.5 + 4.2));
+    var pigmento = vec3f(0.025, 0.027, 0.035);
+    pigmento = tela(pigmento, DITO * w.x * exp(-dot(qq - a1, qq - a1) * 2.1));
+    pigmento = tela(pigmento, MEDIDO * w.y * exp(-dot(qq - a2, qq - a2) * 2.0));
+    pigmento = tela(pigmento, HALO * w.z * 0.6 * exp(-dot(qq - a3, qq - a3) * 3.0));
+    pigmento *= 0.48 + 0.32 * camada + 0.2 * filamento;
+    let luz = normalize(vec3f(-0.55, 0.7, 0.8));
+    let n = normalize(normal + vec3f(0.016 * cos(fase), 0.024 * sin(fase), 0.0));
+    let difusa = max(dot(n, luz), 0.0);
+    let meia = normalize(luz + vec3f(0.0, 0.0, 1.0));
+    let reflexo = pow(max(dot(n, meia), 0.0), 110.0);
+    let suave = pow(max(dot(normal, meia), 0.0), 12.0);
+    let fresnel = pow(1.0 - z, 3.0);
+    let recorte = fresnel * pow(max(dot(normal.xy, normalize(luz.xy)), 0.0), 3.0);
+    var o = pigmento * (0.3 + 0.7 * z) * (0.55 + 0.45 * difusa);
+    o += pigmento * filamento * 0.24 * z;
+    o += vec3f(0.8, 0.86, 0.94) * (reflexo * 0.62 + suave * 0.1 + recorte * 0.48);
+    o += mix(MEDIDO, DITO, difusa) * fresnel * 0.065 * sat;
     let g = dot(o, vec3f(0.299, 0.587, 0.114));
     o = mix(vec3f(g * 0.55), o, sat);
     // A secao do analista abaixa a luz da cena; o orbe acompanha.
     o *= mix(0.55, 1.0, cena.leitura.y);
-    let dentro = smoothstep(1.0, 0.985, d);
-    let halo = (1.0 - dentro) * exp(-(d - 1.0) * 5.0) * 0.16 * sat * w.z;
-    cor = mix(cor, o, dentro) + vec3f(0.55, 0.16, 0.55) * halo;
+    cor = mix(cor, o, dentro);
   }
 
-  cor += (h(fc + fract(t)) - 0.5) * 0.02;
+  // Grao fixo no vidro: trocar a semente a cada quadro parecia cintilacao.
+  cor += (h(fc) - 0.5) * 0.02;
   return vec4f(cor, 1.0);
 }

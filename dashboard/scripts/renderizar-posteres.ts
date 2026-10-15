@@ -1,37 +1,29 @@
 /**
- * Os POSTERES da LP nova: o que aparece para quem nao tem WebGPU ou pediu
- * movimento reduzido.
- *
- * Saem do MESMO WGSL e dos MESMOS uniforms da cena viva (`lib/lp-nova/quadro.ts`),
- * renderizados no Node pelo vgpu (Dawn). A simulacao corre com semente fixa ate
- * o momento de cada poster, e o script renderiza tudo DUAS vezes e compara os
- * bytes: se a segunda leitura diferir da primeira, o poster nao e reproduzivel
- * e o script falha em vez de gravar.
- *
- *     npx jiti scripts/renderizar-posteres.ts
+ * Poster WebP responsivo da mesma cena WGSL. Node/Dawn renderiza duas vezes;
+ * o Chrome ja usado pelo smoke codifica WebP, sem novo pacote ou binario.
+ * npm run posteres (requer o Chrome do Playwright, como npm run test:lp).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
+import { chromium } from "playwright";
 import { resolveShader } from "@vgpu/wgsl/runtime";
 import { compute, draw, effect, frame, init, storage, target } from "vgpu/node";
 import { MARCOS } from "../lib/lp-nova/fases";
 import { BYTES_POR_PARTICULA, aleatorioComSemente, sementeDasParticulas, uniformesDoQuadro } from "../lib/lp-nova/quadro";
 
-const LARGURA = 1600;
-const ALTURA = 1000;
-const TOTAL = 60_000;
 const SEMENTE = 20261009;
 const PASSOS_POR_MOMENTO = 420;
 const DT = 1 / 60;
-
-// O hero sem WebGPU mostra a frase no DOM; o poster dele e o campo ambar do lado.
+const FORMATOS = [
+  { sufixo: "", largura: 1280, altura: 800, total: 30_000, celular: false },
+  { sufixo: "-celular", largura: 390, altura: 844, total: 8_000, celular: true },
+] as const;
 const MOMENTOS = [
-  { nome: "hero", progresso: MARCOS.disperso },
+  { nome: "hero", progresso: MARCOS.frase },
   { nome: "mascara", progresso: MARCOS.mascara },
   { nome: "fecho", progresso: MARCOS.fecho },
 ] as const;
-
 const PASTA_SHADERS = path.resolve("lib/lp-nova/shaders");
 const DESTINO = path.resolve("public/lp-nova");
 
@@ -39,72 +31,53 @@ async function fonte(nome: string) {
   return (await resolveShader({ entry: path.join(PASTA_SHADERS, nome), validate: "require" })).wgsl;
 }
 
-async function renderizarTudo(): Promise<Map<string, Uint8Array>> {
-  // O Dawn do Node sobe em modo de compatibilidade (zero storage buffer no
-  // vertice); o adaptador suporta, entao o limite e pedido explicitamente.
+async function renderizarTudo(formato: (typeof FORMATOS)[number]): Promise<Record<string, Uint8Array>> {
+  const { largura, altura, total, celular } = formato;
   const gpu = await init({ requiredLimits: { maxStorageBuffersInVertexStage: 1 } });
-  const [simularWgsl, particulasWgsl, orbeWgsl] = await Promise.all([
-    fonte("simular.wgsl"),
-    fonte("particulas.wgsl"),
-    fonte("orbe.wgsl"),
-  ]);
-  const aleatorio = aleatorioComSemente(SEMENTE);
-  const origens = new Float32Array(TOTAL * 2);
-  for (let i = 0; i < origens.length; i++) origens[i] = (aleatorio() - 0.5) * 0.4;
-
-  const particulas = storage(gpu, TOTAL * BYTES_POR_PARTICULA, "read-write");
-  particulas.write(sementeDasParticulas(TOTAL, origens, aleatorio));
-  const simular = compute(gpu, simularWgsl, { label: "simular" });
-  const campo = draw(gpu, {
-    shader: particulasWgsl,
-    vertices: 6,
-    instances: TOTAL,
-    blend: { color: { src: "one", dst: "one" }, alpha: { src: "one", dst: "one" } },
-  });
-  const orbe = effect(gpu, orbeWgsl);
-  const alvo = target(gpu, { size: [LARGURA, ALTURA] });
-
-  const quadros = new Map<string, Uint8Array>();
-  let tempo = 0;
-  let progresso = 0;
-  for (const momento of MOMENTOS) {
-    for (let passo = 0; passo < PASSOS_POR_MOMENTO; passo++) {
-      // Caminha ate o marco em vez de saltar: as particulas chegam como chegariam rolando.
-      progresso += (momento.progresso - progresso) * 0.02;
-      tempo += DT;
-      const u = uniformesDoQuadro({
-        aspecto: LARGURA / ALTURA,
-        alturaPx: ALTURA,
-        total: TOTAL,
-        celular: false,
-        progresso,
-        // O poster e a tela parada: o texto e o fundo nao se movem um contra o outro.
-        rolagemPx: 0,
-        humor: 0,
-        cinza: 0,
-        tempo,
-        dt: DT,
-      });
-      simular.set({ cena: u, particulas }).dispatch(Math.ceil(TOTAL / 64));
-      campo.set({ cena: u, particulas });
-      orbe.set({ cena: u });
-      if (passo === PASSOS_POR_MOMENTO - 1) {
-        frame(gpu, (f) =>
-          f.pass(alvo, (pass) => {
+  try {
+    const [simularWgsl, particulasWgsl, orbeWgsl] = await Promise.all([
+      fonte("simular.wgsl"), fonte("particulas.wgsl"), fonte("orbe.wgsl"),
+    ]);
+    const aleatorio = aleatorioComSemente(SEMENTE);
+    const origens = new Float32Array(total * 2);
+    for (let i = 0; i < origens.length; i++) origens[i] = (aleatorio() - 0.5) * 0.4;
+    const particulas = storage(gpu, total * BYTES_POR_PARTICULA, "read-write");
+    particulas.write(sementeDasParticulas(total, origens, aleatorio));
+    const simular = compute(gpu, simularWgsl, { label: "simular" });
+    const campo = draw(gpu, {
+      shader: particulasWgsl, vertices: 6, instances: total,
+      blend: { color: { src: "one", dst: "one" }, alpha: { src: "one", dst: "one" } },
+    });
+    const orbe = effect(gpu, orbeWgsl);
+    const alvo = target(gpu, { size: [largura, altura] });
+    const quadros: Record<string, Uint8Array> = {};
+    let tempo = 0;
+    let progresso = 0;
+    for (const momento of MOMENTOS) {
+      for (let passo = 0; passo < PASSOS_POR_MOMENTO; passo++) {
+        progresso += (momento.progresso - progresso) * 0.02;
+        tempo += DT;
+        const u = uniformesDoQuadro({
+          aspecto: largura / altura, alturaPx: altura, total, celular, progresso,
+          rolagemPx: 0, humor: 0, cinza: 0, tempo, dt: DT,
+        });
+        simular.set({ cena: u, particulas }).dispatch(Math.ceil(total / 64));
+        campo.set({ cena: u, particulas });
+        orbe.set({ cena: u });
+        if (passo === PASSOS_POR_MOMENTO - 1) {
+          frame(gpu, (f) => f.pass(alvo, (pass) => {
             pass.draw(orbe);
-            pass.draw(campo);
-          }),
-        );
+            // A frase do hero e texto DOM, nao uma nuvem sem glifos no poster.
+            if (momento.nome !== "hero") pass.draw(campo);
+          }));
+        }
       }
+      quadros[momento.nome] = new Uint8Array(await alvo.color.read({ mipLevel: 0, region: "all" }));
     }
-    // Na 0.5.0 quem le e a textura de cor do alvo (`npx vgpu docs` e a doc
-    // desta versao; o site ja mostra `target.read()` de uma versao adiante).
-    type Legivel = { read(o: { mipLevel: number; region: "all" }): Promise<Uint8Array> };
-    const cor = (alvo as unknown as { color: Legivel }).color;
-    quadros.set(momento.nome, new Uint8Array(await cor.read({ mipLevel: 0, region: "all" })));
+    return quadros;
+  } finally {
+    gpu.dispose();
   }
-  gpu.dispose();
-  return quadros;
 }
 
 function maiorDiferenca(a: Uint8Array, b: Uint8Array): number {
@@ -114,19 +87,40 @@ function maiorDiferenca(a: Uint8Array, b: Uint8Array): number {
   return maior;
 }
 
-const primeira = await renderizarTudo();
-const segunda = await renderizarTudo();
-mkdirSync(DESTINO, { recursive: true });
-for (const { nome } of MOMENTOS) {
-  const a = primeira.get(nome)!;
-  const diferenca = maiorDiferenca(a, segunda.get(nome)!);
-  // <= 2 e arredondamento de driver (a mesma regua do pixelDiff do vgpu).
-  if (diferenca > 2) {
-    console.error(`${nome}: duas renderizacoes diferem (maxByte ${diferenca}); poster nao reproduzivel`);
-    process.exit(1);
+const navegador = await chromium.launch({ channel: "chrome", headless: true });
+try {
+  const pagina = await navegador.newPage();
+  mkdirSync(DESTINO, { recursive: true });
+  for (const formato of FORMATOS) {
+    const primeira = await renderizarTudo(formato);
+    const segunda = await renderizarTudo(formato);
+    for (const { nome } of MOMENTOS) {
+      const pixels = primeira[nome];
+      const diferenca = maiorDiferenca(pixels, segunda[nome]);
+      if (diferenca > 2) throw new Error(`${nome}${formato.sufixo}: poster nao reproduzivel (maxByte ${diferenca})`);
+      const png = new PNG({ width: formato.largura, height: formato.altura });
+      png.data.set(pixels);
+      const dados = `data:image/png;base64,${PNG.sync.write(png).toString("base64")}`;
+      const base64 = await pagina.evaluate(async (url) => {
+        const imagem = await createImageBitmap(await (await fetch(url)).blob());
+        const canvas = new OffscreenCanvas(imagem.width, imagem.height);
+        const contexto = canvas.getContext("2d");
+        if (!contexto) throw new Error("Chrome sem canvas 2D para codificar poster");
+        contexto.drawImage(imagem, 0, 0);
+        imagem.close();
+        const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.82 });
+        if (blob.type !== "image/webp") throw new Error("Chrome nao codificou WebP");
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binario = "";
+        for (let i = 0; i < bytes.length; i += 8192) binario += String.fromCharCode(...bytes.subarray(i, i + 8192));
+        return btoa(binario);
+      }, dados);
+      const arquivo = `${nome}${formato.sufixo}.webp`;
+      const webp = Buffer.from(base64, "base64");
+      writeFileSync(path.join(DESTINO, arquivo), webp);
+      console.log(`ok ${arquivo}: ${webp.length} bytes (maxByte ${diferenca})`);
+    }
   }
-  const png = new PNG({ width: LARGURA, height: ALTURA });
-  png.data.set(a);
-  writeFileSync(path.join(DESTINO, `${nome}.png`), PNG.sync.write(png));
-  console.log(`ok ${nome}.png (maxByte entre as duas: ${diferenca})`);
+} finally {
+  await navegador.close();
 }

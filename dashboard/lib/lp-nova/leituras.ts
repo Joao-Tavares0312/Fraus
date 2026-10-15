@@ -24,11 +24,13 @@ export type Leitura = {
   categoria: string | null;
   motivo_sem_sinal: string | null;
   mensagens: MensagemAtribuida[];
-  contribuicoes: unknown[];
+  /** Termos do fusor na diferenca de logits satisfeito - insatisfeito; nao pontos da nota. */
+  contribuicoes: Record<string, number> | null;
   conversa: { id: string; mensagens: MensagemDaConversa[] };
   sha256: string;
 };
 
+/** `modelo` e o hash parcial das importancias servidas, nao a identidade completa dos artefatos. */
 export type Procedencia = { gravado_em: string; api: string; modelo: string };
 export type ConjuntoLeituras = { procedencia: Procedencia; leituras: Leitura[] };
 export type Falta = { falta: string };

@@ -42,9 +42,9 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let espalhado = cena.campo.xy + (hash2(vec2f(p.semente, 3.0)) * 2.0 - 1.0) * cena.campo.zw;
   // A constelacao da vitrine antiga: a mascara e os nos, ao redor do orbe.
   let raio_mascara = cena.ponto.w;
-  let respiro = 1.0 + 0.012 * sin(cena.tempo * 0.9 + p.semente * 6.0);
+  let respiro = 1.0 + 0.006 * sin(cena.tempo * 0.55 + p.semente * 6.0);
   let mascara = foco + p.mascara * raio_mascara * respiro;
-  let no = em_volta(foco + p.no * raio_mascara, 0.022 * escala, p.semente, 0.6, 1.0);
+  let no = em_volta(foco + p.no * raio_mascara, 0.022 * escala, p.semente, 0.22, 1.0);
   let orbe = em_volta(foco, cena.foco.z * (0.55 + 0.25 * cena.leitura.z * sin(cena.tempo * 1.4)), p.semente, 0.12, 2.0);
 
   let peso_orbe = cena.extra.x;
@@ -52,15 +52,19 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let origem = p.origem + vec2f(0.0, cena.extra.y);
   let alvo = origem * w.x + espalhado * (w.y + leitura) + mascara * w.z + no * w.w + orbe * peso_orbe;
 
-  // Agitacao: forte na dispersao; na leitura, o detrator agita e o promotor assenta.
+  // Dispersao e leitura podem fluir; mascara e nos precisam manter a forma.
   let agitado = clamp(-humor, 0.0, 1.0);
   let calma = clamp(humor, 0.0, 1.0);
-  let amp = 0.35 * w.y + leitura * (0.08 + 0.55 * agitado - 0.05 * calma) * (1.0 - cena.foco.w) + 0.03 * (1.0 - w.x);
-  let ruido = curl(p.pos * 1.3 + vec2f(p.semente), cena.tempo * 0.15) * amp;
+  let amp = 0.16 * w.y + leitura * (0.05 + 0.3 * agitado - 0.025 * calma) * (1.0 - cena.foco.w);
+  var ruido = vec2f(0.0);
+  if (amp > 0.001) {
+    ruido = curl(p.pos * 1.3 + vec2f(p.semente), cena.tempo * 0.1) * amp;
+  }
 
-  let mola = 6.0 * (1.0 - 0.6 * w.y);
+  // Mola com amortecimento critico: chega sem ricochetear entre as formas.
+  let mola = 12.0 * (1.0 - 0.4 * w.y);
   let forca = (alvo - p.pos) * mola + ruido;
-  p.vel = p.vel * exp(-4.0 * cena.dt) + forca * cena.dt;
+  p.vel = p.vel * exp(-2.0 * sqrt(mola) * cena.dt) + forca * cena.dt;
   p.pos = p.pos + p.vel * cena.dt;
 
   // Tinta: 0 e o dito (ambar), 1 e o medido (azul). Atravessar o orbe mede.

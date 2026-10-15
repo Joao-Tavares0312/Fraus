@@ -1,26 +1,27 @@
 "use client";
 
 /**
- * Entrar e cadastrar, no mesmo componente porque dividem tudo: o painel de
- * vidro, os campos, os estados e a regra de que o ERRO VEM DO SERVIDOR — a
- * mensagem uniforme de credencial ("e-mail ou senha inválidos") não pode
- * ganhar variações locais, e reescrevê-la aqui seria a segunda fonte de
- * verdade que o projeto proíbe.
+ * Entrar e cadastrar compartilham campos e estados. O erro vem do servidor:
+ * recusas de credencial não ganham variações locais.
  *
- * O cadastro tem o campo opcional de código de convite: é ele que diferencia
- * o cadastro de dev (spec 2026-08-31, §2.3). Sem código, nasce analista.
+ * O código de acesso segue a exigência publicada em /auth/estado. Um convite
+ * de equipe é outro fluxo: dispensa o código e não concede papel de dev.
  */
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronDown, Eye, EyeOff, KeyRound, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { destinoAuth } from "@/lib/destino-auth";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
 
-type Modo = "entrar" | "cadastrar";
+type Propriedades = { convite?: string | null } & (
+  | { modo: "entrar"; cadastroExigeCodigo?: never }
+  | { modo: "cadastrar"; cadastroExigeCodigo: boolean }
+);
 
 async function detalheDe(resposta: Response): Promise<string> {
   try {
@@ -32,10 +33,11 @@ async function detalheDe(resposta: Response): Promise<string> {
   return `o servidor respondeu ${resposta.status}`;
 }
 
-export function FormularioAuth({ modo, convite = null }: { modo: Modo; convite?: string | null }) {
+export function FormularioAuth({ modo, convite = null, cadastroExigeCodigo = false }: Propriedades) {
   const roteador = useRouter();
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [senhaVisivel, setSenhaVisivel] = useState(false);
 
   // A CREDENCIAL E A NAVEGACAO SAO DUAS ESPERAS, e confundi-las era o bug.
   //
@@ -57,6 +59,7 @@ export function FormularioAuth({ modo, convite = null }: { modo: Modo; convite?:
 
   async function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (ocupado) return;
     setErro(null);
     setEnviando(true);
 
@@ -66,7 +69,7 @@ export function FormularioAuth({ modo, convite = null }: { modo: Modo; convite?:
 
     try {
       if (modo === "cadastrar") {
-        const codigo = String(dados.get("codigo_dev") ?? "").trim();
+        const codigo = convite ? "" : String(dados.get("codigo_dev") ?? "").trim();
         const cadastro = await fetch("/api/fraus/auth/registrar", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -110,61 +113,129 @@ export function FormularioAuth({ modo, convite = null }: { modo: Modo; convite?:
   const entrando = modo === "entrar";
 
   return (
-    <form onSubmit={enviar} className="flex flex-col gap-4" noValidate={false}>
+    <form onSubmit={enviar} className="conta-formulario" aria-busy={ocupado}>
+      <nav className="conta-navegacao" aria-label="Acesso à conta">
+        <Link
+          href={convite ? `/entrar?convite=${convite}` : "/entrar"}
+          aria-current={entrando ? "page" : undefined}
+        >
+          Entrar
+        </Link>
+        <Link
+          href={convite ? `/cadastrar?convite=${convite}` : "/cadastrar"}
+          aria-current={!entrando ? "page" : undefined}
+        >
+          Criar conta
+        </Link>
+      </nav>
       {modo === "cadastrar" && (
-        <div className="flex flex-col gap-1.5">
+        <div className="conta-campo">
           <Label htmlFor="nome">Nome</Label>
-          <Input id="nome" name="nome" required autoComplete="name" />
+          <div className="conta-entrada">
+            <UserRound className="conta-icone-campo" aria-hidden="true" />
+            <Input id="nome" name="nome" required autoComplete="name" />
+          </div>
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
+      <div className="conta-campo">
         <Label htmlFor="email">E-mail</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-        />
+        <div className="conta-entrada">
+          <Mail className="conta-icone-campo" aria-hidden="true" />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="conta-campo">
         <Label htmlFor="senha">Senha</Label>
-        <Input
-          id="senha"
-          name="senha"
-          type="password"
-          required
-          minLength={entrando ? undefined : 8}
-          autoComplete={entrando ? "current-password" : "new-password"}
-        />
+        <div className="conta-entrada conta-senha">
+          <LockKeyhole className="conta-icone-campo" aria-hidden="true" />
+          <Input
+            id="senha"
+            name="senha"
+            type={senhaVisivel ? "text" : "password"}
+            required
+            minLength={entrando ? undefined : 8}
+            autoComplete={entrando ? "current-password" : "new-password"}
+            aria-describedby={entrando ? undefined : "senha-ajuda"}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            className="conta-ver-senha"
+            aria-label={senhaVisivel ? "Ocultar senha" : "Mostrar senha"}
+            aria-controls="senha"
+            aria-pressed={senhaVisivel}
+            onClick={() => setSenhaVisivel((visivel) => !visivel)}
+          >
+            {senhaVisivel ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+          </Button>
+        </div>
         {!entrando && (
-          <p className="text-xs text-muted-foreground">Pelo menos 8 caracteres.</p>
+          <p id="senha-ajuda" className="conta-ajuda">Pelo menos 8 caracteres.</p>
         )}
       </div>
 
       {modo === "cadastrar" && !convite && (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="codigo_dev">Código de convite (opcional)</Label>
-          <Input id="codigo_dev" name="codigo_dev" autoComplete="off" />
-          <p className="text-xs text-muted-foreground">
-            Só para desenvolvedores: é o código que dá acesso às telas de
-            administração. Sem ele, a conta nasce de analista.
-          </p>
+        <div className="conta-admissao">
+          {cadastroExigeCodigo && (
+            <p id="codigo-exigencia" className="conta-ajuda">
+              Esta instalação exige um código de acesso para criar conta.
+            </p>
+          )}
+          <details className="conta-opcoes">
+            <summary aria-describedby={cadastroExigeCodigo ? "codigo-exigencia" : undefined}>
+              <KeyRound aria-hidden="true" />
+              <span>Código de acesso</span>
+              {!cadastroExigeCodigo && <span className="conta-opcional">Opcional</span>}
+              <ChevronDown className="conta-chevron" aria-hidden="true" />
+            </summary>
+            <div className="conta-campo">
+              <Label htmlFor="codigo_dev">
+                {cadastroExigeCodigo ? "Código de acesso" : "Código de acesso (opcional)"}
+              </Label>
+              <div className="conta-entrada">
+                <KeyRound className="conta-icone-campo" aria-hidden="true" />
+                <Input
+                  id="codigo_dev"
+                  name="codigo_dev"
+                  required={cadastroExigeCodigo}
+                  autoComplete="off"
+                  aria-describedby="codigo-ajuda"
+                  onInvalid={(evento) => {
+                    // Abre antes de o navegador focar o campo obrigatório.
+                    // Não toma o foco dos outros campos inválidos do formulário.
+                    const opcoes = evento.currentTarget.closest("details");
+                    if (opcoes) opcoes.open = true;
+                  }}
+                />
+              </div>
+              <p id="codigo-ajuda" className="conta-ajuda">
+                {cadastroExigeCodigo
+                  ? "Use o código recebido de quem administra o acesso."
+                  : "Use apenas se recebeu um código administrativo."}
+              </p>
+            </div>
+          </details>
         </div>
       )}
 
       {erro && (
         <p
           role="alert"
-          className="border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="conta-erro"
         >
           {erro}
         </p>
       )}
 
-      <Button type="submit" disabled={ocupado}>
+      <Button type="submit" className="conta-enviar" disabled={ocupado}>
         <IconeDeAcao acao={entrando ? "entrar" : "criar"} />
         {/* Tres rotulos para tres estados, e o do meio e o que faltava: depois
             da credencial aceita a espera continua, e chama-la de "Entrando…"
@@ -182,23 +253,6 @@ export function FormularioAuth({ modo, convite = null }: { modo: Modo; convite?:
               : "Criar conta"}
       </Button>
 
-      <p className="border-t border-compasso pt-4 text-center text-sm text-muted-foreground">
-        {entrando ? (
-          <>
-            Ainda sem conta?{" "}
-            <Link href={convite ? `/cadastrar?convite=${convite}` : "/cadastrar"} className="text-primary underline-offset-4 hover:underline">
-              Criar conta
-            </Link>
-          </>
-        ) : (
-          <>
-            Já tem conta?{" "}
-            <Link href={convite ? `/entrar?convite=${convite}` : "/entrar"} className="text-primary underline-offset-4 hover:underline">
-              Entrar
-            </Link>
-          </>
-        )}
-      </p>
     </form>
   );
 }

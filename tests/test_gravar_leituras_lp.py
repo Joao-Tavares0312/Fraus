@@ -13,8 +13,8 @@ def _analise(score, nota=None, categoria=None, motivo=None):
                 "categoria": categoria,
                 "motivo_sem_sinal": motivo,
                 "mensagens": [{"indice": 0, "prob_insatisfeito": 0.7, "prob_neutro": 0.2, "prob_satisfeito": 0.1}],
-                "contribuicoes": [{"feature": "texto_prob_media", "valor": -0.4}],
-                "importancias": [],
+                "contribuicoes": None if score is None else {"texto_prob_media": -0.4},
+                "importancias": {},
                 "vocabulario": {"destaque": ["cobranca"], "referencia": 812},
             }
         ]
@@ -81,22 +81,22 @@ def test_recusa_leitura_com_cliente_que_voltou_sem_nota():
         _montar(respostas)
 
 
-def test_identidade_do_modelo_e_a_impressao_digital_dos_pesos_servidos():
-    from scripts.gravar_leituras_lp import identidade_do_modelo
+def test_impressao_identifica_somente_as_importancias_servidas():
+    from scripts.gravar_leituras_lp import impressao_das_importancias
 
-    ficha = {"importancias": [{"feature": "texto_prob_media", "peso": 1.2}], "metricas": None}
-    mesma = {"metricas": None, "importancias": [{"peso": 1.2, "feature": "texto_prob_media"}]}
-    outra = {"importancias": [{"feature": "texto_prob_media", "peso": 1.3}]}
-    assert identidade_do_modelo(ficha).startswith("fusor:")
-    assert identidade_do_modelo(ficha) == identidade_do_modelo(mesma)
-    assert identidade_do_modelo(ficha) != identidade_do_modelo(outra)
+    ficha = {"importancias": {"texto_prob_media": 1.2}, "metricas": None}
+    mesma = {"metricas": {"acuracia": 0.5}, "importancias": {"texto_prob_media": 1.2}}
+    outra = {"importancias": {"texto_prob_media": 1.3}}
+    assert impressao_das_importancias(ficha).startswith("fusor:")
+    assert impressao_das_importancias(ficha) == impressao_das_importancias(mesma)
+    assert impressao_das_importancias(ficha) != impressao_das_importancias(outra)
 
 
-def test_identidade_recusa_ficha_sem_pesos():
-    from scripts.gravar_leituras_lp import identidade_do_modelo
+def test_impressao_recusa_ficha_sem_importancias():
+    from scripts.gravar_leituras_lp import impressao_das_importancias
 
     with pytest.raises(LeituraRecusada):
-        identidade_do_modelo({"importancias": []})
+        impressao_das_importancias({"importancias": {}})
 
 
 def test_recusa_resposta_sem_uma_chave_que_a_lp_mostra():

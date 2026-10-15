@@ -1,17 +1,12 @@
+import { IconeDeAcao } from "@/components/IconeDeAcao";
 import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
 import { FAMILIAS_DO_VETOR, FATOS_DO_MODELO } from "@/components/lp/fatos";
 import { falasDecisivas, marcasDaAtribuicao } from "@/lib/derivacoes";
 import type { Leitura } from "@/lib/lp-nova/leituras";
 
 /**
- * A MASCARA QUE VIRA CONSTELACAO -- a secao fixada da vitrine antiga, portada
- * para a cena vgpu. A conversa e a MESMA do hero (a do boleto em dobro), e a
- * nota no fim e a que o motor de producao GRAVOU para ela, com a fala que a
- * puxou; sem gravacao, o estado vazio diz isso. A vitrine antiga tinha aqui um
- * "2,9" digitado a mao sobre uma conversa que nunca passou pelo motor.
- *
- * Quatro passos; o ativo acompanha a cena (`data-fase` na raiz). Sem JS ou
- * com movimento reduzido, os quatro ficam visiveis empilhados.
+ * Caso sintetico antes do metodo. A cena acompanha marcos sempre visiveis;
+ * abrir o aprofundamento muda o layout, nao inventa resultados ou notas.
  */
 export function Mascara({ leitura }: { leitura: Leitura | null }) {
   const divisao = FAMILIAS_DO_VETOR.map((f) => `${f.rotulo.toLowerCase()} ${f.qtd}`).join(" · ");
@@ -19,62 +14,70 @@ export function Mascara({ leitura }: { leitura: Leitura | null }) {
   const fala = decisiva ? leitura?.conversa.mensagens[decisiva.indice]?.texto : undefined;
 
   return (
-    <section aria-labelledby="titulo-mascara" className="ln-sec ln-fusor">
-      <span data-marco="mascara" className="ln-marco" aria-hidden />
-      <span data-marco="nos" className="ln-marco ln-marco--nos" aria-hidden />
-      <span data-marco="orbe" className="ln-marco ln-marco--orbe" aria-hidden />
+    <section id="metodo" data-marco="disperso" aria-labelledby="titulo-mascara" className="ln-sec ln-fusor">
       <div className="ln-wrap ln-fusor__preso">
         <div className="ln-coluna">
-          <h2 id="titulo-mascara" className="titulo-vitrine">
-            Toda conversa tem uma máscara.
+          <h2 id="titulo-mascara" data-marco="mascara" className="titulo-vitrine">
+            O contexto muda a leitura.
           </h2>
-          <ol className="ln-passos">
-            <li className="ln-passo" data-passo="mascara">
-              <span className="ln-rotulo">o dito · conversa sintética</span>
+          <div className="ln-caso">
+            <p className="ln-rotulo">Conversa sintética · cobrança em dobro</p>
+            <p className="ln-prosa">
+              O cliente quer corrigir uma cobrança duplicada. O bot oferece uma segunda via,
+              sem resolver a reclamação. No fim, o cliente escreve:
+            </p>
+            <blockquote className="ln-caso__fala">
+              <p>“ok, obrigado 🙂”</p>
+            </blockquote>
+            <p data-marco="nos" className="ln-prosa">
+              O encerramento é cortês. A reclamação continua no contexto.
+              O Fraus reúne <span className="ln-dito">o que foi dito</span> e{" "}
+              <span className="ln-medido">os sinais da conversa</span> para estimar satisfação,
+              não para confirmar o que a pessoa sentiu.
+            </p>
+            <div data-marco="orbe">
               <p className="ln-prosa">
-                Três tentativas de explicar a cobrança em dobro, três respostas que não ouviram. Para quem lê só a
-                última fala, o atendimento terminou bem: <span className="ln-dito">“ok, obrigado 🙂”</span>.
-              </p>
-            </li>
-            <li className="ln-passo" data-passo="mascara">
-              <span className="ln-rotulo">a máscara</span>
-              <p className="ln-prosa">
-                A cortesia é a máscara. Metade dela é <span className="ln-dito">o que o cliente disse</span>; a outra
-                metade é <span className="ln-medido">o que dá para medir</span>: o “de novo isso…”, o bot que não
-                entendeu, a conversa que acabou sem solução.
-              </p>
-            </li>
-            <li className="ln-passo" data-passo="nos">
-              <span className="ln-rotulo">
-                {FATOS_DO_MODELO.features} features · {FATOS_DO_MODELO.familias} famílias
-              </span>
-              <p className="ln-prosa">
-                O Fraus desmonta a máscara em {FATOS_DO_MODELO.features} features, um ponto para cada: {divisao}.
-              </p>
-            </li>
-            <li className="ln-passo" data-passo="orbe">
-              <span className="ln-rotulo">o fusor</span>
-              <p className="ln-prosa">
-                Uma regressão logística junta as {FATOS_DO_MODELO.features} numa nota e aponta a fala que a puxou, em
-                vez de devolver um número opaco.
+                Uma estimativa é um ponto de partida para inspecionar o atendimento, não um veredito sobre o cliente.
               </p>
               {leitura && leitura.nota !== null ? (
                 <div className="ln-nota">
                   <SegmentoLED valor={String(leitura.nota)} rotulo="nota estimada desta conversa" altura={48} cor="medido" traco="fino" celulas={2} />
                   <span className="ln-rotulo">
-                    nota estimada · <strong>{leitura.categoria}</strong> · lida pelo motor de produção
+                    nota estimada · <strong>{leitura.categoria}</strong> · gravada pelo motor real
                   </span>
                   {fala && (
                     <span className="ln-nota__puxou">
-                      quem puxou a nota: <q>{fala}</q>
+                      maior inclinação no classificador de texto: <q>{fala}</q>
                     </span>
                   )}
                 </div>
-              ) : (
-                <p className="ln-rotulo">a nota desta conversa ainda não foi gravada pelo motor</p>
-              )}
-            </li>
-          </ol>
+              ) : leitura ? (
+                <p className="ln-rotulo">sem sinal · sem nota estimada</p>
+              ) : null}
+            </div>
+          </div>
+          <details className="ln-detalhe ln-metodo">
+            <summary>
+              <span>Como a estimativa é construída</span>
+              <IconeDeAcao acao="expandir" />
+            </summary>
+            <div className="ln-detalhe__corpo">
+              <p className="ln-prosa">
+                O modelo reúne {FATOS_DO_MODELO.features} features em {FATOS_DO_MODELO.familias} famílias:
+                {" "}{divisao}. Os pontos da cena representam essa estrutura, não valores medidos.
+              </p>
+              <p className="ln-prosa">
+                Uma regressão logística combina as features num score; o servidor deriva nota e categoria.
+                Os três classificadores BERTimbau leem satisfação, emoção e ironia por mensagem.
+                A ironia permanece visível na inspeção, mas não entra no vetor do fusor.
+              </p>
+              <p className="ln-prosa">
+                A probabilidade de cada fala vem do classificador de texto, não mede seu efeito isolado na nota.
+                As contribuições do fusor são termos na diferença entre logits de satisfeito e insatisfeito,
+                não pontos da nota. O sinal de tempo foi treinado com conversas sintéticas.
+              </p>
+            </div>
+          </details>
         </div>
       </div>
     </section>
