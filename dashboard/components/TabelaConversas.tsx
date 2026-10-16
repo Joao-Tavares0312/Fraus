@@ -46,7 +46,7 @@ import { EtiquetaCategoria } from "./EtiquetaCategoria";
 import { MarcaContestacao } from "./MarcaContestacao";
 import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
-import { NotaLED } from "./NotaLED";
+import { NotaInferida } from "./NotaInferida"
 import { ausenciaNoFim } from "@/lib/ordenacao";
 import { limitarPagina } from "@/lib/paginacao";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
@@ -275,9 +275,7 @@ export function TabelaConversas({
           },
         }),
         colunas.accessor("nota", {
-          // "estimativa" no cabecalho: a nota e INFERIDA do texto, e o LED nao
-          // tem sublinhado pontilhado para carregar essa proveniencia, entao ela
-          // sobe para o rotulo da coluna, sempre visivel.
+          // A origem inferida permanece explícita no cabeçalho da coluna.
           header: "Nota inferida (estimativa)",
           sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) =>
             ausenciaNoFim(a.original.nota, b.original.nota, descendenteEm("nota")),
@@ -285,15 +283,14 @@ export function TabelaConversas({
             const nota = contexto.getValue();
             const linha = contexto.row.original;
             return nota === null ? (
-              // LED apagado + anel oco + a palavra: a ausencia desenhada tres
-              // vezes de proposito, nenhuma delas um zero.
+              // Ausência nomeada e fora da escala; nunca uma nota zero.
               <div className="flex min-w-0 flex-col items-start gap-1.5">
-                <NotaLED nota={null} altura={22} />
+                <NotaInferida nota={null}  />
                 <CabecaVazada rotulo={ROTULO_SEM_SINAL} />
               </div>
             ) : (
               <div className="flex min-w-0 flex-col items-start gap-1.5">
-                <NotaLED nota={nota} altura={22} />
+                <NotaInferida nota={nota}  />
                 <EtiquetaCategoria
                   categoria={linha.categoria}
                   evidenciaFraca={linha.evidencia_fraca}
@@ -564,10 +561,7 @@ export function TabelaConversas({
       </div>
 
       {erroExportacao ? <p role="alert" className="px-5 py-3 text-sm text-destructive">{erroExportacao}</p> : null}
-      {/* Rolagem horizontal PROPRIA: o `body` nunca rola na horizontal. O corpo
-          fica em superficie SOLIDA -- e dado, e vidro atras de texto longo
-          rolando e o pior lugar para translucidez. So o cabecalho fixo (via
-          TableHeader, Task 6) e a moldura do Painel levam vidro. */}
+      {/* Rolagem horizontal própria: a tabela não alarga o documento. */}
       <div className="w-full overflow-x-auto bg-card">
         <Table className="min-w-[860px] text-sm">
           <TableHeader className="sticky top-0 z-10">

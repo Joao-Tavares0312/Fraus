@@ -43,7 +43,7 @@ export function LaudoDaComparacao({ laudo }: { laudo: LaudoComparacao }) {
       </p>
       {laudo.ressalvas?.length ? (
         <div className="border border-warning px-4 py-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-warning">
+          <p className="text-xs font-medium tracking-normal text-warning">
             Ressalva sobre esta medição
           </p>
           {laudo.ressalvas.map((ressalva) => (

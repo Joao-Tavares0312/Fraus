@@ -1,44 +1,10 @@
-// dashboard/lib/hierarquia.ts
-/**
- * O VOCABULARIO DE HIERARQUIA.
- *
- * Ate 04/09/2026 todo painel usava a mesma superficie, o mesmo raio e o mesmo
- * espacamento: a pagina era uma pilha de blocos equivalentes, sem primario e
- * secundario legiveis de longe. A §2.2 do DESIGN.md ja pedia ritmo vertical
- * ("um sistema denso ganha o direito de um respiro depois") e a interface nao
- * executava.
- *
- * O peso mora AQUI, e nao na tela, pelo mesmo motivo que cor mora em token:
- * regra digitada de novo em outro lugar diverge. E a mesma disciplina da
- * invariante 4 do CLAUDE.md, que existe porque isso ja aconteceu neste
- * projeto -- duplicar a regra de faixa de NPS no TypeScript causou divergencia
- * de arredondamento nas fronteiras 6/7 e 8/9.
- *
- * NAO decide cor. Nivel e escala, superficie e espaco; cor continua sendo
- * dito/medido e categoria, que sao encoding e nao hierarquia.
- */
+/** Um painel dominante por tela; os apoios se agrupam por espaço e divisória. */
 
 export type Nivel = "dominante" | "apoio";
 
-/**
- * As tres espessuras de vidro ja existem desde 21/08/2026 (DESIGN.md §7) e
- * estavam sendo consumidas quase indistintamente. O denso NAO entra aqui: ele
- * existe para o conteudo atras SUMIR num menu suspenso, e usar isso como
- * hierarquia de pagina gastaria a espessura mais cara de CSS em decoracao.
- */
-/**
- * REGISTRO HONESTO: hoje a diferenca de SUPERFICIE entre os dois niveis e so
- * o raio do blur (`--vidro-blur` vs `--vidro-blur-fino`, em globals.css).
- * `--vidro-fino-fundo` e `--vidro-fundo` valem o MESMO color-mix nos dois
- * temas, e os pisos calculados por `scripts/pisos.mjs` sao iguais para as
- * duas classes. Na pratica a hierarquia inteira se reduz ao padding
- * (`p-5 -> p-6`) e ao tipo (`text-sm -> text-base`) abaixo. Isto NAO e bug --
- * o design nao muda -- mas quem le "vidro" e "vidro-fino" como vocabulario
- * de opacidade diferente estaria acreditando em algo que o CSS nao entrega.
- */
 const CLASSES: Record<Nivel, string> = {
-  dominante: "vidro p-4 sm:p-6",
-  apoio: "vidro-fino p-4 sm:p-5",
+  dominante: "superficie p-4 sm:p-6",
+  apoio: "painel-apoio p-4 sm:p-5",
 };
 
 export function classesDoNivel(nivel: Nivel): string {

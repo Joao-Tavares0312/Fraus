@@ -1,7 +1,7 @@
 import type { CabecaDeModelo, MetricasTreino as Metricas } from "@/lib/api";
 import { formatarNumero } from "@/lib/formato";
 import { EstadoVazio } from "@/components/EstadoVazio";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 
 /**
  * Campos numericos que a tela sabe nomear.
@@ -195,19 +195,15 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
                     {NUMERICAS[chave].rotulo}
                   </dt>
                   <dd className="flex items-end gap-2 leading-none text-foreground">
-                    <SegmentoLED
-                      valor={
-                        chave === "exemplos_treino"
-                          ? formatarNumero(valor, 0)
-                          : formatarNumero(valor <= 1 ? valor * 100 : valor)
-                      }
-                      altura={30}
-                      rotulo={
-                        chave === "exemplos_treino"
-                          ? NUMERICAS[chave].rotulo
-                          : `${NUMERICAS[chave].rotulo}, em porcento`
-                      }
-                    />
+                    <ValorNumerico valor={
+                      chave === "exemplos_treino"
+                        ? formatarNumero(valor, 0)
+                        : formatarNumero(valor <= 1 ? valor * 100 : valor)
+                    } rotulo={
+                      chave === "exemplos_treino"
+                        ? NUMERICAS[chave].rotulo
+                        : `${NUMERICAS[chave].rotulo}, em porcento`
+                    } />
                     {chave === "exemplos_treino" ? null : (
                       <span className="num text-sm text-muted-foreground">%</span>
                     )}

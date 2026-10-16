@@ -6,7 +6,7 @@ import { consultarOperacao } from "@/lib/operacao";
 import { anunciarAtualizacao } from "@/lib/atualizacao";
 import type { IntervaloNps, ResumoConversa } from "@/lib/api";
 import { formatarNumero, formatarDataHora } from "@/lib/formato";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -53,7 +53,7 @@ export function Numero({ nome, valor, aoMudar, min = 0, max, passo = 1 }: { nome
   return <Campo nome={nome}><Input type="number" required value={valor} min={min} max={max} step={passo} onChange={(e) => aoMudar(Number(e.target.value))} /></Campo>;
 }
 export function Medida({ nome, valor, casas = 0, unidade = "", estimativa = false }: { nome: string; valor: number | null; casas?: number; unidade?: string; estimativa?: boolean }) {
-  return <div className="flex min-w-0 flex-col gap-2"><span className="rotulo-instrumento">{nome}</span><div className="flex flex-wrap items-end gap-2"><SegmentoLED valor={valor === null ? null : formatarNumero(valor, casas)} altura={28} celulas={3} rotulo={nome} cor={estimativa ? "medido" : "tinta"} /><span className="text-xs text-muted-foreground">{unidade} {estimativa ? "estimativa" : ""}</span></div></div>;
+  return <div className="flex min-w-0 flex-col gap-2"><span className="rotulo-instrumento">{nome}</span><div className="flex flex-wrap items-end gap-2"><ValorNumerico valor={valor === null ? null : formatarNumero(valor, casas)} rotulo={nome} cor={estimativa ? "medido" : "tinta"} /><span className="text-xs text-muted-foreground">{unidade} {estimativa ? "estimativa" : ""}</span></div></div>;
 }
 export function FaixaNps({ titulo, intervalo }: { titulo: string; intervalo: IntervaloNps | null }) {
   return <div className="flex flex-col gap-2"><Medida nome={titulo} valor={intervalo?.nps ?? null} casas={1} estimativa /><Medida nome="Conversas com sinal" valor={intervalo?.n ?? 0} /><p className="text-xs text-muted-foreground">{intervalo ? `IC 95%: ${formatarNumero(intervalo.ic_inferior, 1)} a ${formatarNumero(intervalo.ic_superior, 1)}. ${intervalo.nps === null ? "NPS oculto: menos de 30 conversas com sinal." : ""}` : "Sem conversas com sinal."}</p></div>;

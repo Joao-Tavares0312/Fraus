@@ -1,60 +1,41 @@
-/**
- * A NUMERACAO DAS TELAS.
- *
- * O Instrumento numera a navegacao (`01_VISAO GERAL`) e repete a numeracao na
- * faixa de telemetria do topo. As duas pontas leem DAQUI: numero digitado em
- * dois lugares e numero que diverge na primeira tela nova -- a mesma disciplina
- * que manda cor para token e faixa de NPS para um lugar so.
- *
- * A ORDEM E A DA TELA, nao a do papel: um `usuario` so ve as duas primeiras, e
- * elas continuam sendo 01 e 02. Numero que muda conforme quem olha faria a
- * mesma tela ter dois nomes.
- *
- * As tres de olhar (visao geral, atendimentos, analisar, modelo, grafo) vem
- * antes das duas de mexer (configuracoes, integracoes), como o menu ja separa.
- */
+import { Activity, ChartNoAxesCombined, FlaskConical, MessagesSquare, Network, Plug, Settings2, Workflow } from "lucide-react";
+
+/** Destinos, agrupamento e visibilidade. A API continua a fronteira de permissão. */
+export const GRUPOS_DE_NAVEGACAO = ["Acompanhar", "Investigar", "Configurar"] as const;
 
 export const TELAS = [
-  { href: "/dashboard", rotulo: "Visão geral" },
-  { href: "/dashboard/atendimentos", rotulo: "Atendimentos" },
-  { href: "/dashboard/analisar", rotulo: "Analisar" },
-  { href: "/dashboard/modelo", rotulo: "Modelo" },
-  { href: "/dashboard/grafo", rotulo: "Grafo" },
-  { href: "/dashboard/configuracoes", rotulo: "Configurações" },
-  { href: "/dashboard/integracoes", rotulo: "Integrações" },
-  { href: "/dashboard/operacao", rotulo: "Operação" },
+  { href: "/dashboard", rotulo: "Visão geral", grupo: "Acompanhar", somenteDev: false, icone: ChartNoAxesCombined },
+  { href: "/dashboard/atendimentos", rotulo: "Atendimentos", grupo: "Acompanhar", somenteDev: false, icone: MessagesSquare },
+  { href: "/dashboard/analisar", rotulo: "Analisar", grupo: "Investigar", somenteDev: false, icone: FlaskConical },
+  { href: "/dashboard/grafo", rotulo: "Grafo", grupo: "Investigar", somenteDev: false, icone: Network },
+  { href: "/dashboard/operacao", rotulo: "Operação", grupo: "Investigar", somenteDev: false, icone: Workflow },
+  { href: "/dashboard/integracoes", rotulo: "Integrações", grupo: "Configurar", somenteDev: true, icone: Plug },
+  { href: "/dashboard/modelo", rotulo: "Modelo", grupo: "Configurar", somenteDev: true, icone: Activity },
+  { href: "/dashboard/configuracoes", rotulo: "Configurações", grupo: "Configurar", somenteDev: true, icone: Settings2 },
 ] as const;
 
 export type Tela = (typeof TELAS)[number];
 
-/** `01`, `02`... -- dois digitos, para o cursor do menu nao dancar de 9 para 10. */
-export function numeroDaRota(href: string): string | null {
-  const indice = TELAS.findIndex((t) => t.href === href);
-  return indice === -1 ? null : String(indice + 1).padStart(2, "0");
+export function gruposDoPapel(papel: "dev" | "usuario") {
+  return GRUPOS_DE_NAVEGACAO.map((rotulo) => ({
+    rotulo,
+    telas: TELAS.filter((tela) => tela.grupo === rotulo && (!tela.somenteDev || papel === "dev")),
+  })).filter((grupo) => grupo.telas.length > 0);
 }
 
-/**
- * A tela a que um caminho pertence, por PREFIXO MAIS LONGO.
- *
- * `/dashboard/atendimentos/abc-123` e a tela de Atendimentos, e `/dashboard`
- * sozinho so casa consigo mesmo -- senao TODA rota casaria com a Visao geral.
- * Caminho fora da ferramenta devolve `null`, e quem chama decide o que mostrar.
- */
-export function telaDoCaminho(caminho: string): Tela | null {
-  let melhor: Tela | null = null;
-  for (const tela of TELAS) {
-    const casa =
-      tela.href === "/dashboard"
-        ? caminho === "/dashboard"
-        : caminho === tela.href || caminho.startsWith(`${tela.href}/`);
-    if (casa && (melhor === null || tela.href.length > melhor.href.length)) {
-      melhor = tela;
-    }
+/** A visão geral é exata; as demais telas também representam seus descendentes. */
+export function telaEstaAtiva(caminho: string, href: Tela["href"]): boolean {
+  return caminho === href || (href !== "/dashboard" && caminho.startsWith(`${href}/`));
+}
+
+/** Filtros locais da tela anterior nunca vazam para a próxima tarefa. */
+export function consultaDoPeriodo(parametros: Pick<URLSearchParams, "get">): string {
+  const consulta = new URLSearchParams();
+  for (const chave of ["de", "ate"]) {
+    const valor = parametros.get(chave);
+    if (valor) consulta.set(chave, valor);
   }
-  return melhor;
+  const serializada = consulta.toString();
+  return serializada ? `?${serializada}` : "";
 }
 
-/** `01_VISÃO GERAL` -- o rotulo numerado, em caixa alta. */
-export function rotuloNumerado(tela: Tela): string {
-  return `${numeroDaRota(tela.href)}_${tela.rotulo.toLocaleUpperCase("pt-BR")}`;
-}

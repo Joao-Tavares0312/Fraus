@@ -1,4 +1,40 @@
-# Proveniência dos rasters
+# Proveniência dos ativos visuais
+
+## Direção FR — 16/10/2026
+
+| Ativo | Origem e uso |
+|---|---|
+| `identidade/fundo-pincel.svg` | Composição vetorial autoral de traços diagonais. Uma camada cobre toda a LP; sem scripts, animação, filtros ou recursos externos. |
+| `identidade/chakra-petch-{400,500,600}.woff2` | Chakra Petch, Google Fonts, convertida para WOFF2 com FontTools, preservando os glifos recebidos, incluindo português. SIL OFL em `identidade/OFL-Chakra-Petch.txt`. Servida localmente por `next/font/local`. |
+| `identidade/fr-lp-{0,1,2,3}.webp` | Capturas transparentes da própria escultura WebGL, regeneradas em 16/10: Chromium, redução para 1280×1024 e WebP qualidade 82 via FFmpeg. Desktop sem JS, com reduce, sem contexto elegível ou em backend de software; também antes do primeiro draw interativo. |
+| `identidade/fr-lp-{0,1,2,3}-compacto.webp` | As mesmas poses em 800×640; selecionadas por `picture` abaixo de 900px, sem baixar a variante desktop. |
+| `lib/lp-nova/escultura.ts` | Contornos do F e R derivados de `fraus-logo.svg`, com a fenda diagonal subtraída, ilhas separadas e arestas extrudadas. Arte de marca, não representação de features ou famílias. |
+| `lib/lp-nova/renderizador-fr.ts` | Renderizador WebGL nativo dos mesmos contornos, poses e materiais. Um buffer estático; não contém modelo de IA nem executa inferência. |
+
+Fontes originais: [Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch)
+e [licença/família no repositório Google Fonts](https://github.com/google/fonts/tree/main/ofl/chakrapetch).
+Os arquivos foram obtidos das variantes 400, 500 e 600 da família; o produto
+não consulta esses endereços ao abrir a página.
+
+Para regenerar os WebP, com a dashboard em execução:
+
+```bash
+npm run arte:lp
+# LP_URL seleciona outra prévia local. Argumentos 0 1 2 3 selecionam poses.
+# Só na captura offline sem aceleração; não é configuração do produto:
+LP_GL_SOFTWARE=1 npm run arte:lp
+```
+
+O exportador usa os componentes, poses e materiais do produto; não mantém uma
+segunda geometria. A caixa de captura tem margem para a pose aberta, sem cortar
+a ponta do R. Reiniciar uma prévia de produção após criar arquivos públicos.
+A captura em SwiftShader requer autorização explícita no exportador. O driver
+continua sendo software; os pixels vêm do mesmo GL real, sem forjar um perfil
+de hardware ou medir produção nessa condição.
+
+Os ícones de interface vêm de `lucide-react`, já dependência do projeto.
+
+## Ícones, banner e cartão de compartilhamento — Instrumento, 30/09/2026
 
 Todo raster novo do redesign Instrumento (30/09/2026) sai de **um script**,
 `docs/assets/fonte/gerar-assets-instrumento.mjs`. Nenhum foi editado à mão, e
@@ -31,8 +67,8 @@ recusa RGB em favicon e ícone (`The PNG is not in RGBA format!`, ver
 39 features, 0 LLM, NPS estimado). Nenhuma métrica de desempenho, nenhum cliente,
 nenhuma captura de dado real.
 
-**Fontes.** Martian Mono e Bricolage Grotesque, carregadas do Google Fonts **só
-na hora de gerar** a imagem. O produto em si serve as duas por `next/font`.
+**Fontes destes rasters.** Martian Mono e Bricolage Grotesque, carregadas do Google
+Fonts só ao gerar a imagem. A interface atual usa Chakra Petch local, não essas famílias.
 
 ## Removidos
 

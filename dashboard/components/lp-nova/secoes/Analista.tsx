@@ -1,52 +1,21 @@
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import Link from "next/link";
+import { ArrowRight, ChartNoAxesCombined, ListFilter, MessagesSquare } from "lucide-react";
+import { ArteCompacta } from "../ArteCompacta";
 
-/**
- * PARA QUEM OPERA: limites de leitura, ligados as pecas reais da ferramenta.
- * O LED apagado e o "sem sinal" de verdade, nao ilustracao.
- */
 export function Analista() {
   return (
-    <section data-marco="recuo" aria-labelledby="titulo-analista" className="ln-sec ln-analista">
-      <div className="ln-wrap">
-        <h2 id="titulo-analista" className="titulo-vitrine">
-          Do panorama ao atendimento que merece atenção.
-        </h2>
-        <ul className="ln-garantias">
-          <li>
-            <span className="ln-garantias__peca" aria-hidden>
-              <span className="ln-regua">
-                <span className="ln-regua__dito">dito</span>
-                <span className="ln-regua__medido">medido</span>
-              </span>
-            </span>
-            <h3>Encontre o que precisa ser revisto.</h3>
-            <p>
-              Filtre atendimentos por período e categoria e acompanhe o NPS estimado junto à latência observada.
-              Desça do panorama para a conversa: contenção não é prova de resolução.
-            </p>
-          </li>
-          <li>
-            <span className="ln-garantias__peca">
-              <SegmentoLED valor={null} rotulo="nota" altura={40} cor="medido" traco="fino" celulas={2} />
-            </span>
-            <h3>Separe ausência de insatisfação.</h3>
-            <p>
-              Conversa sem fala do cliente fica sem sinal: não tem nota, não entra em média e não vira zero.
-              Você vê o que falta antes de comparar resultados.
-            </p>
-          </li>
-          <li>
-            <span className="ln-garantias__peca" aria-hidden>
-              <span className="ln-marcada">não quero segunda via</span>
-            </span>
-            <h3>Confira a leitura na transcrição.</h3>
-            <p>
-              Consulte as probabilidades do classificador de texto por mensagem e as contribuições dos sinais no fusor.
-              A inclinação de uma fala não explica sozinha a nota da conversa.
-            </p>
-          </li>
-        </ul>
+    <section className="cena" data-cena="3" id="na-pratica" aria-labelledby="titulo-percurso">
+      <div className="texto-cena">
+        <h2 id="titulo-percurso">Do panorama ao atendimento.</h2>
+        <p>Compare satisfação estimada e tempo de resposta. Depois, encontre os atendimentos e volte às mensagens que sustentam a leitura.</p>
+        <ol className="fluxo-lp" aria-label="Percurso de investigação na ferramenta">
+          <li><span className="fluxo-icone"><ChartNoAxesCombined className="icone-lp" aria-hidden="true" /></span><div><h3>Compare o panorama</h3><p>NPS inferido e latência, juntos.</p></div></li>
+          <li><span className="fluxo-icone"><ListFilter className="icone-lp" aria-hidden="true" /></span><div><h3>Recorte os atendimentos</h3><p>Use o período para localizar os casos.</p></div></li>
+          <li><span className="fluxo-icone"><MessagesSquare className="icone-lp" aria-hidden="true" /></span><div><h3>Volte à conversa</h3><p>Confira a transcrição e os sinais.</p></div></li>
+        </ol>
+        <Link className="acao-lp secundaria" href="/dashboard" prefetch={false}>Abrir a dashboard<ArrowRight className="icone-lp" aria-hidden="true" /></Link>
       </div>
+      <ArteCompacta etapa={3} />
     </section>
   );
 }

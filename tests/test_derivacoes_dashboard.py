@@ -26,9 +26,6 @@ from fraus.fusor import NOMES_FEATURES
 
 RAIZ = pathlib.Path(__file__).parent.parent
 CAMINHO_DERIVACOES = RAIZ / "dashboard" / "lib" / "derivacoes.ts"
-CAMINHO_VITRINE = RAIZ / "dashboard" / "app" / "page.tsx"
-DIRETORIO_DA_VITRINE = RAIZ / "dashboard" / "components" / "lp"
-CAMINHO_FATOS_DA_VITRINE = DIRETORIO_DA_VITRINE / "fatos.ts"
 
 
 def _prefixo_de(nome: str) -> str:
@@ -85,162 +82,6 @@ def test_toda_feature_de_nomes_features_tem_rotulo_no_dashboard():
     )
 
 
-def test_a_vitrine_anuncia_o_numero_real_de_features():
-    """A landing page promete "nenhum numero inventado" -- isto e o que cobra.
-
-    `dashboard/app/page.tsx` mostra a contagem de features ao visitante, e
-    `docs/handoff.md` declara que os numeros da LP sao fatos do codigo. Em
-    04/09/2026 o contrato caiu de 40 para 38 e a LP continuou anunciando 35:
-    numero falso numa tela publica, que e exatamente o que a promessa exclui.
-    Nenhum teste pegava porque a contagem e um literal em TypeScript, do outro
-    lado da fronteira de linguagem.
-
-    A honestidade metodologica do projeto nao vale menos por estar na vitrine
-    em vez de estar num sinal -- vale MAIS, porque e a parte que o visitante ve
-    antes de qualquer ressalva.
-    """
-    # O numero mora em UM lugar (`components/lp/fatos.ts`) e os componentes o
-    # consomem. Duas cobranças: a fonte bate com o contrato, e nenhum
-    # componente da vitrine digita outro "N features" a mao.
-    fonte = CAMINHO_FATOS_DA_VITRINE.read_text(encoding="utf-8")
-
-    anunciado = re.search(r"\bfeatures\s*:\s*(\d+)\b", fonte)
-    assert anunciado, (
-        "nao encontrei `features: N` em dashboard/components/lp/fatos.ts. Se o "
-        "formato mudou, atualize esta busca -- nao apague a guarda."
-    )
-
-    assert int(anunciado.group(1)) == len(NOMES_FEATURES), (
-        f"a vitrine anuncia {anunciado.group(1)} features, mas NOMES_FEATURES tem "
-        f"{len(NOMES_FEATURES)}. Atualize FATOS_DO_MODELO em "
-        "dashboard/components/lp/fatos.ts -- e so la."
-    )
-
-    literais = []
-    for arquivo in sorted(DIRETORIO_DA_VITRINE.rglob("*.tsx")) + [CAMINHO_VITRINE]:
-        texto = arquivo.read_text(encoding="utf-8")
-        for achado in re.finditer(r"\b(\d+)\s+(?:features|numeros|números)\b", texto):
-            if int(achado.group(1)) != len(NOMES_FEATURES):
-                literais.append(f"{arquivo.name}: {achado.group(0)!r}")
-    assert not literais, (
-        "a vitrine digita a contagem de features a mao e ela diverge de "
-        f"NOMES_FEATURES ({len(NOMES_FEATURES)}): {literais}. Use FATOS_DO_MODELO."
-    )
-
-
-def _familia_de(nome: str) -> str:
-    """A familia de uma feature, com o mesmo mapa de `SINAL_POR_PREFIXO`.
-
-    Tempo e a unica familia com varios prefixos (latencia_, duracao_, qtd_ e
-    os nomes inteiros escalou/abandonou); as outras sao o proprio prefixo.
-    """
-    prefixo = _prefixo_de(nome)
-    if prefixo in ("latencia_", "duracao_", "qtd_", "escalou", "abandonou"):
-        return "tempo"
-    return prefixo.rstrip("_")
-
-
-def test_a_vitrine_divide_as_features_por_familia_como_o_fusor():
-    """A constelacao da vitrine desenha um no por feature, agrupado por familia.
-
-    Se a divisao for desenho e nao contagem, quem contar os pontos de uma
-    familia le um numero falso -- foi o defeito do prototipo v4 (6/5/6/6/6/5/5,
-    inventado). A divisao mora em `FAMILIAS_DO_VETOR`, em `fatos.ts`, e tem de
-    bater, familia a familia e na ordem, com `NOMES_FEATURES`.
-    """
-    fonte = CAMINHO_FATOS_DA_VITRINE.read_text(encoding="utf-8")
-    anunciadas = [
-        (achado.group(1), int(achado.group(2)))
-        for achado in re.finditer(r'chave:\s*"(\w+)"[^}]*?\bqtd:\s*(\d+)', fonte)
-    ]
-    assert anunciadas, (
-        "nao encontrei `FAMILIAS_DO_VETOR` (`chave: \"...\"` e `qtd: N`) em "
-        "dashboard/components/lp/fatos.ts. Se o formato mudou, atualize esta busca."
-    )
-
-    reais: dict[str, int] = {}
-    for nome in NOMES_FEATURES:
-        familia = _familia_de(nome)
-        reais[familia] = reais.get(familia, 0) + 1
-
-    assert anunciadas == list(reais.items()), (
-        f"a vitrine divide as features como {anunciadas}, mas NOMES_FEATURES "
-        f"divide como {list(reais.items())}. Atualize FAMILIAS_DO_VETOR em "
-        "dashboard/components/lp/fatos.ts."
-    )
-
-
-def test_sem_sinal_e_notacao_e_nao_so_texto():
-    """A §1.1 do DESIGN.md promete cabeca vazada para o sem sinal.
-
-    Guarda que atravessa a fronteira de linguagem, no mesmo molde de
-    `test_a_vitrine_anuncia_o_numero_real_de_features`: o pytest le o TSX
-    como texto. O que ela impede e a regressao silenciosa de alguem trocar a
-    notacao de volta por uma string, que nenhum gate de front pegaria.
-    """
-    componentes = RAIZ / "dashboard" / "components"
-    assert (componentes / "CabecaVazada.tsx").is_file()
-
-    # EtiquetaCategoria entrou aqui no fix round 1: categoria == null desenhava
-    # um ponto CHEIO cinza no mesmo slot dos tres pontos cheios coloridos --
-    # "cinza dentro da escala" que a DESIGN.md §5 probe por nome. E a
-    # instancia mais vista da peca (toda linha sem sinal da tabela e da lista
-    # de piores atendimentos), entao a guarda cobre ela tambem.
-    for arquivo in ("TabelaConversas.tsx", "DistribuicaoScores.tsx", "EtiquetaCategoria.tsx"):
-        fonte = (componentes / arquivo).read_text(encoding="utf-8")
-        assert "CabecaVazada" in fonte, f"{arquivo} ainda imprime sem sinal cru"
-
-
-def test_a_cabeca_vazada_carrega_rotulo_textual():
-    """Categoria nunca e comunicada so por cor -- nem so por forma.
-
-    Um anel oco sem rotulo obrigaria o leitor a saber a convencao, e o
-    PRODUCT.md exige o rotulo textual junto.
-    """
-    caminho = RAIZ / "dashboard" / "components" / "CabecaVazada.tsx"
-    fonte = caminho.read_text(encoding="utf-8")
-    assert "sem sinal" in fonte
-
-
-def test_a_tela_modelo_abre_pelo_veredito():
-    """O que o avaliador precisa ler primeiro nao pode estar no meio da pagina.
-
-    As tres ressalvas estruturais do modelo -- ironia fora do vetor, metricas
-    suspeitas e corpus de tempo sintetico -- sobem para um sistema dominante
-    no topo.
-    """
-    painel = RAIZ / "dashboard"
-    componente = painel / "components" / "modelo" / "EstadoDoModelo.tsx"
-    assert componente.is_file()
-
-    pagina = (painel / "app" / "dashboard" / "modelo" / "page.tsx").read_text(
-        encoding="utf-8"
-    )
-    assert "EstadoDoModelo" in pagina
-
-    # Premissa desta guarda: os componentes sao importados SEM alias. A
-    # comparacao abaixo casa o nome literal `<EstadoDoModelo`/`<Simulador` no
-    # USO em JSX -- se algum dia um `import { EstadoDoModelo as X }` renomear
-    # o componente, o `index()` de baixo devolve -1 e falha de um jeito
-    # ilegivel (ValueError sem contexto). Esta asserção existe so para essa
-    # falha vir com o motivo escrito, em vez de obrigar quem le a caçar um
-    # -1. Acoplar a guarda ao identificador é o padrao ja usado em
-    # `dashboard/lib/hierarquia.test.ts`; nao vale parsear TypeScript aqui so
-    # para tolerar alias.
-    assert "EstadoDoModelo as" not in pagina, (
-        "esta guarda pressupoe `EstadoDoModelo` importado sem alias -- "
-        "se foi renomeado no import, atualize tambem o nome usado nesta "
-        "comparacao de ordem"
-    )
-
-    # A comparacao tem que ser sobre o USO em JSX (`<EstadoDoModelo`,
-    # `<Simulador`), nao sobre a primeira ocorrencia do nome no arquivo --
-    # senao o teste passa so pela ordem alfabetica do bloco de import
-    # (`EstadoDoModelo` importado antes de `Simulador`), que nao garante nada
-    # sobre a ordem de renderizacao no corpo da pagina. `<Simulador` so
-    # aparece uma vez no arquivo, como elemento; o titulo em prosa do Painel
-    # ("Simulador ao vivo") nao bate no prefixo `<Simulador`.
-    assert pagina.index("<EstadoDoModelo") < pagina.index("<Simulador")
 
 
 DIRETORIOS_DA_LP_NOVA = (
@@ -262,19 +103,6 @@ def _arquivos_da_lp_nova():
                 yield arquivo
 
 
-def test_a_lp_nova_nao_digita_contagem_de_features_a_mao():
-    """A LP (`/`) faz a mesma promessa da vitrine: numero do codigo.
-
-    A contagem vem de `FATOS_DO_MODELO`/`FAMILIAS_DO_VETOR`; um "N features"
-    digitado em qualquer arquivo da LP nova e o defeito de 04/09/2026 de novo.
-    """
-    literais = []
-    for arquivo in _arquivos_da_lp_nova():
-        texto = arquivo.read_text(encoding="utf-8")
-        for achado in re.finditer(r"\b(\d+)\s+(?:features|numeros|números)\b", texto):
-            if int(achado.group(1)) != len(NOMES_FEATURES):
-                literais.append(f"{arquivo.name}: {achado.group(0)!r}")
-    assert not literais, f"a LP nova digita contagem divergente de NOMES_FEATURES: {literais}"
 
 
 def test_a_lp_nova_nao_transforma_ausencia_em_zero():

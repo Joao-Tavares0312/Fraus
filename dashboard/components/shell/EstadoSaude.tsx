@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Power } from "lucide-react";
 import { ENDERECO_API } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useSaude, type EstadoDeSaude as Estado } from "./SaudeProvider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSaude } from "./SaudeProvider";
+import type { EstadoDeSaude as Estado } from "./SaudeProvider";
 
 const APARENCIA: Record<
   Estado,
@@ -60,8 +62,8 @@ const APARENCIA: Record<
  * 7): a tela em branco tem duas causas possiveis -- banco vazio ou servidor
  * fora -- e sem este indicador quem esta na frente do produto nao sabe qual.
  *
- * Cor nao e o unico canal: o rotulo textual diz o estado, e o `title` diz qual
- * endereco foi consultado.
+ * Cor nao e o unico canal: o rotulo textual diz o estado. Na barra recolhida,
+ * foco ou hover no indicador revela o mesmo rotulo e a origem da consulta.
  *
  * O POLLING nao mora mais aqui: ele vive no `SaudeProvider`, porque o aviso de
  * "API fora do ar" mostra o mesmo fato e dois pollings independentes
@@ -131,21 +133,21 @@ export function EstadoSaude() {
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <div
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground"
-        title={`${detalhe} — ${ENDERECO_API}`}
-      >
-        <span
-          aria-hidden
-          className={`size-2 shrink-0 rounded-full ${cor}`}
-        />
-        <span
-          role="status"
-          className="truncate group-data-[collapsible=icon]:hidden"
-        >
-          {rotulo}
-        </span>
-        <span className="sr-only">{`${rotulo}. ${detalhe}.`}</span>
+      <div className="flex min-w-0 items-center gap-1 group-data-[collapsible=icon]:justify-center">
+        <Tooltip>
+          <TooltipTrigger
+            render={<div tabIndex={0} role="status" />}
+            className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-xs leading-relaxed text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-data-[collapsible=icon]:size-11 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            aria-label={`${rotulo}. ${detalhe}.`}
+          >
+            <span aria-hidden className={`size-2 shrink-0 rounded-full ${cor}`} />
+            <span aria-hidden className="group-data-[collapsible=icon]:hidden">{rotulo}</span>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="block max-w-72 text-xs leading-relaxed">
+            <p>{rotulo}. {detalhe}.</p>
+            <p className="mt-1 break-all">{ENDERECO_API}</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Só aparece para a API que ESTA dashboard subiu. Para um uvicorn de
             terminal o botão não existe -- oferecer uma ação que levaria 409

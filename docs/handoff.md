@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 02/10/2026 (treino do Laya e divisão do corpus de ironia)
+# Handoff — Fraus, atualizado em 16/10/2026 (LP e dashboard)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -21,6 +21,53 @@ o trabalho.
 
 Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no back; Next.js 16 + shadcn/ui + Tailwind v4
 + Recharts no front (`dashboard/`).
+
+---
+
+## 2.000 Interface — direção FR, 16/10/2026
+
+O protótipo v3 foi aprovado e portado para o produto. LP com FR oficial em
+camadas, Chakra Petch local, widgets nativos e pincel cobrindo a raiz inteira.
+Dashboard com números textuais, sidebar de 224px/rail de 64px, três grupos de
+tarefas e Escuro/Claro; Instrumento e Chuva deixaram de ser temas válidos.
+As regras visuais antigas deste histórico não governam a interface: a fonte
+vigente é `dashboard/DESIGN.md`.
+
+A primeira redução para uma malha CSS não resolveu o peso percebido. O FR agora
+usa um canvas WebGL nativo, sob demanda no desktop sem reduce, com um buffer,
+culling e sem loop ocioso. Backends CPU conhecidos e contextos recusados não
+triangulam nem criam buffers: preservam as poses WebP, assim como mobile, sem JS,
+reduce e perda de contexto. O raster permanece até existir draw válido.
+`LP_GL_SOFTWARE=1` é autorização do navegador de QA/exportação, não opção da LP;
+não confundir esse teste com aceleração real ou benchmark de hardware.
+Motion não é mais carregado no layout raiz. O antigo orbe e os displays LED saíram.
+Os contornos devem manter ilhas simples: juntar fragmentos do R por ponte de
+área zero sobre a fenda impede triangulação. A regressão em
+`lib/lp-nova/escultura.test.ts` compara ocupação com o SVG oficial.
+
+Sidebar restaura cookie no servidor, mantém nomes no rail, período `de`/`ate`,
+permissões, sessão e aviso de dublê integral. Ctrl/Meta+B não intercepta edição;
+gaveta móvel fecha na navegação comum e devolve foco ao fechar/Escape.
+
+O segredo dos cinco cliques agora é **Encaixe secreto**: três fragmentos do
+FR, trilhos nativos e conclusão visual, sem áudio ou cronômetro. O código de
+revelação vaporwave, pontuação de cliques e falsificação dos indicadores saiu
+inteiro. Nenhum indicador muda enquanto se joga. O novo diálogo usa Base UI,
+com foco contido/devolvido e suporte a abertura sobre a gaveta móvel. O smoke
+é `node scripts/validar-segredo-playwright.mjs`.
+
+Leituras gravadas continuam exigindo snapshot validado do motor real; a
+otimização não autoriza gerar resultados com o dublê.
+
+Comparação, capturas e condições em
+[Antes e depois da interface](redesign-2026-10-16.md). Verificação de interface
+usa snapshot sintético temporário e dublê explicitamente identificado, não é
+validação do modelo. Branch `feat/identidade-fr-e-navegacao`; nenhum deploy nesta rodada.
+
+O `MotorDuble` do script de demonstração declara `eixo_global` vazio, conforme o
+contrato do grafo para fusor sem treino: permite inspecionar os nós do snapshot
+sem fabricar uma direção aprendida ou arestas de feature. O motor real não
+recebeu fallback nem alteração; o ajuste é exclusivo da ferramenta de QA.
 
 ---
 

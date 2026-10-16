@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 import { legendaDasFaixas, type BarraDistribuicao } from "@/lib/derivacoes";
 import { DEFINICAO_SEM_SINAL_AGREGADO, ROTULO_CATEGORIA } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
@@ -144,12 +144,8 @@ export function DistribuicaoScores({
             TINTA (nao no azul do medido): ela conta o que NAO foi medido, e o
             anel oco + a palavra ao lado dizem isso sem depender da cor. */}
         <p className="flex items-end gap-2.5">
-          <SegmentoLED
-            valor={String(semSinal)}
-            rotulo="atendimentos sem sinal, fora da escala"
-            altura={30}
-            cor="tinta"
-          />
+          <ValorNumerico valor={String(semSinal)}
+          rotulo="atendimentos sem sinal, fora da escala" cor="tinta" />
           <CabecaVazada className="pb-0.5" />
         </p>
         <p className="text-xs leading-relaxed text-muted-foreground">

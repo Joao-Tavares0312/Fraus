@@ -1,53 +1,34 @@
 import { describe, expect, it } from "vitest";
-import {
-  numeroDaRota,
-  rotuloNumerado,
-  telaDoCaminho,
-  TELAS,
-} from "./navegacao";
+import { consultaDoPeriodo, gruposDoPapel, telaEstaAtiva } from "./navegacao";
 
-describe("numeroDaRota", () => {
-  it("numera em dois digitos, na ordem da tela", () => {
-    expect(numeroDaRota("/dashboard")).toBe("01");
-    expect(numeroDaRota("/dashboard/atendimentos")).toBe("02");
-    expect(numeroDaRota("/dashboard/integracoes")).toBe("07");
-  });
+const destinosDoUsuario = [
+  "/dashboard", "/dashboard/atendimentos", "/dashboard/analisar",
+  "/dashboard/grafo", "/dashboard/operacao",
+];
 
-  it("rota desconhecida nao ganha numero", () => {
-    expect(numeroDaRota("/dashboard/nao-existe")).toBeNull();
-  });
+describe("navegação por tarefa e papel", () => {
 
-  it("nao repete numero nem href", () => {
-    const numeros = TELAS.map((t) => numeroDaRota(t.href));
-    expect(new Set(numeros).size).toBe(TELAS.length);
+  it("usuario não recebe destinos administrativos nem grupo vazio", () => {
+    const grupos = gruposDoPapel("usuario");
+    expect(grupos.map((grupo) => grupo.rotulo)).toEqual(["Acompanhar", "Investigar"]);
+    expect(grupos.flatMap((grupo) => grupo.telas.map((tela) => tela.href))).toEqual(destinosDoUsuario);
   });
 });
 
-describe("telaDoCaminho", () => {
-  it("a raiz da ferramenta so casa consigo mesma", () => {
-    expect(telaDoCaminho("/dashboard")?.rotulo).toBe("Visão geral");
-    expect(telaDoCaminho("/dashboard/qualquer")).toBeNull();
+describe("contexto de navegação", () => {
+  it("distingue a visão geral da seção de um atendimento", () => {
+    expect(telaEstaAtiva("/dashboard", "/dashboard")).toBe(true);
+    expect(telaEstaAtiva("/dashboard/atendimentos/caso-42", "/dashboard")).toBe(false);
+    expect(telaEstaAtiva("/dashboard/atendimentos/caso-42", "/dashboard/atendimentos")).toBe(true);
+    expect(telaEstaAtiva("/dashboard/atendimentos-extra", "/dashboard/atendimentos")).toBe(false);
+    expect(telaEstaAtiva("/dashboard/modelo/comparacao", "/dashboard/modelo")).toBe(true);
   });
 
-  it("sub-rota pertence a tela pai (prefixo mais longo)", () => {
-    expect(telaDoCaminho("/dashboard/atendimentos/abc-123")?.rotulo).toBe(
-      "Atendimentos",
-    );
-  });
-
-  it("nao confunde prefixo de palavra com sub-rota", () => {
-    expect(telaDoCaminho("/dashboard/atendimentosX")).toBeNull();
-  });
-
-  it("caminho fora da ferramenta devolve null", () => {
-    expect(telaDoCaminho("/")).toBeNull();
-    expect(telaDoCaminho("/entrar")).toBeNull();
-  });
-});
-
-describe("rotuloNumerado", () => {
-  it("monta 01_VISÃO GERAL", () => {
-    expect(rotuloNumerado(TELAS[0])).toBe("01_VISÃO GERAL");
-    expect(rotuloNumerado(TELAS[5])).toBe("06_CONFIGURAÇÕES");
+  it("carrega somente de/ate, descartando filtros locais e credenciais", () => {
+    expect(consultaDoPeriodo(new URLSearchParams("de=2026-08-01&ate=2026-08-22&busca=cliente&pagina=4&token=segredo")))
+      .toBe("?de=2026-08-01&ate=2026-08-22");
+    expect(consultaDoPeriodo(new URLSearchParams("de=2026-08-01&de=2020-01-01"))).toBe("?de=2026-08-01");
+    expect(consultaDoPeriodo(new URLSearchParams("de=&busca=texto"))).toBe("");
+    expect(consultaDoPeriodo(new URLSearchParams("ate=2026-08-22"))).toBe("?ate=2026-08-22");
   });
 });

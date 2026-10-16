@@ -1,5 +1,5 @@
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
-import { formatarSegundosLED, ROTULO_DESFECHO } from "@/lib/formato";
+import { ValorNumerico } from "@/components/ValorNumerico"
+import { formatarDuracaoCompacta, ROTULO_DESFECHO } from "@/lib/formato";
 import type { ResumoConversa } from "@/lib/api";
 
 /**
@@ -58,7 +58,7 @@ function Medida({
     <div className="flex min-w-0 flex-col gap-2 bg-card px-5 py-4">
       <dt className="rotulo-instrumento">{rotulo}</dt>
       <dd className="flex items-end gap-1.5">
-        <SegmentoLED valor={valor} rotulo={rotulo} altura={28} />
+        <ValorNumerico valor={valor} rotulo={rotulo} className="text-2xl" />
         {valor !== null && unidade ? (
           <span className="pb-0.5 text-xs leading-none text-muted-foreground">
             {unidade}
@@ -71,9 +71,9 @@ function Medida({
 }
 
 /** Mediana em segundos -> par do display, ou nulo quando nao houve espera. */
-function emLED(segundos: number | null): { valor: string | null; unidade?: string } {
+function duracaoDaMediana(segundos: number | null): { valor: string | null; unidade?: string } {
   if (segundos === null) return { valor: null };
-  return formatarSegundosLED(segundos);
+  return formatarDuracaoCompacta(segundos);
 }
 
 export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
@@ -100,7 +100,7 @@ export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
       />
       <Medida
         rotulo="1ª resposta (mediana)"
-        {...emLED(mediana(primeiras))}
+        {...duracaoDaMediana(mediana(primeiras))}
         detalhe={
           primeiras.length === linhas.length
             ? "de todos os atendimentos"
@@ -109,12 +109,12 @@ export function ResumoDaLista({ linhas }: { linhas: ResumoConversa[] }) {
       />
       <Medida
         rotulo="Resposta do bot (mediana)"
-        {...emLED(mediana(doBot))}
+        {...duracaoDaMediana(mediana(doBot))}
         detalhe={`em ${doBot.length} atendimento(s)`}
       />
       <Medida
         rotulo="Resposta humana (mediana)"
-        {...emLED(mediana(doHumano))}
+        {...duracaoDaMediana(mediana(doHumano))}
         detalhe={
           comEscalada === 0
             ? "nenhum atendimento chegou a um humano"

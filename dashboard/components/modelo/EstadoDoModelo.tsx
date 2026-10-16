@@ -2,7 +2,7 @@ import type { FichaModelo } from "@/lib/api";
 import { formatarNumero } from "@/lib/formato";
 import { Painel } from "@/components/Painel";
 import { EstadoVazio } from "@/components/EstadoVazio";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 import { LIMIAR_SUSPEITO } from "./MetricasTreino";
 
 /**
@@ -132,7 +132,7 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
           </span>
           {f1Percentual !== null ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              <span className="inline-flex items-end gap-1 align-middle"><SegmentoLED valor={f1Percentual} altura={22} rotulo="F1 da classe irônica, em porcento" /><span className="num text-foreground">%</span></span> de
+              <span className="inline-flex items-end gap-1 align-middle"><ValorNumerico valor={f1Percentual} rotulo="F1 da classe irônica, em porcento" /><span className="num text-foreground">%</span></span> de
               F1 na classe irônica, {f1Suspeito ? "acima" : "abaixo"} do limiar
               que este projeto trata como suspeito.{" "}
               {f1Suspeito

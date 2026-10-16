@@ -2,31 +2,21 @@ import type { ReactNode } from "react";
 import type { DetalheConversa } from "@/lib/api";
 import {
   EXPLICACAO_SEM_SINAL,
-  ROTULO_SEM_SINAL,
   formatarDataHora,
   formatarSegundos,
-  formatarSegundosLED,
+  formatarDuracaoCompacta,
 } from "@/lib/formato";
 import { Badge } from "@/components/ui/badge";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
 import { MarcaContestacao } from "@/components/MarcaContestacao";
-import { NotaLED } from "@/components/NotaLED";
+import { NotaInferida } from "@/components/NotaInferida"
 
 /**
  * O RESUMO DE UM ATENDIMENTO: quatro leituras lidas de uma vez.
  *
- * E a armadura da tela do atendimento -- o mesmo desenho da Visao geral (uma
- * fileira de quatro celulas separadas por filete, rotulo mais numero em LED), e
- * por isso ele mora ao lado da `FaixaIndicadores` em idioma, mas NAO a reusa:
- * `CartaoIndicador` carrega o easter egg dos cinco cliques (`useMentira`), que
- * falsifica os quatro indicadores da Visao geral e nada mais. Uma nota de UM
- * atendimento mentindo enquanto o painel esta aberto seria o defeito que as
- * quatro travas existem para impedir; esta peca nunca soube mentir.
- *
  * As regras que ela nao quebra:
- *   - nota nula e "sem sinal": display APAGADO + a palavra + o motivo, nunca 0
- *     (invariante 2);
+ *   - nota nula e "sem sinal", com a palavra e o motivo, nunca zero (invariante 2);
  *   - a nota, a categoria e a evidencia sao do SERVIDOR (invariante 3) -- aqui so
  *     se desenha;
  *   - `estimativa` colada a nota, `observado` colado a latencia: o que e
@@ -47,24 +37,17 @@ export function ResumoDoAtendimento({
   duracao: number | null;
 }) {
   const semNota = conversa.nota === null;
-  const latenciaLED = mediana === null ? null : formatarSegundosLED(mediana);
+  const latenciaCompacta = mediana === null ? null : formatarDuracaoCompacta(mediana);
 
   return (
     <section
       aria-label="Resumo do atendimento"
-      // O filete entre celulas e o `gap-px` sobre fundo de regua: cada celula
-      // pinta o proprio fundo opaco. Uma tecnica so serve a 1, 2 ou 4 colunas.
-      className="grid grid-cols-1 gap-px border border-linha bg-linha sm:grid-cols-2 xl:grid-cols-4 [&>*]:bg-background"
+      className="faixa-indicadores"
     >
       <Celula rotulo="Nota inferida" qualificacao="estimativa">
         {semNota ? (
           <>
-            <div className="flex items-end gap-3">
-              <NotaLED nota={null} altura={56} />
-              <span className="pb-1 text-sm text-muted-foreground">
-                {ROTULO_SEM_SINAL}
-              </span>
-            </div>
+            <NotaInferida nota={null} className="text-2xl" />
             <p className="text-xs leading-relaxed text-muted-foreground">
               {EXPLICACAO_SEM_SINAL[conversa.motivo_sem_sinal ?? "sem_fala_do_cliente"]}{" "}
               Sem sinal, não há nota — e ausência de dado não é insatisfação.
@@ -73,7 +56,7 @@ export function ResumoDoAtendimento({
         ) : (
           <>
             <div className="flex items-end gap-2">
-              <NotaLED nota={conversa.nota} altura={56} />
+              <NotaInferida nota={conversa.nota} className="text-3xl" />
               <span className="pb-1 text-sm text-muted-foreground">/ 10</span>
             </div>
             {/* Colada no numero, e nao no aparato da tela: uma ressalva sobre
@@ -106,14 +89,14 @@ export function ResumoDoAtendimento({
 
       <Celula rotulo="Latência mediana" qualificacao="observado">
         <div className="flex items-end gap-1.5">
-          <SegmentoLED
-            valor={latenciaLED === null ? null : latenciaLED.valor}
+          <ValorNumerico
+            valor={latenciaCompacta === null ? null : latenciaCompacta.valor}
             rotulo="latência mediana do atendimento"
-            altura={40}
+            className="text-2xl"
           />
-          {latenciaLED ? (
+          {latenciaCompacta ? (
             <span className="pb-0.5 text-xs leading-none text-muted-foreground">
-              {latenciaLED.unidade}
+              {latenciaCompacta.unidade}
             </span>
           ) : null}
         </div>

@@ -4,7 +4,7 @@ import type { ResumoConversa } from "@/lib/api";
 import { DEFINICAO_SEM_SINAL_AGREGADO, formatarDataHora } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
-import { NotaLED } from "./NotaLED";
+import { NotaInferida } from "./NotaInferida"
 
 /**
  * Os atendimentos com a menor nota inferida no periodo.
@@ -13,7 +13,7 @@ import { NotaLED } from "./NotaLED";
  * mudos para o topo seria o `?? 0` que o produto combate. Elas continuam
  * visiveis na tabela de Atendimentos, marcadas como "sem sinal".
  *
- * A NOTA E LED, e a cabeca vem do slot unico (`EtiquetaCategoria`) COM o motivo
+ * A nota vem do servidor, e a cabeca do slot unico (`EtiquetaCategoria`) COM o motivo
  * da evidencia fraca impresso: um "detrator" sustentado por uma unica fala do
  * cliente nao pode parecer tao firme quanto um de quarenta turnos, e "evidencia
  * fraca" solto nao aciona ninguem -- "uma unica mensagem do cliente" aciona.
@@ -53,8 +53,7 @@ export function PioresAtendimentos({
             href={`/dashboard/atendimentos/${encodeURIComponent(conversa.id)}${sufixoDeQuery}`}
             className="group grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 outline-none transition-colors duration-150 ease-fluid hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-5"
           >
-            {/* Duas celulas fixas: a coluna de LED nao dança entre 9 e 10. */}
-            <NotaLED nota={conversa.nota} altura={26} />
+            <NotaInferida nota={conversa.nota}  />
             <span className="min-w-0">
               <span className="num block truncate text-xs text-foreground">
                 {conversa.id}
@@ -67,8 +66,7 @@ export function PioresAtendimentos({
               aria-hidden
               className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5"
             />
-            {/* O rotulo (e o motivo) desce para a linha de baixo: ao lado do LED
-                ele empurraria o id para fora da coluna em telas estreitas. */}
+            {/* O motivo fica abaixo para não disputar espaço com o identificador. */}
             <EtiquetaCategoria
               categoria={conversa.categoria}
               evidenciaFraca={conversa.evidencia_fraca}

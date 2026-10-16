@@ -106,6 +106,13 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
   - o encoding **âmbar = o que foi dito / azul = o que foi medido**;
   - o **gráfico sobreposto de NPS × latência** — pode mudar de forma, mas a
     sobreposição continua, porque é o trade-off que cartão isolado esconde.
+  - o **FR escultórico**, derivado do monograma oficial, a tipografia quadrada
+    Chakra Petch e o fundo de pincel em toda a LP (direção aprovada em 16/10/2026);
+  - dashboard calma, com tema escuro padrão e alternativa clara; a LP e o acesso
+    permanecem escuros sem apagar a preferência da ferramenta;
+  - a marca não pode custar cinco malhas escondidas: mobile, movimento reduzido
+    e backend gráfico de software usam a mesma arte pré-renderizada; desktop
+    com contexto elegível monta uma única escultura, sem loop ocioso.
 
 ## Evidence on Hand
 
@@ -136,6 +143,8 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
    quebra outro.
 5. **O servidor é a fonte da verdade.** Score e categoria vêm dele; a interface
    apresenta e não recalcula.
+6. **Brincadeira não falsifica dado.** O Encaixe secreto da marca só manipula
+   fragmentos do FR. Não altera indicadores nem pontua o usuário.
 
 ## Accessibility & Inclusion
 

@@ -1,4 +1,4 @@
-import { CircleSlash } from "lucide-react";
+import { Files } from "lucide-react";
 import { ehFalhaDeConexao } from "@/lib/api";
 import {
   Empty,
@@ -53,7 +53,7 @@ export function EstadoVazio({
   return (
     <Empty
       className={cn(
-        "items-start border border-dashed border-border text-left",
+        "items-start border-0 text-left",
         // O `Empty` do chassi tem `flex-1` e estica para preencher a coluna da
         // pagina. Com a prosa recolhida, isso virava uma moldura tracejada de
         // meia tela em volta de duas linhas de texto -- desperdicio que parece
@@ -65,8 +65,8 @@ export function EstadoVazio({
       )}
     >
       <EmptyHeader className="max-w-[62ch] items-start text-left">
-        <EmptyMedia variant="icon" className="mb-0">
-          <CircleSlash aria-hidden />
+        <EmptyMedia variant="icon" className="mb-1 bg-transparent text-muted-foreground">
+          <Files aria-hidden />
         </EmptyMedia>
         <EmptyTitle className="text-sm text-foreground">{titulo}</EmptyTitle>
 

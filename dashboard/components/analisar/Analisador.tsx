@@ -33,7 +33,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Painel } from "@/components/Painel";
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
-import { NotaLED } from "@/components/NotaLED";
+import { NotaInferida } from "@/components/NotaInferida"
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { TextoComPesos } from "./TextoComPesos";
@@ -488,7 +488,7 @@ function Analise({
                   extenso, nunca 0. O motivo distingue "o cliente nao falou" de
                   "o arquivo nao traz horario": sao problemas em lugares
                   diferentes. */}
-              <NotaLED nota={semNota ? null : analise.nota} altura={44} />
+              <NotaInferida nota={semNota ? null : analise.nota}  />
               {semNota ? (
                 <span className="text-sm text-muted-foreground">
                   {ROTULO_SEM_SINAL} — {motivoSemNota}
@@ -719,7 +719,7 @@ function SinaisDeLeitura({
     // fato valer para a transcricao inteira.
     <details key={String(aberto)} open={aberto} className="group">
       <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 text-xs text-muted-foreground marker:text-muted-foreground">
-        <span className="text-[11px] uppercase tracking-wide">
+        <span className="text-[11px]">
           leitura por frase
         </span>
         {emocaoTop ? (

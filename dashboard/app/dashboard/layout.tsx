@@ -1,15 +1,15 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { AparatoDaTela, ProvedorDeAparato } from "@/components/AparatoDaTela";
-import { TelemetriaDaRota } from "@/components/instrumento/TelemetriaDaRota";
 import { AvisoApiFora } from "@/components/shell/AvisoApiFora";
 import { NavegacaoLateral } from "@/components/shell/NavegacaoLateral";
 import { SaudeProvider } from "@/components/shell/SaudeProvider";
 import { SincronizarDados } from "@/components/shell/SincronizarDados";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ProvedorDaMentira } from "@/lib/mentira";
 import { loginDisponivel, sessaoAtual } from "@/lib/sessao";
+import { Movimento } from "@/components/shell/Movimento";
 
 /**
  * O shell da ferramenta, agora atrás do portão de sessão.
@@ -53,18 +53,14 @@ export default async function DashboardLayout({
 
   const usuario = sessao.estado === "logada" ? sessao.usuario : null;
   const papel = usuario?.papel ?? "dev";
+  const sidebarAberta = (await cookies()).get("sidebar_state")?.value !== "false";
 
   return (
+    <Movimento>
     <TooltipProvider>
       <SaudeProvider>
         <SincronizarDados />
-        {/* O easter egg da marca liga a mentira na NAVEGACAO e ela e exibida
-            pelos INDICADORES, noutra sub-arvore -- o provedor precisa ficar
-            acima das duas, e este e o ponto onde elas se encontram. Fora do
-            painel o valor e sempre `false`, e nenhum indicador sabe mentir
-            por conta propria. Ver lib/mentira.tsx. */}
-        <ProvedorDaMentira>
-          <SidebarProvider>
+          <SidebarProvider defaultOpen={sidebarAberta}>
             {/*
               Atalho para quem navega por teclado: sem ele, chegar ao conteudo
               exige percorrer a navegacao lateral inteira a cada troca de
@@ -82,10 +78,6 @@ export default async function DashboardLayout({
               <NavegacaoLateral papel={papel} usuario={usuario} />
             </Suspense>
             <SidebarInset id="conteudo" className="min-w-0">
-              {/* A TELEMETRIA: a faixa de 34px que assina toda tela do
-                  Instrumento ("FRAUS / 01_VISAO GERAL" e o regime do produto).
-                  Sticky no topo; o cabecalho de pagina cola logo abaixo. */}
-              <TelemetriaDaRota />
               {/* Acima do conteudo, em TODA tela: sem a API todas quebram
                   igual, e a instrucao tem que estar onde o Joao ja esta. */}
               <AvisoApiFora />
@@ -98,8 +90,8 @@ export default async function DashboardLayout({
               </ProvedorDeAparato>
             </SidebarInset>
           </SidebarProvider>
-        </ProvedorDaMentira>
       </SaudeProvider>
     </TooltipProvider>
+    </Movimento>
   );
 }

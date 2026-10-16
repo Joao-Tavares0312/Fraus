@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { FiltroPeriodo } from "./FiltroPeriodo";
-import { rotuloPeriodo, type Extensao, type Periodo } from "@/lib/periodo";
+import { rotuloPeriodo } from "@/lib/periodo";
+import type { Extensao, Periodo } from "@/lib/periodo";
 
 /**
  * Cabecalho de secao.
@@ -37,18 +38,16 @@ export function CabecalhoPagina({
   escopo?: string;
 }) {
   return (
-    // `top-[34px]`: cola logo abaixo da faixa de telemetria (34px, sticky no
-    // topo em `TelemetriaDaRota`), e nao sobre ela.
-    <header className="vidro-fino vidro-faixa sticky top-[34px] z-20">
-      <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-20 bg-background">
+      <div className="flex flex-col gap-4 px-4 py-6 sm:px-8">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-          <SidebarTrigger className="sem-impressao -ml-1 mt-0.5 shrink-0" />
+          <SidebarTrigger className="sem-impressao -ml-1 mt-0.5 shrink-0 md:hidden" />
           {/* `basis-64`: sem base, o titulo encolhia sem limite e as acoes
               nunca desciam de linha -- a 390px o subtitulo virava uma coluna
               de uma ou duas palavras ao lado de "Todos os atendimentos". Com
               base, quando os dois nao cabem, as acoes quebram para baixo. */}
           <div className="min-w-0 flex-1 basis-64">
-            <h1 className="titulo-instrumento text-lg leading-tight text-foreground">
+            <h1 className="titulo-instrumento text-3xl leading-tight text-foreground sm:text-4xl">
               {titulo}
             </h1>
             {subtitulo ? (

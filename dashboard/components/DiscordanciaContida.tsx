@@ -1,4 +1,4 @@
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 import { DEFINICAO_SEM_SINAL_AGREGADO } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 
@@ -57,13 +57,10 @@ export function DiscordanciaContida({
             {/* O percentual e do SERVIDOR (`falso_containment`); aqui so vira
                 display. Formatado uma vez, em pt-BR, como o resto da tela. */}
             <p className="flex shrink-0 items-end gap-1.5">
-              <SegmentoLED
-                valor={percentual.toLocaleString("pt-BR", {
-                  maximumFractionDigits: 1,
-                })}
-                rotulo="contenção que não convenceu, em percentual"
-                altura={34}
-              />
+              <ValorNumerico valor={percentual.toLocaleString("pt-BR", {
+                maximumFractionDigits: 1,
+              })}
+              rotulo="contenção que não convenceu, em percentual"  />
               <span className="pb-0.5 text-lg leading-none text-muted-foreground">
                 %
               </span>

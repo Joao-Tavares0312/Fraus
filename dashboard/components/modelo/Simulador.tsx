@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EstadoVazio } from "@/components/EstadoVazio";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 
 /** Teto de `/modelo/simular`. Repetido aqui so para avisar ANTES do 400. */
 const TETO = 2000;
@@ -192,11 +192,7 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
             {vencedora.rotulo}
           </span>
           <span className="inline-flex items-end gap-1">
-            <SegmentoLED
-              valor={formatarNumero(vencedora.valor * 100)}
-              altura={22}
-              rotulo={`probabilidade da classe ${vencedora.rotulo}, em porcento`}
-            />
+            <ValorNumerico valor={formatarNumero(vencedora.valor * 100)} rotulo={`probabilidade da classe ${vencedora.rotulo}, em porcento`} />
             <span className="num text-muted-foreground">%</span>
           </span>
         </p>

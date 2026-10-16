@@ -58,7 +58,11 @@ insatisfeito não responde pesquisa — e é ele que o sistema precisa enxergar.
 
 -   **[Design da interface](design.md)**
 
-    O sistema visual: LED, régua dito/medido e as regras.
+    FR em camadas, tipografia quadrada, temas e a distinção dito/medido.
+
+-   **[Antes e depois da interface](redesign-2026-10-16.md)**
+
+    LP e dashboard comparadas em desktop e celular, com limites da verificação.
 
 -   **[Limitações](limitacoes.md)**
 

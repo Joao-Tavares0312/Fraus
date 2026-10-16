@@ -1,65 +1,25 @@
-import { IconeDeAcao } from "@/components/IconeDeAcao";
-import { Problema } from "./Problema";
+import { ChevronDown, CircleOff, ClipboardList, Database, UserRoundX } from "lucide-react";
 
 const LIMITES = [
-  {
-    frase: "Não pontua atendente.",
-    porque:
-      "O objeto da análise é o atendimento por chatbot, nunca o desempenho individual de pessoas.",
-  },
-  {
-    frase: "Não roda LLM.",
-    porque: "A inferência roda em CPU, sem enviar conversas a APIs de LLM.",
-  },
-  {
-    frase: "Não finge que perguntou.",
-    porque: "NPS inferido é uma estimativa, não uma resposta do cliente. O tempo foi treinado com dados sintéticos.",
-  },
+  { titulo: "Estimativa, não pesquisa", Icone: ClipboardList, texto: "O Fraus estima satisfação a partir dos sinais da conversa. Não lê pensamentos e não substitui uma resposta declarada pelo cliente." },
+  { titulo: "Não avalia atendentes", Icone: UserRoundX, texto: "O objeto da análise é o atendimento. O Fraus não produz notas de desempenho para atendentes." },
+  { titulo: "Tempo com dados sintéticos", Icone: Database, texto: "O sinal de tempo foi treinado com conversas sintéticas. Essa limitação deve acompanhar a interpretação da estimativa." },
+  { titulo: "Sem sinal não é nota zero", Icone: CircleOff, texto: "Sem fala do cliente ou sem sinal para estimar satisfação, a ausência precisa aparecer como ausência. Nunca como uma nota zero." },
 ];
 
 export function Limites() {
   return (
-    <section id="limites" aria-labelledby="titulo-limites" className="ln-sec ln-limites">
-      <div className="ln-wrap">
-        <div className="ln-limites__abertura">
-          <h2 id="titulo-limites" className="titulo-vitrine">
-            Uma leitura útil sabe onde parar.
-          </h2>
-          <div className="ln-limites__materia" aria-hidden="true" />
-        </div>
-        <ul className="ln-limites__lista">
-          {LIMITES.map((l) => (
-            <li key={l.frase}>
-              <h3 className="ln-limites__frase">{l.frase}</h3>
-              <p className="ln-prosa">{l.porque}</p>
-            </li>
+    <section className="limites" id="limites" aria-labelledby="titulo-limites">
+      <div className="limites-conteudo">
+        <div className="limites-intro"><h2 id="titulo-limites">Conheça também os limites</h2><p>Uma estimativa ajuda a investigar. Ela não transforma os sinais da conversa em certeza sobre o cliente.</p></div>
+        <div className="limites-leituras">
+          {LIMITES.map(({ titulo, Icone, texto }, indice) => (
+            <details className="limite-detalhe" name="limites-lp" key={titulo} open={indice === 0}>
+              <summary><Icone className="icone-lp" aria-hidden="true" /><span>{titulo}</span><ChevronDown className="icone-lp chevron-lp" aria-hidden="true" /></summary>
+              <p>{texto}</p>
+            </details>
           ))}
-        </ul>
-        <details className="ln-detalhe">
-          <summary>
-            <span>Aprofundar limites, pesquisa e uso responsável</span>
-            <IconeDeAcao acao="expandir" />
-          </summary>
-          <div className="ln-detalhe__corpo">
-            <p className="ln-prosa">
-              O intervalo do NPS mede incerteza amostral, não erro do classificador. Abaixo de 30
-              atendimentos com sinal, o ponto não é exibido. Latência e contenção são observadas,
-              não estimativas de satisfação. Resultados em conversas sintéticas não demonstram
-              desempenho em clientes reais.
-            </p>
-            <p className="ln-prosa">
-              A definição de reconhecimento de emoção do EU AI Act exige dados biométricos.
-              Classificar emoção em texto não implica enquadramento automático nessa definição;
-              não pontuar atendentes continua sendo uma política firme do Fraus.
-            </p>
-            <p className="ln-prosa">
-              Sem LLM descreve o caminho de predição, não garante por si só conformidade de
-              hospedagem, armazenamento ou transporte. Quem opera precisa definir finalidade,
-              base legal e acesso aos dados.
-            </p>
-            <Problema />
-          </div>
-        </details>
+        </div>
       </div>
     </section>
   );
