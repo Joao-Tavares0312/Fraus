@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "fase": "paridade_tentativa_inicial",
+  "status": "nao_verificado",
+  "motivo": "instrumento aplicava teto de 300 s a rodada inteira, nao a cada passada; defeito corrigido apenas no instrumento",
+  "comando": "uv run --no-sync python -m scripts.analise_motores.executar paridade --workspace /tmp/fraus-analise-20261016 --perfis torch onnx-fp32 onnx-int8 laya-onnx",
+  "condicoes": {"limite_rss_bytes": 4048417587, "ram_disponivel_inicial_bytes": 5060521984},
+  "artefatos": [],
+  "medicoes": {"duracao_worker_s": 300.2192295040004, "categoria_erro": "timeout", "coleta_completa": false, "score": null, "probabilidades": null}
+}

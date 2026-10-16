@@ -7,6 +7,8 @@ import json
 import os
 import platform
 import shutil
+import contextlib
+import threading
 import subprocess
 import sys
 import time
@@ -114,6 +116,18 @@ def cliente_loopback(url: str):
     return httpx.Client(base_url=url, trust_env=False, follow_redirects=False, timeout=300)
 
 
+@contextlib.contextmanager
+def prazo_operacao(segundos=300):
+    """Timeout de uma carga/passada, não da rodada (worker exclusivo)."""
+    temporizador = threading.Timer(segundos, lambda: os._exit(124))
+    temporizador.daemon = True
+    temporizador.start()
+    try:
+        yield
+    finally:
+        temporizador.cancel()
+
+
 def executar_isolado(modulo: str, argumentos: list[str], workspace: Path, *, parametros=None, timeout=300) -> dict:
     """Supervisiona um worker conhecido, guardando RSS a cada 50 ms."""
     if not modulo.startswith('scripts.analise_motores.'):
@@ -138,7 +152,7 @@ def executar_isolado(modulo: str, argumentos: list[str], workspace: Path, *, par
                 categoria = 'guardrail_memoria'
         except (FileNotFoundError, ProcessLookupError):
             pass
-        if time.perf_counter() - inicio >= timeout:
+        if timeout and time.perf_counter() - inicio >= timeout:
             categoria = 'timeout'
         if categoria:
             processo.kill()
@@ -153,7 +167,8 @@ def executar_isolado(modulo: str, argumentos: list[str], workspace: Path, *, par
     return {'returncode': 2 if categoria else processo.returncode,
             'duracao_s': time.perf_counter() - inicio,
             'stdout': bruto.decode('utf-8', errors='replace'),
-            'categoria_erro': categoria or (None if processo.returncode == 0 else 'subprocesso_recusou'),
+            'categoria_erro': categoria or ('timeout_operacao' if processo.returncode == 124 else
+                                           None if processo.returncode in (0, 2) else 'subprocesso_recusou'),
             'rss_amostras': amostras, 'memoria_inicial': inicial, 'limite_rss_bytes': limite}
 
 

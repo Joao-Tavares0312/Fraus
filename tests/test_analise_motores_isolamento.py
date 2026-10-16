@@ -58,3 +58,24 @@ def test_copia_nao_altera_original(tmp_path):
     (origem / 'link').symlink_to(arquivo)
     with pytest.raises(ValueError):
         comum.copiar_arvore(origem, tmp_path / 'outra')
+
+
+def test_prazo_mata_so_worker_e_nao_soma_operacoes(tmp_path):
+    import subprocess
+    import sys
+    ambiente = comum.ambiente_isolado(comum.preparar_workspace(tmp_path / 'lab'))
+    estourado = subprocess.run([sys.executable, '-c', '''
+import time
+from scripts.analise_motores.comum import prazo_operacao
+with prazo_operacao(0.03):
+    time.sleep(5)
+'''], env=ambiente, timeout=10)
+    assert estourado.returncode == 124
+    separado = subprocess.run([sys.executable, '-c', '''
+import time
+from scripts.analise_motores.comum import prazo_operacao
+for _ in range(3):
+    with prazo_operacao(0.3):
+        time.sleep(0.15)
+'''], env=ambiente, timeout=10)
+    assert separado.returncode == 0
