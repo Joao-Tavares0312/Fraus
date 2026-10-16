@@ -63,7 +63,7 @@ export function CabecasDeLeitura({
     <div className="flex flex-col gap-3">
       {!compacto ? (
         <p className="text-xs text-muted-foreground">
-          <span className="uppercase tracking-wide">
+          <span className="tracking-normal">
             leitura por frase
           </span>{" "}
           — a média da emoção por conversa entra nas features do fusor desde

@@ -64,7 +64,7 @@ export function ReguaDeCamadas({
               aria-pressed={ativa}
               onClick={() => aoFocar(opcao.valor)}
               className={cn(
-                "border px-3 py-1.5 font-mono text-[0.6875rem] tracking-[0.1em] whitespace-nowrap uppercase transition-colors duration-150 ease-fluid",
+                "border px-3 py-1.5 font-sans text-[0.6875rem] tracking-normal whitespace-nowrap transition-colors duration-150 ease-fluid",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 ativa
                   ? "border-primary bg-primary/10 font-medium text-foreground"

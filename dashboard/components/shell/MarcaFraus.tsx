@@ -2,22 +2,20 @@
 
 import {
   useCallback,
-  useEffect,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
+import dynamic from "next/dynamic";
 import {
   CONTADOR_ZERADO,
-  type EstadoContador,
   abriu,
   registrarClique,
 } from "@/lib/contadorSegredo";
-import { useMentira } from "@/lib/mentira";
-import { type LeituraDeCliques, lerCliques } from "@/lib/pontuarCliques";
-import { RevelacaoFraus } from "./RevelacaoFraus";
+import type { EstadoContador } from "@/lib/contadorSegredo";
 
 const CONSULTA_MOVIMENTO_REDUZIDO = "(prefers-reduced-motion: reduce)";
+const SegredoFraus = dynamic(() => import("./SegredoFraus").then((modulo) => modulo.SegredoFraus), { ssr: false });
 
 /**
  * Preferencia de movimento reduzido, SEGURA PARA HIDRATACAO.
@@ -59,14 +57,7 @@ function useMovimentoReduzido(): boolean {
 export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   const [contador, setContador] = useState<EstadoContador>(CONTADOR_ZERADO);
   const semMovimento = useMovimentoReduzido();
-  const gatilho = useRef<SVGSVGElement>(null);
-  const { mentir } = useMentira();
-
-  // O updater e PURO -- nada de `setState` de outro estado aqui dentro. Os
-  // instantes viajam DENTRO do contador exatamente por isto: a versao anterior
-  // chamava `setInstantes` daqui, o React invocava o updater mais de uma vez, e
-  // cada invocacao empurrava um instante repetido. O painel mostrava oito
-  // latencias para cinco cliques, metade delas `0 ms`.
+  const gatilho = useRef<HTMLButtonElement>(null);
   const aoClicar = useCallback(() => {
     const agora = performance.now();
     setContador((anterior) => registrarClique(anterior, agora));
@@ -75,32 +66,14 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
   // Fechar DEVOLVE o foco e zera o contador -- senao o proximo clique reabriria
   // de imediato, e o segredo deixaria de ser segredo.
   //
-  // O foco volta para o <Link> QUE ENVOLVE a marca, nao para o <svg>: svg sem
-  // `tabIndex` nao e focavel, e `focus()` nele seria uma chamada silenciosamente
-  // sem efeito -- o teclado ficaria no <body> depois de fechar. Quem o teclado
-  // alcanca nesta sidebar sempre foi o link.
+  // O botao da marca e independente do link de inicio: o segredo nao navega,
+  // e o foco volta ao mesmo controle ao fechar a revelacao.
   const fechar = useCallback(() => {
     setContador(CONTADOR_ZERADO);
-    gatilho.current?.closest("a")?.focus();
+    gatilho.current?.focus();
   }, []);
 
   const aberta = abriu(contador);
-
-  // TRAVA 1 e 4: a mentira e ESTADO DE RENDER, ligada e desligada por este
-  // efeito e por mais nada. Ela nasce com a fenda e morre com ela -- inclusive
-  // se o componente desmontar no meio (o retorno do efeito), que e o caso de
-  // quem navega para outra pagina com o painel aberto. Sem essa limpeza a
-  // dashboard poderia continuar mentindo sem o selo por cima, que e exatamente
-  // o defeito que as travas existem para impedir.
-  useEffect(() => {
-    mentir(aberta);
-    return () => mentir(false);
-  }, [aberta, mentir]);
-
-  // A leitura so e calculada quando ha painel para mostra-la.
-  const leitura: LeituraDeCliques | null = aberta
-    ? lerCliques([...contador.instantes])
-    : null;
 
   // Os quatro primeiros cliques tremem, e cada um treme mais: 0px, 1, 2, 3. E o
   // unico aviso de que ALGO esta sendo contado -- sem ele o segredo nao seria
@@ -118,15 +91,22 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
 
   return (
     <>
-      <svg
+      <button
         ref={gatilho}
+        type="button"
+        aria-label="Fraus — revelar o segredo com cinco cliques"
+        aria-haspopup="dialog"
+        aria-expanded={aberta}
+        title="Fraus"
+        onClick={aoClicar}
+        className="flex size-11 shrink-0 items-center justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+      <svg
         viewBox="0 0 640 640"
         width={tamanho}
         height={tamanho}
-        role="img"
-        aria-label="Fraus"
-        onClick={aoClicar}
-        className="group/marca size-7 shrink-0 rounded-md"
+        aria-hidden
+        className="group/marca shrink-0 rounded-md"
         style={{
           // O tremor e transform, nao margin: nao reflui layout, e a sidebar
           // inteira nao se mexe junto.
@@ -166,12 +146,10 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
           />
         </g>
 
-        {/* O S -- a metade de cima, entao sobe e vai para a direita. O dourado
-            vira vermelho de erro enquanto a marca esta aberta: a divindade da
-            fraude mostrando a cara. */}
+        {/* O R acompanha a abertura pela fenda, sem mudar a cor da marca. */}
         <path
           d="M444.887,289.944C468.708,289.944 488.048,270.604 488.048,246.783C488.048,222.962 468.708,202.059 444.887,202.059L428.65,202.059L365.123,202.112L408.778,154.084L444.887,154.084C495.186,154.084 536.023,196.484 536.023,246.783C536.023,297.082 495.186,337.919 444.887,337.919L408.425,337.919L542.538,484.486L473.955,484.24L300.814,289.944"
-          fill={aberta ? "var(--destructive)" : "url(#rampa-marca)"}
+          fill="url(#rampa-marca)"
           style={{
             transform: afastar ? "translate(14px, -14px)" : undefined,
             transition: transicaoDaMetade,
@@ -201,8 +179,9 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
           className="opacity-0 transition-opacity duration-[220ms] ease-fluid group-hover/marca:opacity-100 motion-reduce:transition-none"
         />
       </svg>
+      </button>
 
-      {aberta && <RevelacaoFraus leitura={leitura} aoFechar={fechar} />}
+      {aberta && <SegredoFraus gatilho={gatilho} aoFechar={fechar} />}
     </>
   );
 }

@@ -78,6 +78,7 @@ nav:
   - "Ironia: corpus e Laya": ironia.md
   - Integração com o Tars: integracao-tars.md
   - Design da interface: design.md
+  - Antes e depois da interface: redesign-2026-10-16.md
   - Conformidade (AI Act): conformidade.md
   - Encolher os modelos: encolhimento.md
   - Limitações conhecidas: limitacoes.md

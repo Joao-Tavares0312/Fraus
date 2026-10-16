@@ -72,7 +72,7 @@ export function formatarSegundos(segundos: number): string {
   // A fronteira e decidida DEPOIS de arredondar, nao antes: 59,96 s escreve
   // "60 s" e 119,6 s escrevia "1 min 60 s" (o resto arredondava sozinho, sem
   // levar o minuto junto). Acima de um minuto arredonda-se o TOTAL uma vez e
-  // so entao se divide -- mesma ordem de `formatarSegundosLED`, para a forma
+  // so entao se divide -- mesma ordem de `formatarDuracaoCompacta`, para a forma
   // por extenso e o display nunca discordarem do mesmo numero.
   if (Math.round(segundos * 10) / 10 < 60) return `${NUMERO.format(segundos)} s`;
   const total = Math.round(segundos);
@@ -83,19 +83,8 @@ export function formatarSegundos(segundos: number): string {
   return `${horas} h ${minutos % 60} min`;
 }
 
-/**
- * A MESMA duracao, na forma que o display de sete segmentos sabe desenhar:
- * so digitos e separadores, e a UNIDADE separada do numero. `1 min 12 s` no
- * LED viraria texto cru no meio dos segmentos.
- *
- *   38     -> { valor: "38",   unidade: "s" }
- *   72     -> { valor: "1:12", unidade: "min:s" }
- *   3.900  -> { valor: "1:05", unidade: "h:min" }
- *
- * E so APRESENTACAO: `formatarSegundos` continua sendo a forma por extenso que
- * o texto corrido usa, e nenhuma das duas decide nada sobre a duracao.
- */
-export function formatarSegundosLED(segundos: number): {
+/** Duração compacta e unidade separada, sem recalcular qualquer medida. */
+export function formatarDuracaoCompacta(segundos: number): {
   valor: string;
   unidade: string;
 } {

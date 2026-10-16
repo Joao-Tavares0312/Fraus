@@ -1,33 +1,11 @@
 "use client";
 
-import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { entradaDeSistema } from "@/lib/movimento";
-import { useEspecular } from "@/hooks/useEspecular";
 import { classesDoNivel, type Nivel } from "@/lib/hierarquia";
 import { RessalvaDaTela } from "./AparatoDaTela";
 
-/**
- * O SISTEMA: a unidade de composicao da interface.
- *
- * Como numa partitura, um sistema e uma faixa de largura total que carrega uma
- * linha e tudo que a anota. A pagina e uma PILHA DE SISTEMAS, nao uma grade de
- * cartoes -- o cartao com borda e fundo proprio deixou de ser o agrupador
- * padrao, e quem agrupa agora e espaco mais regua. Ver DESIGN.md, secao 2.
- *
- * A MUDANCA QUE IMPORTA e a posicao da prosa. Antes, a legenda metodologica
- * ficava no cabecalho, ACIMA do conteudo: somando os paineis, isso empurrava o
- * grafico que carrega a tese da tela para 560px abaixo do topo. Nenhuma
- * explicacao foi removida -- ela virou APARATO, no rodape do sistema e na
- * tipografia menor, que e onde a partitura poe nota de editor.
- *
- * Recolher e permitido; remover nao -- so o LUGAR mudou de novo: a ressalva
- * ja nao abre no proprio painel, ela SOBE para o aparato da TELA, um so por
- * pagina, no rodape (ver `AparatoDaTela.tsx`). Os rotulos curtos que
- * qualificam o numero (`estimativa`, `observado`, `sem sinal`) NAO sao
- * aparato: ficam colados ao dado, sempre visiveis.
- */
+/** Região da tela com estado isolado e ressalvas preservadas no aparato. */
 export function Painel({
   titulo,
   legenda,
@@ -81,40 +59,18 @@ export function Painel({
   /** Substitui regua/children pelo estado vazio, no lugar do conteudo. */
   vazio?: ReactNode;
 }) {
-  const refEspecular = useEspecular<HTMLElement>();
-
   return (
     <>
-      <motion.section
-        ref={refEspecular}
-        // A ENTRADA. `whileInView` com `once` em vez de `animate` puro: o sistema
-        // sobe quando ENTRA em cena, e nao todos juntos no instante do primeiro
-        // quadro. Numa pagina que rola, isso da o escalonamento de graca, na
-        // ordem em que o olho chega -- sem precisar coordenar indice entre
-        // sistemas que moram em grades diferentes.
-        //
-        // `margin` negativo embaixo: o gatilho dispara pouco ANTES do sistema
-        // aparecer, senao ele entra ja animando e o movimento e visto pela
-        // metade.
-        variants={entradaDeSistema}
-        initial="oculto"
-        whileInView="presente"
-        viewport={{ once: true, margin: "0px 0px -64px 0px" }}
+      <section
         className={cn(
-          "especular chanfro quebra-evitar min-w-0 overflow-hidden rounded-lg",
+          "quebra-evitar min-w-0 overflow-hidden",
           classesDoNivel(nivel),
           className,
         )}
       >
         {/* A regua do sistema. Mais espaco acima do titulo do que abaixo. */}
-        <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-linha pb-2">
-          <h2
-            className={cn(
-              // Titulo de painel e ROTULO de instrumento: mono, caixa alta.
-              "rotulo-instrumento font-medium",
-              nivel === "dominante" ? "text-xs text-foreground" : "text-[0.6875rem]",
-            )}
-          >
+        <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+          <h2 className="text-base font-medium text-foreground">
             {titulo}
           </h2>
           {acessorio ? <div className="shrink-0">{acessorio}</div> : null}
@@ -144,7 +100,7 @@ export function Painel({
             children
           ))}
         </div>
-      </motion.section>
+      </section>
       {/* A ressalva sobe para o aparato da tela, identificada pelo titulo do
           painel -- ela e filho de verdade deste componente, entao re-renderiza
           quando `legenda`/`rodape` mudam, em vez de congelar num valor antigo

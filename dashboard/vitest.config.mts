@@ -19,8 +19,7 @@ export default defineConfig({
   // `@` como no tsconfig: os testes de rota (`lib/rotas-locais.test.ts`)
   // importam `app/api/**/route.ts`, que resolvem `@/lib/...`.
   resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
-  // Componentes puros (sem hook, sem estado) como o SegmentoLED renderizam em
-  // `react-dom/server` mesmo em node, entao entram na suite sem jsdom.
+  // Componentes puros renderizam via react-dom/server sem ambiente de navegador.
   test: {
     environment: "node",
     include: ["lib/**/*.test.ts", "components/**/*.test.tsx"],

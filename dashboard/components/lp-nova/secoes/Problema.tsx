@@ -1,51 +1,29 @@
-/**
- * O PROBLEMA, so com o que tem fonte no repositorio (README, docs/tese.md).
- * Nenhum percentual de mercado inventado.
- */
-const FALHAS = [
-  {
-    nome: "Pesquisa declarada",
-    texto:
-      "Depende de quem responde e pode deixar parte dos atendimentos sem avaliação. A ausência de resposta não diz como o cliente se sentiu.",
-  },
-  {
-    nome: "Taxa de contenção",
-    texto: "Registra se houve transferência, não se o problema foi resolvido. Um atendimento contido também pode terminar em desistência.",
-  },
-  {
-    nome: "Métricas genéricas",
-    texto: "Nesse estudo, variáveis genéricas explicaram cerca de 10% da variância da satisfação declarada; com variáveis de domínio, cerca de 27%. Não são medidas de desempenho do Fraus nem um teto universal.",
-    fonte: {
-      href: "https://link.springer.com/article/10.1007/s41233-025-00071-8",
-      rotulo: "Quality and User Experience, Springer, 2025",
-    },
-  },
-];
+import { ChevronDown, MessagesSquare, Search } from "lucide-react";
+import { ArteCompacta } from "../ArteCompacta";
 
 export function Problema() {
   return (
-    <div className="ln-pesquisa">
-        <h3 id="titulo-problema">
-          O que a pesquisa ajuda a distinguir
-        </h3>
-        <ul className="ln-linhas">
-          {FALHAS.map((f) => (
-            <li key={f.nome}>
-              <span className="ln-linhas__nome">{f.nome}</span>
-              <p className="ln-linhas__texto">
-                {f.texto}
-                {f.fonte && (
-                  <>
-                    {" "}
-                    <a href={f.fonte.href} className="ln-fonte" target="_blank" rel="noreferrer">
-                      {f.fonte.rotulo}
-                    </a>
-                  </>
-                )}
-              </p>
-            </li>
-          ))}
-        </ul>
-    </div>
+    <section className="cena" data-cena="1" id="como-funciona" aria-labelledby="titulo-contexto">
+      <div className="texto-cena">
+        <h2 id="titulo-contexto">Uma frase não conta a conversa inteira.</h2>
+        <p>Uma despedida cordial não diz, sozinha, se o problema foi resolvido. O contexto precisa entrar na leitura.</p>
+        <div className="lp-widget contexto-widget">
+          <div className="widget-cabecalho">
+            <span className="widget-voz voz-dito"><MessagesSquare className="icone-lp" aria-hidden="true" />O que foi dito</span>
+            <span className="rotulo-exemplo">Exemplo de linguagem</span>
+          </div>
+          <blockquote className="frase-ilustrativa"><p>“Ok, obrigado.”</p></blockquote>
+          <details className="contexto-detalhes" open>
+            <summary><Search className="icone-lp" aria-hidden="true" /><span>O que conferir na conversa</span><ChevronDown className="icone-lp chevron-lp" aria-hidden="true" /></summary>
+            <ul className="perguntas-contexto">
+              <li><strong>O pedido</strong><span>O que o cliente precisava resolver.</span></li>
+              <li><strong>A resposta</strong><span>Como o chatbot tratou a solicitação.</span></li>
+              <li><strong>O desfecho</strong><span>Como o atendimento terminou.</span></li>
+            </ul>
+          </details>
+        </div>
+      </div>
+      <ArteCompacta etapa={1} />
+    </section>
   );
 }

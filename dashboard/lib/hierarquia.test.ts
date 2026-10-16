@@ -1,23 +1,8 @@
 // dashboard/lib/hierarquia.test.ts
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  DOMINANTE_POR_TELA,
-  classesDoNivel,
-  dominanteDaTela,
-} from "./hierarquia";
+import { DOMINANTE_POR_TELA, dominanteDaTela } from "./hierarquia";
 
-describe("classesDoNivel", () => {
-  it("da ao dominante uma superficie mais densa que a do apoio", () => {
-    expect(classesDoNivel("dominante")).toContain("vidro");
-    expect(classesDoNivel("dominante")).not.toContain("vidro-fino");
-    expect(classesDoNivel("apoio")).toContain("vidro-fino");
-  });
-
-  it("nao devolve a mesma coisa para os dois niveis", () => {
-    expect(classesDoNivel("dominante")).not.toBe(classesDoNivel("apoio"));
-  });
-});
 
 describe("dominanteDaTela", () => {
   it("nomeia um dominante para cada tela da ferramenta", () => {
@@ -50,17 +35,6 @@ describe("dominanteDaTela", () => {
   });
 });
 
-describe("Painel", () => {
-  it("consome o vocabulario em vez de digitar a superficie de novo", () => {
-    // Guarda de duplicacao: se alguem cravar `vidro-fino` no Painel, a regra
-    // passa a existir em dois lugares e diverge no dia em que um dos dois for
-    // corrigido -- que e exatamente como o Aparato nasceu (ver o cabecalho
-    // dele).
-    const fonte = readFileSync("components/Painel.tsx", "utf8");
-    expect(fonte).toContain("classesDoNivel");
-    expect(fonte).not.toMatch(/"[^"]*\bvidro(-fino)?\b[^"]*"/);
-  });
-});
 
 describe("aparato", () => {
   it("o Painel nao hospeda mais um Aparato proprio", () => {

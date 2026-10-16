@@ -1,319 +1,299 @@
 ---
-name: Fraus — Instrumento
-description: Painel de instrumento de laboratório sobre quase-preto neutro; todo número é um display de sete segmentos e a ausência de dado é um segmento apagado.
+name: Fraus — Contexto, não certeza
+description: Grafite, monograma FR em camadas e tipografia quadrada. Uma chegada expressiva e uma ferramenta de leitura calma, com temas escuro e claro.
 colors:
-  background: "oklch(0.14 0.004 285)"
-  foreground: "oklch(0.96 0.003 285)"
-  card: "oklch(0.185 0.005 285)"
-  popover: "oklch(0.175 0.005 285)"
-  sidebar: "oklch(0.16 0.004 285)"
-  muted: "oklch(0.245 0.006 285)"
-  muted-foreground: "oklch(0.74 0.01 285)"
-  linha: "oklch(0.96 0.003 285 / 26%)"
-  compasso: "oklch(0.96 0.003 285 / 9%)"
-  border: "oklch(0.96 0.003 285 / 13%)"
-  primary: "oklch(0.83 0.095 84)"
-  primary-foreground: "oklch(0.15 0.02 84)"
-  dito: "oklch(0.78 0.14 72)"
-  dito-texto: "oklch(0.85 0.125 72)"
-  medido: "oklch(0.74 0.13 250)"
-  medido-texto: "oklch(0.82 0.105 250)"
-  detrator: "oklch(0.67 0.24 22)"
-  neutro: "oklch(0.78 0.15 90)"
-  promotor: "oklch(0.79 0.18 190)"
-  sem-sinal: "oklch(0.705 0.015 286.067)"
-  destructive: "oklch(0.79 0.121 22.216)"
-  success: "oklch(0.78 0.16 150)"
-  warning: "oklch(0.8 0.14 80)"
-  atelie-halo: "oklch(0.62 0.2 320)"
+  background: "#171819"
+  foreground: "#F3F4F5"
+  card: "#222426"
+  muted-foreground: "#B3B9C0"
+  border: "#454B52"
+  primary: "#D6BA72"
+  dito: "#EDB466"
+  medido: "#8DC8F5"
 typography:
-  display-vitrine:
-    fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "clamp(2.6rem, min(8vw, 10.5vh), 6.5rem)"
+  display:
+    fontFamily: "Chakra Petch, system-ui, sans-serif"
     fontWeight: 500
-    lineHeight: 0.95
-    letterSpacing: "-0.035em"
-  titulo-vitrine:
-    fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "clamp(2.1rem, 4.6vw, 3.75rem)"
-    fontWeight: 500
-    lineHeight: 1.02
-    letterSpacing: "-0.028em"
-  titulo-instrumento:
-    fontFamily: "Martian Mono, ui-monospace, Cascadia Mono, monospace"
-    fontWeight: 500
-    letterSpacing: "-0.02em"
-  rotulo-instrumento:
-    fontFamily: "Martian Mono, ui-monospace, Cascadia Mono, monospace"
-    fontSize: "0.6875rem"
-    fontWeight: 400
-    lineHeight: 1.3
-    letterSpacing: "0.14em"
+    lineHeight: 1.06
+    letterSpacing: "-0.025em"
   prosa:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.0625rem"
-    lineHeight: 1.7
+    fontFamily: "Chakra Petch, system-ui, sans-serif"
+    fontWeight: 400
+    lineHeight: 1.75
   dado:
-    fontFamily: "Martian Mono, ui-monospace, Cascadia Mono, monospace"
+    fontFamily: "Chakra Petch, system-ui, sans-serif"
     fontFeature: "tabular-nums"
 rounded:
-  none: "0"
-  pilula: "999px"
-  cabeca: "50%"
+  controle: "8px"
+  regiao: "12px"
 spacing:
-  telemetria: "34px"
-  gutter-vitrine: "clamp(1rem, 4vw, 3rem)"
-  secao-vitrine: "clamp(4.5rem, 9vw, 8rem)"
-  pauta: "13px"
-components:
-  telemetria-topo:
-    backgroundColor: "{colors.background}"
-    textColor: "{colors.muted-foreground}"
-    typography: "{typography.rotulo-instrumento}"
-    height: "34px"
-  painel:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.none}"
-    padding: "16px 20px"
-  botao-primario-vitrine:
-    backgroundColor: "{colors.background}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.none}"
-    padding: "0 1.6rem"
-    height: "3rem"
-  botao-acessar-nav:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.pilula}"
-    padding: "0.6rem 1rem"
-  segmento-led:
-    textColor: "{colors.medido}"
+  sidebar: "224px"
+  sidebar-recolhida: "64px"
+  gutter-lp-desktop: "64px"
+  gutter-lp-mobile: "24px"
 ---
 
-# Design System: Fraus — Instrumento
+# Design da interface — Contexto, não certeza
 
-Registrado em 30/09/2026 a partir do que foi **construído** (`app/globals.css`, `app/lp.css`, `components/instrumento/**`, `components/lp-nova/**`, `components/shell/**`), não do plano. Substitui por inteiro o mundo "Pauta / espaço profundo", que foi descartado; o que dele continua vivo está aqui, com o motivo. Contrato da rodada: `docs/superpowers/specs/2026-09-30-instrumento-design.md`. Verdade de produto: `PRODUCT.md`.
+Direção aprovada no protótipo v3 e implementada em 16/10/2026. Este documento
+substitui as regras visuais do **Instrumento / Chuva de neon**; não é uma camada
+adicional sobre elas. A comparação histórica está em
+[Antes e depois da interface](redesign-2026-10-16.md).
 
-## Overview
+A verdade de produto continua em `dashboard/PRODUCT.md`. Tokens executáveis
+moram em `dashboard/app/globals.css`; a LP tem seu escopo em `dashboard/app/lp.css`.
+Os valores abaixo documentam o código, não constituem uma segunda configuração.
 
-**Creative North Star: "O Instrumento de Bancada"**
+## Direção
 
-Um painel de laboratório sobre quase-preto neutro. Todo número medido é um display de sete segmentos; o segmento **apagado também é desenhado**, então "sem sinal" é um medidor ligado que não leu nada, nunca um `0`. É a invariante 2 do CLAUDE.md virada objeto. Superfície é retângulo de hairline de 1px, raio zero, rótulo em mono caixa alta. Nada de cartão colorido ou cenário na ferramenta. As chegadas têm cenografia própria: orbe na vitrine e FR escultórico com luz de corte finita no acesso.
+**A marca tem matéria; a ferramenta tem clareza.** A LP combina o monograma FR,
+camadas com profundidade, tipografia angular e pinceladas diagonais. A dashboard
+usa a mesma família tipográfica e as mesmas vozes de cor, mas não recebe uma cena
+atrás dos dados. A fenda do monograma reaparece como pequeno detalhe de identidade,
+não como recorte que prejudica texto ou alvo de clique.
 
-A tese que atravessa a interface inteira não mudou: **o dito fica acima da régua, o medido abaixo**. Âmbar é o que o cliente articulou (fala, texto, emoji); azul é o que o sistema mediu (score, probabilidade, latência, tendência). O produto vende a distância entre os dois, então ela nunca pode ficar invisível. O LED é azul porque número é medido.
+- Grafite, branco mineral e ouro fosco na chegada.
+- Cabeçalhos e navegação em caixa normal; sem telemetria numerada decorativa.
+- Números como texto legível, não polígonos de sete segmentos.
+- Controles de 8px e regiões de 12px; borda simples e superfície opaca.
+- Uma região dominante por tela; apoio não disputa o mesmo peso visual.
 
-Fusão aprovada pelo dono sobre mockups estáticos (seed 197a1d0c): **Régua** (telemetria, hairlines, mono, nav numerado, a régua dito/medido) + **Segmento** (LED, apagado = ausência, lâmpada sempre com palavra) + **Aurora** (só na vitrine: orbe, headline gigante, nav de vidro, CTA de borda cônica, halo e grão). **Tinta e tom** foi retirado da fusão por decisão do dono: nada de balão, halftone, linhas de velocidade ou sarjeta. Em 15/10/2026, a vitrine incorporou os controles e a matéria grafite do acesso, preservando sua cena e narrativa próprias.
+## Cor e significado
 
-**Key Characteristics:**
-- Quase-preto neutro (croma 0,004) com traço de matiz 285; degraus de superfície são passos de claridade, não de cor.
-- Hairline 1px e raio 0 na ferramenta; a linha de 26% (`--linha`) **afirma**, a de 9% (`--compasso`) só agrupa. Acesso e controles da vitrine têm exceções locais de raio.
-- Martian Mono em rótulo, dado e título da ferramenta; Inter na prosa e nos controles de acesso/vitrine; Bricolage nos displays da vitrine e da chegada à conta.
-- Três cores com dono: âmbar dito, azul medido, dourado só em ação, foco e marca. Magenta só no orbe e no halo.
-- Um momento vivo na vitrine (o orbe); a ferramenta é estática.
+| Papel | Escuro | Claro |
+|---|---|---|
+| Fundo | `#171819` | `#F3F4F5` |
+| Superfície / popover / sidebar | `#222426` | `#FFFFFF` |
+| Texto principal | `#F3F4F5` | `#202326` |
+| Texto secundário | `#B3B9C0` | `#565D65` |
+| Ação e foco | `#D6BA72` | `#735713` |
+| Dito | `#EDB466` | `#8A4B00` |
+| Medido | `#8DC8F5` | `#165E9D` |
+| Borda | `#454B52` | `#D5D9DE` |
 
-## Colors
+**Âmbar é dito; azul é medido.** Fala, texto e emoji pertencem ao primeiro.
+Probabilidade, nota, tempo e tendência pertencem ao segundo. Uma régua entre os
+dois só aparece quando existe essa divisão real; NPS × latência são duas medidas,
+não uma fala confrontada com uma medida.
 
-Estratégia: **neutro quase-preto restrito, com duas vozes de dado e um metal de marca**. Tudo em OKLCH; o frontmatter é a fonte normativa e `scripts/contraste.mjs` só lê `oklch()` literal.
+**Ouro não é dado.** Pertence a marca, ação, foco e seleção. Não colore série,
+barra, categoria ou valor de indicador para parecer bom resultado.
 
-### Primary
-- **Ouro fosco do monograma** (`--primary`, oklch 0.83 0.095 84): cor de **ação e foco**, medida do próprio `public/fraus-logo.svg`. Preenche controle, anel de foco, cursor `█` do nav ativo, o `00` da telemetria. **Nunca** codifica dado. Separa-se do âmbar do dito pelo croma (fosco 0,095 contra saturado 0,14): metálico contra pigmento; e por nunca dividirem superfície.
+Categorias, famílias, emoções e tipos de nó conservam seus significados. No tema
+claro, a luminância se adapta ao fundo, não se troca a família de matiz. Toda
+categoria leva rótulo; cor não é o único canal. Os validadores medem texto e marcas
+nos dois temas, inclusive as cores do grafo.
 
-### Secondary (as duas vozes)
-- **Âmbar do dito** (`--dito` 0.78 0.14 72; texto `--dito-texto` 0.85 0.125 72): fala, texto, emoji. Acima da régua.
-- **Azul do medido** (`--medido` 0.74 0.13 250; texto `--medido-texto` 0.82 0.105 250): score, probabilidade, latência. Abaixo da régua. Cor padrão do `SegmentoLED`.
-- Variantes `-fraco` (18% de mistura) para preenchimento; `-texto` para tipo. Cor de marcação e cor de tipo não são a mesma coisa.
+## Tipografia e ícones
 
-### Tertiary (categorias, famílias, grafo)
-- **Escala de NPS**: `--detrator` (0.67 0.24 22), `--neutro` (0.78 0.15 90), `--promotor` (0.79 0.18 190, teal, longe do dourado de propósito). Sempre com rótulo escrito.
-- **Sem sinal** (`--sem-sinal`, 0.705 0.015 286): cinza fora da escala, de propósito.
-- **Famílias do fusor**: `--emocao` (10), `--lexico` (140), `--ironia` (230), `--estilo` (170), `--incongruencia` (290, croma 0,15: o gamut estreita nesse matiz), `--tempo` (320, série sempre tracejada). Cada família tem `-fraco` e `-texto`; matiz de nenhuma é reciclado. `--outros-sinal` é cinza para prefixo que nenhuma família reconhece.
-- **Sete emoções** (`--emo-medo` 315, `-nojo` 160, `-tristeza` 245, `-raiva` 0, `-surpresa` 280, `-alegria` 125, `-neutro` cinza acromático): cor de **marca, nunca de texto**. Validadas por vizinhos na ordem fixa da pauta (`ORDEM_EMOCOES` em `lib/partitura.ts`: medo, nojo, tristeza, raiva, surpresa, alegria, neutro). Nove cores num painel não se separam sozinhas; o que as legitima é o nome escrito em cada linha e a validação por vizinhos (CVD ΔE 12,5, visão normal 16,2, ≥3:1 sobre o card, medidos em 15/09/2026). Trocar um tom ou a ordem sem rodar o validador desfaz a medição. Desprezo (raiva + nojo) é a nota vazada no tom da raiva.
-- **Grafo, nove tipos de nó**: `--no-*` com L 0,79 / C 0,19 iguais e só o matiz variando. Quente (30–95) = dito: emoji 30, conversa 60, termo 95. Frio (150–340) = medido/cadastrado: fonte 150, canal 195, feature 265, categoria 305, desfecho 340. `--no-importacao` é cinza (0.7 0 0): nó solto sem origem rastreável, ausência de afirmação. Claridade igual é deliberada: nenhum tipo é mais importante que outro. A tela carrega legenda própria agrupada nas duas famílias.
-- **Erro / sucesso / aviso**: `--destructive`, `--success`, `--warning` (este compartilha o matiz do dourado e só vive como texto, nunca como preenchimento) e as trincas `-rich`, `-rich-border`, `-rich-text`.
+**Chakra Petch local**, pesos 400, 500 e 600, com licença SIL OFL em
+`dashboard/public/identidade/`. `next/font/local` serve os arquivos do próprio
+produto; não há busca de fonte no Google no build ou no navegador.
 
-### Neutral
-- **Quase-preto** (`--background`), **card** 0.185, **popover** 0.175, **sidebar** 0.16, **muted/secondary/accent** 0.245. Não é preto puro: preto puro faz a régua de meio ponto flutuar no vácuo (argumento herdado do grafite).
-- **`--muted-foreground`** (0.74 0.01 285) é o **piso de cor de texto**: nada mais escuro que isto carrega texto.
-- **Halo** (`--atelie-halo`, magenta 0.62 0.2 320): cenografia da vitrine. Sem canal de significado.
+- Texto, títulos, controles e valores usam a família quadrada.
+- Valores comparáveis usam algarismos tabulares. Código, `pre` e `kbd` mantêm
+  pilha monoespaçada de sistema.
+- Piso de texto: 11px. Não diminuir procedência ou ressalva para fazê-la caber.
+- Títulos grandes fecham o tracking; não aplicar caixa alta e tracking de
+  telemetria a toda a interface.
+- Lucide com ícones contextuais. Ação usa o desenho do verbo; seleção é
+  identificada pelo estado, não por um ícone arbitrário.
+- Ícone decorativo leva `aria-hidden`; texto ou nome acessível diz a ação.
 
-### Named Rules
-**A Regra do Dito e do Medido.** Âmbar acima da linha, azul abaixo. Onde as duas séries são medidas (NPS × latência) a régua **não** entra, senão vira notação decorativa. `Painel` aceita a prop `regua` só quando o dado realmente se divide.
-**A Regra do Ouro Fora do Dado.** `--primary` nunca aparece numa série, barra, categoria ou célula. Só ação primária, foco de teclado, cursor do nav, valor de telemetria e a marca. Uma exceção nomeada legada: o cursor de leitura da partitura (não codifica valor).
-**A Regra do Magenta Cenográfico.** Magenta só no orbe, no halo e na borda cônica do CTA da vitrine. Nunca em dado.
-**A Regra do Piso.** Todo par de cor que carrega texto cruza AA (4,5:1) por cálculo. O portão manda no vidro; o vidro nunca afrouxa o portão.
+## LP
 
-## Typography
+### Estrutura e conteúdo
 
-**Display Font:** Bricolage Grotesque (fallback `ui-sans-serif, system-ui`), **só na vitrine**.
-**Body Font:** Inter (fallback pilha de sistema), com `cv01` e `ss03`.
-**Label/Mono Font:** Martian Mono (fallback `ui-monospace, Cascadia Mono, Consolas`).
+1. **Abertura:** “O atendimento termina. A análise começa.” e ação para conhecer
+   o método. O FR é arte da marca, não um gráfico de resultados.
+2. **Contexto:** “Ok, obrigado.” vem identificado como **exemplo de linguagem**.
+   Pedido, resposta e desfecho explicam o que conferir; cortesia isolada não
+   comprova satisfação ou insatisfação.
+3. **Sinais:** detalhes nativos separam leitura textual da mensagem,
+   contribuições dos sinais e horários da conversa. Probabilidade textual não
+   vira causa isolada da nota fundida.
+4. **Uso:** panorama → recorte → conversa, com destino real para `/dashboard`.
+5. **Limites:** estimativa, não pesquisa; não avalia atendentes; tempo treinado
+   com dados sintéticos; sem sinal não é zero.
+6. **Fecho:** entrar e criar conta, sem links ou rótulos de prancha de estudo.
 
-Todas por `next/font/google` no `app/layout.tsx`, baixadas no build e servidas do próprio deploy: zero rede em runtime. Variáveis: `--fonte-martian`, `--fonte-inter`, `--fonte-bricolage`; tokens de uso `--fonte-mono`, `--fonte-sans`, `--fonte-display`.
+As leituras gravadas permanecem em expansão nativa. `carregarLeituras` valida o
+snapshot; seletor, transcrição, data, API e hash parcial acompanham resultados
+válidos. O hash das importâncias **não** identifica todos os checkpoints nem o
+pipeline. Sem snapshot válido, a LP nomeia a ausência; não publica resultado do
+dublê nem apresenta escolhas fictícias. Nenhuma análise é executada ao abrir a LP.
 
-**Caráter:** mono de instrumento para tudo que é rótulo ou número, prosa humana onde mono cansa, e um display de contraste violento apenas onde o visitante chega de passagem.
+### Fundo contínuo
 
-### Hierarchy
-- **Display da vitrine** (`.display-vitrine`, 500, `clamp(2.6rem, min(8vw, 10.5vh), 6.5rem)`, 0,95, -0,035em): manchete. O teto depende da altura (`min` com `vh`) para o hero não estourar em monitor largo e baixo. No hero o `h1` (`.ln-hero__titulo`) sobrepõe corpo `clamp(2.8rem, min(6.4vw, 11vh), 6rem)` e peso 700.
-- **Título de seção da vitrine** (`.titulo-vitrine`, 500, `clamp(2.1rem, 4.6vw, 3.75rem)`, 1,02, -0,028em).
-- **Título de tela** (`.titulo-instrumento`): mono, 500, caixa alta, -0,02em. Nunca display.
-- **Rótulo** (`.rotulo-instrumento`, 0,6875rem, 0,14em, caixa alta, `muted-foreground`): campo, painel, telemetria, grupo do menu.
-- **Dado** (`.num`): mono + `tabular-nums`. Todo número comparável.
-- **Prosa** (Inter): transcrição, explicação, aparato; na vitrine `.ln-prosa`.
+Uma única camada SVG de pincel cobre **a raiz inteira da LP**, do cabeçalho ao
+fecho. A raiz é posicionada e isolada; o pseudo-elemento usa `inset: 0`. Sua altura
+deve acompanhar a página, inclusive quando detalhes alteram o conteúdo. Não
+voltar a prender o fundo ao palco do FR ou a um viewport de altura fixa.
 
-### Named Rules
-**A Regra dos 11px.** Nenhum texto abaixo de 11px (0,6875rem); a banca lê em projetor. `lib/tipografia.test.ts` varre TSX por `text-[..]` e o `globals.css` por `font-size` literal.
-**A Regra da Display Contida.** Bricolage entra via `.display-vitrine` e `.titulo-vitrine`, ambas em `globals.css`; a frase cenográfica `.conta-frase` é a exceção do acesso. Nunca em rótulo, dado ou campo. `--fonte-sans`/`--fonte-mono` continuam apontando para Inter/Martian. `app/lp.css` sobrepõe só tamanho e peso, nunca família.
-**A Regra do Tracking Inverso.** Tipo grande fecha (-0,03 a -0,04em), rótulo pequeno abre (0,12 a 0,16em). A escala da vitrine não vale para a dashboard.
+O SVG é estático, local e sem filtros, scripts ou recursos externos. Não recebe
+interação. Widgets têm superfície opaca; a textura não atravessa o texto deles.
+A dashboard não herda o pincel.
 
-## Layout
+### FR e orçamento de renderização
 
-**Dashboard.** Pilha de "sistemas" (`Painel`), não grade de cartões: quem agrupa é espaço mais régua. Cada tela abre com a telemetria de 34px, depois a **armadura horizontal** (quatro células lado a lado, largura total, mesma altura curta, separadas por régua), depois o painel dominante. Um dominante por tela (`lib/hierarquia.ts`, `DOMINANTE_POR_TELA`); `apoio` é o padrão para ninguém virar dominante por omissão. Padding: dominante `p-4 sm:p-6`, apoio `p-4 sm:p-5`. Nav lateral colapsável para 32px (só o número sobrevive).
+A geometria deriva do **SVG oficial**, incluindo a fenda diagonal. F claro e R
+champanhe, cinco camadas extrudadas. Essas cinco camadas **não representam**
+famílias, features ou contribuições do modelo.
 
-**Vitrine — produto primeiro (15/10/2026).** `.ln-wrap` máx. 82rem com gutter `clamp(1rem, 4vw, 3rem)`; seções com `padding-block: clamp(5rem, 11vw, 9rem)`. Ordem: hero, caso com máscara, leituras, uso pelo analista, limites, acesso. A cena do caso tem altura natural, sem percurso sticky de `320svh`, inclusive no pôster. Método técnico e aprofundamento dos limites usam `details` nativo. Abaixo de 900px o orbe sobe; texto informativo tem fundo opaco de leitura.
+- Desktop a partir de 900px, sem movimento reduzido: **um canvas WebGL nativo**
+  quando o contexto é elegível, importado sob demanda. O HTML inicial contém
+  a própria arte pré-renderizada; centenas de faces CSS não permanecem no DOM.
+- Produção pede `failIfMajorPerformanceCaveat` e recusa backends CPU conhecidos,
+  como SwiftShader/llvmpipe. Nesse caso as poses continuam em WebP, sem replay,
+  triangulação ou upload de buffers. Identificação ocultada não prova hardware;
+  a decisão restante depende do caveat do navegador.
+- A seção com maior porção visível escolhe a pose. Nova direção parte da
+  interpolação atual e substitui o alvo; não existe fila nem sequestro da rolagem.
+- Com GL ativo, transições de 650ms; replay reexecuta a entrada sem mover o documento.
+- Mobile: imagens WebP transparentes das mesmas poses, sem iniciar WebGL.
+  `picture` seleciona a variante de 800×640; desktop usa 1280×1024. As imagens
+  inferiores usam carregamento preguiçoso, sem baixar as duas variantes.
+- Sem JS ou com `prefers-reduced-motion`: arte estática e conteúdo completo,
+  sem importar o renderizador nem oferecer replay.
+- Um buffer estático e um draw por quadro, culling de faces traseiras e placas
+  próximas primeiro. rAF existe apenas durante transições; resize redesenha sob
+  demanda. Limites: DPR 1,5 e 1,6 megapixel.
+- O raster só sai após o primeiro draw válido. WebGL indisponível ou contexto
+  perdido mantém a marca estática e remove replay; restauração recria recursos.
+  Desmontar libera buffers, programa, shaders, observadores e rAF.
+- Não há device WebGPU, partículas ou laço permanente na LP. O WebGL serve
+  somente à arte da marca, não à inferência. Motion fica no layout da dashboard.
+- Links para conta e ferramenta não antecipam o download dessas rotas na LP.
 
-**A dobra por altura.** O hero usa `clamp(2.8rem, min(6.4vw, 11vh), 6rem)`, peso 700. No celular reserva `36svh` para o orbe; fala, contexto sintético e CTA ficam em sequência, sem legenda invadindo a cena. A `.ln` usa `overflow-x: clip`. Conferir os dois CTAs presentes e inteiros em 1280×720 e 390×844, com fontes prontas e sem depender de WebGPU.
-
-**Acesso — FR escultórico (15/10/2026).** `MolduraDeConta` é compartilhada por entrar, cadastrar e aceitar convite. Desktop separa arte à esquerda e formulário opaco à direita; abaixo de 900px a arte vira faixa compacta acima dos campos. Nenhum cenário atravessa os inputs. `conta-*` fica isolado das rotas da ferramenta.
-
-**Ritmo.** Pauta de 13px, peso 1px, opacidade 0,03 (papel de ensaio virou ruído de instrumento). Grade de 1px da seção Sistema: `gap: 1px` sobre fundo `--linha`.
-
-### Named Rules
-**A Regra da Dobra.** Toda mudança no hero se confere a 1280×720 e a 390px de largura: CTA visível, sem rolagem horizontal.
-**A Regra da Régua Única.** Só a linha `--linha` afirma; filete interno é `--compasso`. Não empilhe bordas.
-
-## Elevation & Depth
-
-**Plano por padrão; profundidade é opacidade e hairline.** A superfície é quase opaca (fino/médio ~90–92% de `--card`, denso 97%), com `border: 1px solid var(--linha)` e uma sombra de assentamento `0 1px 0 oklch(0 0 0 / 30%)`. Sem quina iluminada, sem halo, sem chanfro. Blur só onde há sobreposição real: o denso (`blur(16px) saturate(1.2)`: popover/sheet), a faixa sticky do cabeçalho e a navegação fixa da vitrine (`blur(12px)`). Sem `backdrop-filter` o navegador recebe o **piso** opaco (`--vidro-*-piso`), medido por `npm run pisos`.
-
-As classes `.vidro-fino`, `.vidro`, `.vidro-denso` e `.chanfro` **permanecem** (30 componentes as carregam) mas o Instrumento as reduz a hairline e `clip-path: none`; só o tema chuva as reativa por baixo. Pisos medidos em 30/09/2026: 0.192 / 0.191 / 0.188.
-
-O ateliê é **calmo**: planeta, estrelas, grade laser, sol listrado e marca impressa em opacidade 0; sobra a mancha fria a 0,07 e o papel pautado. A mancha dourada foi zerada na revisão final porque esquentava cabeçalho e sidebar; **o dourado é ação, foco e marca, não luz de ambiente**.
-
-### Named Rules
-**A Regra da Espessura como Opacidade.** Vidro engrossa por opacidade, nunca por luz baixa. Par que reprova no `contraste` faz a espessura ganhar opacidade.
-
-## Shapes
-
-**Raio zero na ferramenta** (`--radius: 0`): retângulo de hairline. O chanfro de 45° do F e do R saiu junto com o vidro. Exceções circulares: cabeça da categoria, ponto de status e orbe (50%). Marcadores de lâmpada são quadrados de 0,5rem com brilho. **Exceções das chegadas, pedidas em 15/10/2026:** no acesso, inputs e ação com 11px, navegação com 12px/9px e olho com 8px; na LP, ações e abas com 11px, seletores, detalhes e matéria com 12px. Os componentes globais e a dashboard permanecem intactos.
-
-## Components
-
-### SegmentoLED (peça-assinatura)
-`components/instrumento/SegmentoLED.tsx` + `lib/segmentos.ts` (parte pura, testável sem React).
-- **Alfabeto:** `0-9`, `-` (e o menos tipográfico U+2212, mesmo sinal), `+` (segmento do meio + traço vertical), `,`, `.`, `:`, espaço. Caractere fora do alfabeto **não some**: entra como texto cru em mono (um display que engole caractere muda o número em silêncio).
-- **Vírgula com cauda:** a vírgula do pt-BR é um ponto com cauda descendo à esquerda; o ponto (`.`) é célula própria, só círculo. Sem a cauda, `66,1` lia como `66.1` (milhar em pt-BR).
-- **`null` é apagado:** renderiza N células (padrão 3) com os sete segmentos a 10% de opacidade, nunca `0`. `aria-label` vira `${rotulo}: sem sinal`.
-- **`rotulo` obrigatório:** SVG de polígonos não diz nada a leitor de tela, e "2,9" de quê não diz nada a quem vê.
-- **Não calcula, não arredonda, não converte.** Recebe a string já formatada em pt-BR (`formatarNps`, `formatarSegundosLED`...). Uma fonte só de formatação (invariante 3).
-- **Cor:** `medido` (azul, padrão), `marca` (dourado, fatos da marca), `tinta` (foreground, observado e não inferido), `erro` (só o easter egg). Brilho: um `drop-shadow(0 0 3px currentColor)` no grupo aceso, não por polígono. Sem estado, serve em Server Component.
-
-### TelemetriaTopo
-Faixa de 34px no topo de cada tela: mono 11px, caixa alta, 0,14em, `border-b border-linha`, fundo `--background`. Carrega **só fatos verdadeiros do produto** ("NPS ESTIMATIVA", "LLM 00"), nunca métrica inventada. `TelemetriaValor` põe o valor em dourado (marca, não dado). O lado direito some abaixo de `sm`. `TelemetriaDaRota` escolhe pela rota.
-
-### Navegação numerada
-Lateral: mono 11px, caixa alta, filete inferior, sem raio. Item `01_VISÃO GERAL` com o **cursor `█` dourado** na tela ativa; ativa também leva `aria-current="page"` (cor nunca é o único canal). A numeração vem de `lib/navegacao.ts`, a mesma fonte da telemetria; a ordem é a da tela e não a do papel (`usuario` vê 01 e 02, que continuam sendo 01 e 02). Grupos: Seções (5 de olhar), Referência (docs, aparece só com `NEXT_PUBLIC_URL_DOCS`, ícone de saída, aba nova), Ajustes (só `dev`). Rodapé: "Modelos locais / Sem LLM em runtime". Cada item carrega o período na URL.
-
-### Painel (hairline)
-Sistema de largura total: cabeçalho com `rotulo-instrumento` e `border-b border-linha`; corpo; prosa metodológica sobe para o **aparato da tela** (`RessalvaDaTela`), recolhível mas nunca removida. Rótulos curtos (`estimativa`, `observado`, `sem sinal`) ficam colados ao dado. Props `erro` e `vazio` substituem o conteúdo no lugar dele; `regua` divide dito/medido. Entrada: sobe 8px uma vez ao entrar em cena (`whileInView` + `once`).
-
-### Armadura de indicadores
-`FaixaIndicadores`: quatro células em fileira, rótulo + LED, sem barra de progresso decorativa. NPS e CSAT levam "estimativa" e o sublinhado pontilhado (`.estimado`); contenção e latência são observadas e não levam. Cada célula falha sozinha.
-
-### Cabeça da categoria (`EtiquetaCategoria`, slot único)
-Três formas, nesta ordem de honestidade, num só componente que tabela, piores atendimentos, ficha do grafo e tela do atendimento atravessam:
-- **cheia**: medido, com evidência, ponto colorido.
-- **tracejada**: medido, evidência **fraca**, anel tracejado **na cor da classe**; texto por extenso "evidência fraca: motivo". Vem do servidor (`fraus/evidencia.py`), derivada de fala observável (quantas mensagens e palavras), **nunca** da probabilidade do modelo: probabilidade não calibrada não é confiança.
-- **vazada**: não medido, anel oco cinza (`CabecaVazada`), nunca quarto ponto cheio; escreve "sem sinal" por extenso.
-Um componente irmão daria três formas em quatro lugares, e o que ninguém lembrasse de trocar continuaria mentindo confiança.
-
-### Vitrine — a LP (`/`, `ln-*`)
-Nasceu em `/leitura` como experimento vgpu em 09/10/2026, recebeu a constelação da vitrine antiga no mesmo dia e virou a raiz quando o dono pediu de volta o fósforo e o orbe (09/10/2026). A vitrine anterior (`components/lp/` com WebGL à mão, `lib/vitrine/`, `vitrine.css`, prefixo `vt-`) foi **removida**; `/leitura` redireciona para `/` (`permanent: false`). Dela ficaram `components/lp/fatos.ts` (os números) e as peças abaixo. Mesmo mundo (Instrumento), sem as amarras da ferramenta.
-- **Fundo e orbe da vitrine antiga, em WGSL** (`lib/lp-nova/shaders/orbe.wgsl`, porte do antigo `FS_FUNDO`): fósforo de osciloscópio — retícula, traço âmbar do dito e azul do medido com varredura, curvatura de CRT, vinheta, scanline, grão — e o **orbe de três canais** (âmbar, azul, magenta cenográfico). O orbe é um objeto só que atravessa a página (`lib/lp-nova/orbe.ts`, parte pura e testada): grande no hero, **pequeno no canto de cima enquanto a máscara se forma** (o rosto precisa ler), pequeno no centro nos nós, fusor azul, leitura, grande e âmbar no fecho. **A cor é canal**: âmbar (dito) domina na entrada da conversa e no fecho, azul (medido) no fusor, magenta só oscila. Na leitura **sem sinal**, saturação 0, superfície e manchas paradas e o traço do dito vira linha de base tracejada: ausência fora da escala.
-- **Material do orbe (15/10/2026):** esfera de fósforo polida, com volume obtido da normal analítica, faixas fluidas curvadas sobre a superfície, reflexo concentrado e luz de recorte. O domínio de fbm acompanha a esfera; o movimento interno é multiplicado pela saturação e para na ausência de sinal. O halo é curto e externo à silhueta; o recorte tem antialias proporcional ao raio e à resolução. Não é vidro com refração física: é iluminação procedural no mesmo fragment shader, sem textura externa, ray marching, draw adicional ou dependência nova. Posição, raio e pesos por etapa continuam pertencendo à coreografia existente. Os seis pôsteres foram regenerados pelo mesmo shader.
-- **Cartões minimalistas** (pedido do dono): nada de caixa com fundo, chip ou painel com cabeçalho na vitrine. Fala é citação tipográfica com rótulo mono; o Sistema é lista de linhas com hairline.
-- **LED fino**: `SegmentoLED traco="fino"` — mesma célula e alfabeto, segmento de 4 em vez de 12, sem brilho, apagado a 8%. Só na vitrine; a ferramenta segue no traço cheio.
-- **Cena** (`components/lp-nova/CenaLeitura.tsx` + `lib/lp-nova/cena.ts`): UM canvas **WebGPU** via [vgpu](https://vgpu.sh) 0.5.0. Um compute shader avança as partículas num storage buffer e um `draw` instanciado lê esse buffer; a CPU não toca posição depois da semente. WGSL modular em `lib/lp-nova/shaders/` (loader `@vgpu/wgsl` no Turbopack), validado por `npm run wgsl` (`vgpu check --require-validation`).
-- **A história é a leitura, com a constelação da vitrine antiga dentro** (mistura aprovada pelo dono em 09/10/2026): a fala `ok, obrigado 🙂` permanece DOM na fase inicial; fora dela as partículas assumem. Dispersa, forma máscara, reúne **39 nós agrupados nas sete famílias** e cai no orbe. Posições são cenografia da estrutura, não valores ou contribuições medidos. O caso sintético inclui cobrança sem solução; cortesia isolada não comprova satisfação nem insatisfação. A nota só aparece se veio do servidor. Destaque de mensagem mostra inclinação do classificador textual, nunca causa isolada da nota fundida. Coreografia em `fases.ts`; `data-marco` marca momentos e o filete acompanha `data-fase`.
-- **Movimento por etapas (15/10/2026):** cada forma tem um platô de 18% no começo e no fim do intervalo de rolagem; a transformação central usa curva quíntica com velocidade e aceleração nulas nas pontas. O motor interpola posição, raio, paleta e pesos com amortecimento exponencial de 180ms, independente da cadência. São constantes de tempo, não atrasos no conteúdo: o scroll, o layout e a seleção de leitura continuam imediatos. Voltar ou saltar uma seção substitui o alvo sem enfileirar a história; entrar por âncora/rolagem restaurada começa na etapa correta. Os vetores dos uniforms são reutilizados durante a interpolação. Dispersão/leitura mantêm fluxo contido, máscara e nós mantêm a forma; a mola amortecida reduz ricochete, e o grão do vidro fica fixo em vez de cintilar. Reduce continua sem device e sem animação espacial.
-- **Leituras gravadas, nunca ao vivo**: cinco CSVs sintéticos podem ser analisados pela rota sem persistência usando `scripts/gravar_leituras_lp.py`. Data/API e hash parcial das importâncias acompanham o snapshot; esse hash não identifica todos os checkpoints/pipeline. Sem JSON, o hero oferece entender o método; `#leituras` mantém uma nota compacta, sem resultado inventado ou seletor vazio. O fecho sempre conclui em entrar/criar conta. Publicar resultados reais exige fusor compatível com `log1p` e credencial válida; o fusor local em segundos continua recusado, sem retreino ou promoção automática.
-- **Diagnóstico secundário, não faixa fixa** (decisão do dono em 15/10/2026): os regimes `GPU · alto`, `GPU · baixo · quadros lentos` e `pôster · <motivo>` permanecem escritos dentro de “Sobre a cena visual”, recolhível no rodapé. Qualidade só desce dentro da mesma cena. Breakpoint 899/900 e movimento são observados em runtime; remontagem descarta o device anterior e reaplica humor/rolagem. O loop repousa após seis segundos sem entrada e retoma por interação; aba oculta cancela rAF. Reduce mantém pôster sem device.
-- **Pôsteres responsivos do mesmo WGSL**: `npm run posteres` usa Node/Dawn, compara duas renderizações com semente fixa e codifica WebP pelo Chrome já usado no smoke. Desktop 1280×800 e celular 390×844 têm composição própria. O hero usa o orbe sem nuvem de partículas sem glifos; a frase é DOM. Só `data-regime="poster"` busca assets; init e vivo não baixam pôster. Sem JS, `@media (scripting: none)` conserva imagens e ações. Não substituir por recorte lateral de imagem desktop.
-- **Fusão com o acesso (15/10/2026):** ações, navegação, abas e resumos em Inter/caixa normal, ícones de verbo do mapa compartilhado e alvos mínimos de 44px; mono continua nos metadados e instrumentos. O CTA de borda cônica dá uma volta de seis segundos, sem loop; o fecho usa ouro preenchido e mantém entrar/criar conta. O orbe, a máscara e a hierarquia da história não são substituídos pelo monograma.
-- **Matéria compartilhada, cena separada:** `npm run arte:estudio` executa o exportador da conta com `--fundo`, sem FR nem sua sombra, e grava `public/estudio-grafite.webp` (1280×800, 10.708 bytes). O ciclorama físico aparece em proporção 8:5 na abertura dos limites, sem texto sobreposto. É imagem estática também no regime vivo, não pôster da cena; não cria device adicional nem baixa o vídeo da conta. A exigência de zero requisições aos pôsteres `/lp-nova/*` no regime vivo continua.
-- **Modo de compatibilidade**: workgroup 64 e storage buffer no vértice. Falha de init/draw/device preserva conteúdo e cai em `falha-gpu`, com warning de diagnóstico, não erro silenciado.
-- `npm run test:lp` exercita 1280×720, 1568×882 e 390×844, dois temas, navegação e aprofundamento por teclado, alvos de toque, matéria estática, vivo sem baixar pôster, sem WebGPU, reduce inicial/dinâmico, resize 899↔900, repouso/retorno, device perdido, reflow 320, sem JS, saída para `/entrar` e `/cadastrar` e redirect `/leitura`. `LP_EVIDENCIAS` guarda capturas/dados. Portões de tokens não substituem amostragem composta e inspeção visual.
-
-### Acesso à conta (`conta-*`)
-**Luz de corte (refinamento aprovado em 15/10/2026).** O FR preserva a geometria do SVG oficial: F em cerâmica acetinada clara e R em metal champanhe escovado, com chanfros, microtextura e sombra de contato sobre grafite contínuo. Material e iluminação são calculados em `lib/conta/escultura.wgsl`, não simulados por brilho CSS. `npm run arte:acesso` usa Node/Dawn e o binário `ffmpeg` para gerar `public/conta/fr-luz-de-corte.webm` (960×1020, VP9, 24fps, três segundos sem áudio) e `fr-escultura.webp`. A geometria é calculada uma vez no exportador; os quadros variam a fonte de luz ao longo da fenda. O exportador confere que início e fim voltam ao mesmo repouso antes de aceitar o pôster. O acesso não carrega motor 3D nem cria device WebGPU.
-
-**Uma passagem, depois repouso.** `ArteDeConta` é a folha cliente da moldura de servidor. O vídeo não tem `src` no HTML inicial; sem JS ou com movimento reduzido, nem é solicitado. O pôster permanece por baixo. Término, falha, autoplay recusado, foco no acesso, redução de movimento, ocultação ou saída de vista encerram a sequência, sem retomada automática. No desktop com ponteiro preciso, apenas a composição da arte acompanha o cursor até ±3px/±2px; sair do ateliê ou focar o formulário zera o deslocamento. Não é rotação do objeto. Mobile e reduce ficam sem parallax; a faixa mobile funde o limite do asset ao fundo, sem moldura aparente. Nada disso move ou atrasa os campos.
-
-**Estrutura do acesso (15/10/2026).** Campos Inter de 16px e altura de 50px, rótulos Inter em caixa normal, ícones contextuais e olho com nome acessível/alvo de 44px. “Entrar” e “Criar conta” formam navegação segmentada de links reais com `aria-current`, preservando convite na URL, sem alternância duplicada no rodapé. São exceções locais da chegada, não uma troca da tipografia da ferramenta. O fundo passou a um ciclorama grafite com dobras diagonais e luz rasante, derivado na mesma cena 3D; parede e chão têm junção curva, não uma imagem de gradiente por trás dos campos.
-
-**Código sob demanda, exigência explícita.** Fora do convite, o input permanece montado dentro de `details` inicialmente fechado. Cadastro restrito mantém aviso visível e `required`; `onInvalid` abre o detalhe sincronamente antes do foco nativo, sem chamar `focus()` nem impedir que outro campo inválido seja o primeiro. Recolher não apaga o valor nem o retira do envio. No cadastro aberto, o código administrativo é opcional; convite de equipe segue dispensando outro código e não promove papel global. Erro vem do servidor; ocupação cobre envio e navegação. API indisponível e login desativado são estados diferentes; retry preserva convite. Não acrescentar LED “sessão” apagado, rodapé acadêmico ou OAuth/recuperação inexistentes.
+`npm run arte:lp`, com o produto local aberto, gera os WebP da própria escultura.
+`LP_URL` seleciona a prévia; o exportador usa Chromium e FFmpeg. Não recriar a
+geometria num segundo gerador. Depois de gerar novos arquivos públicos, reiniciar
+a prévia de produção antes de conferir as imagens.
+Em ambiente de captura sem aceleração, `LP_GL_SOFTWARE=1 npm run arte:lp`
+autoriza GL em software **somente no Playwright de exportação**. Não falsifica o
+driver nem habilita um modo oculto na LP. Isso produz arte real, não evidência
+de desempenho de hardware.
 
 
-### Ícone de ação
-`components/IconeDeAcao.tsx`. **Um verbo, um desenho:** todo botão de ação leva o ícone do VERBO (salvar, cancelar, remover, copiar, criar, atualizar, executar…), tirado de um mapa único, à esquerda do texto; só "próxima" o leva à direita. "Salvar faixas" e "Salvar equipe" têm o mesmo desenho. Controle de **seleção** (perfil, ordem de data, linha clicável de lista) não leva ícone de verbo: ele escolhe, não faz, e o estado já é dito por `aria-pressed`. O ícone é sempre decorativo (`aria-hidden`); o nome do botão é o texto.
-**Traço:** os ícones vêm do lucide e são redesenhados por CSS (`.lucide` em `globals.css`): 1,5px, ponta reta, junta viva. Ponta redonda a 2px é desenho de app amigável sobre uma superfície de hairline e raio zero. A regra cobre todo ícone da ferramenta; acesso e vitrine reutilizam o mapa apenas em ações funcionais, sem transformar seletores ou instrumentos em cartões de ícone.
+## Dashboard
 
-### Estados (coreografia)
-Todo componente interativo tem padrão, hover, foco, ativo, desabilitado, carregando, erro e vazio.
-- **Carregando** = esqueleto com a **forma** do resultado (`app/dashboard/loading.tsx`: armadura de quatro células, gráfico, lista), `aria-busy`. **Nunca desenha LED apagado**: apagado quer dizer "o medidor leu e não há sinal", e aqui ele ainda não leu. Nunca roda girando.
-- **Vazio** (`EstadoVazio`) nomeia o que falta e o endpoint ou a etapa que resolveria (`Resolvido por ...`, `Falta rodar: ...`). Moldura tracejada. Nunca preenche com número simulado. Com API fora, fala menos: a ação está na faixa do topo e a prosa recolhe para aparato.
-- **Erro isolado**: o sistema que falha mostra o próprio erro no lugar dele, com o peso dele; os vizinhos continuam de pé.
-- **Sem sinal**: LED apagado ou cabeça vazada. Nunca zero, nunca cinza dentro da escala.
-- **Foco**: anel de 2px `--ring` (dourado) em `:focus-visible`, também para `summary` e links.
+Sidebar de **224px**, recolhida em um rail de **64px**, com ícones e nomes em
+caixa normal. Três grupos organizam tarefas: **Acompanhar** (visão geral e
+atendimentos), **Investigar** (analisar, grafo e operação) e **Configurar**
+(integrações, modelo e configurações, apenas para `dev`). Destinos, ícones,
+grupos e visibilidade têm uma fonte única em `lib/navegacao.ts`.
 
-### Easter egg da mentira (`lib/mentira.tsx`)
-Com o painel do easter egg aberto, os indicadores da visão geral exibem números **falsos**: violação deliberada e **encenada** da invariante 2, sustentada por quatro travas: (1) nada sai da memória (zero escrita, zero API; estado de render); (2) leitor de tela recebe a verdade (o falso é `aria-hidden` e um `sr-only` diz que foi falsificado e qual o real); (3) selo `--destructive` inescapável no mesmo quadro; (4) volta sozinha em 8s, `Esc` ou clique fora. Gráficos e tabela **não** mentem. O falso é determinístico (`(d*7+3)%10` só nos algarismos, sem `Math.random`) e o LED vai a `cor="erro"`. Qualquer variação que quebre uma trava não é o easter egg, é defeito.
+- Página atual usa `aria-current="page"`; sua seção ancestral usa `"location"`.
+  Links recolhidos mantêm nome acessível e tooltip por foco ou ponteiro.
+- Somente `de` e `ate` acompanham a troca de tarefa. Busca, paginação e outros
+  parâmetros locais não vazam para a próxima seção.
+- Recolhimento é restaurado no servidor pelo cookie de preferência. Ctrl/Meta+B
+  alterna a navegação sem interceptar input, textarea, select ou contenteditable.
+- Ação de recolher/expandir fica junto à marca no desktop. No celular, o
+  cabeçalho abre a gaveta; fechamento explícito e Escape devolvem o foco.
+  Navegação comum fecha a gaveta; clique modificado para nova aba não a fecha.
+- Marca interativa e link para a visão geral são controles separados. Tema,
+  documentação, sessão e saída permanecem disponíveis; o rodapé compacto não
+  trunca o aviso real de motor sintético.
 
-### Motion
-Vocabulário em `lib/movimento.ts` (150–250 ms, curva `--ease-fluid` `cubic-bezier(0.32, 0.72, 0, 1)`). Na **ferramenta**, dois momentos autorados: o cursor de leitura na linha do tempo e a entrada dos sistemas (8px, uma vez, escalonada em 40 ms na armadura). Resposta a gesto (hover, a marca `MarcaFraus` que responde a cinco cliques) é outra categoria e não conta.
+Permissões continuam sendo contratos do servidor, não consequência de mostrar
+ou esconder links. Não converter ausência de papel em permissão administrativa.
 
-**A exceção da vitrine (cena de GPU).** Desde 01/10/2026 a vitrine tem um canvas com laço de quadros — decisão do dono, que inverte a de 30/09 (orbe em CSS puro, sem canvas); desde 09/10/2026 ele é WebGPU (vgpu). A regra que sobrevive é onde ele mora: **só na vitrine** (`app/page.tsx`), nunca no layout raiz, porque a ferramenta é lida por horas e não pode ter GPU girando atrás de tabela e gráfico. O device é liberado ao desmontar; sem WebGPU, a página mostra o pôster e segue legível. `scripts/validar-lp-playwright.mjs` cobra exatamente um canvas e o regime certo.
-**`prefers-reduced-motion` congela, não desacelera:** na vitrine a cena entra no regime `pôster` — nenhum laço, imagem fixa renderizada do mesmo WGSL. Na ferramenta, o bloco global zera transições e o `<Movimento>` passa `reducedMotion="user"` ao Motion.
+A visão geral abre com título e filtro, faixa compacta de quatro indicadores e
+NPS × latência como região dominante. A faixa usa quatro colunas em telas largas
+e duas em larguras menores. Informação de amostra e incerteza continua próxima
+do NPS, sem transformar ressalva em rodapé invisível.
 
-**A exceção de chegada à conta.** Luz pré-renderizada de três segundos, sem loop; interrompe quando a pessoa opera o formulário. Pôster estático é o estado completo, não tela de carregamento. Feedback dos controles de conta dura 100–140ms; reduce remove o deslocamento de pressionamento e mantém resposta de cor. Não substituir a cintilação metálica por jitter/glitch nem acrescentar partículas ou orbe ao acesso.
+`Painel` preserva dominante/apoio, erros locais, vazios e aparato metodológico.
+Superfície opaca, borda simples; nenhum ateliê, brilho especular, vidro ou fundo
+animado interfere nos gráficos. `EstadoVazio` nomeia o que falta e a etapa ou o
+endpoint que pode resolver.
 
-## Do's and Don'ts
+### Números, ausência e proveniência
 
-### Do:
-- **Do** passar ao `SegmentoLED` a string já formatada em pt-BR e sempre um `rotulo`; `valor={null}` para ausência.
-- **Do** manter âmbar acima e azul abaixo; use `-texto` quando a cor carrega tipo.
-- **Do** manter o dourado em ação, foco, cursor e marca, e o magenta no orbe e no halo.
-- **Do** rodar `npm run contraste` e `npm run pisos` ao tocar token de cor, vidro ou ateliê, e `npm run build` (ele compila o CSS e processa assets; os outros gates não).
-- **Do** conferir trabalho visual olhando, a 1280×720 e a 390px, nos dois temas.
-- **Do** rotular amostras sintéticas como tal em todo lugar em que aparecem.
-- **Do** nomear o que falta em estado vazio, com a etapa ou o endpoint.
-- **Do** derivar score, nota e categoria no servidor; o LED apresenta, não calcula.
+`ValorNumerico` recebe uma string já formatada, rótulo e ausência explícita.
+Não calcula score, nota ou categoria. `NotaInferida` apresenta a nota recebida.
+Zero observado continua zero; `null` continua ausência.
 
-### Don't:
-- **Don't** renderizar `0` para ausência; `null` é segmento apagado e "sem sinal" por extenso.
-- **Don't** usar kickers/eyebrows acima de título na vitrine (removidos na revisão final).
-- **Don't** usar dourado em série, barra, categoria ou célula de dado, nem como luz de ambiente.
-- **Don't** usar Bricolage fora dos displays da vitrine e da chegada à conta (`.display-vitrine`, `.titulo-vitrine`, `.conta-frase`), nem em rótulo, dado ou campo.
-- **Don't** pôr orbe, halo, grade ou coreografia atrás de tabela, gráfico ou qualquer rota do Operate.
-- **Don't** escrever texto abaixo de 11px.
-- **Don't** empilhar bordas ou reintroduzir chanfro/quina iluminada na ferramenta. O raio suave autorizado no acesso e nos controles da vitrine é local; não modificar o primitivo compartilhado para espalhá-lo.
-- **Don't** reciclar matiz de família nem reordenar/retocar as sete emoções sem rodar o validador.
-- **Don't** pontuar atendentes: nenhum elemento de interface pode transformar reconhecimento de emoção em score de performance por pessoa (CLAUDE.md, EU AI Act).
-- **Don't** pôr comentário ou regra que cite `.tema-chuva` antes do bloco real dele: o gate recorta pela primeira ocorrência da string e mede o bloco errado (ver Temas e gates).
+- NPS e CSAT carregam **estimativa**. Contenção e latência são observadas.
+- Amostra insuficiente não ganha ponto de NPS; o intervalo amostral não mede o
+  erro do modelo.
+- `sem sinal`, `sem estimativa` e `sem dados` não são sinônimos; a região nomeia
+  a condição correta.
+- Categoria medida: cabeça cheia; evidência fraca: tracejada com motivo;
+  ausência: cabeça vazada cinza e texto. Cinza fica fora da escala.
+- Erro de uma consulta não apaga indicadores que responderam.
+- O segredo da marca nunca modifica indicadores, gráficos ou transcrições.
 
-## Temas e gates
+### Encaixe secreto
 
-**Dois temas, ambos escuros.** O padrão é o Instrumento (`:root, .dark`, o app renderiza sempre com `.dark`); a segunda opção é **chuva de neon** (`.tema-chuva`), que sobrepõe só o chassi: asfalto índigo, dourado de sódio (`0.81 0.1 82`), quina de neon ciano/magenta, atelier aceso e vidro mais grosso. Ela **não toca a camada de dado**: `--dito` continua âmbar, `--medido` azul, famílias intactas; o dourado segue fora de dado; todo par de texto cruza AA nos dois temas.
+Cinco cliques consecutivos na marca, com até dois segundos entre eles, abrem
+um quebra-cabeça do FR. Três fragmentos da arte pré-renderizada deslizam em
+trilhos nativos; o centro de cada trilho recompõe o monograma. A conclusão
+é uma brincadeira visual, não score, leitura psicológica ou resultado do modelo.
 
-**Gate ciente de tema.** `scripts/contraste.mjs` recorta o bloco base (`:root, .dark {`) e cada bloco cujo seletor começa com `.tema-`, sobrepõe à base como a cascata (um tema só declara o que muda) e roda a matriz inteira por tema. Um mapa único deixaria o segundo tema sobrescrever o primeiro e o relatório sairia verde medindo um tema só. `scripts/pisos.mjs` mede o pior caso de vidro sobre o ateliê (só lê `oklch()` literal, por isso os pisos são pré-calculados, não `color-mix`).
-**O cuidado com `.tema-chuva`.** O laço que descobre temas usa `^(\.tema-…)\s*\{` (ancorado no início de linha), mas `recortarBloco` localiza o bloco por `indexOf` do seletor **em qualquer ponto do arquivo**, e depois abre na primeira `{` seguinte. Logo, qualquer comentário ou regra anterior ao bloco real que escreva a string `.tema-chuva` (por exemplo `.tema-chuva .vidro-fino`) faz o gate recortar o trecho errado e medir o bloco errado, com relatório verde. Em `globals.css` o bloco real vem antes de toda outra menção e o comentário que o antecede fala do tema sem escrever o seletor. Mantenha assim.
+O componente carrega apenas ao descobrir o segredo. Não usa canvas, áudio,
+relógio de jogo, API ou persistência; não fecha sozinho. Embaralhar oferece
+outro arranjo. `prefers-reduced-motion` elimina transições sem retirar o jogo.
+O diálogo contém foco, fecha por Escape/botão/clique fora e devolve foco à
+marca. No celular, fechar o segredo não fecha a gaveta que o abriu.
 
-**Ciclo de verificação:** `pisos`, `contraste`, `tsc --noEmit`, `lint` e `build` não se substituem, e nenhum vê a tela. Quatro já devolveram verde com o build quebrado.
+A antiga revelação vaporwave, a pontuação do ritmo e o contexto que falsificava
+indicadores foram removidos, não mantidos como um segundo modo.
 
-## Adições e desvios conscientes desta rodada
+### Temas
 
-- **Revisão final (30/09/2026):** kickers removidos da LP; dourado só em ação e marca (mancha dourada do ateliê zerada, LED da faixa de fatos em `tinta`); hero a 1280×720 com CTA na dobra (orbe por altura); mobile 390 sem corte nem rolagem horizontal; armadura da visão geral em faixa curta com leitura do NPS em faixa própria; grafo com respiro e reenquadramento ao redimensionar.
-- **`.lp-*` no `globals.css`** é resíduo de duas vitrines atrás; a LP de hoje vive em `app/lp.css` com prefixo `ln-` justamente para não herdar hover de peça extinta.
-- **Nove tipos de nó do grafo não foram alterados nesta rodada, mesmo com o revisor pedindo.** Os matizes estão congelados: a família (quente/fria) já diz dito/medido de longe, o matiz diz o tipo de perto, a legenda agrupa os nove, e claridade/croma iguais impedem hierarquia acidental. Mexer nas cores em rodada de chassi, sem validar de novo legenda, contraste e leitura no canvas, trocaria uma decisão medida por gosto. Reabra só como decisão própria, com validação.
-- **Vidro que não é mais vidro:** `--vidro-*-fundo`, `--vidro-quina`, `.chanfro`, `.especular` ficam como vocabulário porque o tema chuva os usa. Em `lib/hierarquia.ts`, a diferença entre `vidro` e `vidro-fino` é hoje só o padding e o tipo; não leia como duas opacidades.
-- **Não canonizado (defeitos carregados, não regras):** comentários do `globals.css` ainda citam croma "0.085"/"0.15" para dourado/âmbar (o token vigente é 0.095/0.14) e "DESIGN.md secão 4" numerada como no arquivo antigo. Os ícones `lucide-react` deixaram de ser defeito carregado em 02/10/2026: ganharam traço próprio e regra de uso (ver "Ícone de ação"); o glifo `█` do cursor continua sendo texto, e continua sendo a peça.
+**Escuro** é o padrão; **Claro** é alternativa da dashboard. Preferência fica no
+navegador e acompanha abas e navegação. Valores legados Instrumento/Chuva não são
+aliases: retornam ao padrão. LP e acesso ficam escuros, sem apagar a preferência
+da ferramenta; voltar à dashboard restaura a escolha.
+
+O script inicial evita flash; `TemaDaRota` trata transições do App Router. O
+canvas do grafo invalida a paleta ao trocar tema sem recriar dados ou física.
+
+## Acesso, acessibilidade e estados
+
+O acesso mantém o FR pré-renderizado de luz de corte: uma passagem curta, sem
+loop, interrompida ao operar o formulário. Não carrega motor 3D no navegador.
+Convite, código administrativo, erros, disponibilidade de login e navegação são
+contratos do servidor, não efeitos visuais.
+
+- Teclado: pular conteúdo, foco visível, abas com setas/Home/End e `details`
+  nativo com Enter. Controles da LP têm alvo mínimo de 44px.
+- Carregamento: esqueleto com forma do resultado e estado ocupado, nunca zero ou
+  “sem sinal” antes da resposta.
+- Erro: causa visível e ação real, sem ocultar os vizinhos que funcionam.
+- Movimento reduzido remove deslocamento; não apenas o torna mais lento.
+- Não pontuar atendentes, não alegar leitura de pensamentos e não apresentar
+  números de demonstração como resultados de clientes reais.
+
+## Verificação e manutenção
+
+`npm test`, `npm run lint`, `npm run build`, `npm run contraste` e `npm run pisos`
+cobrem contratos diferentes. Nenhum substitui olhar e operar o produto.
+
+`npm run test:lp` exercita desktop/mobile, teclado, snapshots/ausência, fundo com
+altura integral, pixels do FR, retarget/retorno, replay sem scroll, reduce
+inicial/dinâmico, resize, sem JS, indisponibilidade/perda/restauração de WebGL,
+ausência de draws ociosos, acesso e redirect de `/leitura`. `LP_EVIDENCIAS`
+guarda capturas e resultados fora do código.
+O relatório distingue GL exercitado de cenários não elegíveis. Para conferir
+geometria, retarget e ciclo de contexto sem uma GPU disponível,
+`LP_GL_SOFTWARE=1 npm run test:lp` autoriza renderização real em software apenas
+no navegador de QA; não é benchmark do caminho padrão.
+
+
+`node scripts/validar-navegacao-playwright.mjs` opera rotas reais, período,
+recolhimento/reload, atalhos durante edição, tooltip por foco, tema, marca e
+gaveta móvel. `DASHBOARD_URL` aponta para o produto já iniciado; exige sessão
+válida ou o modo local aberto. Também conferir dashboard vazia, atendimento sem
+sinal, temas, grafo e navegação LP ↔ ferramenta.
+
+`node scripts/validar-segredo-playwright.mjs` resolve o jogo por teclado,
+confere mudança dos pixels, reinício, embaralhar, foco e modais aninhados.
+Compara os quatro indicadores antes/durante/depois em desktop e celular,
+incluindo Claro e reduce. `SEGREDO_EVIDENCIAS` guarda as capturas opcionais.
+
+
+A documentação MkDocs mantém sua aparência própria nesta entrega; não presumir
+que o CSS do site foi redesenhado junto com o produto.

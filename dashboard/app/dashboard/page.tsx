@@ -186,9 +186,6 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
 
   return (
     <>
-      {/* Sem subtitulo, por decisao do Joao (14/08): o pitch morava aqui e
-          empurrava a tese da tela para baixo. A honestidade metodologica nao
-          saiu -- ela vive na NotaMetodologica e nos rotulos de estimativa. */}
       <CabecalhoPagina titulo="Visão geral" periodo={periodo} extensao={extensao} />
 
       {/* SEM flex-1: esta div so cresce ate onde o conteudo pede. Com
@@ -198,19 +195,11 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
           metodologica -- o buraco de ~600px que a hierarquia veio fechar. O
           buraco nunca foi a altura da barra lateral: ela e `fixed`, e ja
           acompanha o viewport por conta propria (ver components/ui/sidebar.tsx). */}
-      <div className="flex min-w-0 flex-col gap-7 px-4 py-5 sm:px-6">
+      <div className="flex min-w-0 flex-col gap-7 px-4 py-5 sm:px-8">
         {defasadas > 0 ? (
           <AvisoLexicoAntigo defasadas={defasadas} total={totalNoBanco} />
         ) : null}
 
-        {/*
-          O PRIMEIRO SISTEMA. A armadura de indicadores abre a tela em largura
-          total — quatro leituras em LED, lidas de uma vez — e o gráfico que
-          carrega a tese (o trade-off entre satisfação e tempo) vem logo abaixo,
-          ainda na primeira dobra. Até 30/09/2026 a armadura era uma coluna de
-          15rem à esquerda; o Instrumento a deitou (a fatia de 4 células cabe em
-          uma fileira e o número em LED pede corpo).
-        */}
         <div className="grid min-w-0 grid-cols-1 gap-6">
           <FaixaIndicadores
             indicadores={indicadores}

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentType, RefObject } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type {
   ForceGraphMethods,
   ForceGraphProps,
@@ -11,6 +11,7 @@ import type {
 } from "react-force-graph-2d";
 import type { ArestaDoGrafo, Camada, Grafo, NoDoGrafo } from "@/lib/api";
 import { escaparHtml } from "@/lib/escaparHtml";
+import { assinarTema, lerTema, temaDoServidor } from "@/lib/tema";
 import { ListaDeNos } from "./ListaDeNos";
 import { FichaDoNo } from "./FichaDoNo";
 import { ReguaDeCamadas } from "./ReguaDeCamadas";
@@ -58,6 +59,8 @@ function idDaPonta(ponta: ArestaDaSimulacao["source"]): string {
 }
 
 export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
+  useSyncExternalStore(assinarTema, lerTema, temaDoServidor);
+  const paleta = paletaAtual();
   const refGrafo = useRef<Metodos | undefined>(undefined);
   const refCaixa = useRef<HTMLDivElement | null>(null);
   const [foco, setFoco] = useState<Camada | "todas">("todas");
@@ -228,7 +231,7 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
 
   const corDaAresta = useCallback(
     (aresta: ArestaDaSimulacao) => {
-      const linha = paletaAtual().linha;
+      const linha = paleta.linha;
       const origem = porId.get(idDaPonta(aresta.source));
       const destino = porId.get(idDaPonta(aresta.target));
       if (!origem || !destino) return comOpacidade(linha, APAGADO);
@@ -243,7 +246,7 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
         ),
       );
     },
-    [porId, opacidadeDe],
+    [porId, opacidadeDe, paleta],
   );
 
   const contagem = `${grafo.nos.length} nós, ${grafo.arestas.length} arestas`;
@@ -298,7 +301,7 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
                     escala,
                     opacidadeDe(String(no.id), no.camada),
                     String(no.id) === selecionado?.id,
-                    paletaAtual(),
+                    paleta,
                   )
                 }
                 nodePointerAreaPaint={(no, cor, ctx) =>

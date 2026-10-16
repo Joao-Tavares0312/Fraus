@@ -1,28 +1,20 @@
+import { ChevronDown, ScanText } from "lucide-react";
 import type { ConjuntoLeituras, Falta } from "@/lib/lp-nova/leituras";
 import { SeletorDeLeituras } from "../SeletorDeLeituras";
 
 export function Leituras({ conjunto }: { conjunto: ConjuntoLeituras | Falta }) {
   if ("falta" in conjunto) {
     return (
-      <aside id="leituras" data-marco="leitura" aria-label="Disponibilidade das leituras" className="ln-leituras ln-leituras--ausentes">
-        <div className="ln-wrap">
-          <p className="ln-vazio" role="status">
-            <strong>Leituras gravadas indisponíveis.</strong> {conjunto.falta}.
-            {" "}O caso acima é um roteiro sintético, sem resultado publicado.{" "}
-            <a href="#limites">Conheça os limites da estimativa.</a>
-          </p>
-        </div>
+      <aside id="leituras" aria-label="Disponibilidade das leituras" className="leituras-ausentes">
+        <p role="status"><strong>Leituras gravadas indisponíveis.</strong> {conjunto.falta}. Nenhum resultado é publicado sem uma análise gravada pelo motor real.</p>
       </aside>
     );
   }
   return (
-    <section id="leituras" data-marco="leitura" aria-labelledby="titulo-leituras" className="ln-sec ln-leituras">
-      <div className="ln-wrap">
-        <h2 id="titulo-leituras" className="titulo-vitrine ln-leituras__titulo">
-          Escolha uma conversa. Inspecione a leitura.
-        </h2>
-        <SeletorDeLeituras conjunto={conjunto} />
-      </div>
-    </section>
+    <details id="leituras" className="leituras-gravadas">
+      <summary><ScanText className="icone-lp" aria-hidden="true" /><span>Inspecionar conversas analisadas</span><ChevronDown className="icone-lp chevron-lp" aria-hidden="true" /></summary>
+      <p>Conversas sintéticas escritas para esta página, com análises gravadas pelo motor real. Escolha uma conversa e confira o que foi lido.</p>
+      <SeletorDeLeituras conjunto={conjunto} />
+    </details>
   );
 }

@@ -15,9 +15,8 @@ theme:
   name: material
   language: pt-BR
   palette:
-    # Dois temas ESCUROS e a decisao do dashboard/DESIGN.md, e o site herda a
-    # mesma escolha: alternar para claro aqui daria ao leitor da documentacao
-    # uma identidade que o produto nao tem.
+    # O site documental mantém sua aparência escura nesta entrega. O produto
+    # passou a oferecer Escuro/Claro; a comparação visual está no nav abaixo.
     scheme: slate
     primary: black
     accent: amber
@@ -58,9 +57,9 @@ plugins:
             separate_signature: true
             members_order: source
   # O PDF NAO MORA AQUI, e isso e deliberado -- ver `mkdocs-pdf.yml`.
-# A identidade do produto vestindo o site. Os tokens OKLCH sao os mesmos de
-# `dashboard/app/globals.css` -- ver o cabecalho do arquivo para por que eles
-# sao copiados e nao importados.
+# O site documental mantém seu tema próprio. Cores e fontes em assets/fraus.css
+# não são importadas automaticamente do produto; a direção atual e a comparação
+# ficam nas páginas Design da interface e Antes e depois da interface.
 extra_css:
   - assets/fraus.css
 
@@ -120,6 +119,7 @@ nav:
   # Copiado de dashboard/DESIGN.md no build (`scripts/reunir_docs.py`), nunca
   # a mao: copia manual e a documentacao divergindo do produto em uma semana.
   - Design da interface: design.md
+  - Antes e depois da interface: redesign-2026-10-16.md
   - Conformidade (AI Act): conformidade.md
   - Encolher os modelos: encolhimento.md
   - Limitações conhecidas: limitacoes.md

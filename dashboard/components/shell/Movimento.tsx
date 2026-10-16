@@ -16,8 +16,8 @@ import type { ReactNode } from "react";
  * transform, layout e escala, preservando so opacidade -- a leitura correta da
  * preferencia, que pede menos DESLOCAMENTO, nao ausencia total de feedback.
  *
- * Fica no `layout`, envolvendo tudo: preferencia de acessibilidade nao e
- * decisao de componente.
+ * Envolve a dashboard, onde o Motion e usado. A LP usa CSS e media query
+ * nativa; carregar esta biblioteca nela acrescentaria JavaScript sem uso.
  */
 export function Movimento({ children }: { children: ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;

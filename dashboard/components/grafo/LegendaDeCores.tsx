@@ -41,7 +41,7 @@ function Familia({ titulo, tipos }: { titulo: string; tipos: TipoDeNo[] }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <span
-        className={`font-mono tracking-[0.14em] uppercase ${titulo === "dito" ? "text-dito-texto" : "text-medido-texto"}`}
+        className={`font-sans ${titulo === "dito" ? "text-dito-texto" : "text-medido-texto"}`}
       >
         {titulo}
       </span>

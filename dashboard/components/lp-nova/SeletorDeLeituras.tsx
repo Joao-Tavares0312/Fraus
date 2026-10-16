@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { useId, useState } from "react";
+import { ValorNumerico } from "@/components/ValorNumerico";
 import { falasDecisivas, marcasDaAtribuicao, type MarcaAtribuicao } from "@/lib/derivacoes";
-import { humorDaCategoria } from "@/lib/lp-nova/humor";
 import { concordaComRoteiro, dataDaGravacao, type ConjuntoLeituras, type IdLeitura, type Leitura } from "@/lib/lp-nova/leituras";
-import { useCena } from "./CenaLeitura";
 
 const TITULOS: Record<IdLeitura, { aba: string; tese: string }> = {
   obrigado: { aba: "O obrigado", tese: "Agradeceu e saiu sem solução." },
@@ -31,18 +29,12 @@ function porcentagem(v: number) {
  * Tudo que aparece aqui veio do servidor na gravacao: nota, categoria e a
  * probabilidade por mensagem. As marcas usam o saldo do classificador textual,
  * nao uma decomposicao da nota nem uma atribuicao causal por fala.
- * A cena de fundo muda de humor com a categoria escolhida.
  */
 export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) {
   const [atual, setAtual] = useState<IdLeitura>("obrigado");
-  const { definirHumor } = useCena();
   const base = useId();
   const leitura = conjunto.leituras.find((l) => l.id === atual) as Leitura;
 
-  useEffect(() => {
-    const { humor, cinza } = humorDaCategoria(leitura.categoria);
-    definirHumor(humor, cinza);
-  }, [leitura, definirHumor]);
 
   const marcas = marcasDaAtribuicao(leitura.mensagens);
   const decisivas = falasDecisivas(marcas);
@@ -63,8 +55,10 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
             onKeyDown={(e) => {
               const i = conjunto.leituras.findIndex((x) => x.id === atual);
               const passo = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-              if (!passo) return;
-              const proxima = conjunto.leituras[(i + passo + conjunto.leituras.length) % conjunto.leituras.length];
+              if (!passo && e.key !== "Home" && e.key !== "End") return;
+              e.preventDefault();
+              const indice = e.key === "Home" ? 0 : e.key === "End" ? conjunto.leituras.length - 1 : (i + passo + conjunto.leituras.length) % conjunto.leituras.length;
+              const proxima = conjunto.leituras[indice];
               setAtual(proxima.id);
               document.getElementById(`${base}-aba-${proxima.id}`)?.focus();
             }}
@@ -96,10 +90,10 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
           {/* O ROTEIRO e o que nos escrevemos; o veredito embaixo e o que o motor leu. */}
           <div>
             <span className="ln-rotulo">roteiro da conversa</span>
-            <p className="titulo-vitrine ln-veredito__tese">{TITULOS[atual].tese}</p>
+            <p className="ln-veredito__tese">{TITULOS[atual].tese}</p>
           </div>
           <div className="ln-veredito__nota">
-            <SegmentoLED valor={leitura.nota === null ? null : String(leitura.nota)} rotulo="nota estimada" altura={64} cor="medido" traco="fino" celulas={2} />
+            <ValorNumerico valor={leitura.nota === null ? null : String(leitura.nota)} rotulo="nota estimada" cor="medido" />
             <span className="ln-rotulo">
               {leitura.categoria ? (
                 <>

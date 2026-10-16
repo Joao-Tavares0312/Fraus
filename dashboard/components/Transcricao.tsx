@@ -13,12 +13,12 @@ import {
 import {
   formatarHora,
   formatarSegundos,
-  formatarSegundosLED,
+  formatarDuracaoCompacta,
   ROTULO_AUTOR,
 } from "@/lib/formato";
 import { fracaoDaPausa } from "@/lib/pausa";
 import { cn } from "@/lib/utils";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 
 const COR_SEVERIDADE: Record<SeveridadeLatencia, string> = {
   pico: "var(--promotor)",
@@ -68,10 +68,10 @@ function realce(marca: MarcaAtribuicao): string | undefined {
  *      fala do cliente e o que foi DITO, entao leva o filete ambar (`--dito`) e
  *      o fundo do papel; a resposta do bot ou do atendente fica RECUADA e em
  *      contorno TRACEJADO, porque nao e fala que o classificador de texto
- *      pontue. A prosa fica em Inter: mono em paragrafo cansa;
+ *      pontue. A prosa usa a fonte compartilhada da interface;
  *   2. a ESPERA do cliente, desenhada como a PAUSA da notacao (DESIGN.md §1.1):
  *      um intervalo tracejado entre a fala e a resposta, com o COMPRIMENTO
- *      proporcional a latencia e o tempo em LED. Ela sai dos timestamps, nao do
+ *      proporcional a latencia e a duração legível. Ela sai dos timestamps, nao do
  *      modelo, e a faixa de severidade da literatura de live chat continua
  *      escrita por extenso ao lado (o ponto colorido nunca e o unico canal);
  *   3. a marcacao das falas do cliente pela probabilidade POR MENSAGEM do
@@ -125,7 +125,7 @@ export function Transcricao({
                 className="quebra-evitar grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-0.5 sm:pl-10"
                 aria-label={`espera de ${formatarSegundos(latencia)} do cliente até esta resposta`}
               >
-                <PausaEmLED segundos={latencia} />
+                <PausaCompacta segundos={latencia} />
                 <span aria-hidden className="relative block h-4 min-w-0">
                   <span
                     className="absolute inset-y-0 left-0 border-x border-medido"
@@ -218,15 +218,12 @@ export function Transcricao({
 }
 
 /** A duracao da pausa no display: so digitos, e a unidade escrita ao lado. */
-function PausaEmLED({ segundos }: { segundos: number }) {
-  const { valor, unidade } = formatarSegundosLED(segundos);
+function PausaCompacta({ segundos }: { segundos: number }) {
+  const { valor, unidade } = formatarDuracaoCompacta(segundos);
   return (
     <span className="flex items-end gap-1">
-      <SegmentoLED
-        valor={valor}
-        rotulo="espera do cliente até esta resposta"
-        altura={18}
-      />
+      <ValorNumerico valor={valor}
+      rotulo="espera do cliente até esta resposta"  />
       <span className="pb-px text-[0.6875rem] leading-none text-muted-foreground">
         {unidade}
       </span>

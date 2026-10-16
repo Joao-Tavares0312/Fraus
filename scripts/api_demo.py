@@ -153,6 +153,14 @@ class MotorDuble:
             for indice, nome in enumerate(NOMES_FEATURES)
         }
 
+    def eixo_global(self) -> dict[str, float]:
+        """Sem coeficientes aprendidos: o grafo omite as arestas de feature.
+
+        Importancia ficticia nao fornece direcao aprendida. O mapa vazio e o
+        contrato do grafo para fusor sem treino, nao um eixo inventado.
+        """
+        return {}
+
     def simular_texto(self, texto: str) -> dict:
         p = self._probabilidades(texto)
         emojis = [

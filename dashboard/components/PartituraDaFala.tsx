@@ -147,7 +147,7 @@ function Linha({
 function Grupo({ rotulo, extra }: { rotulo: string; extra?: ReactNode }) {
   return (
     <div className="col-span-3 mt-2 grid grid-cols-subgrid items-end first:mt-0">
-      <span className="text-right font-mono text-[0.6875rem] uppercase tracking-widest text-muted-foreground">
+      <span className="text-right font-sans text-[0.6875rem] tracking-normal text-muted-foreground">
         {rotulo}
       </span>
       <span className="col-start-2 row-start-1 border-t border-linha" />

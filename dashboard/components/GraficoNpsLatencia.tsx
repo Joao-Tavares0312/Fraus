@@ -124,12 +124,20 @@ export function GraficoNpsLatencia({ serie }: { serie: PontoSerie[] }) {
 
   if (serie.length === 0) {
     return (
-      <EstadoVazio
-        className="m-5"
-        titulo="Sem série temporal para desenhar"
-        explicacao="Nenhum atendimento no período selecionado, então não há dias para agregar. A série vem agregada do servidor, por data de início do atendimento."
-        endpoint="GET /serie-temporal?de=&ate="
-      />
+      <div className="px-5 pb-5">
+        <div className="flex justify-between pb-2 text-xs text-muted-foreground">
+          <span>NPS inferido</span><span>Latência mediana</span>
+        </div>
+        <div className="flex min-h-72 items-center justify-center border-x border-b border-border">
+          <EstadoVazio
+            className="m-5 flex-none"
+            titulo="Sem série temporal para desenhar"
+            explicacao="Nenhum atendimento no período selecionado, então não há dias para agregar. A série vem agregada do servidor, por data de início do atendimento."
+            endpoint="GET /serie-temporal?de=&ate="
+          />
+        </div>
+        <p className="pt-2 text-center text-xs text-muted-foreground">Período dos atendimentos</p>
+      </div>
     );
   }
 

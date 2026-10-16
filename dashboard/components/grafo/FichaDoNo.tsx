@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { NoDoGrafo, TipoDeNo } from "@/lib/api";
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 import { ROTULO_SEM_SINAL, formatarNumero } from "@/lib/formato";
 
 /**
@@ -77,22 +77,13 @@ export function FichaDoNo({ no }: { no: NoDoGrafo | null }) {
                 <dd className="mt-1 flex items-end gap-2">
                   {no.sem_sinal || no.nota === null || no.nota === undefined ? (
                     <>
-                      <SegmentoLED
-                        valor={null}
-                        celulas={2}
-                        altura={28}
-                        rotulo="nota do atendimento"
-                      />
+                      <ValorNumerico valor={null} rotulo="nota do atendimento" />
                       <span className="text-sm text-muted-foreground">
                         {ROTULO_SEM_SINAL}
                       </span>
                     </>
                   ) : (
-                    <SegmentoLED
-                      valor={formatarNumero(no.nota)}
-                      altura={28}
-                      rotulo="nota estimada do atendimento"
-                    />
+                    <ValorNumerico valor={formatarNumero(no.nota)} rotulo="nota estimada do atendimento" />
                   )}
                 </dd>
               </div>

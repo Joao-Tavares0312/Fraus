@@ -1,248 +1,343 @@
-/** Smoke real da LP; LP_URL aponta para build em execucao. Capturas opcionais em LP_EVIDENCIAS. */
+/** LP_URL aponta para o produto em execucao; LP_EVIDENCIAS guarda capturas opcionais. */
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
-const BASE = process.env.LP_URL ?? "http://localhost:3000";
+const BASE = process.env.LP_URL ?? "http://127.0.0.1:3000";
 const DESTINO = process.env.LP_EVIDENCIAS;
-const ARGS = ["--enable-unsafe-webgpu", "--enable-features=Vulkan,WebGPU", "--use-angle=vulkan", "--ignore-gpu-blocklist"];
-let navegador;
+const permitirSoftware = process.env.LP_GL_SOFTWARE === "1";
+if (permitirSoftware) console.warn("QA FORCADO: WebGL em software permitido explicitamente. Nao e benchmark do caminho padrao de producao.");
 const falhas = [];
 const evidencias = [];
+const navegador = await chromium.launch({ channel: "chrome", headless: true });
 if (DESTINO) await mkdir(DESTINO, { recursive: true });
-function exigir(nome, condicao, detalhe) { if (!condicao) falhas.push(`${nome}: ${detalhe}`); }
 
-async function abrir(viewport, { reduzido = false, semGpu = false, chuva = false, javaScriptEnabled = true } = {}) {
-  // Cada caso recebe um processo/Instance proprio. Contextos isolam o DOM,
-  // mas ainda compartilham o backend nativo WebGPU do processo anterior.
-  await navegador?.close();
-  navegador = await chromium.launch({ channel: "chrome", headless: true, args: ARGS });
+function exigir(nome, condicao, detalhe) {
+  if (!condicao) falhas.push(`${nome}: ${detalhe}`);
+}
+
+async function abrir(viewport, { reduzido = false, javaScriptEnabled = true, semGL = false } = {}) {
   const contexto = await navegador.newContext({ viewport, deviceScaleFactor: 1, reducedMotion: reduzido ? "reduce" : "no-preference", javaScriptEnabled });
-  await contexto.addInitScript(({ semGpu, chuva }) => {
-    window.__lpSmoke = { submits: 0, destroys: 0, storage: [] };
-    if (chuva) new MutationObserver(() => document.documentElement.classList.add("tema-chuva")).observe(document, { childList: true });
-    if (semGpu) {
-      let objeto = navigator;
-      while (objeto) { if (Object.prototype.hasOwnProperty.call(objeto, "gpu")) delete objeto.gpu; objeto = Object.getPrototypeOf(objeto); }
-    }
-    if (typeof GPUAdapter !== "undefined") {
-      const original = GPUAdapter.prototype.requestDevice;
-      GPUAdapter.prototype.requestDevice = async function (...args) {
-        const device = await original.apply(this, args);
-        window.__deviceDaCena = device;
-        const submit = device.queue.submit.bind(device.queue);
-        device.queue.submit = (...a) => { window.__lpSmoke.submits++; return submit(...a); };
-        const destroy = device.destroy.bind(device);
-        device.destroy = () => { window.__lpSmoke.destroys++; return destroy(); };
-        const createBuffer = device.createBuffer.bind(device);
-        device.createBuffer = (descritor) => {
-          if (descritor.usage & GPUBufferUsage.STORAGE) window.__lpSmoke.storage.push(descritor.size);
-          return createBuffer(descritor);
-        };
-        return device;
-      };
-    }
-  }, { semGpu, chuva });
+  if (semGL) await contexto.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (tipo, ...args) {
+      return tipo === "webgl" || tipo === "webgl2" ? null : original.call(this, tipo, ...args);
+    };
+  });
+  else if (permitirSoftware) await contexto.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (tipo, ...args) {
+      return tipo === "webgl" || tipo === "webgl2"
+        ? original.call(this, tipo, { ...args[0], failIfMajorPerformanceCaveat: false })
+        : original.call(this, tipo, ...args);
+    };
+  });
   const pagina = await contexto.newPage();
   const erros = [];
-  pagina.on("console", m => { if (m.type() === "error") erros.push(`console: ${m.text()} em ${pagina.url()} ${JSON.stringify(m.location())}`); });
-  pagina.on("pageerror", e => erros.push(`pageerror: ${e.stack ?? e.message} em ${pagina.url()}`));
-  const resposta = await pagina.goto(`${BASE}/`, { waitUntil: "networkidle", timeout: 90_000 });
+  pagina.on("pageerror", (erro) => erros.push(erro.stack ?? erro.message));
+  const resposta = await pagina.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await pagina.evaluate(() => document.fonts.ready);
-  if (javaScriptEnabled) await pagina.waitForFunction(() => document.querySelector(".ln")?.dataset.regime !== "carregando", null, { timeout: 30_000 });
-  await pagina.waitForTimeout(300);
   return { contexto, pagina, erros, status: resposta?.status() };
 }
 
-async function registrar(nome, pagina, dados) {
+async function registrar(nome, pagina, dados = {}) {
+  await pagina.locator(".arte-estatica").evaluateAll((imagens) => Promise.all(imagens.filter((imagem) => {
+    const r = imagem.getBoundingClientRect();
+    return r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+  }).map((imagem) => imagem.decode())));
   const arquivo = `${nome}.png`;
   if (DESTINO) await pagina.screenshot({ path: path.join(DESTINO, arquivo) });
   evidencias.push({ nome, captura: DESTINO ? arquivo : null, ...dados });
 }
-async function medidas(pagina) {
-  return pagina.evaluate(() => {
-    const raiz = document.querySelector(".ln");
-    const botoes = [...document.querySelectorAll(".ln-hero .ln-botao")].map(b => ({ texto: b.textContent.trim(), href: b.getAttribute("href"), top: b.getBoundingClientRect().top, bottom: b.getBoundingClientRect().bottom, right: b.getBoundingClientRect().right }));
-    window.scrollTo(10_000, 0);
-    const diagnostico = document.querySelector(".ln-diagnostico details");
-    const metodo = document.querySelector(".ln-metodo");
-    const fecho = [...document.querySelectorAll(".ln-fecho .ln-botao")].map(b => b.getAttribute("href"));
-    const ausencia = document.querySelector(".ln-leituras--ausentes");
-    const navegacao = [...document.querySelectorAll(".ln-topo__acoes a")].map(a => {
-      const r = a.getBoundingClientRect();
-      return { href: a.getAttribute("href"), top: r.top, bottom: r.bottom, left: r.left, right: r.right, altura: r.height };
-    });
-    const materia = document.querySelector(".ln-limites__materia");
-    const estiloDaMateria = materia && getComputedStyle(materia);
-    const resumoDosLimites = document.querySelector(".ln-limites details summary");
-    return {
-      regime: raiz?.dataset.regime,
-      rotulo: document.querySelector(".ln-regime")?.textContent,
-      h1: document.querySelectorAll("h1").length,
-      canvas: document.querySelectorAll("canvas").length,
-      scrollX: window.scrollX,
-      altura: innerHeight,
-      largura: innerWidth,
-      botoes,
-      fecho,
-      navegacao,
-      materia: materia && {
-        fundo: estiloDaMateria.backgroundImage,
-        largura: materia.getBoundingClientRect().width,
-        altura: materia.getBoundingClientRect().height,
-        opacidade: estiloDaMateria.opacity,
-        carregada: performance.getEntriesByType("resource").some(r => new URL(r.name).pathname === "/estudio-grafite.webp"),
-      },
-      resumoDosLimites: resumoDosLimites && { altura: resumoDosLimites.getBoundingClientRect().height },
-      diagnosticoRecolhido: diagnostico && !diagnostico.open && getComputedStyle(diagnostico).position !== "fixed",
-      metodoRecolhido: metodo && !metodo.open,
-      casoNatural: getComputedStyle(document.querySelector(".ln-fusor__preso")).position !== "sticky",
-      ausenciaCompacta: !ausencia || (ausencia.tagName === "ASIDE" && !ausencia.querySelector("h2,[role=tab]")),
-      posteres: performance.getEntriesByType("resource").filter(r => /\/lp-nova\/.*\.(webp|png)/.test(r.name)).map(r => ({ url: r.name, bytes: r.encodedBodySize })),
-      gpu: window.__lpSmoke,
-    };
-  });
+
+async function irParaEtapa(pagina, etapa) {
+  await pagina.locator(`[data-cena="${etapa}"]`).evaluate((elemento) => elemento.scrollIntoView({ block: "center", behavior: "instant" }));
+}
+
+async function assentarArte(pagina, etapa) {
+  await pagina.locator(".objeto-desktop [data-fr-estado]").waitFor();
+  if (await pagina.locator(".objeto-desktop [data-fr-estado]").getAttribute("data-fr-estado") === "estatico") {
+    await pagina.waitForFunction((valor) => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEtapa === String(valor), etapa);
+    await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
+    return false;
+  }
+  await pagina.waitForFunction((valor) => {
+    const arte = document.querySelector(".objeto-desktop [data-fr-etapa]");
+    return arte?.dataset.frEtapa === String(valor) && arte.dataset.frAssentada === String(valor) && arte.dataset.frEstado === "pronto" && arte.dataset.frMovimento === "parado";
+  }, etapa);
+  await pagina.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  return true;
+}
+
+async function arteVisivel(pagina, compacta = false) {
+  const png = await pagina.locator(compacta ? ".hero .arte-compacta" : ".objeto-desktop").screenshot();
+  const cores = await pagina.evaluate(async (bytes) => {
+    const imagem = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+    const tela = document.createElement("canvas");
+    tela.width = imagem.width; tela.height = imagem.height;
+    const ctx = tela.getContext("2d");
+    ctx.drawImage(imagem, 0, 0);
+    imagem.close();
+    const pixels = ctx.getImageData(0, 0, tela.width, tela.height).data;
+    let claro = 0, ouro = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+      if (r > 150 && g > 150 && b > 130 && Math.max(r, g, b) - Math.min(r, g, b) < 50) claro++;
+      if (r > 90 && r > g * 1.03 && g > b * 1.05) ouro++;
+    }
+    return { claro, ouro };
+  }, [...png]);
+  return { hash: createHash("sha256").update(png).digest("hex"), ...cores };
+}
+
+async function pose(pagina) {
+  const estado = await pagina.locator(".objeto-desktop [data-fr-etapa]").evaluate((elemento) => ({
+    etapa: Number(elemento.dataset.frEtapa),
+    movimento: elemento.dataset.frMovimento,
+    scroll: window.scrollY,
+  }));
+  return { ...estado, ...await arteVisivel(pagina) };
 }
 
 try {
-  for (const viewport of [{ width: 1280, height: 720 }, { width: 1568, height: 882 }, { width: 390, height: 844 }]) {
-    for (const chuva of [false, true]) for (const semGpu of [false, true]) {
-      const nome = `${viewport.width}x${viewport.height}-${chuva ? "chuva" : "instrumento"}-${semGpu ? "poster" : "vivo"}`;
-      const { contexto, pagina, erros, status } = await abrir(viewport, { chuva, semGpu });
-      const m = await medidas(pagina);
-      exigir(nome, status === 200 && m.h1 === 1 && m.canvas === 1, `status/h1/canvas ${status}/${m.h1}/${m.canvas}`);
-      exigir(nome, semGpu ? m.regime === "poster" : m.regime?.startsWith("vivo"), `regime ${m.regime}`);
-      exigir(nome, m.scrollX === 0, `scrollX ${m.scrollX}`);
-      exigir(nome, m.botoes.length === 2 && m.botoes.every(b => b.top >= 0 && b.bottom <= m.altura && b.right <= m.largura), `CTAs ausentes/fora da dobra: ${JSON.stringify(m.botoes)}`);
-      exigir(nome, semGpu || m.posteres.length === 0, `vivo baixou poster: ${JSON.stringify(m.posteres)}`);
-      exigir(nome, m.diagnosticoRecolhido && m.metodoRecolhido && m.casoNatural && m.ausenciaCompacta, `estrutura produto primeiro: ${JSON.stringify(m)}`);
-      exigir(nome, m.fecho.join(",") === "/entrar,/cadastrar", `fecho sem acesso real: ${m.fecho}`);
-      exigir(nome, m.navegacao.map(a => a.href).join(",") === "#metodo,/entrar" && m.navegacao.every(a => a.altura >= 44 && a.left >= 0 && a.right <= m.largura && a.top >= 0 && a.bottom <= m.altura), `navegacao cortada ou sem destino: ${JSON.stringify(m.navegacao)}`);
-      exigir(nome, m.materia?.fundo.includes("/estudio-grafite.webp") && m.materia.carregada && m.materia.opacidade === "1" && m.materia.largura >= 250 && m.materia.altura >= 150, `materia ausente ou reduzida a detalhe: ${JSON.stringify(m.materia)}`);
-      exigir(nome, m.resumoDosLimites?.altura >= 44, `resumo sem alvo de toque: ${JSON.stringify(m.resumoDosLimites)}`);
-      await registrar(nome + "-hero", pagina, m);
-      await pagina.locator(".ln-hero .ln-botao").first().click();
-      const destino = m.botoes[0].href;
-      exigir(nome, destino?.startsWith("#") && await pagina.locator(destino).isVisible(), `acao sem destino ${destino}`);
-      await pagina.waitForTimeout(700);
-      await registrar(nome + "-destino", pagina, { destino, erros });
-      const metodo = pagina.locator(".ln-metodo");
-      await metodo.locator("summary").focus();
-      await pagina.keyboard.press("Enter");
-      exigir(nome, await metodo.evaluate(e => e.open), "metodo nao abriu por teclado");
-      for (const id of ["metodo", "leituras", "limites"]) {
-        const ancora = pagina.locator(`#${id}`);
-        exigir(nome, await ancora.count() === 1, `ancora inexistente/duplicada #${id}`);
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
+    for (const opcoes of [{}, { reduzido: true }, { javaScriptEnabled: false }]) {
+      const nome = `${viewport.width}x${viewport.height}-${opcoes.reduzido ? "reduce" : opcoes.javaScriptEnabled === false ? "sem-js" : "normal"}`;
+      const { contexto, pagina, erros, status } = await abrir(viewport, opcoes);
+      const habilitada = viewport.width >= 900 && !opcoes.reduzido && opcoes.javaScriptEnabled !== false;
+      const animada = habilitada ? await assentarArte(pagina, 0) : false;
+      if (habilitada) {
+        const capacidade = await pagina.locator(".fr-canvas").evaluate((canvas) => ({
+          contexto: !!canvas.getContext("webgl", { failIfMajorPerformanceCaveat: true }),
+          backend: canvas.dataset.frBackend,
+        }));
+        const contextoDisponivel = capacidade.contexto && (capacidade.backend !== "software" || permitirSoftware);
+        exigir(nome, animada === contextoDisponivel && (!permitirSoftware || animada), `Renderizador nao corresponde a capacidade grafica real: ${JSON.stringify(capacidade)}`);
+        evidencias.push({ nome: `${nome}-caminho`, caminho: animada ? "webgl" : "webp-sem-contexto-performatico", backend: capacidade.backend, softwarePermitido: permitirSoftware });
       }
-      await pagina.locator("#leituras").scrollIntoViewIfNeeded();
-      await registrar(nome + "-metodo-aberto", pagina, { altura: await pagina.evaluate(() => document.documentElement.scrollHeight) });
-      await metodo.locator("summary").focus();
+      const medidas = await pagina.evaluate(() => {
+        const hero = document.querySelector(".hero .acao-lp").getBoundingClientRect();
+        const raiz = document.querySelector(".lp");
+        const pincel = getComputedStyle(raiz, "::before");
+        return {
+          h1: document.querySelectorAll("h1").length,
+          overflow: document.documentElement.scrollWidth > innerWidth,
+          escultura: document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEstado ?? "estatico",
+          fundo: { altura: parseFloat(pincel.height), pagina: raiz.getBoundingClientRect().height, imagem: pincel.backgroundImage },
+          hero: { left: hero.left, right: hero.right, top: hero.top, bottom: hero.bottom },
+          nav: [...document.querySelectorAll(".lp-cabecalho nav a")].map((link) => {
+            const r = link.getBoundingClientRect();
+            return { href: link.getAttribute("href"), left: r.left, right: r.right, altura: r.height };
+          }),
+          acoes: [...document.querySelectorAll(".fecho a")].map((link) => link.getAttribute("href")),
+        };
+      });
+      exigir(nome, status === 200 && medidas.h1 === 1, JSON.stringify({ status, medidas }));
+      exigir(nome, !medidas.overflow, "overflow horizontal");
+      exigir(nome, medidas.escultura === (animada ? "pronto" : "estatico"), `arte no modo errado: ${JSON.stringify(medidas)}`);
+      exigir(nome, Math.abs(medidas.fundo.altura - medidas.fundo.pagina) <= 1 && medidas.fundo.imagem.includes("/identidade/fundo-pincel.svg"), `pincel nao cobre toda a LP: ${JSON.stringify(medidas.fundo)}`);
+      exigir(nome, medidas.hero.left >= 0 && medidas.hero.right <= viewport.width && medidas.hero.top >= 0, "acao do hero cortada");
+      if (viewport.width >= 900) exigir(nome, medidas.hero.bottom <= viewport.height, "acao do hero fora da primeira dobra desktop");
+      exigir(nome, medidas.nav.every((link) => link.left >= 0 && link.right <= viewport.width && link.altura >= 44), "navegacao cortada ou sem alvo de toque");
+      exigir(nome, medidas.acoes.includes("/entrar") && medidas.acoes.includes("/cadastrar"), "acesso sem destinos reais");
+      exigir(nome, await pagina.locator("a[href='/dashboard']").count() > 0, "percurso sem destino na ferramenta");
+      for (const ancora of ["inicio", "como-funciona", "sinais", "na-pratica", "leituras", "limites"]) {
+        exigir(nome, await pagina.locator(`#${ancora}`).count() === 1, `ancora ausente/duplicada: ${ancora}`);
+      }
+      await registrar(`${nome}-hero`, pagina, medidas);
+      const heroArte = await arteVisivel(pagina, viewport.width < 900);
+      exigir(nome, heroArte.claro > 500 && heroArte.ouro > 500, `FR nao visivel: ${JSON.stringify(heroArte)}`);
+      await pagina.locator(".hero .acao-lp").focus();
       await pagina.keyboard.press("Enter");
-      exigir(nome, !(await metodo.evaluate(e => e.open)), "metodo nao fechou por teclado");
-      await pagina.locator(".ln-topo__metodo").focus();
+      exigir(nome, new URL(pagina.url()).hash === "#como-funciona", "acao do hero nao navegou");
+      const detalhes = pagina.locator(".contexto-detalhes");
+      await detalhes.locator("summary").focus();
       await pagina.keyboard.press("Enter");
-      exigir(nome, new URL(pagina.url()).hash === "#metodo", "Como funciona nao chegou ao metodo");
+      exigir(nome, !(await detalhes.evaluate((elemento) => elemento.open)), "detalhes nao fecharam por teclado");
+      await pagina.keyboard.press("Enter");
+      exigir(nome, await detalhes.evaluate((elemento) => elemento.open), "detalhes nao abriram por teclado");
+      await registrar(`${nome}-contexto`, pagina);
+
+      const gravadas = pagina.locator(".leituras-gravadas");
+      if (await gravadas.count()) {
+        await gravadas.locator("summary").focus();
+        await pagina.keyboard.press("Enter");
+        exigir(nome, await pagina.locator("[role='tabpanel']").isVisible(), "snapshot validado sem transcricao visivel");
+        if (opcoes.javaScriptEnabled !== false) {
+          const abas = pagina.getByRole("tab");
+          await abas.first().focus();
+          await pagina.keyboard.press("End");
+          exigir(nome, await abas.last().getAttribute("aria-selected") === "true", "End nao selecionou ultima leitura");
+          const nota = await pagina.locator("[role='tabpanel'] [aria-label^='nota estimada:']").getAttribute("aria-label");
+          exigir(nome, nota && !/\d/.test(nota), `ausencia virou numero: ${nota}`);
+          await pagina.keyboard.press("ArrowRight");
+          exigir(nome, await abas.first().getAttribute("aria-selected") === "true", "seta nao circulou entre leituras");
+        }
+        await registrar(`${nome}-snapshot`, pagina);
+        await gravadas.locator("summary").click();
+      } else {
+        exigir(nome, await pagina.locator(".leituras-ausentes [role='status']").count() === 1 && await pagina.getByRole("tab").count() === 0, "ausencia sem explicacao ou com escolhas ficticias");
+      }
+      for (const etapa of [2, 3]) {
+        await irParaEtapa(pagina, etapa);
+        if (viewport.width >= 900 && !opcoes.reduzido && opcoes.javaScriptEnabled !== false) await assentarArte(pagina, etapa);
+        await registrar(`${nome}-etapa-${etapa}`, pagina);
+      }
+      if (viewport.width < 900 || opcoes.reduzido || opcoes.javaScriptEnabled === false) {
+        exigir(nome, !(await pagina.locator(".legenda-arte button").isVisible()), "replay aparece onde a arte deve ser estatica");
+      }
       await pagina.locator("#limites").scrollIntoViewIfNeeded();
-      await registrar(nome + "-limites-materia", pagina, { materia: m.materia });
-      const limites = pagina.locator(".ln-limites details");
-      await limites.locator("summary").focus();
+      const limite = pagina.locator(".limite-detalhe").nth(1);
+      await limite.locator("summary").focus();
       await pagina.keyboard.press("Enter");
-      exigir(nome, await limites.evaluate(e => e.open), "limites nao abriram por teclado");
-      await registrar(nome + "-limites-abertos", pagina, {});
-      await pagina.keyboard.press("Enter");
-      exigir(nome, !(await limites.evaluate(e => e.open)), "limites nao fecharam por teclado");
-      await pagina.locator(".ln-fecho a[href='/cadastrar']").click();
-      await pagina.waitForURL(url => url.pathname === "/cadastrar");
-      exigir(nome, new URL(pagina.url()).pathname === "/cadastrar", "Criar conta nao chegou ao cadastro");
-      await pagina.goto(`${BASE}/`, { waitUntil: "networkidle" });
-      await pagina.locator(".ln-fecho a[href='/entrar']").click();
-      await pagina.waitForURL(url => url.pathname === "/entrar");
-      exigir(nome, new URL(pagina.url()).pathname === "/entrar", "Entrar nao chegou ao acesso");
+      exigir(nome, await limite.evaluate((elemento) => elemento.open), "limites nao abriram por teclado");
+      exigir(nome, !(await pagina.evaluate(() => document.documentElement.scrollWidth > innerWidth)), "overflow apos abrir detalhes");
+      await registrar(`${nome}-limites`, pagina);
       exigir(nome, erros.length === 0, erros.join(" | "));
       await contexto.close();
     }
   }
+
   {
-    const { contexto, pagina, erros } = await abrir({ width: 1280, height: 720 });
-    const antes = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
+    const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 });
+    const animada = await assentarArte(pagina, 0);
+    if (animada) {
+    await irParaEtapa(pagina, 1);
+    await pagina.waitForFunction(() => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEtapa === "1");
+    await pagina.waitForTimeout(100);
+    await irParaEtapa(pagina, 3);
+    await assentarArte(pagina, 3);
+    const final = await pose(pagina);
+    await pagina.waitForTimeout(150);
+    const assentada = await pose(pagina);
+    exigir("retarget rapido", final.etapa === 3 && final.hash === assentada.hash && final.claro > 500 && final.ouro > 500, JSON.stringify({ final, assentada }));
+    await irParaEtapa(pagina, 1);
+    await assentarArte(pagina, 1);
+    const retorno = await pose(pagina);
+    exigir("retorno", retorno.etapa === 1, JSON.stringify(retorno));
+    // Screenshot de elemento pode esperar a composicao e chegar so apos o fim
+    // da animacao em software. Captura pixels no draw real, antes do descarte
+    // do drawing buffer, em vez de confundir estado anterior com imagem tardia.
+    await pagina.evaluate(() => {
+      const original = WebGLRenderingContext.prototype.drawArrays;
+      const imagens = [];
+      window.replayFraus = { imagens, restaurar: () => { WebGLRenderingContext.prototype.drawArrays = original; } };
+      WebGLRenderingContext.prototype.drawArrays = function (...args) {
+        original.apply(this, args);
+        if (this.canvas.matches(".fr-canvas") && imagens.length < 3) imagens.push(this.canvas.toDataURL());
+      };
+    });
+    await pagina.locator(".legenda-arte button").click();
+    await pagina.waitForFunction(() => window.replayFraus.imagens.length > 0);
+    const durante = await pagina.locator(".objeto-desktop [data-fr-etapa]").evaluate((elemento) => ({
+      etapa: Number(elemento.dataset.frEtapa), movimento: elemento.dataset.frMovimento, scroll: window.scrollY,
+    }));
+    await assentarArte(pagina, 1);
+    const quadrosReplay = await pagina.evaluate(() => {
+      const { imagens, restaurar } = window.replayFraus;
+      restaurar();
+      delete window.replayFraus;
+      return { capturados: imagens.length, distintos: new Set(imagens).size };
+    });
+    const repetida = await pose(pagina);
+    exigir("replay", quadrosReplay.distintos > 1 && repetida.hash === retorno.hash && repetida.scroll === retorno.scroll, JSON.stringify({ retorno, durante, repetida, quadrosReplay }));
+    await registrar("replay-retorno", pagina, { retorno, durante, repetida, quadrosReplay });
     await pagina.emulateMedia({ reducedMotion: "reduce" });
-    await pagina.waitForFunction(() => document.querySelector(".ln")?.dataset.regime === "poster");
-    await pagina.waitForTimeout(300);
-    const parada = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
-    await pagina.waitForTimeout(700);
-    const depois = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
-    exigir("motion dinamico", parada.destroys > antes.destroys && depois.submits === parada.submits, JSON.stringify({ antes, parada, depois }));
-    await registrar("motion-dinamico", pagina, { antes, parada, depois, erros });
-    exigir("motion dinamico", erros.length === 0, erros.join(" | "));
-    await contexto.close();
-  }
-  {
-    const { contexto, pagina, erros } = await abrir({ width: 899, height: 900 });
-    const inicial = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
-    await pagina.setViewportSize({ width: 900, height: 900 });
-    await pagina.waitForFunction(() => window.__lpSmoke.destroys >= 1 && document.querySelector(".ln")?.dataset.regime?.startsWith("vivo"));
-    await pagina.waitForTimeout(500);
-    const largo = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
+    await pagina.locator(".objeto-desktop [data-fr-etapa]").waitFor({ state: "detached" });
+    exigir("reduce dinamico", !(await pagina.locator(".legenda-arte button").count()), "replay persistiu");
+    await irParaEtapa(pagina, 2);
+    const poster = pagina.locator(".objeto-desktop .arte-estatica");
+    exigir("reduce dinamico", await poster.isVisible() && await poster.evaluate((imagem) => imagem.complete && imagem.naturalWidth > 0), "FR estatico nao carregou");
     await pagina.setViewportSize({ width: 899, height: 900 });
-    await pagina.waitForFunction(() => window.__lpSmoke.destroys >= 2 && document.querySelector(".ln")?.dataset.regime?.startsWith("vivo"));
-    await pagina.waitForTimeout(500);
-    const estreito = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
-    exigir("breakpoint", inicial.storage.at(-1) === 896000 && largo.storage.at(-1) === 6720000 && estreito.storage.at(-1) === 896000, JSON.stringify({ inicial, largo, estreito }));
-    await registrar("breakpoint", pagina, { inicial, largo, estreito, erros });
-    exigir("breakpoint", erros.length === 0, erros.join(" | "));
+    exigir("breakpoint", !(await pagina.locator(".palco").isVisible()) && await pagina.locator(".arte-compacta").first().isVisible(), "arte mobile/desktop nao alternou");
+    await pagina.setViewportSize({ width: 900, height: 900 });
+    exigir("breakpoint", await pagina.locator(".palco").isVisible() && !(await pagina.locator(".arte-compacta").first().isVisible()), "arte desktop nao voltou");
+    await pagina.emulateMedia({ reducedMotion: "no-preference" });
+    await pagina.locator('.objeto-desktop [data-fr-estado="pronto"]').waitFor();
+    await assentarArte(pagina, 2);
+    const restaurada = await arteVisivel(pagina);
+    exigir("retorno ao 3D", restaurada.claro > 500 && restaurada.ouro > 500, `FR nao visivel: ${JSON.stringify(restaurada)}`);
+    exigir("narrativa", erros.length === 0, erros.join(" | "));
+    } else {
+      evidencias.push({ nome: "retarget/replay/media dinamica GL", exercitado: false, motivo: "Contexto recusado pela politica padrao; executar LP_GL_SOFTWARE=1 para QA forcado, nao para benchmark" });
+    }
     await contexto.close();
   }
+
   {
-    const { contexto, pagina, erros } = await abrir({ width: 1280, height: 720 });
-    await pagina.waitForTimeout(8500);
-    const repouso = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
-    await pagina.waitForTimeout(800);
-    const parada = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
-    exigir("repouso", parada.submits === repouso.submits, JSON.stringify({ repouso, parada }));
-    await pagina.mouse.wheel(0, 400);
-    await pagina.waitForTimeout(500);
-    const retorno = await pagina.evaluate(() => ({ ...window.__lpSmoke }));
-    exigir("repouso", retorno.submits > parada.submits, "rolagem nao retomou render");
-    await registrar("repouso-retorno", pagina, { repouso, parada, retorno, erros });
-    await pagina.evaluate(() => window.__deviceDaCena.destroy());
-    await pagina.waitForFunction(() => document.querySelector(".ln")?.dataset.regime === "poster");
-    const cor = await pagina.locator(".ln-fala__texto").evaluate(e => getComputedStyle(e).color);
-    exigir("device perdido", !/rgba\(0, 0, 0, 0\)/.test(cor), "frase transparente");
-    exigir("repouso/device", erros.length === 0, erros.join(" | "));
+    const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 }, { semGL: true });
+    await pagina.locator('.objeto-desktop [data-fr-estado="estatico"]').waitFor();
+    await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
+    const estatica = await arteVisivel(pagina);
+    exigir("sem WebGL", estatica.claro > 500 && estatica.ouro > 500 && !(await pagina.locator(".legenda-arte button").count()), `fallback sem marca: ${JSON.stringify(estatica)}`);
+    await irParaEtapa(pagina, 3);
+    await pagina.waitForFunction(() => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEtapa === "3");
+    await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
+    const final = await arteVisivel(pagina);
+    exigir("sem WebGL", final.hash !== estatica.hash && final.claro > 500 && final.ouro > 500, `fallback nao segue a narrativa: ${JSON.stringify(final)}`);
+    exigir("sem WebGL", erros.length === 0, erros.join(" | "));
+    await registrar("sem-webgl", pagina, final);
     await contexto.close();
   }
-  for (const largura of [320, 390, 1280]) {
-    const { contexto, pagina, erros } = await abrir({ width: largura, height: 844 }, { reduzido: true });
-    const m = await medidas(pagina);
-    exigir("reduce/reflow", m.regime === "poster" && m.scrollX === 0, JSON.stringify(m));
-    exigir("reduce/reflow", m.navegacao.every(a => a.altura >= 44 && a.left >= 0 && a.right <= m.largura), `navegacao fora da tela: ${JSON.stringify(m.navegacao)}`);
-    await registrar(`${largura}-reduce`, pagina, m);
-    exigir("reduce/reflow", erros.length === 0, erros.join(" | "));
+
+  {
+    const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 });
+    const animada = await assentarArte(pagina, 0);
+    if (animada) {
+    await pagina.evaluate(() => {
+      const desenhar = WebGLRenderingContext.prototype.drawArrays;
+      window.quadrosArteFraus = 0;
+      WebGLRenderingContext.prototype.drawArrays = function (...args) {
+        window.quadrosArteFraus++;
+        return desenhar.apply(this, args);
+      };
+    });
+    await pagina.locator(".legenda-arte button").click();
+    await pagina.waitForFunction(() => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frMovimento === "animando");
+    await assentarArte(pagina, 0);
+    const quadros = await pagina.evaluate(() => window.quadrosArteFraus);
+    await pagina.waitForTimeout(250);
+    exigir("sem loop ocioso", quadros > 0 && quadros === await pagina.evaluate(() => window.quadrosArteFraus), "drawArrays continuou apos transicao");
+    const extensao = await pagina.locator(".fr-canvas").evaluateHandle((canvas) => canvas.getContext("webgl").getExtension("WEBGL_lose_context"));
+    if (await extensao.evaluate((valor) => !!valor)) {
+      await extensao.evaluate((valor) => valor.loseContext());
+      await pagina.locator('.objeto-desktop [data-fr-estado="estatico"]').waitFor();
+      await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
+      const perdida = await arteVisivel(pagina);
+      exigir("contexto perdido", perdida.claro > 500 && perdida.ouro > 500 && !(await pagina.locator(".legenda-arte button").count()), `marca desapareceu: ${JSON.stringify(perdida)}`);
+      await registrar("contexto-perdido", pagina, perdida);
+      await extensao.evaluate((valor) => valor.restoreContext());
+      await assentarArte(pagina, 0);
+      const restaurada = await arteVisivel(pagina);
+      exigir("contexto restaurado", restaurada.claro > 500 && restaurada.ouro > 500 && await pagina.locator(".legenda-arte button").isVisible(), `marca nao voltou: ${JSON.stringify(restaurada)}`);
+    } else {
+      evidencias.push({ nome: "contexto perdido/restaurado", exercitado: false, motivo: "WEBGL_lose_context indisponivel neste navegador" });
+    }
+    await extensao.dispose();
+    exigir("ciclo WebGL", erros.length === 0, erros.join(" | "));
+    } else {
+      evidencias.push({ nome: "loop ocioso/perda/restauracao GL", exercitado: false, motivo: "Contexto recusado pela politica padrao; arte WebP exercitada nas demais etapas" });
+    }
     await contexto.close();
   }
-  for (const largura of [320, 390, 1280]) {
-    const { contexto, pagina } = await abrir({ width: largura, height: 844 }, { javaScriptEnabled: false });
-    const m = await medidas(pagina);
-    exigir("sem JS", m.botoes.length === 2 && m.posteres.length > 0 && m.scrollX === 0, JSON.stringify(m));
-    exigir("sem JS", m.metodoRecolhido && m.casoNatural && m.fecho.join(",") === "/entrar,/cadastrar", JSON.stringify(m));
-    exigir("sem JS", m.materia?.carregada && m.materia.largura >= 250 && m.materia.altura >= 150, `materia sem JS: ${JSON.stringify(m.materia)}`);
-    exigir("sem JS", m.navegacao.every(a => a.altura >= 44 && a.left >= 0 && a.right <= m.largura), `navegacao sem JS: ${JSON.stringify(m.navegacao)}`);
-    const metodo = pagina.locator(".ln-metodo");
-    await metodo.locator("summary").focus();
-    await pagina.keyboard.press("Enter");
-    exigir("sem JS", await metodo.evaluate(e => e.open), "details nativo nao abriu");
-    await registrar(`${largura}-sem-js`, pagina, m);
-    await contexto.close();
-  }
+
   {
     const { contexto, pagina } = await abrir({ width: 1280, height: 720 });
-    const resposta = await pagina.goto(`${BASE}/leitura`, { waitUntil: "domcontentloaded" });
-    exigir("redirect", new URL(pagina.url()).pathname === "/" && resposta?.status() === 200, pagina.url());
+    await pagina.locator(".fecho a[href='/cadastrar']").click();
+    await pagina.waitForURL((url) => url.pathname === "/cadastrar");
+    await pagina.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await pagina.locator(".fecho a[href='/entrar']").click();
+    await pagina.waitForURL((url) => url.pathname === "/entrar");
+    const resposta = await pagina.goto(`${BASE}/leitura`, { waitUntil: "networkidle" });
+    exigir("redirect", resposta?.status() === 200 && new URL(pagina.url()).pathname === "/", pagina.url());
     await contexto.close();
   }
 } finally {
-  await navegador?.close();
-  if (DESTINO) await writeFile(path.join(DESTINO, "resultados.json"), JSON.stringify({ base: BASE, data: new Date().toISOString(), falhas, evidencias }, null, 2));
+  await navegador.close();
+  if (DESTINO) await writeFile(path.join(DESTINO, "resultados.json"), JSON.stringify({ base: BASE, data: new Date().toISOString(), softwarePermitido: permitirSoftware, falhas, evidencias }, null, 2));
 }
+for (const evento of evidencias.filter((item) => item.exercitado === false)) console.warn(`NAO EXERCITADO ${evento.nome}: ${evento.motivo}`);
+console.log("Caminhos exercitados:", JSON.stringify(evidencias.filter((item) => item.caminho)));
 if (falhas.length) { console.error(`FALHOU\n- ${falhas.join("\n- ")}`); process.exit(1); }
-console.log("ok /: produto primeiro, aprofundamento por teclado, ancoras e acesso real, materia estatica visivel, navegacao com alvos de toque, dobras desktop/mobile, dois temas, vivo sem poster, fallback, motion dinamico, breakpoint, repouso/retorno, device perdido, reflow, sem JS e redirect");
+console.log("ok LP: navegacao, teclado, dados/ausencia e arte visivel; consultar evidencias para caminho WebGL/WebP e cenarios GL nao exercitados");

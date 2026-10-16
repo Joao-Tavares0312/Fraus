@@ -17,7 +17,7 @@ import {
   DEFINICAO_SEM_SINAL_AGREGADO,
   formatarNps,
   formatarNumero,
-  formatarSegundosLED,
+  formatarDuracaoCompacta,
 } from "@/lib/formato";
 
 /**
@@ -122,14 +122,6 @@ export function FaixaIndicadores({
   return (
     <>
       <div className="flex min-w-0 flex-col gap-3">
-        {/* A ARMADURA: uma faixa horizontal de quatro celulas, lida de uma vez --
-            como o painel de leitura de um instrumento. Desde 30/09/2026
-            (Instrumento) ela abre a tela em largura total, e nao mais empilhada
-            a esquerda: o numero em LED pede corpo, e quatro leituras lado a
-            lado cabem na dobra sem empurrar o grafico. O que continua valendo
-            da regra antiga: e rotulo mais numero, sem barra de progresso
-            decorativa. As quatro celulas tem a MESMA altura curta: o texto do
-            NPS e o intervalo moram na faixa logo abaixo, nao aqui dentro. */}
         <motion.section
           aria-label={`Indicadores de ${rotuloDoPeriodo}`}
           // A ARMADURA e o container da pilha: ela escalona os quatro
@@ -145,7 +137,7 @@ export function FaixaIndicadores({
           // `--linha` por baixo. Uma tecnica so serve a qualquer numero de
           // colunas (1, 2 ou 4) sem cada breakpoint recontar qual celula leva
           // qual borda.
-          className="grid min-w-0 grid-cols-1 gap-px border border-linha bg-linha sm:grid-cols-2 xl:grid-cols-4 [&>*]:bg-background"
+          className="faixa-indicadores min-w-0"
         >
           <CartaoIndicador
             rotulo="NPS inferido"
@@ -169,7 +161,7 @@ export function FaixaIndicadores({
           />
 
           <CartaoIndicador
-            rotulo="CSAT inferido"
+            rotulo="CSAT estimado"
             qualificacao="estimativa"
             estimativa
             unidade="%"
@@ -185,7 +177,7 @@ export function FaixaIndicadores({
           />
 
           <CartaoIndicador
-            rotulo="Taxa de contenção"
+            rotulo="Contenção"
             qualificacao="observado"
             unidade="%"
             erro={erro}
@@ -207,12 +199,12 @@ export function FaixaIndicadores({
             formatado={
               tempoMediano === null
                 ? undefined
-                : formatarSegundosLED(tempoMediano).valor
+                : formatarDuracaoCompacta(tempoMediano).valor
             }
             unidade={
               tempoMediano === null
                 ? undefined
-                : formatarSegundosLED(tempoMediano).unidade
+                : formatarDuracaoCompacta(tempoMediano).unidade
             }
             trilho={trilhoDeLatencia(limiares)}
             explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
@@ -228,7 +220,7 @@ export function FaixaIndicadores({
         {erro ? null : (
           <div
             className={cn(
-              "grid min-w-0 gap-px border border-linha bg-linha [&>*]:bg-background",
+              "grid min-w-0 gap-4 border-t border-border pt-3",
               temLeituraDoNps && "lg:grid-cols-[1.35fr_1fr]",
             )}
           >

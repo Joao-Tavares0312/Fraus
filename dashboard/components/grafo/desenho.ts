@@ -85,6 +85,7 @@ export type Paleta = {
   rotulo: string;
   fundo: string;
   selecao: string;
+  fonte: string;
 };
 
 /** Paleta neutra do SSR, onde nao existe `document`. Nunca chega a pintar. */
@@ -98,22 +99,20 @@ const PALETA_VAZIA: Paleta = {
   rotulo: "transparent",
   fundo: "transparent",
   selecao: "transparent",
+  fonte: "sans-serif",
 };
 
 let paletaEmCache: Paleta | null = null;
+let classeEmCache: boolean | null = null;
 
-/**
- * A paleta, lida do CSS na primeira chamada e guardada dali em diante.
- *
- * Cache no modulo, e nao estado do React, porque o tema e escuro UNICO: os
- * tokens nao mudam durante a vida da pagina. Assim quem pinta um quadro
- * apenas chama isto -- sem `getComputedStyle` por no por quadro (refluxo
- * forcado sessenta vezes por segundo) e sem um `useEffect` que exista so
- * para copiar CSS para dentro do React.
- */
+/** Releitura só na troca de paleta: nunca mede CSS por nó ou por quadro. */
 export function paletaAtual(): Paleta {
   if (typeof document === "undefined") return PALETA_VAZIA;
-  paletaEmCache ??= lerPaleta();
+  const claro = document.documentElement.classList.contains("light");
+  if (!paletaEmCache || claro !== classeEmCache) {
+    paletaEmCache = lerPaleta();
+    classeEmCache = claro;
+  }
   return paletaEmCache;
 }
 
@@ -123,6 +122,7 @@ function lerPaleta(): Paleta {
   return {
     dito: token("--dito"),
     medido: token("--medido"),
+    fonte: token("--fonte-sans"),
     porTipo: Object.fromEntries(
       TIPOS_NA_LEGENDA.map((tipo) => [tipo, token(TOKEN_DO_TIPO[tipo])]),
     ) as Record<TipoDeNo, string>,
@@ -142,11 +142,6 @@ function lerPaleta(): Paleta {
 
 /**
  * A cor de um no: uma por TIPO, dentro da familia quente/fria do dito/medido.
- *
- * O esboco do brief pedia um `temaClaro: boolean` -- ele nao entrou porque o
- * tema e escuro UNICO (DESIGN.md), e parametro que so aceita um valor e
- * mentira sobre a variacao que existe. O que de fato varia e a paleta, e ela
- * entra explicita.
  *
  * O fallback para dito/medido nao e defensivo a toa: `paletaAtual()` devolve a
  * paleta VAZIA no SSR, e um tipo que a API inventar depois de um deploy
@@ -273,11 +268,9 @@ export function desenharNo(
   if (escala > ZOOM_DO_ROTULO) {
     // Tamanho em coordenadas do MUNDO dividido pela escala = tamanho constante
     // na tela. Sem isso o rotulo cresce junto com o zoom e vira cartaz.
-    // A pilha literal, e nao `var(--fonte-sans)`: `ctx.font` nao expande
-    // custom property e uma string invalida e descartada em silencio, deixando
-    // o rotulo na fonte serifada padrao do canvas. Mesma familia do CSS.
-    const corpo = 10 / escala;
-    ctx.font = `${corpo}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
+    // O token computado já resolve a fonte local antes de chegar ao canvas.
+    const corpo = 12 / escala;
+    ctx.font = `${corpo}px ${paleta.fonte}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     const texto = encurtar(no.rotulo);

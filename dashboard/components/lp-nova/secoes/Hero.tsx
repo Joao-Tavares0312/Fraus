@@ -1,58 +1,15 @@
-import Link from "next/link";
-import { IconeDeAcao } from "@/components/IconeDeAcao";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
-import type { Leitura } from "@/lib/lp-nova/leituras";
+import { ArrowRight } from "lucide-react";
+import { ArteCompacta } from "../ArteCompacta";
 
-/**
- * A fala e o caso sao sinteticos; a nota so aparece se foi gravada pelo motor.
- * A fala fica no DOM; na cena viva, as particulas ocupam os mesmos pixels.
- */
-export function Hero({ leitura }: { leitura: Leitura | null }) {
+export function Hero() {
   return (
-    <section id="topo" data-marco="frase" aria-labelledby="titulo-ln" className="ln-hero">
-      <div className="ln-wrap ln-hero__miolo">
-        <h1 id="titulo-ln" className="display-vitrine ln-hero__titulo">
-          Um obrigado <span className="ln-medido">não conta tudo.</span>
-        </h1>
-
-        <figure className="ln-fala">
-          <blockquote>
-            <p data-ln="frase" className="ln-fala__texto">
-              ok, obrigado 🙂
-            </p>
-          </blockquote>
-          <figcaption className="ln-fala__leitura">
-            <span className="ln-rotulo">caso sintético · cobrança sem solução</span>
-            {leitura && leitura.nota !== null ? (
-              <>
-                <SegmentoLED valor={String(leitura.nota)} rotulo="nota estimada" altura={44} cor="medido" traco="fino" celulas={2} />
-                <span className="ln-rotulo">
-                  nota estimada · <strong>{leitura.categoria}</strong>
-                  <br />o que o Fraus leu nessa conversa
-                </span>
-              </>
-            ) : leitura ? (
-              <span className="ln-rotulo">sem sinal · sem nota estimada</span>
-            ) : (
-              null
-            )}
-          </figcaption>
-        </figure>
-
-        <p className="ln-prosa ln-hero__prosa">
-          O Fraus estima satisfação em atendimentos de chatbot, sem pesquisa. Inspecione o contexto antes de agir.
-        </p>
-        <div className="ln-botoes">
-          <a href={leitura ? "#leituras" : "#metodo"} className="ln-botao ln-botao--feixe">
-            <IconeDeAcao acao="abrir" />
-            {leitura ? "Ver leituras gravadas" : "Entender como funciona"}
-          </a>
-          <Link href="/entrar" className="ln-botao ln-botao--contorno">
-            <IconeDeAcao acao="entrar" />
-            Entrar
-          </Link>
-        </div>
+    <section className="cena hero" data-cena="0" id="inicio" aria-labelledby="titulo-inicio">
+      <div className="texto-cena">
+        <h1 id="titulo-inicio"><span>O atendimento<br />termina.</span><span className="titulo-abertura">A análise começa.</span></h1>
+        <p>Estime a satisfação nas conversas do seu chatbot e investigue os sinais por trás de cada resultado.</p>
+        <a className="acao-lp" href="#como-funciona">Conhecer a análise<ArrowRight className="icone-lp" aria-hidden="true" /></a>
       </div>
+      <ArteCompacta etapa={0} />
     </section>
   );
 }

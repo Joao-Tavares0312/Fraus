@@ -1,87 +1,31 @@
-/**
- * OS DOIS TEMAS.
- *
- * O "instrumento" e o PADRAO DE FABRICA desde 30/09/2026, e por isso ele mora
- * no `:root` do globals.css e nao num bloco proprio: tema padrao e a AUSENCIA
- * de classe (ver `classeDoTema`). A "chuva de neon" e a opcao.
- *
- * O "ESPACO PROFUNDO" (01/09/2026) SAIU do padrao para o instrumento, por
- * decisao do dono do projeto, e o grafite tinha saido antes dele. Quem tiver
- * "espacial" ou "grafite" gravado no storage cai no padrao sozinho:
- * `temaValido` so aceita o que existe, entao a migracao nao precisou de codigo.
- *
- * O QUE MUDA E O QUE NAO MUDA: o tema troca o CHASSI (fundo, superficie,
- * borda, quina do vidro, luz do atelie). O ENCODING nao entra aqui --
- * `--dito` continua ambar e `--medido` continua azul nos dois, porque
- * ambar = dito / azul = medido e compromisso do PRODUCT.md e nao pele. Ver
- * globals.css.
- *
- * A classe vive no `<html>` e nao num provider de contexto: quem precisa saber
- * o tema e o CSS, e o CSS ja sabe ler classe. Estado em React aqui so criaria
- * uma segunda fonte de verdade para uma coisa que o navegador ja guarda.
- */
-
-export const TEMAS = ["instrumento", "chuva"] as const;
-
+/** A preferência só colore a ferramenta; as chegadas permanecem escuras. */
+export const TEMAS = ["escuro", "claro"] as const;
 export type Tema = (typeof TEMAS)[number];
-
-export const TEMA_PADRAO: Tema = "instrumento";
-
-/** Onde a escolha sobrevive ao refresh. */
+export const TEMA_PADRAO: Tema = "escuro";
 export const CHAVE_TEMA = "fraus-tema";
+export const EVENTO_TEMA = "fraus:tema";
 
-/**
- * A classe que o `<html>` carrega. O PADRAO e a AUSENCIA de classe, nao uma
- * classe propria: ele e o `:root`, e um tema padrao que precisa se declarar
- * para funcionar quebra em toda tela que renderiza antes do JavaScript.
- *
- * Escrito contra `TEMA_PADRAO` e nao contra o nome literal do tema: foi
- * exatamente essa indirecao que permitiu trocar o padrao de grafite para
- * espacial em 01/09/2026, e de espacial para instrumento em 30/09/2026, sem
- * tocar nesta funcao.
- */
-export function classeDoTema(tema: Tema): string | null {
-  return tema === TEMA_PADRAO ? null : `tema-${tema}`;
+export function classeDoTema(tema: Tema): "dark" | "light" {
+  return tema === "claro" ? "light" : "dark";
 }
 
-/** Aceita so o que existe. Valor estranho no storage cai no padrao. */
 export function temaValido(valor: unknown): Tema {
   return TEMAS.includes(valor as Tema) ? (valor as Tema) : TEMA_PADRAO;
 }
 
-/**
- * O SCRIPT ANTI-PISCADA, injetado no `<head>` e executado antes da primeira
- * pintura.
- *
- * Sem ele o servidor manda o HTML sem classe, a tela pinta no tema padrao, o
- * React hidrata e so entao aplica a "chuva" -- um flash de troca de paleta a
- * cada navegacao. E preciso ser string inline: qualquer arquivo externo chega
- * depois do primeiro quadro, que e exatamente o quadro que se quer corrigir.
- *
- * `try/catch` porque `localStorage` levanta em navegacao privada de alguns
- * navegadores, e falhar aqui derrubaria a pagina inteira por causa de uma cor.
- */
+export function temaDaRota(caminho: string, preferencia: Tema): Tema {
+  return caminho === "/dashboard" || caminho.startsWith("/dashboard/")
+    ? preferencia
+    : TEMA_PADRAO;
+}
+
 export const SCRIPT_ANTI_PISCADA = `
-(function(){try{
-var t=localStorage.getItem(${JSON.stringify(CHAVE_TEMA)});
-var opera=location.pathname.indexOf("/dashboard")===0;
-if(opera&&t&&t!==${JSON.stringify(TEMA_PADRAO)}){document.documentElement.classList.add("tema-"+t)}
-}catch(e){}})();
+(function(){var t="escuro";try{var p=localStorage.getItem(${JSON.stringify(CHAVE_TEMA)});if(p==="claro")t=p}catch(e){}
+var d=location.pathname==="/dashboard"||location.pathname.indexOf("/dashboard/")===0;
+var c=d&&t==="claro"?"light":"dark";var r=document.documentElement;
+r.classList.remove("light","dark");r.classList.add(c);r.style.colorScheme=c;})();
 `.trim();
 
-/**
- * O evento que avisa a interface que o tema mudou nesta aba.
- *
- * `storage` do navegador so dispara nas OUTRAS abas -- a aba que escreveu nao
- * se ouve. Sem este evento proprio, o botao que voce acabou de clicar seria o
- * unico lugar da tela que nao saberia da troca.
- */
-export const EVENTO_TEMA = "fraus:tema";
-
-/**
- * Assina as duas fontes de mudanca, para `useSyncExternalStore`: a aba atual
- * (evento proprio) e as outras abas (evento nativo `storage`).
- */
 export function assinarTema(aoMudar: () => void): () => void {
   window.addEventListener(EVENTO_TEMA, aoMudar);
   window.addEventListener("storage", aoMudar);
@@ -91,39 +35,36 @@ export function assinarTema(aoMudar: () => void): () => void {
   };
 }
 
-/** O snapshot do SERVIDOR, que nao tem storage: sempre o padrao de fabrica. */
 export function temaDoServidor(): Tema {
   return TEMA_PADRAO;
 }
 
-/** Le a escolha guardada. So no cliente. */
+// Mantém a escolha da aba mesmo quando o navegador bloqueia localStorage.
+let preferenciaSemStorage: Tema = TEMA_PADRAO;
 export function lerTema(): Tema {
   if (typeof window === "undefined") return TEMA_PADRAO;
   try {
     return temaValido(window.localStorage.getItem(CHAVE_TEMA));
   } catch {
-    return TEMA_PADRAO;
+    return preferenciaSemStorage;
   }
 }
 
-/**
- * Aplica e guarda. Remove as classes de TODOS os temas antes de por a nova --
- * so tirar a anterior deixaria lixo com tres ou mais. O projeto ja teve tres
- * (24/08 a 01/09/2026), entao isto nao e hipotese: e caso ja vivido.
- */
-export function aplicarTema(tema: Tema): void {
+export function sincronizarTemaDaRota(caminho: string): void {
+  const classe = classeDoTema(temaDaRota(caminho, lerTema()));
   const raiz = document.documentElement;
-  for (const outro of TEMAS) {
-    const classe = classeDoTema(outro);
-    if (classe) raiz.classList.remove(classe);
-  }
-  const classe = classeDoTema(tema);
-  if (classe) raiz.classList.add(classe);
+  raiz.classList.remove("light", "dark");
+  raiz.classList.add(classe);
+  raiz.style.colorScheme = classe;
+}
+
+export function aplicarTema(tema: Tema): void {
+  preferenciaSemStorage = tema;
   try {
     window.localStorage.setItem(CHAVE_TEMA, tema);
   } catch {
-    // Sem storage a escolha vale so para esta sessao. Nao e motivo de erro.
+    // A escolha continua válida nesta aba, sem transformar cor em erro de tela.
   }
-  // Depois de escrever, e nao antes: quem ouvir vai chamar `lerTema`.
+  sincronizarTemaDaRota(window.location.pathname);
   window.dispatchEvent(new Event(EVENTO_TEMA));
 }

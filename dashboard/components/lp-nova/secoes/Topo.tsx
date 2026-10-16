@@ -1,23 +1,16 @@
 import Link from "next/link";
-import { IconeDeAcao } from "@/components/IconeDeAcao";
-import { MarcaFraus } from "@/components/shell/MarcaFraus";
+import Image from "next/image";
+import { LogIn } from "lucide-react";
 
 export function Topo() {
   return (
-    <header className="ln-topo">
-      <nav aria-label="Navegação principal" className="ln-wrap ln-topo__faixa">
-        <Link href="/" aria-label="Fraus — início" className="ln-marca">
-          <MarcaFraus tamanho={22} />
-          <span>Fraus</span>
-        </Link>
-        <span className="ln-topo__nota">Sem LLM em runtime</span>
-        <div className="ln-topo__acoes">
-          <a href="#metodo" className="ln-topo__metodo">Como funciona</a>
-          <Link href="/entrar" className="ln-topo__entrar">
-            <IconeDeAcao acao="entrar" />
-            Entrar
-          </Link>
-        </div>
+    <header className="lp-cabecalho">
+      <Link className="marca" href="/" aria-label="Fraus, início"><Image src="/fraus-logo.svg" alt="" width={42} height={42} /><span>Fraus</span></Link>
+      <nav aria-label="Navegação principal">
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#na-pratica">Na prática</a>
+        <a href="#limites">Limites</a>
+        <Link className="entrar-lp" href="/entrar" prefetch={false}><LogIn className="icone-lp" aria-hidden="true" />Entrar</Link>
       </nav>
     </header>
   );

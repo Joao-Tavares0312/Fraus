@@ -1,39 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Inter, Martian_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
-import { Atelier } from "@/components/shell/Atelier";
-import { Movimento } from "@/components/shell/Movimento";
+import { TemaDaRota } from "@/components/shell/TemaDaRota";
 import { SCRIPT_ANTI_PISCADA } from "@/lib/tema";
 
-/**
- * As TRES FAMILIAS do Instrumento (spec 2026-09-30). `next/font` baixa os
- * arquivos NO BUILD e os serve do proprio deploy -- nenhuma chamada ao Google
- * em runtime, que e a regra da casa. As variaveis entram no `<html>` e o
- * globals.css as poe na frente de cada pilha, com fallback de sistema.
- *
- *  - Martian Mono: rotulo, nav, telemetria, dado e titulo de tela
- *    (`--fonte-mono`). E o que faz a interface parecer instrumento.
- *  - Inter: a PROSA (`--fonte-sans`) -- transcricao, explicacao, aparato --,
- *    onde mono cansa em texto corrido.
- *  - Bricolage Grotesque: a display da VITRINE e so dela (`--fonte-display`,
- *    `.display-vitrine` e `.titulo-vitrine`). DESIGN.md §4: fonte de display
- *    em rotulo e dado continua proibida; `lib/tipografia.test.ts` barra o
- *    vazamento pelo CSS. Ela substituiu a Mona Sans em 30/09/2026.
- */
-const inter = Inter({
-  subsets: ["latin", "latin-ext"],
-  variable: "--fonte-inter",
+/** Chakra Petch local: nenhuma busca de fonte no build nem em runtime. */
+const quadrada = localFont({
+  src: [
+    { path: "../public/identidade/chakra-petch-400.woff2", weight: "400", style: "normal" },
+    { path: "../public/identidade/chakra-petch-500.woff2", weight: "500", style: "normal" },
+    { path: "../public/identidade/chakra-petch-600.woff2", weight: "600", style: "normal" },
+  ],
+  variable: "--fonte-quadrada",
   display: "swap",
-});
-const martian = Martian_Mono({
-  subsets: ["latin", "latin-ext"],
-  variable: "--fonte-martian",
-  display: "swap",
-});
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin", "latin-ext"],
-  variable: "--fonte-bricolage",
-  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
 });
 
 const DESCRICAO =
@@ -76,55 +56,30 @@ export const metadata: Metadata = {
   // `<head>` sairia com cada um declarado duas vezes.
 };
 
-/**
- * O navegador pinta a barra do sistema com o fundo do Instrumento em vez do
- * branco padrao. `colorScheme: "dark"` porque os dois temas sao escuros.
- */
+/** O tema da rota sincroniza tambem a cor da barra do navegador. */
 export const viewport: Viewport = {
-  themeColor: "#09090b",
-  colorScheme: "dark",
+  themeColor: "#171819",
+  colorScheme: "dark light",
 };
 
-/**
- * Casca COMUM: html, tema e ateliê. O shell da ferramenta (sidebar, saúde,
- * provedores) desceu para `app/dashboard/layout.tsx` em 31/08/2026, quando a
- * raiz virou a página pública do produto — a LP não tem navegação lateral, e
- * um visitante sem sessão não precisa carregar os provedores da dashboard.
- *
- * `className="dark"` no `<html>` e fixo, e continua fixo: os DOIS temas do
- * Fraus sao escuros, entao o `dark` do chassi vale para os dois e nao ha
- * modo claro a alternar.
- *
- * O que MUDOU, e este comentario dizia o contrario ate 24/08/2026: existe
- * alternador. Ele nao troca `dark` por `light` -- poe (ou tira) a classe
- * `.tema-chuva` no mesmo `<html>`, e o tema sobrepoe so o chassi. O argumento
- * antigo ("um contrato de contraste verificado por calculo vale para uma
- * paleta") nao caiu: `scripts/contraste.mjs` passou a ser CIENTE DE TEMA e
- * roda a matriz inteira por tema, entao as duas paletas sao verificadas, nao
- * uma. Ver DESIGN.md, seccao 8.
- */
+/** LP e acesso em grafite; a ferramenta respeita a preferencia claro/escuro. */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // `suppressHydrationWarning` no `<html>`: o script abaixo pode adicionar a
-    // classe do tema antes da hidratacao, e o React acusaria a diferenca entre
-    // o HTML que o servidor mandou e o que encontrou no DOM. A divergencia e
-    // intencional e e o ponto do script.
+    // O script de tema pode alterar a classe antes da hidratacao.
     <html
       lang="pt-BR"
-      className={`dark ${inter.variable} ${martian.variable} ${bricolage.variable}`}
+      className={`dark ${quadrada.variable}`}
       suppressHydrationWarning
     >
       <head>
-        {/* ANTES DE TUDO. Ver SCRIPT_ANTI_PISCADA em lib/tema.ts: sem isto,
-            quem escolheu "chuva de neon" ve a tela pintar em grafite e trocar
-            depois da hidratacao, a cada navegacao. */}
+        {/* A preferencia da ferramenta e aplicada antes da primeira pintura. */}
         <script
           dangerouslySetInnerHTML={{ __html: SCRIPT_ANTI_PISCADA }}
         />
       </head>
       <body className="min-h-svh antialiased">
-        <Atelier />
-        <Movimento>{children}</Movimento>
+        <TemaDaRota />
+        {children}
       </body>
     </html>
   );

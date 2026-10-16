@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { EstadoVazio } from "@/components/EstadoVazio";
-import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
+import { ValorNumerico } from "@/components/ValorNumerico"
 
 /**
  * 404 proprio.
@@ -11,21 +11,18 @@ import { SegmentoLED } from "@/components/instrumento/SegmentoLED";
  * pela mesma razao: quando nao ha o que mostrar, a tela diz o que houve e
  * oferece o caminho de volta, em vez de sumir com o produto.
  *
- * O "404" e o proprio codigo HTTP lido no display de segmentos: e o unico
- * numero desta tela, e ele nao mede nada -- por isso a cor e `tinta`, nao o
- * azul do medido.
+ * O código HTTP é um identificador, não uma medição: usa a tinta da interface.
  */
 export default function NaoEncontrada() {
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-5 px-6 py-10">
       <div className="w-full max-w-lg">
         <p className="rotulo-instrumento mb-3">erro de endereço</p>
-        <SegmentoLED
+        <ValorNumerico
           valor="404"
-          altura={72}
           cor="tinta"
           rotulo="erro 404, página não encontrada"
-          className="mb-5"
+          className="mb-5 text-6xl"
         />
         <EstadoVazio
           titulo="Esta página não existe"
