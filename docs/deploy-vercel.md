@@ -68,6 +68,17 @@ foi a variante que preservou o comportamento aceito. Satisfação e emoção
 continuam em fp32; portanto, o deploy não “coube” às custas de uma redução não
 medida de eficiência.
 
+**Proteção de memória, 16/10/2026:** cada `session.run` BERT ONNX recebe no
+máximo quatro sequências, inclusive no grafo multitarefa. A tokenização,
+padding, truncamento em 192 tokens, ordem e todas as variantes de oclusão são
+preservados; não se corta atendimento nem se inventa peso zero. A fábrica
+também deixa de construir BERT-ironia quando a cabeça selecionada é Laya.
+Em smoke CPU com export **local** de satisfação, 61 textos e oclusão, o pico
+RSS caiu de 1.794.387.968 para 826.523.648 bytes, sem diferença nas
+probabilidades ou pesos medidos. Isso não é memória total medida da função
+publicada. Os logs do incidente registraram `137/SIGKILL`; a métrica de pico
+da requisição de produção não estava acessível no plano Hobby.
+
 ### 2. Artefatos fora do Git, mas dentro da função
 
 O ZIP versionado pelo SHA-256 fica num bucket privado do Oracle Object Storage.
