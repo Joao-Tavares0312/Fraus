@@ -301,29 +301,34 @@ def montar_classificadores(backend: str):
 
     O `Motor` nao sabe qual e: os dois lados expoem so `prever_mensagens`.
     """
+    usar_laya = backend_ironia_declarado() in {"laya", "laya-onnx"}
     if backend == "onnx":
         from fraus.sinais.onnx import ClassificadorOnnx
 
         classificadores = (
             ClassificadorOnnx(CAMINHO_ONNX_TEXTO),
             ClassificadorOnnx(CAMINHO_ONNX_EMOCAO),
-            ClassificadorOnnx(CAMINHO_ONNX_IRONIA),
         )
+        if not usar_laya:
+            return (*classificadores, ClassificadorOnnx(CAMINHO_ONNX_IRONIA))
     elif backend == "onnx-multitarefa":
         from fraus.sinais.onnx import classificadores_multitarefa
 
         classificadores = classificadores_multitarefa(CAMINHO_ONNX_MULTITAREFA)
+        if not usar_laya:
+            return classificadores
     else:
         classificadores = (
             ClassificadorTexto(CAMINHO_MODELO_TEXTO),
             ClassificadorEmocao(CAMINHO_MODELO_EMOCAO),
-            ClassificadorIronia(CAMINHO_MODELO_IRONIA),
         )
-    if backend_ironia_declarado() in {"laya", "laya-onnx"}:
-        from fraus.sinais.ironia_laya import obter_classificador_ironia_laya_declarado
+        if not usar_laya:
+            return (*classificadores, ClassificadorIronia(CAMINHO_MODELO_IRONIA))
+    # A cabeça BERT de ironia não pode coexistir com sua substituta durante
+    # o cold start: seria um quarto modelo que nunca participa da leitura.
+    from fraus.sinais.ironia_laya import obter_classificador_ironia_laya_declarado
 
-        return (*classificadores[:2], obter_classificador_ironia_laya_declarado())
-    return classificadores
+    return (*classificadores[:2], obter_classificador_ironia_laya_declarado())
 
 
 def construir_motor_padrao() -> Motor:
