@@ -310,7 +310,6 @@ export function Analisador() {
         <ConferenciaDeColunas
           previa={previa}
           ocupado={ocupado}
-          nomeArquivo={arquivo}
           aoAjustar={ajustar}
           aoConfirmar={(mapeamento, ordem) => confirmar(mapeamento, ordem)}
           aoCancelar={() => {

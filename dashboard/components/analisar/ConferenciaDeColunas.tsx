@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { Check } from "lucide-react";
 import {
   PAPEIS,
@@ -11,7 +11,6 @@ import {
 } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Painel } from "@/components/Painel";
 import {
@@ -60,27 +59,14 @@ const NENHUMA = "__nenhuma__";
 export function ConferenciaDeColunas({
   previa,
   ocupado,
-  nomeArquivo,
   aoAjustar,
   aoConfirmar,
   aoCancelar,
-  acao = "analisar",
 }: {
   previa: PreviaLeitura;
-  /**
-   * Na importação, salvar o perfil deixa de ser opcional: é ele que autoriza
-   * a coluna inferida a entrar no banco. A análise não grava, então lá lembrar
-   * é conveniência.
-   */
-  acao?: "analisar" | "importar";
   ocupado: boolean;
-  nomeArquivo: string;
   aoAjustar: (mapeamento: MapeamentoConfirmado, ordem: OrdemData | null) => void;
-  aoConfirmar: (
-    mapeamento: MapeamentoConfirmado,
-    ordem: OrdemData | null,
-    salvarComo: string | null,
-  ) => void;
+  aoConfirmar: (mapeamento: MapeamentoConfirmado, ordem: OrdemData | null) => void;
   aoCancelar: () => void;
 }) {
   const id = useId();
@@ -88,14 +74,9 @@ export function ConferenciaDeColunas({
   const escolhido: MapeamentoConfirmado = Object.fromEntries(
     PAPEIS.map((papel) => [papel, mapa.papeis[papel]?.coluna ?? null]),
   );
-  const importando = acao === "importar";
-  // Na análise, o mapeamento não vira perfil: perfil salvo vence a inferência
-  // em todo arquivo futuro, e um perfil errado era a causa de "data ilegível"
-  // num export que a heurística lia certo (19/10/2026).
-  const lembrar = importando;
-  const [nomePerfil, setNomePerfil] = useState(
-    nomeArquivo.replace(/\.[^.]+$/, "").slice(0, 80),
-  );
+  // O mapeamento conferido aqui NÃO vira perfil salvo: perfil vence a
+  // inferência em todo arquivo futuro, e um perfil errado era a causa de
+  // "data ilegível" num export que a heurística lia certo (19/10/2026).
 
   const avisosAlemDasColunas = previa.avisos.filter(
     (aviso) => !/^(Colunas (inferidas|confirmadas):|Apliquei o perfil salvo)/.test(aviso),
@@ -170,16 +151,9 @@ export function ConferenciaDeColunas({
   return (
     <Painel
       titulo="Conferir colunas"
-      legenda={
-        importando
-          ? "Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Coluna inferida só entra no banco depois de confirmada: ao importar, o mapeamento vira um perfil, e o próximo arquivo com as mesmas colunas entra direto. Nada foi importado ainda."
-          : "Não tive certeza de quais colunas usar. Confira a fala e quem falou — uma coluna errada não dá erro, dá uma nota errada. Nada foi gravado ainda."
-      }
+      legenda="Não tive certeza de quais colunas usar. Confira a fala e quem falou — uma coluna errada não dá erro, dá uma nota errada. Nada foi gravado ainda."
     >
-      {/* `@container`: o painel mora em telas de larguras diferentes — a
-          largura inteira em Analisar, meia coluna de 26rem em Integrações.
-          A grade responde à largura DELE, não à da janela; com `sm:` ela
-          abria duas colunas dentro dos 26rem e o rótulo quebrava letra a letra. */}
+      {/* `@container`: a grade responde à largura do painel, não à da janela. */}
       <div className="@container flex flex-col gap-4 px-5 py-4">
         {previa.perfil ? (
           <p className="text-sm text-muted-foreground">
@@ -305,52 +279,19 @@ export function ConferenciaDeColunas({
           </Alert>
         ) : null}
 
-        <div className="flex flex-col gap-2">
-          {importando ? (
-            <p className="text-sm">
-              O mapeamento será salvo como perfil — é o que autoriza estas
-              colunas a entrarem no banco.
-            </p>
-          ) : null}
-          {lembrar ? (
-            <div className="flex flex-col gap-1 sm:max-w-sm">
-              <Label htmlFor={`${id}-perfil`} className="text-xs font-normal text-muted-foreground">
-                Nome do perfil — grava só os nomes das colunas, nunca o conteúdo
-              </Label>
-              <Input
-                id={`${id}-perfil`}
-                value={nomePerfil}
-                maxLength={80}
-                onChange={(evento) => setNomePerfil(evento.target.value)}
-                disabled={ocupado}
-              />
-            </div>
-          ) : null}
-        </div>
-
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             onClick={() =>
-              aoConfirmar(
-                escolhido,
-                perguntarOrdem ? mapa.ordem_data : null,
-                lembrar && nomePerfil.trim() ? nomePerfil.trim() : null,
-              )
+              aoConfirmar(escolhido, perguntarOrdem ? mapa.ordem_data : null)
             }
-            disabled={ocupado || faltaObrigatorio || (importando && !nomePerfil.trim())}
+            disabled={ocupado || faltaObrigatorio}
           >
             <Check aria-hidden />
-            {importando
-              ? ocupado
-                ? "Importando…"
-                : "Salvar perfil e importar"
-              : ocupado
-                ? "Analisando…"
-                : "Analisar"}
+            {ocupado ? "Analisando…" : "Analisar"}
           </Button>
           <Button type="button" variant="outline" onClick={aoCancelar} disabled={ocupado}><IconeDeAcao acao="arquivo" />
-            {importando ? "Cancelar" : "Escolher outro arquivo"}
+            Escolher outro arquivo
           </Button>
         </div>
         {faltaObrigatorio ? (

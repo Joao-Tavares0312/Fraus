@@ -38,7 +38,7 @@ const previa: PreviaLeitura = {
 };
 
 const renderizar = () => renderToStaticMarkup(
-  <ConferenciaDeColunas previa={previa} ocupado={false} nomeArquivo="x.xlsx"
+  <ConferenciaDeColunas previa={previa} ocupado={false}
     aoAjustar={vi.fn()} aoConfirmar={vi.fn()} aoCancelar={vi.fn()} />,
 );
 
