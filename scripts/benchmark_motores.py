@@ -265,7 +265,8 @@ def main(argv: list[str] | None = None) -> int:
     args.saida.write_text(json.dumps(laudo, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     for c in laudo["conjuntos"]:
         linha = ", ".join(
-            f"{n} F1 {m['f1_macro']:.3f} acc {m['acuracia']:.3f} ECE {m['ece']:.3f}"
+            f"{n} F1 {m.get('f1_macro_classes_presentes', m['f1_macro']):.3f} "
+            f"acc {m['acuracia']:.3f} ECE {m['ece']:.3f}"
             for n, m in c["modelos"].items()
         )
         print(f"{c['id']} (n={c['exemplos']}): {linha}")
