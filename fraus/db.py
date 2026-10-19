@@ -1141,6 +1141,12 @@ class Banco:
             return None
         return Conversa(**json.loads(linha["payload"])), linha["score"], linha["categoria"]
 
+    def apagar_conversa(self, conversa_id: str) -> bool:
+        """Remove um atendimento gravado. Devolve se havia o que remover."""
+        with self._conectar() as conexao:
+            cursor = conexao.execute("DELETE FROM conversas WHERE id = ?", (conversa_id,))
+            return cursor.rowcount > 0
+
     def regua_da_conversa(self, conversa_id: str) -> tuple[int | None, str | None] | None:
         """Versoes que produziram o score, sem desserializar a transcricao."""
         with self._conectar() as conexao:

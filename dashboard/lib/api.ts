@@ -969,6 +969,10 @@ export const obterGrafo = (de?: string | null, ate?: string | null) =>
 export const obterConversa = (id: string) =>
   proteger(buscar<DetalheConversa>(`/conversas/${encodeURIComponent(id)}`));
 
+/** Remove o atendimento gravado. Só conta `dev`; a API registra na auditoria. */
+export const removerConversa = (id: string) =>
+  proteger(escrever<void>(`/conversas/${encodeURIComponent(id)}`, "DELETE"));
+
 export const obterAtribuicao = (id: string) =>
   proteger(
     buscar<Atribuicao>(`/conversas/${encodeURIComponent(id)}/atribuicao`),

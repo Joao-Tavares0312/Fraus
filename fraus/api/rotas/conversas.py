@@ -459,6 +459,20 @@ def atribuir(
     }
 
 
+@router.delete("/conversas/{conversa_id:path}", status_code=204)
+def remover(conversa_id: str, ctx: Contexto = Depends(obter_contexto)) -> None:
+    """Remove um atendimento gravado (so `dev`, ver `rota_administrativa`).
+
+    Existe para limpar registro que nunca deveria ter entrado -- em 19/10/2026,
+    um atendimento datado de 2243 (id de chat lido como horario, antes do
+    conserto de 02/10) e duplicatas de teste. Fica na auditoria.
+    """
+    if not ctx.banco.apagar_conversa(conversa_id):
+        raise HTTPException(status_code=404, detail="conversa nao encontrada")
+    ator = str(ctx.usuario_id) if ctx.usuario_id is not None else "credencial-tecnica-ou-local"
+    ctx.banco.auditar(ator, "remover_conversa", conversa_id)
+
+
 @router.get("/conversas/{conversa_id:path}")
 def detalhar(
     conversa_id: str, ctx: Contexto = Depends(obter_contexto)

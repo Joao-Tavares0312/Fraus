@@ -113,3 +113,26 @@ def test_oito_digitos_nao_e_data_compacta():
     # numerico de oito digitos virava data.
     datas, _ = mapeador.interpretar_datas(["20240115", "20240116"], ["c", "c"], None)
     assert datas == [None, None]
+
+
+def test_perfil_salvo_errado_nao_estraga_a_leitura():
+    # Producao, 19/10/2026: um perfil salvo dizia que a data era a coluna
+    # "Chat ID". Perfil vence a heuristica, e o arquivo inteiro voltava como
+    # "data ilegivel" -- mesmo a heuristica sozinha lendo o export certo.
+    from fraus.ingest.arquivos import OpcoesDeLeitura
+
+    agora = datetime(2026, 9, 23, 12, 2, 44)
+    cabecalho = ["Chat ID", "Papel", "Conteúdo", "Data e hora"]
+    linhas = [cabecalho] + [
+        ["8624457065", papel, texto, agora + timedelta(seconds=30 * i)]
+        for i, (papel, texto) in enumerate([("user", "oi tudo bem"), ("assistant", "olá, como posso ajudar"),
+                                            ("user", "quero saber dos planos"), ("assistant", "temos três planos")])
+    ]
+    perfil_errado = {"id": 7, "nome": "tars antigo", "ordem_data": None, "papeis": {
+        "texto": "Conteúdo", "autor": "Papel", "enviada_em": "Chat ID", "conversa_id": None, "canal": None}}
+    extracao = extrair("tars.xlsx", _xlsx(linhas), OpcoesDeLeitura(perfil_para=lambda _a: perfil_errado))
+    assert extracao.tem_tempo is True
+    assert len(extracao.conversas[0].mensagens) == 4
+    assert extracao.mapeamento["papeis"]["enviada_em"]["coluna"] == "Data e hora"
+    assert extracao.perfil is None
+    assert any("tars antigo" in aviso for aviso in extracao.avisos)

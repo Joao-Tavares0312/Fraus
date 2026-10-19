@@ -416,6 +416,20 @@ def _mapeada(
         if perfil is not None:
             forcado = perfil["papeis"]
             ordem_data = ordem_data or perfil.get("ordem_data")
+    perfil_descartado = None
+    if perfil is not None:
+        # Perfil salvo errado nao pode estragar todo arquivo futuro daquela
+        # estrutura (19/10/2026: "data ilegivel em Chat ID" num export que a
+        # heuristica lia certo). Se ele derruba metade das linhas ou mais, a
+        # leitura volta para a heuristica e o aviso diz qual perfil falhou.
+        try:
+            tentativa = mapeador.converter(colunas, linhas, origem, forcado, ordem_data)
+            aceitas = sum(len(c.mensagens) for c in tentativa.conversas)
+            perfil_serviu = len(tentativa.rejeitadas) * 2 < aceitas + len(tentativa.rejeitadas)
+        except (mapeador.MapeamentoInsuficienteError, ValueError):
+            perfil_serviu = False
+        if not perfil_serviu:
+            perfil_descartado, perfil, forcado, ordem_data = perfil, None, None, opcoes.ordem_data
     try:
         resultado = mapeador.converter(colunas, linhas, origem, forcado, ordem_data)
     except mapeador.MapeamentoInsuficienteError as erro:
@@ -428,6 +442,9 @@ def _mapeada(
     avisos = list(resultado.avisos)
     if perfil is not None:
         avisos.insert(0, f"Apliquei o perfil salvo “{perfil['nome']}”, que casa com as colunas deste arquivo.")
+    if perfil_descartado is not None:
+        avisos.insert(0, f"O perfil salvo “{perfil_descartado['nome']}” recusava a maior parte das linhas; "
+                         "descobri as colunas de novo pelo nome e pelo conteúdo.")
     return Extracao(
         conversas=resultado.conversas,
         formato=f"{origem} com colunas inferidas",
