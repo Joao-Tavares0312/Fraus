@@ -112,6 +112,34 @@ class Extracao:
     ver `fraus/api/identidade.py`."""
 
 
+# Abaixo disto a inferencia de texto ou autor e palpite, e o analista confere.
+CONFIANCA_PARA_SEGUIR = 0.6
+# Fracao de linhas recusadas que ainda nao derruba a confianca: uma ou outra
+# linha suja e normal; muitas dizem que alguma coluna foi mal escolhida.
+FRACAO_REJEITADA_TOLERADA = 0.1
+
+
+def leitura_confiavel(extracao: "Extracao") -> bool:
+    """Se a leitura pode seguir sem o analista conferir as colunas.
+
+    Formato reconhecido e perfil salvo sao confiaveis por construcao. Coluna
+    inferida so e quando texto e autor vieram com confianca, houve conversa e
+    quase nenhuma linha foi recusada. E o criterio UNICO da tela "arrastar e
+    pronto" e da gravacao sem confirmacao (19/10/2026).
+    """
+    if not extracao.conversas:
+        return False
+    if extracao.mapeamento is None or extracao.perfil is not None:
+        return True
+    papeis = extracao.mapeamento.get("papeis", {})
+    for papel in ("texto", "autor"):
+        if papeis.get(papel, {}).get("confianca", 0.0) < CONFIANCA_PARA_SEGUIR:
+            return False
+    mensagens = sum(len(c.mensagens) for c in extracao.conversas)
+    recusadas = len(extracao.rejeitadas)
+    return recusadas <= FRACAO_REJEITADA_TOLERADA * (mensagens + recusadas)
+
+
 @dataclass
 class OpcoesDeLeitura:
     """O que quem chama sabe sobre o arquivo e a heuristica nao sabe."""
