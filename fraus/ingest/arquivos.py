@@ -177,6 +177,22 @@ def _recusar_bomba_zip(dados: bytes, formato: str) -> None:
             )
 
 
+def _celula_como_texto(valor: object) -> str:
+    """Data vira texto ISO COM fuso; o resto, `str`.
+
+    O driver canonico le `datetime.fromisoformat` e exige fuso (invariante 6).
+    Celula de data do Excel nao guarda fuso, e o openpyxl a devolve naive: sem
+    completar aqui, toda linha de uma planilha no formato do Fraus morria em
+    "nenhuma conversa valida". O fuso e o mesmo que o mapeador e a Totalk ja
+    assumem para data sem fuso.
+    """
+    if isinstance(valor, datetime):
+        if valor.tzinfo is None or valor.utcoffset() is None:
+            valor = valor.replace(tzinfo=mapeador.FUSO_PADRAO)
+        return valor.isoformat()
+    return "" if valor is None else str(valor)
+
+
 def _linhas_da_planilha(dados: bytes) -> list[list[str]]:
     _recusar_bomba_zip(dados, "xlsx")
     try:
@@ -189,20 +205,23 @@ def _linhas_da_planilha(dados: bytes) -> list[list[str]]:
     except Exception as erro:
         raise ArquivoIlegivelError(f"planilha ilegivel: {erro}") from erro
 
-    aba = pasta[pasta.sheetnames[0]]
-    linhas = []
-    for numero, celulas in enumerate(aba.iter_rows(values_only=True)):
-        if numero >= TETO_LINHAS_PLANILHA:
-            break
-        # Data vira texto ISO: o driver canonico le `datetime.fromisoformat`, e
-        # o str() de um datetime do Excel sai em formato que ele nao aceita.
-        valores = [
-            v.isoformat() if isinstance(v, datetime) else ("" if v is None else str(v))
-            for v in celulas
-        ]
-        if any(valor.strip() for valor in valores):
-            linhas.append(valores)
-    pasta.close()
+    # O try cobre a ITERACAO: em read-only o XML da aba e lido enquanto as
+    # linhas sao percorridas, e uma falha ali escapava como 500.
+    try:
+        aba = pasta[pasta.sheetnames[0]]
+        linhas = []
+        for numero, celulas in enumerate(aba.iter_rows(values_only=True)):
+            if numero >= TETO_LINHAS_PLANILHA:
+                break
+            valores = [_celula_como_texto(v) for v in celulas]
+            if any(valor.strip() for valor in valores):
+                linhas.append(valores)
+    except ArquivoIlegivelError:
+        raise
+    except Exception as erro:
+        raise ArquivoIlegivelError(f"planilha ilegivel: {erro}") from erro
+    finally:
+        pasta.close()
     if not linhas:
         raise ArquivoIlegivelError("a primeira aba da planilha esta vazia")
     return linhas
