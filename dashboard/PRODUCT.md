@@ -51,15 +51,17 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
 
 ## Operating Context
 
-- Atendimentos entram por importação, fontes de Integrações ou análise de
-  upload/conversa colada com a opção de salvar. A análise avulsa segue disponível.
+- Atendimentos entram pela tela Analisar (solta o arquivo, salva direto quando
+  a leitura é confiável) ou sozinhos pelas fontes de Integrações — o Tars
+  conecta em dois cliques. A importação por pasta do servidor saiu da tela.
 - O analista filtra por período e desce da visão agregada para a transcrição de
   um atendimento.
 - A API oferece autenticação JWT de usuários e credenciais técnicas. Produção
   usa PostgreSQL/Supabase; SQLite permanece para desenvolvimento e testes.
-- Oito telas: Visão geral, Atendimentos, Modelo, Configurações, Integrações,
-  Grafo, Analisar e Operação. A última reúne radar, equipe e escala, jornadas,
-  investigações, replay, laboratório e acessos.
+- Oito telas. Na lateral, o dia a dia: Visão geral, Atendimentos, Analisar,
+  Grafo e Modelo (dev). No menu da conta: Operação (radar, equipe e escala,
+  jornadas, investigações, replay, laboratório e acessos), Integrações e
+  Configurações.
 
 ## Capabilities and Constraints
 

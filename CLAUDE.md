@@ -70,7 +70,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/api/vazao.py` | dois tetos: `/auth/*` por IP em middleware, `/ingestao` por fonte na rota |
 | `fraus/api/registro.py` | o miolo de derivação, compartilhado pelas duas rotas de entrada |
 | `fraus/api/rotas/webhook.py` | webhook assinado por fonte, com registro de entrega |
-| `dashboard/components/integracoes/ConectarTars.tsx` | conecta o TARS: cria a fonte `tars` e gera a chave `frs_`; o TARS chama `POST /ingestao` |
+| `dashboard/components/integracoes/ConectarTars.tsx` | conecta o TARS: cria a fonte `tars` e gera a chave `frs_`; o TARS chama `POST /ingestao` (contrato em `docs/integracao-tars.md`) |
+| `dashboard/components/atendimentos/RemoverAtendimento.tsx` | remove atendimento gravado — só `dev`, `DELETE /conversas/{id}`, auditado |
 | `dashboard/components/shell/MenuDoUsuario.tsx` | menu da conta: Operação, Integrações, Configurações, docs, tema, sair — a lateral só tem as tarefas do dia a dia |
 | `scripts/preparar_sentilex.py` | converte o SentiLex bruto em `fraus/dados/sentilex_pt02.csv` |
 | `fraus/fusor.py` | `NOMES_FEATURES` (39) e o `Fusor` |
