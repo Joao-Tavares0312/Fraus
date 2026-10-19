@@ -3,12 +3,10 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { anunciarAtualizacao } from "@/lib/atualizacao";
-import { Textarea } from "@/components/ui/textarea";
 import { FileText, RefreshCw, Upload } from "lucide-react";
 import {
   analisarUpload,
   previaUpload,
-  salvarPerfilMapeamento,
   type ConversaAnalisada,
   type MapeamentoConfirmado,
   type OrdemData,
@@ -40,16 +38,23 @@ import { TextoComPesos } from "./TextoComPesos";
 import { formatarProbabilidade } from "@/lib/partitura";
 import { ConferenciaDeColunas } from "./ConferenciaDeColunas";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
+import { deveSalvar, proximoPasso } from "@/lib/fluxo-analise";
 
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
 const TETO_BYTES = 200_000;
 
 const ACEITOS = ".csv,.tsv,.xlsx,.xlsm,.json,.jsonl,.txt,.docx,.pdf";
 
+/**
+ * "Arrastar e pronto" (19/10/2026): o cliente final solta o arquivo e recebe
+ * a análise, já salva nos indicadores. A conferência de colunas só aparece
+ * quando o servidor diz que a leitura NÃO é confiável (`previa.confiavel`),
+ * ou quando a pessoa pede para ajustar depois do resultado.
+ *
+ * Sem horário não há nota nem o que somar aos indicadores: o arquivo é lido
+ * em modo avulso, e o resultado diz por quê.
+ */
 export function Analisador() {
-  const [salvar, setSalvar] = useState(true);
-  const [texto, setTexto] = useState("");
-  const [formatoTexto, setFormatoTexto] = useState("csv");
   const entrada = useRef<HTMLInputElement>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -57,10 +62,10 @@ export function Analisador() {
   /** O último arquivo escolhido, para "tentar de novo" sem reabrir o seletor. */
   const [ultimo, setUltimo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<ResultadoAnalise | null>(null);
-  /** Leitura inferida aguardando conferência. Nula quando o formato é conhecido. */
+  /** A leitura inferida que precisa de conferência antes do modelo rodar. */
   const [previa, setPrevia] = useState<PreviaLeitura | null>(null);
-  /** Falha ao gravar o perfil — não impede a análise, mas não pode sumir. */
-  const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null);
+  /** A última prévia com mapeamento, para "ajustar colunas" depois do resultado. */
+  const [mapeada, setMapeada] = useState<PreviaLeitura | null>(null);
   /**
    * Contador, não booleano: dragenter/dragleave disparam para CADA filho que
    * o cursor cruza, e um booleano apagaria o realce ao passar sobre o ícone
@@ -68,24 +73,42 @@ export function Analisador() {
    */
   const [arrastando, setArrastando] = useState(0);
 
+  async function rodar(
+    escolhido: File,
+    lida: PreviaLeitura,
+    opcoes: { mapeamento?: MapeamentoConfirmado; ordemData?: OrdemData | null } = {},
+  ) {
+    const resposta = await analisarUpload(escolhido, {
+      ...opcoes,
+      salvar: deveSalvar(lida),
+    });
+    if (resposta.ok) {
+      setPrevia(null);
+      setResultado(resposta.dado);
+      if (resposta.dado.gravacao) anunciarAtualizacao();
+    } else {
+      setErro(resposta.erro);
+    }
+  }
+
   async function analisar(escolhido: File) {
     setErro(null);
     setResultado(null);
     setPrevia(null);
-    setAvisoPerfil(null);
+    setMapeada(null);
     setArquivo(escolhido.name);
     setUltimo(escolhido);
 
     if (escolhido.size > TETO_BYTES) {
       setErro(
-        `O arquivo tem ${Math.round(escolhido.size / 1024).toLocaleString("pt-BR")} kB, acima do limite de ${Math.round(TETO_BYTES / 1024).toLocaleString("pt-BR")} kB. Esta tela examina um atendimento por vez; para um lote inteiro, use a importação em Integrações.`,
+        `O arquivo tem ${Math.round(escolhido.size / 1024).toLocaleString("pt-BR")} kB, acima do limite de ${Math.round(TETO_BYTES / 1024).toLocaleString("pt-BR")} kB. Divida o arquivo em partes menores e envie uma de cada vez.`,
       );
       return;
     }
 
-    // A prévia vem ANTES do modelo: é só leitura, responde rápido e diz se as
-    // colunas foram inferidas. Formato conhecido segue direto para a análise;
-    // inferido para na conferência — coluna errada não dá erro, dá nota errada.
+    // A prévia vem ANTES do modelo: é só leitura e responde rápido. Leitura
+    // confiável segue direto; duvidosa para na conferência — coluna errada
+    // não dá erro, dá nota errada.
     setOcupado(true);
     const lida = await previaUpload(escolhido);
     if (!lida.ok) {
@@ -93,15 +116,14 @@ export function Analisador() {
       setErro(lida.erro);
       return;
     }
-    if (lida.dado.mapeamento) {
+    if (lida.dado.mapeamento) setMapeada(lida.dado);
+    if (proximoPasso(lida.dado) === "conferir") {
       setOcupado(false);
       setPrevia(lida.dado);
       return;
     }
-    const resposta = await analisarUpload(escolhido, { salvar });
+    await rodar(escolhido, lida.dado);
     setOcupado(false);
-    if (resposta.ok) { setResultado(resposta.dado); if (resposta.dado.gravacao) anunciarAtualizacao(); }
-    else setErro(resposta.erro);
   }
 
   async function ajustar(mapeamento: MapeamentoConfirmado, ordemData: OrdemData | null) {
@@ -112,39 +134,18 @@ export function Analisador() {
     if (lida.ok) {
       setErro(null);
       setPrevia(lida.dado);
+      setMapeada(lida.dado);
     } else {
       setErro(lida.erro);
     }
   }
 
-  async function confirmar(
-    mapeamento: MapeamentoConfirmado,
-    ordemData: OrdemData | null,
-    salvarComo: string | null,
-  ) {
-    if (!ultimo || !previa?.mapeamento) return;
+  async function confirmar(mapeamento: MapeamentoConfirmado, ordemData: OrdemData | null) {
+    if (!ultimo || !previa) return;
     setOcupado(true);
     setErro(null);
-    if (salvarComo) {
-      const salvo = await salvarPerfilMapeamento({
-        nome: salvarComo,
-        colunas: previa.mapeamento.colunas,
-        papeis: mapeamento,
-        ordem_data: ordemData,
-      });
-      if (!salvo.ok) {
-        setAvisoPerfil(`O perfil não foi salvo: ${salvo.erro} A análise seguiu com as colunas escolhidas.`);
-      }
-    }
-    const resposta = await analisarUpload(ultimo, { mapeamento, ordemData, salvar });
+    await rodar(ultimo, previa, { mapeamento, ordemData });
     setOcupado(false);
-    if (resposta.ok) {
-      setPrevia(null);
-      setResultado(resposta.dado);
-      if (resposta.dado.gravacao) anunciarAtualizacao();
-    } else {
-      setErro(resposta.erro);
-    }
   }
 
   async function aoEscolher(evento: React.ChangeEvent<HTMLInputElement>) {
@@ -153,8 +154,7 @@ export function Analisador() {
     // Zerar o valor do input É O CONSERTO, não faxina. Um `<input type=file>`
     // só dispara `change` quando o valor MUDA -- escolher o mesmo arquivo de
     // novo não dispara nada, e a tela ficava parada mostrando o erro anterior
-    // sem nenhum sinal de que o clique foi ignorado. Justamente o caso mais
-    // comum: corrigir o arquivo e reenviar com o mesmo nome.
+    // sem nenhum sinal de que o clique foi ignorado.
     evento.target.value = "";
 
     if (escolhido) await analisar(escolhido);
@@ -164,55 +164,9 @@ export function Analisador() {
     <div className="flex flex-col gap-4">
       <Painel
         titulo="Arquivo do atendimento"
-        legenda="Com a opção de salvar, as conversas analisadas entram no banco da instalação e passam a compor os indicadores e o grafo. Dados pessoais são censurados antes da análise. Reenviar a mesma conversa não duplica o agregado."
+        legenda="As conversas analisadas entram nos indicadores, nos atendimentos e no grafo. Dados pessoais são censurados antes da análise, e reenviar a mesma conversa não duplica nada."
       >
-        <div className="flex flex-col gap-3 px-5 py-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={salvar} disabled={ocupado || previa !== null} onChange={(e) => setSalvar(e.target.checked)} />
-            Salvar as conversas analisadas nos indicadores e no grafo
-          </label>
-          <details className="border border-linha p-3">
-            <summary className="cursor-pointer text-sm">Colar uma conversa</summary>
-            <div className="mt-3 flex flex-col gap-3">
-              <Textarea aria-label="Conversa para analisar" value={texto} onChange={(e) => setTexto(e.target.value)} disabled={ocupado} placeholder="Cole um CSV com horários ou uma transcrição exportada do WhatsApp." />
-              <label className="flex items-center gap-3 text-sm">Formato
-                <select aria-label="Formato da conversa colada" className="border border-input bg-background p-2" value={formatoTexto} onChange={(e) => setFormatoTexto(e.target.value)} disabled={ocupado}>
-                  <option value="csv">CSV com cabeçalho e horários</option><option value="json">JSON do Fraus</option><option value="txt">Transcrição / WhatsApp</option>
-                </select>
-              </label>
-              <Button type="button" size="sm" disabled={ocupado || !texto.trim()} onClick={() => analisar(new File([texto], `conversa.${formatoTexto}`, { type: formatoTexto === "csv" ? "text/csv" : formatoTexto === "json" ? "application/json" : "text/plain" }))}><IconeDeAcao acao="executar" />Analisar conversa</Button>
-              <p className="text-xs text-muted-foreground">Para salvar, a conversa precisa trazer horários reais. Para transcrições sem horário, desmarque a opção de salvar.</p>
-            </div>
-          </details>
-          <div className="text-sm text-muted-foreground">
-            <p>Leio planilha, JSON, WhatsApp e transcrição — e descubro as colunas sozinho:</p>
-            <ul className="mt-1.5 flex flex-col gap-1 text-xs">
-              <li>
-                <strong className="text-foreground">.csv</strong>,{" "}
-                <strong className="text-foreground">.xlsx</strong> e{" "}
-                <strong className="text-foreground">.json</strong> — qualquer
-                estrutura com uma coluna de fala e uma de quem falou. Reconheço
-                o formato do Fraus e o export da Totalk; nos outros,{" "}
-                <strong>infiro</strong> qual coluna é texto, autor, data e
-                conversa, e o resultado diz o que inferi. Com horário, a
-                conversa recebe nota.
-              </li>
-              <li>
-                <strong className="text-foreground">.txt</strong> do{" "}
-                <em>Exportar conversa</em> do WhatsApp — traz horário, recebe
-                nota; quem abre a conversa é lido como cliente.
-              </li>
-              <li>
-                <strong className="text-foreground">.docx</strong>,{" "}
-                <strong className="text-foreground">.pdf</strong> e .txt em
-                prosa — transcrição em linhas{" "}
-                <code className="num">Autor: mensagem</code>. Sem horário no
-                texto <strong>não há nota</strong>, só a leitura por mensagem —
-                o porquê aparece no resultado.
-              </li>
-            </ul>
-          </div>
-
+        <div className="px-5 py-4">
           {/*
             A área inteira recebe o arquivo — arrastar por cima realça com a
             cor de ação, que aqui é legítima: soltar É a ação primária da
@@ -233,12 +187,11 @@ export function Analisador() {
               const solto = evento.dataTransfer.files?.[0];
               if (solto && !ocupado) await analisar(solto);
             }}
-            className="group flex flex-col items-center gap-2 rounded-md border border-dashed border-input px-6 py-8 text-center transition-colors duration-200 ease-fluid data-[arrastando]:border-primary data-[arrastando]:bg-primary/5"
+            className="group flex flex-col items-center gap-2 rounded-md border border-dashed border-input px-6 py-10 text-center transition-colors duration-200 ease-fluid data-[arrastando]:border-primary data-[arrastando]:bg-primary/5"
           >
             {/* O controle de verdade é o botão abaixo. Este input só existe para
                 abrir o seletor do sistema: fora da ordem de tabulação e da
-                árvore de acessibilidade, senão o teclado para num campo
-                invisível e o leitor de tela anuncia um "arquivo" sem nome. */}
+                árvore de acessibilidade. */}
             <input
               ref={entrada}
               type="file"
@@ -247,6 +200,7 @@ export function Analisador() {
               tabIndex={-1}
               aria-hidden
               onChange={aoEscolher}
+              data-testid="entrada-arquivo"
             />
             <Upload
               aria-hidden
@@ -263,6 +217,9 @@ export function Analisador() {
             ><IconeDeAcao acao="arquivo" />
               {ocupado ? "Analisando…" : "Escolher arquivo"}
             </Button>
+            <p className="text-xs text-muted-foreground">
+              Planilha, CSV, JSON ou conversa exportada do WhatsApp
+            </p>
             {arquivo ? (
               <span className="num mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <FileText aria-hidden className="size-3.5" />
@@ -272,30 +229,37 @@ export function Analisador() {
           </div>
 
           {ocupado ? (
-            <p className="text-xs text-muted-foreground">
-              O peso de cada palavra sai apagando a palavra e perguntando de
-              novo ao modelo — uma passada por palavra, em CPU. Uma conversa
-              longa leva alguns segundos.
+            <p className="mt-3 text-xs text-muted-foreground" role="status">
+              Lendo cada mensagem com os modelos, em CPU. Uma conversa longa
+              leva alguns segundos.
             </p>
           ) : null}
         </div>
       </Painel>
+
       {resultado?.gravacao ? (
         <Alert role="status">
-          <AlertTitle>{resultado.gravacao.salvas} conversa(s) salva(s) no {resultado.gravacao.banco === "postgres" ? "Postgres / Supabase" : "banco local"}</AlertTitle>
+          <AlertTitle>{resultado.gravacao.salvas} conversa(s) salva(s)</AlertTitle>
           <AlertDescription>
-            <p>Os indicadores e o grafo já consideram este lote. Abra o período das conversas para encontrá-las.</p>
+            <p>Os indicadores e o grafo já consideram este arquivo.</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {[["/dashboard", "Ver indicadores"], ["/dashboard/atendimentos", "Ver atendimentos"], ["/dashboard/grafo", "Ver grafo"]].map(([rota, rotulo]) => <Link key={rota} className="text-sm underline underline-offset-4" href={`${rota}?de=${resultado.gravacao!.de}&ate=${resultado.gravacao!.ate}`}>{rotulo}</Link>)}
             </div>
           </AlertDescription>
         </Alert>
+      ) : resultado ? (
+        <Alert role="status">
+          <AlertTitle>Analisado, mas não salvo</AlertTitle>
+          <AlertDescription>
+            O arquivo não traz o horário das mensagens. Sem horário não há
+            nota, então a conversa não entra nos indicadores — abaixo está a
+            leitura por mensagem.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {/* O erro carrega o MOTIVO e as duas saídas: corrigir e reenviar o mesmo
-          arquivo, ou escolher outro. Recusa que só diz "não foi possível"
-          deixa a pessoa sem próximo passo — e o arquivo errado é o caso comum,
-          porque cada um exporta do sistema que tem. */}
+          arquivo, ou escolher outro. */}
       {erro ? (
         <Alert variant="destructive">
           <AlertTitle>
@@ -313,7 +277,18 @@ export function Analisador() {
                   disabled={ocupado}
                 >
                   <RefreshCw aria-hidden />
-                  Tentar de novo com este arquivo
+                  Tentar de novo
+                </Button>
+              ) : null}
+              {mapeada && !previa ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setErro(null); setPrevia(mapeada); }}
+                  disabled={ocupado}
+                >
+                  Ajustar colunas
                 </Button>
               ) : null}
               <Button
@@ -337,7 +312,7 @@ export function Analisador() {
           ocupado={ocupado}
           nomeArquivo={arquivo}
           aoAjustar={ajustar}
-          aoConfirmar={confirmar}
+          aoConfirmar={(mapeamento, ordem) => confirmar(mapeamento, ordem)}
           aoCancelar={() => {
             setPrevia(null);
             entrada.current?.click();
@@ -345,14 +320,21 @@ export function Analisador() {
         />
       ) : null}
 
-      {avisoPerfil ? (
-        <Alert>
-          <AlertTitle>Perfil de mapeamento</AlertTitle>
-          <AlertDescription>{avisoPerfil}</AlertDescription>
-        </Alert>
+      {resultado && mapeada && !previa ? (
+        <p className="text-xs text-muted-foreground">
+          As colunas foram descobertas pelo nome e pelo conteúdo.{" "}
+          <button
+            type="button"
+            className="underline underline-offset-4 hover:text-foreground"
+            onClick={() => setPrevia(mapeada)}
+            disabled={ocupado}
+          >
+            Estão erradas? Ajustar
+          </button>
+        </p>
       ) : null}
 
-      {resultado ? <Resultado resultado={resultado} /> : null}
+      {resultado && !previa ? <Resultado resultado={resultado} /> : null}
     </div>
   );
 }

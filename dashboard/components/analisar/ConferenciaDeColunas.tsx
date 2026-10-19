@@ -39,6 +39,9 @@ const EXPLICACAO_PAPEL: Record<Papel, string> = {
   canal: "opcional",
 };
 
+const OBRIGATORIOS: Papel[] = ["texto", "autor"];
+const OPCIONAIS: Papel[] = ["enviada_em", "conversa_id", "canal"];
+
 /** Valor do Select para "este arquivo não tem essa coluna". */
 const NENHUMA = "__nenhuma__";
 
@@ -86,8 +89,10 @@ export function ConferenciaDeColunas({
     PAPEIS.map((papel) => [papel, mapa.papeis[papel]?.coluna ?? null]),
   );
   const importando = acao === "importar";
-  const [lembrarEscolhido, setLembrar] = useState(false);
-  const lembrar = importando || lembrarEscolhido;
+  // Na análise, o mapeamento não vira perfil: perfil salvo vence a inferência
+  // em todo arquivo futuro, e um perfil errado era a causa de "data ilegível"
+  // num export que a heurística lia certo (19/10/2026).
+  const lembrar = importando;
   const [nomePerfil, setNomePerfil] = useState(
     nomeArquivo.replace(/\.[^.]+$/, "").slice(0, 80),
   );
@@ -109,6 +114,56 @@ export function ConferenciaDeColunas({
     aoAjustar(novo, mapa.ordem_data);
   }
 
+  const campo = (papel: Papel) => {
+    const valor = escolhido[papel] ?? NENHUMA;
+    const obrigatorio = papel === "texto" || papel === "autor";
+    return (
+      <div key={papel} className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-baseline gap-x-1.5">
+          <Label htmlFor={`${id}-${papel}`} className="text-sm">
+            {ROTULO_PAPEL[papel]}
+          </Label>
+          <span className="text-xs text-muted-foreground">
+            {EXPLICACAO_PAPEL[papel]}
+          </span>
+        </div>
+        <Select
+          value={valor}
+          onValueChange={(novo) =>
+            trocar(papel, !novo || novo === NENHUMA ? null : String(novo))
+          }
+          disabled={ocupado}
+        >
+          <SelectTrigger
+            id={`${id}-${papel}`}
+            className="h-9 w-full"
+            aria-invalid={obrigatorio && !escolhido[papel] ? true : undefined}
+          >
+            <SelectValue>
+              {(atual: string | null) =>
+                !atual || atual === NENHUMA
+                  ? obrigatorio
+                    ? "— escolha uma coluna —"
+                    : "— o arquivo não tem —"
+                  : atual
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NENHUMA}>
+              {obrigatorio ? "— escolha uma coluna —" : "— o arquivo não tem —"}
+            </SelectItem>
+            {mapa.colunas.map((coluna) => (
+              <SelectItem key={coluna} value={coluna}>
+                {coluna}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
+
   const indiceDe = (coluna: string | null | undefined) =>
     coluna ? mapa.colunas.indexOf(coluna) : -1;
 
@@ -118,7 +173,7 @@ export function ConferenciaDeColunas({
       legenda={
         importando
           ? "Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Coluna inferida só entra no banco depois de confirmada: ao importar, o mapeamento vira um perfil, e o próximo arquivo com as mesmas colunas entra direto. Nada foi importado ainda."
-          : "Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Confira antes de analisar: uma coluna errada não dá erro, dá uma nota errada. Nada foi analisado nem gravado ainda."
+          : "Não tive certeza de quais colunas usar. Confira a fala e quem falou — uma coluna errada não dá erro, dá uma nota errada. Nada foi gravado ainda."
       }
     >
       {/* `@container`: o painel mora em telas de larguras diferentes — a
@@ -135,74 +190,17 @@ export function ConferenciaDeColunas({
         ) : null}
 
         <div className="grid gap-3 @xl:grid-cols-2">
-          {PAPEIS.map((papel) => {
-            const atribuido = mapa.papeis[papel];
-            const valor = escolhido[papel] ?? NENHUMA;
-            const obrigatorio = papel === "texto" || papel === "autor";
-            return (
-              <div key={papel} className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <Label htmlFor={`${id}-${papel}`} className="text-sm">
-                    {ROTULO_PAPEL[papel]}
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    {EXPLICACAO_PAPEL[papel]}
-                  </span>
-                </div>
-                <Select
-                  value={valor}
-                  onValueChange={(novo) =>
-                    trocar(papel, !novo || novo === NENHUMA ? null : String(novo))
-                  }
-                  disabled={ocupado}
-                >
-                  <SelectTrigger
-                    id={`${id}-${papel}`}
-                    className="h-9 w-full"
-                    aria-invalid={obrigatorio && !escolhido[papel] ? true : undefined}
-                  >
-                    <SelectValue>
-                      {(atual: string | null) =>
-                        !atual || atual === NENHUMA
-                          ? obrigatorio
-                            ? "— escolha uma coluna —"
-                            : "— o arquivo não tem —"
-                          : atual
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NENHUMA}>
-                      {obrigatorio ? "— escolha uma coluna —" : "— o arquivo não tem —"}
-                    </SelectItem>
-                    {mapa.colunas.map((coluna) => (
-                      <SelectItem key={coluna} value={coluna}>
-                        {coluna}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {atribuido ? (
-                  <span className="text-xs text-muted-foreground">
-                    {atribuido.motivo === "confirmado" ? (
-                      "confirmado"
-                    ) : (
-                      <>
-                        evidência{" "}
-                        <span className="num text-medido-texto">
-                          {atribuido.confianca.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </span>{" "}
-                        · {atribuido.motivo}
-                      </>
-                    )}
-                  </span>
-                ) : null}
-              </div>
-            );
-          })}
+          {OBRIGATORIOS.map(campo)}
         </div>
+
+        <details className="group/mais" open={!previa.tem_tempo || undefined}>
+          <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+            Mais colunas — data, conversa e canal
+          </summary>
+          <div className="mt-3 grid gap-3 @xl:grid-cols-2">
+            {OPCIONAIS.map(campo)}
+          </div>
+        </details>
 
         {perguntarOrdem ? (
           <fieldset className="flex flex-col gap-1.5">
@@ -254,7 +252,7 @@ export function ConferenciaDeColunas({
                 </tr>
               </thead>
               <tbody>
-                {previa.amostra.map((linha, i) => (
+                {previa.amostra.slice(0, 3).map((linha, i) => (
                   <tr key={i} className="border-b border-border last:border-0">
                     {mapa.colunas.map((coluna, indice) => (
                       <td
@@ -313,18 +311,7 @@ export function ConferenciaDeColunas({
               O mapeamento será salvo como perfil — é o que autoriza estas
               colunas a entrarem no banco.
             </p>
-          ) : (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="size-4 accent-primary"
-                checked={lembrar}
-                onChange={(evento) => setLembrar(evento.target.checked)}
-                disabled={ocupado}
-              />
-              Lembrar este mapeamento para arquivos com as mesmas colunas
-            </label>
-          )}
+          ) : null}
           {lembrar ? (
             <div className="flex flex-col gap-1 sm:max-w-sm">
               <Label htmlFor={`${id}-perfil`} className="text-xs font-normal text-muted-foreground">
@@ -360,7 +347,7 @@ export function ConferenciaDeColunas({
                 : "Salvar perfil e importar"
               : ocupado
                 ? "Analisando…"
-                : "Analisar com estas colunas"}
+                : "Analisar"}
           </Button>
           <Button type="button" variant="outline" onClick={aoCancelar} disabled={ocupado}><IconeDeAcao acao="arquivo" />
             {importando ? "Cancelar" : "Escolher outro arquivo"}
