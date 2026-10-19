@@ -170,12 +170,14 @@ CONJUNTOS = {"satisfacao": conjuntos_satisfacao, "emocao": conjuntos_emocao,
 
 
 def prever(caminho: Path, textos: list[str], *, lote: int = 32) -> list[list[float]]:
-    from fraus.sinais.texto import carregar_torch, prever_torch
+    from fraus.sinais.texto import carregar_torch, prever_torch, temperatura_do_artefato
 
+    # A mesma temperatura que o runtime aplicaria (1,0 nos artefatos antigos).
+    temperatura = temperatura_do_artefato(caminho)
     tokenizador, modelo = carregar_torch(caminho, str(caminho))
     probs: list[list[float]] = []
     for inicio in range(0, len(textos), lote):
-        probs.extend(prever_torch(tokenizador, modelo, textos[inicio:inicio + lote]))
+        probs.extend(prever_torch(tokenizador, modelo, textos[inicio:inicio + lote], temperatura))
         print(f"\r  {caminho.name}: {len(probs)}/{len(textos)}", end="", file=sys.stderr)
     print(file=sys.stderr)
     return probs
