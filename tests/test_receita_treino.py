@@ -272,5 +272,23 @@ def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path):
     assert gravado["semente"] == 7 and gravado["impressao_teste"] == r["impressao_teste"]
     from transformers import AutoConfig
 
+    from fraus.receita_treino import prever_probabilidades
+
+    probs = prever_probabilidades(str(saida), ["foi bom", "foi ruim"],
+                                  temperatura=r["temperatura"])
+    assert len(probs) == 2 and all(abs(sum(p) - 1) < 1e-6 for p in probs)
     assert AutoConfig.from_pretrained(saida).id2label == {0: "insatisfeito", 1: "neutro",
                                                           2: "satisfeito"}
+
+
+def test_juntar_concatena_e_exige_as_mesmas_classes():
+    from fraus.corpora import Exemplos
+    from fraus.receita_treino import juntar
+
+    a = Exemplos(["x"], [0], ["g1"], ["n", "s"])
+    b = Exemplos(["y", "z"], [1, 0], None, ["n", "s"])
+    j = juntar(a, b)
+    assert j.textos == ["x", "y", "z"] and j.rotulos == [0, 1, 0]
+    assert j.grupos == ["g1", "", ""]
+    with pytest.raises(ValueError):
+        juntar(a, Exemplos(["w"], [0], None, ["outra", "ordem"]))

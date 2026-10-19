@@ -446,3 +446,40 @@ def treinar_uma_semente(
     with open(os.path.join(dir_saida, ARQUIVO_RECEITA), "w", encoding="utf-8") as arquivo:
         json.dump(resultado, arquivo, ensure_ascii=False, indent=2)
     return resultado
+
+
+def prever_probabilidades(
+    dir_modelo: str, textos: Sequence[str], *, temperatura: float = 1.0, lote: int = 64,
+    tamanho_maximo: int = 192,
+) -> list[list[float]]:
+    """Probabilidades com a temperatura do artefato; GPU se houver. Para conjunto independente."""
+    import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
+    tokenizador = AutoTokenizer.from_pretrained(dir_modelo)
+    modelo = AutoModelForSequenceClassification.from_pretrained(dir_modelo).to(dispositivo).eval()
+    logits: list[list[float]] = []
+    with torch.inference_mode():
+        for inicio in range(0, len(textos), lote):
+            entradas = tokenizador(
+                list(textos[inicio:inicio + lote]), truncation=True, max_length=tamanho_maximo,
+                padding=True, return_tensors="pt",
+            ).to(dispositivo)
+            logits.extend(modelo(**entradas).logits.float().cpu().tolist())
+    return aplicar_temperatura(logits, temperatura) if logits else []
+
+
+def juntar(*partes):
+    """Concatena Exemplos com as MESMAS classes na mesma ordem (invariante 8)."""
+    from fraus.corpora import Exemplos
+
+    nomes = list(partes[0].nomes_classes)
+    if any(list(p.nomes_classes) != nomes for p in partes):
+        raise ValueError("so junta corpora com as mesmas classes, na mesma ordem")
+    saida = Exemplos(grupos=[], nomes_classes=nomes)
+    for p in partes:
+        saida.textos += list(p.textos)
+        saida.rotulos += list(p.rotulos)
+        saida.grupos += list(p.grupos) if p.grupos is not None else [""] * len(p.textos)
+    return saida
