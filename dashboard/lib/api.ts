@@ -1575,6 +1575,8 @@ export type PreviaLeitura = {
   /** Primeiras linhas, já censuradas pelo servidor. */
   amostra: string[][];
   perfil: { id: number; nome: string } | null;
+  /** O servidor diz se a leitura pode seguir sem o analista conferir as colunas. */
+  confiavel: boolean;
 };
 
 export type PerfilMapeamento = {

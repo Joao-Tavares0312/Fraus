@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { Check } from "lucide-react";
 import {
   PAPEIS,
@@ -11,7 +11,6 @@ import {
 } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Painel } from "@/components/Painel";
 import {
@@ -39,6 +38,9 @@ const EXPLICACAO_PAPEL: Record<Papel, string> = {
   canal: "opcional",
 };
 
+const OBRIGATORIOS: Papel[] = ["texto", "autor"];
+const OPCIONAIS: Papel[] = ["enviada_em", "conversa_id", "canal"];
+
 /** Valor do Select para "este arquivo não tem essa coluna". */
 const NENHUMA = "__nenhuma__";
 
@@ -57,27 +59,14 @@ const NENHUMA = "__nenhuma__";
 export function ConferenciaDeColunas({
   previa,
   ocupado,
-  nomeArquivo,
   aoAjustar,
   aoConfirmar,
   aoCancelar,
-  acao = "analisar",
 }: {
   previa: PreviaLeitura;
-  /**
-   * Na importação, salvar o perfil deixa de ser opcional: é ele que autoriza
-   * a coluna inferida a entrar no banco. A análise não grava, então lá lembrar
-   * é conveniência.
-   */
-  acao?: "analisar" | "importar";
   ocupado: boolean;
-  nomeArquivo: string;
   aoAjustar: (mapeamento: MapeamentoConfirmado, ordem: OrdemData | null) => void;
-  aoConfirmar: (
-    mapeamento: MapeamentoConfirmado,
-    ordem: OrdemData | null,
-    salvarComo: string | null,
-  ) => void;
+  aoConfirmar: (mapeamento: MapeamentoConfirmado, ordem: OrdemData | null) => void;
   aoCancelar: () => void;
 }) {
   const id = useId();
@@ -85,12 +74,9 @@ export function ConferenciaDeColunas({
   const escolhido: MapeamentoConfirmado = Object.fromEntries(
     PAPEIS.map((papel) => [papel, mapa.papeis[papel]?.coluna ?? null]),
   );
-  const importando = acao === "importar";
-  const [lembrarEscolhido, setLembrar] = useState(false);
-  const lembrar = importando || lembrarEscolhido;
-  const [nomePerfil, setNomePerfil] = useState(
-    nomeArquivo.replace(/\.[^.]+$/, "").slice(0, 80),
-  );
+  // O mapeamento conferido aqui NÃO vira perfil salvo: perfil vence a
+  // inferência em todo arquivo futuro, e um perfil errado era a causa de
+  // "data ilegível" num export que a heurística lia certo (19/10/2026).
 
   const avisosAlemDasColunas = previa.avisos.filter(
     (aviso) => !/^(Colunas (inferidas|confirmadas):|Apliquei o perfil salvo)/.test(aviso),
@@ -109,22 +95,65 @@ export function ConferenciaDeColunas({
     aoAjustar(novo, mapa.ordem_data);
   }
 
+  const campo = (papel: Papel) => {
+    const valor = escolhido[papel] ?? NENHUMA;
+    const obrigatorio = papel === "texto" || papel === "autor";
+    return (
+      <div key={papel} className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-baseline gap-x-1.5">
+          <Label htmlFor={`${id}-${papel}`} className="text-sm">
+            {ROTULO_PAPEL[papel]}
+          </Label>
+          <span className="text-xs text-muted-foreground">
+            {EXPLICACAO_PAPEL[papel]}
+          </span>
+        </div>
+        <Select
+          value={valor}
+          onValueChange={(novo) =>
+            trocar(papel, !novo || novo === NENHUMA ? null : String(novo))
+          }
+          disabled={ocupado}
+        >
+          <SelectTrigger
+            id={`${id}-${papel}`}
+            className="h-9 w-full"
+            aria-invalid={obrigatorio && !escolhido[papel] ? true : undefined}
+          >
+            <SelectValue>
+              {(atual: string | null) =>
+                !atual || atual === NENHUMA
+                  ? obrigatorio
+                    ? "— escolha uma coluna —"
+                    : "— o arquivo não tem —"
+                  : atual
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NENHUMA}>
+              {obrigatorio ? "— escolha uma coluna —" : "— o arquivo não tem —"}
+            </SelectItem>
+            {mapa.colunas.map((coluna) => (
+              <SelectItem key={coluna} value={coluna}>
+                {coluna}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
+
   const indiceDe = (coluna: string | null | undefined) =>
     coluna ? mapa.colunas.indexOf(coluna) : -1;
 
   return (
     <Painel
       titulo="Conferir colunas"
-      legenda={
-        importando
-          ? "Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Coluna inferida só entra no banco depois de confirmada: ao importar, o mapeamento vira um perfil, e o próximo arquivo com as mesmas colunas entra direto. Nada foi importado ainda."
-          : "Este arquivo não está num formato que eu conheça pelo nome, então descobri as colunas pelo nome e pelo conteúdo. Confira antes de analisar: uma coluna errada não dá erro, dá uma nota errada. Nada foi analisado nem gravado ainda."
-      }
+      legenda="Não tive certeza de quais colunas usar. Confira a fala e quem falou — uma coluna errada não dá erro, dá uma nota errada. Nada foi gravado ainda."
     >
-      {/* `@container`: o painel mora em telas de larguras diferentes — a
-          largura inteira em Analisar, meia coluna de 26rem em Integrações.
-          A grade responde à largura DELE, não à da janela; com `sm:` ela
-          abria duas colunas dentro dos 26rem e o rótulo quebrava letra a letra. */}
+      {/* `@container`: a grade responde à largura do painel, não à da janela. */}
       <div className="@container flex flex-col gap-4 px-5 py-4">
         {previa.perfil ? (
           <p className="text-sm text-muted-foreground">
@@ -135,74 +164,17 @@ export function ConferenciaDeColunas({
         ) : null}
 
         <div className="grid gap-3 @xl:grid-cols-2">
-          {PAPEIS.map((papel) => {
-            const atribuido = mapa.papeis[papel];
-            const valor = escolhido[papel] ?? NENHUMA;
-            const obrigatorio = papel === "texto" || papel === "autor";
-            return (
-              <div key={papel} className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <Label htmlFor={`${id}-${papel}`} className="text-sm">
-                    {ROTULO_PAPEL[papel]}
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    {EXPLICACAO_PAPEL[papel]}
-                  </span>
-                </div>
-                <Select
-                  value={valor}
-                  onValueChange={(novo) =>
-                    trocar(papel, !novo || novo === NENHUMA ? null : String(novo))
-                  }
-                  disabled={ocupado}
-                >
-                  <SelectTrigger
-                    id={`${id}-${papel}`}
-                    className="h-9 w-full"
-                    aria-invalid={obrigatorio && !escolhido[papel] ? true : undefined}
-                  >
-                    <SelectValue>
-                      {(atual: string | null) =>
-                        !atual || atual === NENHUMA
-                          ? obrigatorio
-                            ? "— escolha uma coluna —"
-                            : "— o arquivo não tem —"
-                          : atual
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NENHUMA}>
-                      {obrigatorio ? "— escolha uma coluna —" : "— o arquivo não tem —"}
-                    </SelectItem>
-                    {mapa.colunas.map((coluna) => (
-                      <SelectItem key={coluna} value={coluna}>
-                        {coluna}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {atribuido ? (
-                  <span className="text-xs text-muted-foreground">
-                    {atribuido.motivo === "confirmado" ? (
-                      "confirmado"
-                    ) : (
-                      <>
-                        evidência{" "}
-                        <span className="num text-medido-texto">
-                          {atribuido.confianca.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </span>{" "}
-                        · {atribuido.motivo}
-                      </>
-                    )}
-                  </span>
-                ) : null}
-              </div>
-            );
-          })}
+          {OBRIGATORIOS.map(campo)}
         </div>
+
+        <details className="group/mais" open={!previa.tem_tempo || undefined}>
+          <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+            Mais colunas — data, conversa e canal
+          </summary>
+          <div className="mt-3 grid gap-3 @xl:grid-cols-2">
+            {OPCIONAIS.map(campo)}
+          </div>
+        </details>
 
         {perguntarOrdem ? (
           <fieldset className="flex flex-col gap-1.5">
@@ -254,7 +226,7 @@ export function ConferenciaDeColunas({
                 </tr>
               </thead>
               <tbody>
-                {previa.amostra.map((linha, i) => (
+                {previa.amostra.slice(0, 3).map((linha, i) => (
                   <tr key={i} className="border-b border-border last:border-0">
                     {mapa.colunas.map((coluna, indice) => (
                       <td
@@ -307,63 +279,19 @@ export function ConferenciaDeColunas({
           </Alert>
         ) : null}
 
-        <div className="flex flex-col gap-2">
-          {importando ? (
-            <p className="text-sm">
-              O mapeamento será salvo como perfil — é o que autoriza estas
-              colunas a entrarem no banco.
-            </p>
-          ) : (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="size-4 accent-primary"
-                checked={lembrar}
-                onChange={(evento) => setLembrar(evento.target.checked)}
-                disabled={ocupado}
-              />
-              Lembrar este mapeamento para arquivos com as mesmas colunas
-            </label>
-          )}
-          {lembrar ? (
-            <div className="flex flex-col gap-1 sm:max-w-sm">
-              <Label htmlFor={`${id}-perfil`} className="text-xs font-normal text-muted-foreground">
-                Nome do perfil — grava só os nomes das colunas, nunca o conteúdo
-              </Label>
-              <Input
-                id={`${id}-perfil`}
-                value={nomePerfil}
-                maxLength={80}
-                onChange={(evento) => setNomePerfil(evento.target.value)}
-                disabled={ocupado}
-              />
-            </div>
-          ) : null}
-        </div>
-
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             onClick={() =>
-              aoConfirmar(
-                escolhido,
-                perguntarOrdem ? mapa.ordem_data : null,
-                lembrar && nomePerfil.trim() ? nomePerfil.trim() : null,
-              )
+              aoConfirmar(escolhido, perguntarOrdem ? mapa.ordem_data : null)
             }
-            disabled={ocupado || faltaObrigatorio || (importando && !nomePerfil.trim())}
+            disabled={ocupado || faltaObrigatorio}
           >
             <Check aria-hidden />
-            {importando
-              ? ocupado
-                ? "Importando…"
-                : "Salvar perfil e importar"
-              : ocupado
-                ? "Analisando…"
-                : "Analisar com estas colunas"}
+            {ocupado ? "Analisando…" : "Analisar"}
           </Button>
           <Button type="button" variant="outline" onClick={aoCancelar} disabled={ocupado}><IconeDeAcao acao="arquivo" />
-            {importando ? "Cancelar" : "Escolher outro arquivo"}
+            Escolher outro arquivo
           </Button>
         </div>
         {faltaObrigatorio ? (

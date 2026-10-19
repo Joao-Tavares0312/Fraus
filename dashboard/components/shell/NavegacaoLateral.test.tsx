@@ -35,11 +35,11 @@ function linksDoMenu(html: string) {
 }
 
 describe("destinos efetivamente renderizados na sidebar", () => {
-  it("usuario só recebe as cinco tarefas permitidas, todas com o período", () => {
+  it("usuario só recebe as quatro tarefas do dia a dia, todas com o período", () => {
     const html = renderizar("usuario");
     const internos = linksDoMenu(html).filter((tag) => tag.includes('href="/dashboard'));
-    expect(internos).toHaveLength(5);
-    for (const destino of ["/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo", "/dashboard/operacao"]) {
+    expect(internos).toHaveLength(4);
+    for (const destino of ["/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo"]) {
       expect(internos.some((tag) => tag.includes(`href="${destino}?de=2026-08-01&amp;ate=2026-08-22"`)), destino).toBe(true);
     }
     expect(html).not.toContain('aria-label="Configurar"');
@@ -49,12 +49,12 @@ describe("destinos efetivamente renderizados na sidebar", () => {
     expect(html).not.toContain("nao-carregar");
   });
 
-  it("dev recebe as oito rotas, com nomes explícitos mesmo recolhidas", () => {
+  it("dev recebe as cinco rotas da lateral, com nomes explícitos mesmo recolhidas", () => {
     const html = renderizar("dev", false);
     expect(html).toContain('data-state="collapsed"');
     const links = linksDoMenu(html);
-    expect(links).toHaveLength(9);
-    for (const nome of ["Visão geral", "Atendimentos", "Analisar", "Grafo", "Operação", "Integrações", "Modelo", "Configurações", "Documentação (abre em nova aba)"]) {
+    expect(links).toHaveLength(5);
+    for (const nome of ["Visão geral", "Atendimentos", "Analisar", "Grafo", "Modelo"]) {
       expect(links.some((tag) => tag.includes(`aria-label="${nome}"`)), nome).toBe(true);
     }
     expect(html).toContain('aria-label="Expandir navegação"');
@@ -71,13 +71,13 @@ describe("destinos efetivamente renderizados na sidebar", () => {
       .toContain('aria-label="Atendimentos"');
   });
 
-  it("documentação e sessão permanecem acessíveis, sem marca interativa dentro do link", () => {
+  it("configuração, documentação, tema e sair moram no menu da conta", () => {
     const html = renderizar();
-    const docs = linksDoMenu(html).find((tag) => tag.includes('href="https://docs.example.test/fraus"'));
-    expect(docs).toContain('target="_blank"');
-    expect(docs).toContain('rel="noopener noreferrer"');
-    expect(html).toContain('aria-label="Sair da conta de Analista"');
-    expect(html).toContain('aria-label="Tema: Escuro. Trocar para Claro."');
+    expect(html).toContain('aria-label="Menu da conta de Analista"');
+    expect(html).toContain('aria-haspopup="menu"');
+    for (const fora of ["/dashboard/operacao", "/dashboard/integracoes", "/dashboard/configuracoes", "docs.example.test"]) {
+      expect(html, fora).not.toContain(fora);
+    }
     expect(html).toContain('aria-label="Fraus — revelar o segredo com cinco cliques"');
     for (const [link] of html.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/g)) {
       expect(link).not.toContain("<button");
