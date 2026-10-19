@@ -186,3 +186,51 @@ def ler_goemotions_ptbr(
         ex.rotulos.append(NOMES_EMOCOES.index(classes.pop()))
         ex.grupos.append(autor_de[ident])
     return ex
+
+
+URL_MULTIPICO = (
+    "https://huggingface.co/datasets/Multilingual-Perspectivist-NLU/MultiPICo/resolve/main/"
+    "multipico_anonimized.csv"
+)
+CLASSES_IRONIA = ["nao_ironico", "ironico"]
+
+
+def ler_multipico(
+    caminho: str | Path, *, idioma: str = "pt", variedade: str | None = None
+) -> Exemplos:
+    """MultiPICo (Casola et al., ACL 2024), CC BY 4.0: pares post-resposta de Reddit e Twitter.
+
+    Rotulo por MAIORIA dos anotadores de cada par; empate sai. O texto e a
+    RESPOSTA, que e o que o sinal le no atendimento (a mensagem do cliente).
+    Ironico e nao ironico vem das mesmas fontes -- ao contrario do IDPT, a
+    procedencia nao entrega o rotulo. Grupo = post, para que respostas ao mesmo
+    post nao caiam dos dois lados.
+    """
+    _permitir_campo_longo()
+    votos: dict[tuple[str, str], list[int]] = {}
+    texto_de: dict[tuple[str, str], str] = {}
+    with open(caminho, newline="", encoding="utf-8") as arquivo:
+        for linha in csv.DictReader(arquivo):
+            if linha.get("language") != idioma:
+                continue
+            if variedade is not None and linha.get("language_variety") != variedade:
+                continue
+            rotulo = (linha.get("label") or "").strip()
+            if rotulo not in ("0", "1"):
+                continue
+            chave = (linha["post_id"], linha["reply_id"])
+            votos.setdefault(chave, []).append(int(rotulo))
+            texto_de.setdefault(chave, (linha.get("reply") or "").strip())
+    ex = Exemplos(grupos=[], nomes_classes=list(CLASSES_IRONIA))
+    for chave, lista in votos.items():
+        ironicos = sum(lista)
+        if 2 * ironicos == len(lista) or not texto_de[chave]:
+            continue
+        ex.textos.append(texto_de[chave])
+        ex.rotulos.append(int(2 * ironicos > len(lista)))
+        ex.grupos.append(chave[0])
+    return ex
+
+# Corpus pequeno (~1,9 mil pares): teste maior que o padrao para o IC nao
+# ficar largo demais. Notebook e benchmark usam ESTAS fracoes.
+FRACOES_MULTIPICO = {"fracao_val": 0.15, "fracao_teste": 0.25}

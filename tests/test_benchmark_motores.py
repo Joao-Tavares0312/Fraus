@@ -50,6 +50,13 @@ def test_numero_de_classes_divergente_falha_alto(dubles, monkeypatch):
         bm.medir("ironia", {"bertimbau": Path("ref")}, None)
 
 
-def test_regua_de_ironia_tem_dez_de_cada_lado():
-    (c,) = bm.conjuntos_ironia(None)
+def test_regua_de_ironia_tem_dez_de_cada_lado(monkeypatch, tmp_path):
+    from fraus.corpora import Exemplos
+
+    monkeypatch.setattr(bm, "baixar", lambda url, destino: tmp_path)
+    monkeypatch.setattr(bm.corpora, "ler_multipico", lambda caminho: Exemplos(
+        textos=[f"t{i}" for i in range(3000)], rotulos=[int(i % 3 == 0) for i in range(3000)],
+        grupos=[f"p{i}" for i in range(3000)], nomes_classes=["nao_ironico", "ironico"]))
+    mp, c = bm.conjuntos_ironia(None)
+    assert mp["id"] == "ironia_multipico" and mp["independente"]
     assert c["exemplos"].rotulos.count(0) == c["exemplos"].rotulos.count(1) == 10

@@ -153,3 +153,27 @@ def test_ler_goemotions_conta_votos_por_id_e_reduz_a_ekman(tmp_path):
     assert ex.textos == ["Valeu demais", "Tanto faz"]
     assert [ex.nomes_classes[r] for r in ex.rotulos] == ["alegria", "neutro"]
     assert ex.grupos == ["u1", "u5"]
+
+
+def test_ler_multipico_vota_por_par_descarta_empate_e_agrupa_por_post(tmp_path):
+    from fraus.corpora import ler_multipico
+
+    caminho = tmp_path / "mp.csv"
+    with caminho.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["label", "source", "reply", "post", "language", "language_variety",
+                    "annotator_id", "reply_id", "post_id"])
+        for anot, rot in (("a1", "1"), ("a2", "1"), ("a3", "0")):      # maioria ironica
+            w.writerow([rot, "reddit", "Que otimo, de novo", "Caiu o sistema", "pt", "br", anot, "r1", "p1"])
+        for anot, rot in (("a1", "1"), ("a2", "0")):                    # empate: sai
+            w.writerow([rot, "twitter", "Pode ser", "Vai chover?", "pt", "br", anot, "r2", "p2"])
+        for anot, rot in (("a1", "0"), ("a2", "0")):                    # outra lingua: sai
+            w.writerow([rot, "twitter", "Sure", "Q", "en", "us", anot, "r3", "p3"])
+        for anot, rot in (("a1", "0"), ("a2", "0"), ("a3", "1")):      # maioria nao ironica
+            w.writerow([rot, "twitter", "Obrigado pela dica", "Use o app", "pt", "pt", anot, "r4", "p1"])
+    ex = ler_multipico(caminho)
+    assert ex.textos == ["Que otimo, de novo", "Obrigado pela dica"]
+    assert ex.rotulos == [1, 0]
+    assert ex.grupos == ["p1", "p1"]
+    assert ex.nomes_classes == ["nao_ironico", "ironico"]
+    assert ler_multipico(caminho, variedade="br").textos == ["Que otimo, de novo"]

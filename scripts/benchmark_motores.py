@@ -127,12 +127,26 @@ def conjuntos_ironia(amostra: int | None) -> list[dict]:
         rotulos=[0] * len(SINCERAS_COM_MARCADOR) + [1] * len(IRONIAS_SEM_MARCADOR),
         nomes_classes=["nao_ironico", "ironico"],
     )
-    return [{
+    multipico = corpora.ler_multipico(
+        baixar(corpora.URL_MULTIPICO, CACHE / "multipico" / "multipico_anonimized.csv")
+    )
+    teste_mp = preparar_divisao(multipico, **corpora.FRACOES_MULTIPICO)["teste"]
+    return _amostrar([{
+        "id": "ironia_multipico", "nome": "MultiPICo-PT, respostas de Reddit/Twitter",
+        "independente": True, "exemplos": teste_mp,
+        "ressalvas": [
+            "Rotulo por maioria de ~5 anotadores; empates fora. As duas classes vem das "
+            "mesmas fontes (sem atalho de procedencia). PT-BR e PT-PT juntos. A ironia "
+            "foi anotada VENDO o post; o modelo le so a resposta.",
+            "Deixa de ser independente para candidato treinado com o MultiPICo "
+            "(o teste continua disjunto do treino).",
+        ],
+    }, {
         "id": "ironia_regua_20", "nome": "Regua de 20 frases de atendimento",
         "independente": True, "exemplos": regua,
         "ressalvas": ["20 frases: IC de cerca de +-0,22. Serve de alarme, nao de medida fina. "
                       "A regua de pares minimos substitui esta quando congelar."],
-    }]
+    }], amostra)
 
 
 def _amostrar(conjuntos: list[dict], amostra: int | None) -> list[dict]:
