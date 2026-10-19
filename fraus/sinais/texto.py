@@ -7,6 +7,8 @@ BERTimbau supera as variantes multilingues em classificacao de sentimento
 PT-BR (Souza, Nogueira, Lotufo -- arXiv:2201.03382).
 """
 
+import json
+import math
 from pathlib import Path
 
 from fraus.modelos import Conversa
@@ -17,6 +19,29 @@ TAMANHO_MAXIMO = 192
 
 class ModeloAusenteError(RuntimeError):
     """Modelo nao encontrado ou ilegivel. Falha alta: sem modelo nao ha predicao."""
+
+
+ARQUIVO_RECEITA = "fraus_receita.json"
+
+
+def temperatura_do_artefato(diretorio: Path) -> float:
+    """A temperatura que `fraus.receita_treino` gravou ao lado do modelo; 1,0 se nao gravou.
+
+    Artefato de antes de 19/10/2026 nao tem o arquivo: T=1 e o softmax de
+    sempre, nenhuma probabilidade muda. Arquivo presente com valor invalido e
+    falha alta -- cair para 1 em silencio serviria probabilidade descalibrada
+    com a etiqueta de calibrada.
+    """
+    caminho = Path(diretorio) / ARQUIVO_RECEITA
+    if not caminho.is_file():
+        return 1.0
+    try:
+        temperatura = float(json.loads(caminho.read_text(encoding="utf-8"))["temperatura"])
+    except (ValueError, KeyError, TypeError) as erro:
+        raise ModeloAusenteError(f"{caminho} sem temperatura legivel: {erro}") from erro
+    if not (temperatura > 0 and math.isfinite(temperatura)):
+        raise ModeloAusenteError(f"{caminho}: temperatura {temperatura} invalida")
+    return temperatura
 
 
 def carregar_torch(caminho_modelo: Path, rotulo: str):
@@ -46,8 +71,10 @@ def carregar_torch(caminho_modelo: Path, rotulo: str):
     return tokenizador, modelo
 
 
-def prever_torch(tokenizador, modelo, textos: list[str]) -> list[list[float]]:
-    """Softmax por texto, num lote com padding pela mensagem mais longa."""
+def prever_torch(
+    tokenizador, modelo, textos: list[str], temperatura: float = 1.0
+) -> list[list[float]]:
+    """Softmax de logits/T por texto, num lote com padding pela mensagem mais longa."""
     if not textos:
         return []
     import torch
@@ -57,7 +84,7 @@ def prever_torch(tokenizador, modelo, textos: list[str]) -> list[list[float]]:
             textos, truncation=True, max_length=TAMANHO_MAXIMO, padding=True, return_tensors="pt"
         )
         logits = modelo(**entradas).logits
-        return torch.softmax(logits, dim=-1).tolist()
+        return torch.softmax(logits / temperatura, dim=-1).tolist()
 
 
 class ClassificadorTexto:
@@ -69,10 +96,11 @@ class ClassificadorTexto:
                 "Ver docs/treinamento.md."
             )
         self._tokenizador, self._modelo = carregar_torch(caminho_modelo, "Modelo")
+        self._temperatura = temperatura_do_artefato(caminho_modelo)
 
     def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
         """Probabilidades [insatisfeito, neutro, satisfeito] para cada texto."""
-        return prever_torch(self._tokenizador, self._modelo, textos)
+        return prever_torch(self._tokenizador, self._modelo, textos, self._temperatura)
 
 
 def features_texto(conversa: Conversa, classificador) -> dict[str, float]:

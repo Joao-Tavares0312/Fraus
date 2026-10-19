@@ -158,7 +158,9 @@ def converter(nome: str, precisao: str = "int8") -> dict:
     # classes (0 insatisfeito, 1 neutro, 2 satisfeito) e a invariante 8, e
     # perde-la na conversao faria o sistema pontuar ao contrario em silencio.
     shutil.copy2(origem / "config.json", destino / "config.json")
-    for extra in ("metricas.json",):
+    # `fraus_receita.json` leva a temperatura: sem ele o ONNX serviria
+    # softmax cru e divergiria do torch no mesmo checkpoint.
+    for extra in ("metricas.json", "fraus_receita.json"):
         if (origem / extra).exists():
             shutil.copy2(origem / extra, destino / extra)
 
