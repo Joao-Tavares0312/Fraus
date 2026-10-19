@@ -76,3 +76,48 @@ def test_multitarefa_exige_as_tres_saidas_nomeadas():
     assert len(resultado["satisfacao"][0]) == 3
     assert len(resultado["emocao"][0]) == 7
     assert len(resultado["ironia"][0]) == 2
+
+
+def test_a_referencia_torch_do_encolhimento_aplica_a_temperatura_do_artefato(tmp_path):
+    """O ONNX aplica a temperatura de `fraus_receita.json`; a referencia tem de aplicar a mesma.
+
+    Sem isso a paridade compara softmax(z/T) com softmax(z) e recusa a conversao
+    de qualquer modelo com T != 1 -- em 19/10/2026 o fp32 da ironia deu
+    Δp 0,099 por isso, nao por diferenca de executor.
+    """
+    torch = pytest.importorskip("torch")
+    import importlib.util
+    import json
+    from pathlib import Path
+
+    from transformers import BertConfig, BertForSequenceClassification, BertTokenizerFast
+
+    palavras = ["bom", "ruim", "atendimento"]
+    vocab = tmp_path / "vocab.txt"
+    vocab.write_text("\n".join(["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]", *palavras]))
+    modelo_dir = tmp_path / "modelo"
+    BertTokenizerFast(vocab_file=str(vocab), do_lower_case=True).save_pretrained(modelo_dir)
+    torch.manual_seed(0)
+    modelo = BertForSequenceClassification(BertConfig(
+        vocab_size=len(palavras) + 5, hidden_size=16, num_hidden_layers=1,
+        num_attention_heads=2, intermediate_size=32, num_labels=2,
+    ))
+    with torch.no_grad():  # logits grandes: T=2 muda a probabilidade de forma visivel
+        modelo.classifier.weight.mul_(50)
+    modelo.save_pretrained(modelo_dir)
+    (modelo_dir / "fraus_receita.json").write_text(json.dumps({"temperatura": 2.0}))
+
+    caminho = Path(__file__).resolve().parents[1] / "scripts" / "encolher_modelos.py"
+    especificacao = importlib.util.spec_from_file_location("encolher_modelos", caminho)
+    encolher = importlib.util.module_from_spec(especificacao)
+    especificacao.loader.exec_module(encolher)
+
+    textos = ["atendimento bom", "ruim"]
+    obtido = encolher._probabilidades_torch(modelo_dir, textos)
+
+    tokenizador = BertTokenizerFast.from_pretrained(modelo_dir)
+    modelo.eval()
+    with torch.inference_mode():
+        logits = modelo(**tokenizador(textos, padding=True, return_tensors="pt")).logits
+    esperado = torch.softmax(logits / 2.0, dim=-1).tolist()
+    assert np.allclose(obtido, esperado, atol=1e-6)

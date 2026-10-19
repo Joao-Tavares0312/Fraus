@@ -20,7 +20,12 @@ from pathlib import Path
 
 
 from fraus.modelos import Conversa
-from fraus.sinais.texto import ModeloAusenteError, carregar_torch, prever_torch
+from fraus.sinais.texto import (
+    ModeloAusenteError,
+    carregar_torch,
+    prever_torch,
+    temperatura_do_artefato,
+)
 
 # Ordem canonica das duas classes, valida no notebook 04 e aqui.
 NAO_IRONICO, IRONICO = 0, 1
@@ -37,10 +42,11 @@ class ClassificadorIronia:
                 "Ver docs/treinamento.md."
             )
         self._tokenizador, self._modelo = carregar_torch(caminho_modelo, "Modelo de ironia")
+        self._temperatura = temperatura_do_artefato(caminho_modelo)
 
     def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
         """Probabilidades [nao_ironico, ironico] para cada texto."""
-        return prever_torch(self._tokenizador, self._modelo, textos)
+        return prever_torch(self._tokenizador, self._modelo, textos, self._temperatura)
 
 
 def features_ironia(conversa: Conversa, classificador) -> dict[str, float]:

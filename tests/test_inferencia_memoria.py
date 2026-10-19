@@ -28,6 +28,7 @@ def _sessao(classe):
     sessao._tokenizador = Tokenizador()
     sessao._entradas = {'input_ids', 'attention_mask'}
     sessao._sessao = RuntimeComOrcamento()
+    sessao._temperatura = 1.0  # artefato sem fraus_receita.json
     return sessao
 
 
