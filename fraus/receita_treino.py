@@ -405,6 +405,12 @@ def treinar_uma_semente(
     argumentos = argumentos_padrao(os.path.join(dir_checkpoint, f"semente-{semente}"),
                                    semente=semente, **ajustes)
     paciencia = argumentos.pop("paciencia")
+    # O transformers 5 tirou o `warmup_ratio` (o Colab ja vem com ele; a 4.x
+    # local aceitava). Passos inteiros valem nas duas versoes.
+    passos_por_epoca = math.ceil(len(treino) / argumentos["per_device_train_batch_size"])
+    argumentos["warmup_steps"] = int(
+        argumentos.pop("warmup_ratio") * passos_por_epoca * argumentos["num_train_epochs"]
+    )
     treinador = _Ponderado(
         model=modelo, args=TrainingArguments(**argumentos),
         train_dataset=treino, eval_dataset=validacao,  # NUNCA o teste
