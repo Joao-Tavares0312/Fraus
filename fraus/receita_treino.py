@@ -262,3 +262,59 @@ def argumentos_padrao(
         "report_to": "none",
         "paciencia": 2,
     }
+
+
+# --- o caminho unico de notebook e benchmark ------------------------------------
+
+SEMENTE_DIVISAO = 42
+
+
+def _recorte(exemplos, indices):
+    from fraus.corpora import Exemplos
+
+    return Exemplos(
+        textos=[exemplos.textos[i] for i in indices],
+        rotulos=[exemplos.rotulos[i] for i in indices],
+        grupos=None if exemplos.grupos is None else [exemplos.grupos[i] for i in indices],
+        nomes_classes=list(exemplos.nomes_classes),
+    )
+
+
+def preparar_divisao(
+    exemplos,
+    *,
+    agrupar: bool = True,
+    fracao_val: float = 0.10,
+    fracao_teste: float = 0.15,
+    semente: int = SEMENTE_DIVISAO,
+) -> dict:
+    """Duplicata fora, depois treino/validacao/teste -- o MESMO teste dos dois lados.
+
+    O notebook treina em `treino`, escolhe epoca e temperatura em `validacao`;
+    o benchmark mede em `teste`. `agrupar=False` ignora os grupos (corpus em
+    que um grupo sozinho e grande demais para caber num lado).
+    """
+    limpos = _recorte(exemplos, remover_duplicatas(exemplos.textos, exemplos.rotulos).indices)
+    grupos = limpos.grupos if agrupar else None
+    divisao = dividir_treino_val_teste(
+        limpos.rotulos, grupos=grupos, fracao_val=fracao_val, fracao_teste=fracao_teste,
+        semente=semente,
+    )
+    return {
+        "treino": _recorte(limpos, divisao.treino),
+        "validacao": _recorte(limpos, divisao.validacao),
+        "teste": _recorte(limpos, divisao.teste),
+    }
+
+
+def amostra_estratificada(exemplos, n: int, *, semente: int = SEMENTE_DIVISAO):
+    """`n` exemplos na proporcao das classes; o conjunto inteiro se ja for menor."""
+    if n >= len(exemplos.rotulos):
+        return exemplos
+    from sklearn.model_selection import train_test_split
+
+    _, escolhidos = train_test_split(
+        list(range(len(exemplos.rotulos))), test_size=n, random_state=semente,
+        stratify=exemplos.rotulos,
+    )
+    return _recorte(exemplos, sorted(int(i) for i in escolhidos))

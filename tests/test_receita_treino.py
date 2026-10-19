@@ -179,3 +179,43 @@ def test_argumentos_padrao_selecionam_na_validacao_com_parada_antecipada():
     assert a["weight_decay"] == pytest.approx(0.01)
     assert a["eval_strategy"] == a["save_strategy"] == "epoch"
     assert a["paciencia"] == 2  # vai para o EarlyStoppingCallback, nao para o TrainingArguments
+
+
+# --- preparar_divisao: o caminho unico de notebook e benchmark ------------------
+
+
+def test_preparar_divisao_tira_duplicata_antes_e_devolve_os_tres_lados():
+    from fraus.corpora import Exemplos
+    from fraus.divisao import impressao_dos_textos
+    from fraus.receita_treino import preparar_divisao
+
+    rotulos = _corpus(1500)
+    textos = [f"texto {i}" for i in range(len(rotulos))]
+    textos[10] = textos[11] = "repetido"
+    rotulos[10] = rotulos[11]
+    ex = Exemplos(textos=textos, rotulos=rotulos, grupos=None, nomes_classes=["a", "b", "c"])
+    lados = preparar_divisao(ex, semente=42)
+    total = sum(len(l.textos) for l in lados.values())
+    assert set(lados) == {"treino", "validacao", "teste"}
+    assert total == len(textos) - 1
+    todos = [t for l in lados.values() for t in l.textos]
+    assert todos.count("repetido") == 1
+    assert lados["teste"].nomes_classes == ["a", "b", "c"]
+    # deterministico: a impressao do teste e o que notebook e benchmark comparam
+    de_novo = preparar_divisao(ex, semente=42)
+    assert impressao_dos_textos(de_novo["teste"].textos) == impressao_dos_textos(
+        lados["teste"].textos
+    )
+
+
+def test_amostra_estratificada_mantem_proporcao_e_e_deterministica():
+    from fraus.corpora import Exemplos
+    from fraus.receita_treino import amostra_estratificada
+
+    rotulos = _corpus(5000)
+    ex = Exemplos(textos=[str(i) for i in range(5000)], rotulos=rotulos, nomes_classes=["a", "b", "c"])
+    a = amostra_estratificada(ex, 1000, semente=1)
+    assert len(a.textos) == 1000
+    assert abs(sum(r == 1 for r in a.rotulos) / 1000 - 0.2) < 0.02
+    assert a.textos == amostra_estratificada(ex, 1000, semente=1).textos
+    assert amostra_estratificada(ex, 99999, semente=1).textos == ex.textos
