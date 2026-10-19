@@ -61,12 +61,12 @@ def _consumerbr(tmp_path):
         "data_abertura", "localizacao", "data_resposta", "avaliacao_nota",
         "avaliacao_comentario",
     ])
-    w.writerow(["A", "cobraram duas vezes", "resolvido", "False", "Resolvida", "", "", "", "5",
+    w.writerow(["A", "cobraram duas vezes", "resolvido", "False", "Resolvida", "", "", "", "Nota 5",
                 "Resolveram rápido, obrigado"])
-    w.writerow(["B", "nao entregaram", "aguarde", "True", "Não Resolvida", "", "", "", "1",
+    w.writerow(["B", "nao entregaram", "aguarde", "True", "Não Resolvida", "", "", "", "Nota 1",
                 "Ninguém resolveu nada"])
-    w.writerow(["A", "x", "y", "False", "Resolvida", "", "", "", "3", "Mais ou menos"])
-    w.writerow(["C", "z", "w", "False", "Resolvida", "", "", "", "4", ""])  # sem comentario
+    w.writerow(["A", "x", "y", "False", "Resolvida", "", "", "", "Nota 3", "Mais ou menos"])
+    w.writerow(["C", "z", "w", "False", "Resolvida", "", "", "", "Nota 4", ""])  # sem comentario
     w.writerow(["C", "z", "w", "False", "Resolvida", "", "", "", "", "sem nota"])
     caminho = tmp_path / "ConsumerBR.zip"
     with zipfile.ZipFile(caminho, "w") as z:
@@ -81,6 +81,14 @@ def test_ler_consumerbr_usa_o_comentario_da_avaliacao_e_nao_a_reclamacao(tmp_pat
     assert ex.textos == ["Resolveram rápido, obrigado", "Ninguém resolveu nada", "Mais ou menos"]
     assert ex.rotulos == [2, 0, 1]
     assert ex.grupos == ["A", "B", "A"]
+
+
+def test_nota_do_consumerbr_vem_como_texto():
+    from fraus.corpora import nota_consumerbr
+
+    assert nota_consumerbr("Nota 4") == 4
+    assert nota_consumerbr(" nota 1 ") == 1
+    assert nota_consumerbr("") is None and nota_consumerbr("Nota") is None
 
 
 def test_ler_consumerbr_respeita_limite(tmp_path):

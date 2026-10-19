@@ -80,6 +80,12 @@ def ler_b2w(caminho: str | Path) -> Exemplos:
     return ex
 
 
+def nota_consumerbr(valor: object) -> int | None:
+    """O arquivo publicado grava a nota como texto: "Nota 1" .. "Nota 5"."""
+    texto = str(valor or "").strip().lower().removeprefix("nota").strip()
+    return int(texto) if texto.isdigit() else None
+
+
 def ler_consumerbr(caminho_zip: str | Path, *, limite: int | None = None) -> Exemplos:
     """ConsumerBR: o COMENTARIO da avaliacao com a nota 1-5, agrupado por empresa.
 
@@ -97,7 +103,7 @@ def ler_consumerbr(caminho_zip: str | Path, *, limite: int | None = None) -> Exe
             leitor = csv.DictReader(io.TextIOWrapper(bruto, encoding="utf-8", newline=""))
             for linha in leitor:
                 texto = (linha.get("avaliacao_comentario") or "").strip()
-                rotulo = rotulo_por_estrelas(linha.get("avaliacao_nota"))
+                rotulo = rotulo_por_estrelas(nota_consumerbr(linha.get("avaliacao_nota")))
                 if not texto or rotulo is None:
                     continue
                 ex.textos.append(texto)
