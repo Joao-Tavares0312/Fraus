@@ -596,6 +596,19 @@ O desprezo e derivado da **diade primaria raiva + nojo**, que e como Plutchik (1
 
 Classificacao binaria: 0 nao-ironico, 1 ironico.
 
+> **19/10/2026: a cabeça vigente é a do MultiPICo-PT.** O notebook 04 passou a
+> treinar no MultiPICo (CC BY 4.0, pares post-resposta com irônico e não irônico
+> vindos das mesmas fontes) com a receita nova (`fraus.receita_treino`). Pareado
+> contra a cabeça do IDPT (`docs/notas/2026-10-19-benchmark-ironia.json`):
+> MultiPICo F1 0,511 → 0,660, diferença +0,149 com IC 95% [+0,088; +0,210] e
+> McNemar p = 0,0002; régua de 20 frases 0,394 → 0,520 (falso positivo 7/10 →
+> 2/10; n pequeno, IC cruza zero). O baseline só de estilo dá 0,499 no teste: o
+> corpus não entrega o rótulo pela forma. ECE 0,34 → 0,06 com a temperatura.
+> **O ONNX dela é fp32**: em int8 ela troca de classe em 2 das sondas de
+> `encolher_modelos.py` (`--precisao fp32`, Δp 0,0000). A ironia continua fora
+> do vetor do fusor, então a troca não pede fusor novo. O texto abaixo é o
+> histórico do IDPT.
+
 **Corpus:** IDPT 2021, a tarefa de *Irony Detection in Portuguese* do IberLEF — 15,2k tweets e 18,4k noticias anotados.
 
 > **08/10/2026: o treino publico do IDPT entrega o rotulo pela fonte.** Os
