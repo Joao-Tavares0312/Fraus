@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { TemaDaRota } from "@/components/shell/TemaDaRota";
+import { SCRIPT_PRELOADER } from "@/lib/lp-nova/coreografia";
 import { SCRIPT_ANTI_PISCADA } from "@/lib/tema";
 
 /** Chakra Petch local: nenhuma busca de fonte no build nem em runtime. */
@@ -76,6 +77,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script
           dangerouslySetInnerHTML={{ __html: SCRIPT_ANTI_PISCADA }}
         />
+        {/* A LP pula o preloader para quem ja o viu nesta sessao. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_PRELOADER }} />
       </head>
       <body className="min-h-svh antialiased">
         <TemaDaRota />
