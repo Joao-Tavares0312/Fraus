@@ -108,7 +108,9 @@ function rotacionar(destino: Float32Array, x: number, y: number, z: number, s = 
 /** Canvas fixo de tela cheia: dois programas, dois buffers estaticos, dois draws.
  * Nao agenda quadros: quem chama `desenhar` e o ticker do GSAP. */
 export function criarPalcoFR(canvas: HTMLCanvasElement): PalcoFR {
-  const gl = canvas.getContext("webgl", { alpha: true, antialias: true, depth: true, stencil: false, premultipliedAlpha: true, preserveDrawingBuffer: false, powerPreference: "low-power", failIfMajorPerformanceCaveat: true });
+  // Em tela densa o proprio DPR suaviza a borda: MSAA 4x num buffer de 2,2 MP
+  // a cada quadro e GPU gasta sem diferenca visivel.
+  const gl = canvas.getContext("webgl", { alpha: true, antialias: (window.devicePixelRatio || 1) < 1.5, depth: true, stencil: false, premultipliedAlpha: true, preserveDrawingBuffer: false, powerPreference: "low-power", failIfMajorPerformanceCaveat: true });
   canvas.dataset.frBackend = "indisponivel";
   if (!gl) throw new Error("WebGL indisponivel para a arte Fraus.");
   const informacao = gl.getExtension("WEBGL_debug_renderer_info");

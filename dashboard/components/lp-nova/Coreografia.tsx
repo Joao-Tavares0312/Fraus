@@ -73,7 +73,11 @@ export function Coreografia() {
     };
     tela.addEventListener("webglcontextlost", perder);
     tela.addEventListener("webglcontextrestored", iniciarPalco);
-    iniciarPalco();
+    // Contexto e shaders custam ~200ms de thread principal: ficam para o
+    // primeiro respiro, enquanto o preloader (ou o WebP) ocupa a tela.
+    const ocioso = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 1));
+    const cancelarOcioso = window.cancelIdleCallback ?? window.clearTimeout;
+    const espera = ocioso(iniciarPalco, { timeout: 600 });
 
     const mm = gsap.matchMedia();
     mm.add({
@@ -93,7 +97,7 @@ export function Coreografia() {
         alvo.addEventListener(tipo, fn as EventListener);
         desfazer.push(() => alvo.removeEventListener(tipo, fn as EventListener));
       };
-      const tique = (fn: gsap.TickerCallback) => { gsap.ticker.add(fn); desfazer.push(() => gsap.ticker.remove(fn)); };
+      const tique = (fn: gsap.TickerCallback, primeiro = false) => { gsap.ticker.add(fn, false, primeiro); desfazer.push(() => gsap.ticker.remove(fn)); };
 
       // ---------- preloader dourado: so na primeira visita da sessao ----------
       const pre = raiz.querySelector<HTMLElement>(".lp-pre");
@@ -104,7 +108,9 @@ export function Coreografia() {
       const lenis = new Lenis({ lerp: 0.09, anchors: { offset: -60 } });
       lenis.on("scroll", ScrollTrigger.update);
       const rolar = (tempo: number) => lenis.raf(tempo * 1000);
-      tique(rolar);
+      // Primeiro no tique, antes de qualquer escrita de estilo: o scrollTo do
+      // Lenis depois de um gsap.set forcava um layout sincrono a cada quadro.
+      tique(rolar, true);
       gsap.ticker.lagSmoothing(0);
       desfazer.push(() => { lenis.destroy(); gsap.ticker.lagSmoothing(500, 33); estado.velocidade = 0; estado.suave = 0; });
 
@@ -160,10 +166,14 @@ export function Coreografia() {
       const letreiro = raiz.querySelector<HTMLElement>("[data-letreiro]");
       if (letreiro) {
         const giro = gsap.to(letreiro, { xPercent: -50, duration: 20, ease: "none", repeat: -1 });
+        const inclinar = gsap.quickSetter(letreiro, "skewX", "deg");
+        let inclinacao = 0;
         tique(() => {
           const v = estado.suave;
           giro.timeScale(gsap.utils.interpolate(giro.timeScale(), (v < 0 ? -1 : 1) * (1 + Math.abs(v) * 0.35), 0.1));
-          gsap.set(letreiro, { skewX: gsap.utils.clamp(-12, 12, v * -0.6) });
+          // Parado, nao reescreve o estilo a cada quadro.
+          const alvo = Math.round(gsap.utils.clamp(-12, 12, v * -0.6) * 100) / 100;
+          if (alvo !== inclinacao) inclinar(inclinacao = alvo);
         });
       }
 
@@ -252,6 +262,7 @@ export function Coreografia() {
     });
 
     return () => {
+      cancelarOcioso(espera);
       mm.revert();
       tela.removeEventListener("webglcontextlost", perder);
       tela.removeEventListener("webglcontextrestored", iniciarPalco);
