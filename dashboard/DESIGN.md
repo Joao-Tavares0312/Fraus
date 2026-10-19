@@ -174,10 +174,13 @@ placas **não representam** famílias, features ou contribuições do modelo.
 ## Dashboard
 
 Sidebar de **224px**, recolhida em um rail de **64px**, com ícones e nomes em
-caixa normal. Três grupos organizam tarefas: **Acompanhar** (visão geral e
-atendimentos), **Investigar** (analisar, grafo e operação) e **Configurar**
-(integrações, modelo e configurações, apenas para `dev`). Destinos, ícones,
-grupos e visibilidade têm uma fonte única em `lib/navegacao.ts`.
+caixa normal. Dois grupos organizam o dia a dia: **Acompanhar** (visão geral e
+atendimentos) e **Investigar** (analisar, grafo e modelo, este só para `dev`).
+Gestão e configuração moram no **menu da conta** (`MenuDoUsuario`, `Menu` do
+Base UI), aberto pelo nome no rodapé: Operação, Integrações e Configurações
+(as duas últimas só `dev`), documentação, tema claro/escuro e sair. Destinos,
+ícones, grupos e visibilidade têm uma fonte única em `lib/navegacao.ts`
+(`gruposDoPapel` para a lateral, `telasDaConta` para o menu).
 
 - Página atual usa `aria-current="page"`; sua seção ancestral usa `"location"`.
   Links recolhidos mantêm nome acessível e tooltip por foco ou ponteiro.

@@ -34,14 +34,28 @@
 4. **Integrações + TARS**: `exigir_mestra_ou_dev` libera chave e segredo de FONTE
    para conta `dev` (chave de acesso continua só com a mestra). A tela ganhou
    "Conectar o TARS"; a importação por pasta saiu da tela.
-5. **TARS** (`~/GITHUB/tars`, branch `feat/integracao-fraus`): aba Integrações → Fraus
-   (URL + chave cifrada). Depois de cada resposta, `after()` manda o chat inteiro para
-   `POST /ingestao`, id `tars:<instancia>:<canal>:<chat>` — reenviar substitui.
-   Freio de 1 envio/min por chat, repescagem pelo botão e pelo cron diário, desliga
-   na 10ª falha seguida.
+5. **TARS**: aba Integrações → Fraus (URL + chave cifrada). Depois de cada
+   resposta, `after()` manda o atendimento para `POST /ingestao` — reenviar
+   substitui. Repescagem pelo botão e pelo cron diário; desliga na 10ª falha
+   seguida. (Desenho final do envio no item 7 e em `docs/integracao-tars.md`.)
+
+## Segunda e terceira rodada, testadas em produção
+
+O teste com o Telegram de verdade mostrou dois defeitos, corrigidos no mesmo dia:
+
+6. **O chat inteiro era um atendimento só** — datado de 23/09, numa janela de 40
+   mensagens que andava a cada fala. Agora 30 min sem fala encerram o
+   atendimento (Tars #29), e o id do atendimento em curso fica em
+   `fraus_envios.sessao_id` para sobreviver à poda de 40 mensagens.
+7. **A última fala não chegava** — o freio de 1 envio/min deixava duas mensagens
+   no mesmo minuto para o cron. Trocado por espera de 5 s: só manda quem ainda
+   é a fala mais nova (Tars #30). Conferido pelo João: a conversa inteira chega.
+8. **Remover atendimento** (Fraus #98), para limpar o registro de 2243 (id do
+   chat lido como horário antes de 02/10) e as duplicatas de teste; e perfil
+   salvo que recusa metade das linhas ou mais cede à heurística.
 
 ## Pendências
 
-- Publicar **API e dashboard separadamente** e conferir as rotas pelo proxy.
+- O id do Tars leva o `chat_id` do Telegram em claro; trocar por hash com sal.
+- "Resolveu/Não resolveu" do Tars ainda não vira `feedback_declarado`.
 - Retreinar o fusor local em `log1p` (o `fusor.joblib` local é recusado no boot).
-- O TARS de produção precisa do deploy do branch e da chave gerada no Fraus.
