@@ -15,10 +15,9 @@
 | 2 | `notebooks/02_treino_fusor.ipynb` | `modelos/fusor.joblib` e `modelos/importancias.json` — a regressao logistica que funde os sinais | nao | pronto |
 | 3 | `notebooks/03_treino_emocao.ipynb` | `modelos/bertimbau-emocao/` e `modelos/metricas_emocao.json` — classificador das sete classes de emocao | **sim** | pronto |
 | 4 | `notebooks/04_treino_ironia.ipynb` | `modelos/bertimbau-ironia/` e `modelos/metricas_ironia.json` — classificador binario de ironia | **sim** | pronto; o padrão (`ORIGEM = 'idpt_publico'`) baixa as fontes públicas originais, e o pedido aos organizadores do IDPT é alternativa |
-| 5 | `notebooks/05_calibracao.ipynb` | `modelos/calibracao.json` — temperatura por cabeça, sem retreinar; o runtime não a lê | **sim** | laudo |
 | 5 | `notebooks/05_treino_multitarefa.ipynb` | candidato ONNX com um encoder e três cabeças | **sim** | candidato, não promovido |
 | 6 | `notebooks/06_exportar_laya_onnx.ipynb` | ZIP do Laya em ONNX INT8 para o bundle externo da Vercel | nao | carregado quando `FRAUS_IRONIA_BACKEND=laya-onnx` (ver `deploy-vercel.md`) |
-| 7 | `notebooks/07_treino_laya.ipynb` | `modelos/laya-fraus` — fine-tune do Laya em emoção e ironia, comparado ao BERTimbau | **sim** | executado em 02/10/2026, não promovido |
+| 7 | `notebooks/07_treino_laya.ipynb` | `modelos/laya-fraus` — fine-tune do Laya em emoção e ironia, comparado ao BERTimbau | **sim** | **histórico**: executado em 02/10/2026, não promovido; não roda de novo sem rever a receita |
 
 O notebook 02 **depende do artefato do 01**: ele carrega o BERTimbau treinado para extrair o sinal de texto de cada conversa. A primeira celula do 02 falha com erro explicito se `modelos/bertimbau-satisfacao` nao estiver no Drive.
 
@@ -824,29 +823,26 @@ Nao tem notebook: e **deterministico**, nao treinado — `fraus/sinais/estilo.py
 
 ---
 
-## Notebook 05 — calibração, e por que ele não retreina nada
+## Calibração — a temperatura mora no artefato (desde 19/10/2026)
 
-Acrescentado em 10/09/2026. Ele ajusta **um escalar por cabeça** (a
-temperatura) sobre os checkpoints que já existem, e mede o quanto isso aproxima
-a confiança declarada da frequência empírica — o **ECE**, mais o diagrama de
-confiabilidade.
+O antigo `notebooks/05_calibracao.ipynb` saiu em 19/10/2026. Ele ajustava a
+temperatura num conjunto "cego" que vazava para o treino da satisfação, e
+gravava `modelos/calibracao.json`, que nada no runtime lia.
 
-**Temperature scaling não muda a decisão do modelo.** Dividir todos os logits
-pelo mesmo `T > 0` preserva a ordem, então acurácia e F1 ficam idênticos. É a
-única forma de calibração que não pode piorar o classificador — e o notebook
-tem uma asserção que falha se o `argmax` mudar, porque isso seria defeito de
-código, não propriedade do método.
+Agora cada notebook de treino (01, 03, 04) ajusta a temperatura **na
+validação**, via `fraus.receita_treino.ajustar_temperatura`, e grava o valor em
+`fraus_receita.json` dentro da pasta do modelo. O runtime
+(`fraus/sinais/texto.py` e `fraus/sinais/onnx.py`) aplica essa temperatura;
+artefato sem o arquivo continua com `T = 1,0`, então os modelos em produção não
+mudam de score.
 
-Ele produz `modelos/calibracao.json`. **Nada no runtime consome esse arquivo
-ainda, e isso é deliberado:** aplicar a temperatura muda o score de toda
-conversa do banco, e a régua deste projeto para trocar o que gera número é
-medir o efeito em `score`/`nota`/`categoria` antes de promover — a mesma
-disciplina que recusou a quantização int8 (ver `docs/encolhimento.md`).
+**Temperature scaling não muda a decisão do modelo.** Dividir os logits pelo
+mesmo `T > 0` preserva o `argmax`: acurácia e F1 ficam idênticos, só a
+confiança declarada muda (ECE).
 
-**A ironia é o caso a não confundir.** Calibrar vai melhorar o ECE dela e ela
-vai continuar errando 6 em 10 falas sinceras de atendimento. Temperatura ajusta
-*o quanto* o modelo se diz confiante, não *sobre o que* ele está confiante.
-Apresentar a melhora do ECE como conserto do domínio seria falso.
+**A ironia é o caso a não confundir.** Calibrar melhora o ECE dela, mas ela
+continua errando falas sinceras de atendimento. Temperatura ajusta *o quanto* o
+modelo se diz confiante, não *sobre o que*.
 
 ## Notebook 02 — a seção 10 é uma pendência, não uma etapa
 

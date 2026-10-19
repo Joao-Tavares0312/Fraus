@@ -39,10 +39,9 @@ proveniência. Apresentar como NPS declarado seria falso.
 
 **O intervalo de confiança cobre a incerteza AMOSTRAL, não a do modelo.** Ele
 responde "quantas conversas sustentam este número"; ele **não** responde "o
-quanto o modelo pode estar errado" — isso exigiria calibração aplicada no
-runtime, que ainda não existe: `notebooks/05_calibracao.ipynb` mede temperatura
-e ECE por cabeça (`modelos/calibracao.json`), mas nada em `fraus/` consome esse
-arquivo. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
+quanto o modelo pode estar errado". A temperatura gravada no artefato
+(`fraus_receita.json`, desde 19/10/2026) calibra a confiança de cada cabeça,
+mas não entra neste intervalo. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
 IC nenhum, e por isso a ressalva está impressa junto do número, não só aqui.
 
 O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
