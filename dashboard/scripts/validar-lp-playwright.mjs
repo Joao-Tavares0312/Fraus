@@ -1,16 +1,21 @@
-/** LP_URL aponta para o produto em execucao; LP_EVIDENCIAS guarda capturas opcionais. */
+/** QA da LP coreografada. LP_URL aponta para o produto em execucao;
+ * LP_EVIDENCIAS guarda capturas; LP_GPU=1 pede GPU real ao Chrome headless
+ * (sem isso ele usa SwiftShader e o palco cai, de proposito, no WebP). */
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createHash } from "node:crypto";
 
 const BASE = process.env.LP_URL ?? "http://127.0.0.1:3000";
 const DESTINO = process.env.LP_EVIDENCIAS;
-const permitirSoftware = process.env.LP_GL_SOFTWARE === "1";
-if (permitirSoftware) console.warn("QA FORCADO: WebGL em software permitido explicitamente. Nao e benchmark do caminho padrao de producao.");
+const GPU = process.env.LP_GPU === "1";
+const FATOS = ["07", "39", "03", "00"];
 const falhas = [];
 const evidencias = [];
-const navegador = await chromium.launch({ channel: "chrome", headless: true });
+const navegador = await chromium.launch({
+  channel: "chrome",
+  headless: true,
+  args: GPU ? ["--enable-gpu", "--use-angle=vulkan", "--ignore-gpu-blocklist"] : [],
+});
 if (DESTINO) await mkdir(DESTINO, { recursive: true });
 
 function exigir(nome, condicao, detalhe) {
@@ -25,319 +30,122 @@ async function abrir(viewport, { reduzido = false, javaScriptEnabled = true, sem
       return tipo === "webgl" || tipo === "webgl2" ? null : original.call(this, tipo, ...args);
     };
   });
-  else if (permitirSoftware) await contexto.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (tipo, ...args) {
-      return tipo === "webgl" || tipo === "webgl2"
-        ? original.call(this, tipo, { ...args[0], failIfMajorPerformanceCaveat: false })
-        : original.call(this, tipo, ...args);
-    };
-  });
   const pagina = await contexto.newPage();
+  // O video do acesso derruba a GPU do Chrome headless+Vulkan: artefato do
+  // ambiente de teste, nao da LP. Sem ele a volta mede so a remontagem.
+  await pagina.route(/\.(mp4|webm)(\?.*)?$/, (rota) => rota.abort());
   const erros = [];
   pagina.on("pageerror", (erro) => erros.push(erro.stack ?? erro.message));
+  pagina.on("console", (msg) => { if (msg.type() === "error" && !/ERR_FAILED/.test(msg.text())) erros.push(msg.text()); });
   const resposta = await pagina.goto(`${BASE}/`, { waitUntil: "networkidle" });
-  await pagina.evaluate(() => document.fonts.ready);
-  return { contexto, pagina, erros, status: resposta?.status() };
+  exigir("status", resposta?.status() === 200, String(resposta?.status()));
+  return { contexto, pagina, erros };
 }
 
-async function registrar(nome, pagina, dados = {}) {
-  await pagina.locator(".arte-estatica").evaluateAll((imagens) => Promise.all(imagens.filter((imagem) => {
-    const r = imagem.getBoundingClientRect();
-    return r.width > 0 && r.bottom > 0 && r.top < innerHeight;
-  }).map((imagem) => imagem.decode())));
-  const arquivo = `${nome}.png`;
-  if (DESTINO) await pagina.screenshot({ path: path.join(DESTINO, arquivo) });
-  evidencias.push({ nome, captura: DESTINO ? arquivo : null, ...dados });
-}
-
-async function irParaEtapa(pagina, etapa) {
-  await pagina.locator(`[data-cena="${etapa}"]`).evaluate((elemento) => elemento.scrollIntoView({ block: "center", behavior: "instant" }));
-}
-
-async function assentarArte(pagina, etapa) {
-  await pagina.locator(".objeto-desktop [data-fr-estado]").waitFor();
-  if (await pagina.locator(".objeto-desktop [data-fr-estado]").getAttribute("data-fr-estado") === "estatico") {
-    await pagina.waitForFunction((valor) => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEtapa === String(valor), etapa);
-    await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
-    return false;
-  }
-  await pagina.waitForFunction((valor) => {
-    const arte = document.querySelector(".objeto-desktop [data-fr-etapa]");
-    return arte?.dataset.frEtapa === String(valor) && arte.dataset.frAssentada === String(valor) && arte.dataset.frEstado === "pronto" && arte.dataset.frMovimento === "parado";
-  }, etapa);
-  await pagina.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  return true;
-}
-
-async function arteVisivel(pagina, compacta = false) {
-  const png = await pagina.locator(compacta ? ".hero .arte-compacta" : ".objeto-desktop").screenshot();
-  const cores = await pagina.evaluate(async (bytes) => {
-    const imagem = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
-    const tela = document.createElement("canvas");
-    tela.width = imagem.width; tela.height = imagem.height;
-    const ctx = tela.getContext("2d");
-    ctx.drawImage(imagem, 0, 0);
-    imagem.close();
-    const pixels = ctx.getImageData(0, 0, tela.width, tela.height).data;
-    let claro = 0, ouro = 0;
-    for (let i = 0; i < pixels.length; i += 4) {
-      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
-      if (r > 150 && g > 150 && b > 130 && Math.max(r, g, b) - Math.min(r, g, b) < 50) claro++;
-      if (r > 90 && r > g * 1.03 && g > b * 1.05) ouro++;
-    }
-    return { claro, ouro };
-  }, [...png]);
-  return { hash: createHash("sha256").update(png).digest("hex"), ...cores };
-}
-
-async function pose(pagina) {
-  const estado = await pagina.locator(".objeto-desktop [data-fr-etapa]").evaluate((elemento) => ({
-    etapa: Number(elemento.dataset.frEtapa),
-    movimento: elemento.dataset.frMovimento,
-    scroll: window.scrollY,
-  }));
-  return { ...estado, ...await arteVisivel(pagina) };
-}
+const capturar = async (pagina, nome) => {
+  if (DESTINO) await pagina.screenshot({ path: path.join(DESTINO, `${nome}.png`) });
+};
+const contadores = (pagina) => pagina.locator("[data-n]").allTextContents();
+const semRolagemLateral = (pagina) => pagina.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 
 try {
-  for (const viewport of [{ width: 1280, height: 720 }, { width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
-    for (const opcoes of [{}, { reduzido: true }, { javaScriptEnabled: false }]) {
-      const nome = `${viewport.width}x${viewport.height}-${opcoes.reduzido ? "reduce" : opcoes.javaScriptEnabled === false ? "sem-js" : "normal"}`;
-      const { contexto, pagina, erros, status } = await abrir(viewport, opcoes);
-      const habilitada = viewport.width >= 900 && !opcoes.reduzido && opcoes.javaScriptEnabled !== false;
-      const animada = habilitada ? await assentarArte(pagina, 0) : false;
-      if (habilitada) {
-        const capacidade = await pagina.locator(".fr-canvas").evaluate((canvas) => ({
-          contexto: !!canvas.getContext("webgl", { failIfMajorPerformanceCaveat: true }),
-          backend: canvas.dataset.frBackend,
-        }));
-        const contextoDisponivel = capacidade.contexto && (capacidade.backend !== "software" || permitirSoftware);
-        exigir(nome, animada === contextoDisponivel && (!permitirSoftware || animada), `Renderizador nao corresponde a capacidade grafica real: ${JSON.stringify(capacidade)}`);
-        evidencias.push({ nome: `${nome}-caminho`, caminho: animada ? "webgl" : "webp-sem-contexto-performatico", backend: capacidade.backend, softwarePermitido: permitirSoftware });
-      }
-      const medidas = await pagina.evaluate(() => {
-        const hero = document.querySelector(".hero .acao-lp").getBoundingClientRect();
-        const raiz = document.querySelector(".lp");
-        const pincel = getComputedStyle(raiz, "::before");
-        return {
-          h1: document.querySelectorAll("h1").length,
-          overflow: document.documentElement.scrollWidth > innerWidth,
-          escultura: document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEstado ?? "estatico",
-          fundo: { altura: parseFloat(pincel.height), pagina: raiz.getBoundingClientRect().height, imagem: pincel.backgroundImage },
-          hero: { left: hero.left, right: hero.right, top: hero.top, bottom: hero.bottom },
-          nav: [...document.querySelectorAll(".lp-cabecalho nav a")].map((link) => {
-            const r = link.getBoundingClientRect();
-            return { href: link.getAttribute("href"), left: r.left, right: r.right, altura: r.height };
-          }),
-          acoes: [...document.querySelectorAll(".fecho a")].map((link) => link.getAttribute("href")),
-        };
-      });
-      exigir(nome, status === 200 && medidas.h1 === 1, JSON.stringify({ status, medidas }));
-      exigir(nome, !medidas.overflow, "overflow horizontal");
-      exigir(nome, medidas.escultura === (animada ? "pronto" : "estatico"), `arte no modo errado: ${JSON.stringify(medidas)}`);
-      exigir(nome, Math.abs(medidas.fundo.altura - medidas.fundo.pagina) <= 1 && medidas.fundo.imagem.includes("/identidade/fundo-pincel.svg"), `pincel nao cobre toda a LP: ${JSON.stringify(medidas.fundo)}`);
-      exigir(nome, medidas.hero.left >= 0 && medidas.hero.right <= viewport.width && medidas.hero.top >= 0, "acao do hero cortada");
-      if (viewport.width >= 900) exigir(nome, medidas.hero.bottom <= viewport.height, "acao do hero fora da primeira dobra desktop");
-      exigir(nome, medidas.nav.every((link) => link.left >= 0 && link.right <= viewport.width && link.altura >= 44), "navegacao cortada ou sem alvo de toque");
-      exigir(nome, medidas.acoes.includes("/entrar") && medidas.acoes.includes("/cadastrar"), "acesso sem destinos reais");
-      exigir(nome, await pagina.locator("a[href='/dashboard']").count() > 0, "percurso sem destino na ferramenta");
-      for (const ancora of ["inicio", "como-funciona", "sinais", "na-pratica", "leituras", "limites"]) {
-        exigir(nome, await pagina.locator(`#${ancora}`).count() === 1, `ancora ausente/duplicada: ${ancora}`);
-      }
-      await registrar(`${nome}-hero`, pagina, medidas);
-      const heroArte = await arteVisivel(pagina, viewport.width < 900);
-      exigir(nome, heroArte.claro > 500 && heroArte.ouro > 500, `FR nao visivel: ${JSON.stringify(heroArte)}`);
-      await pagina.locator(".hero .acao-lp").focus();
-      await pagina.keyboard.press("Enter");
-      exigir(nome, new URL(pagina.url()).hash === "#como-funciona", "acao do hero nao navegou");
-      const detalhes = pagina.locator(".contexto-detalhes");
-      await detalhes.locator("summary").focus();
-      await pagina.keyboard.press("Enter");
-      exigir(nome, !(await detalhes.evaluate((elemento) => elemento.open)), "detalhes nao fecharam por teclado");
-      await pagina.keyboard.press("Enter");
-      exigir(nome, await detalhes.evaluate((elemento) => elemento.open), "detalhes nao abriram por teclado");
-      await registrar(`${nome}-contexto`, pagina);
-
-      const gravadas = pagina.locator(".leituras-gravadas");
-      if (await gravadas.count()) {
-        await gravadas.locator("summary").focus();
-        await pagina.keyboard.press("Enter");
-        exigir(nome, await pagina.locator("[role='tabpanel']").isVisible(), "snapshot validado sem transcricao visivel");
-        if (opcoes.javaScriptEnabled !== false) {
-          const abas = pagina.getByRole("tab");
-          await abas.first().focus();
-          await pagina.keyboard.press("End");
-          exigir(nome, await abas.last().getAttribute("aria-selected") === "true", "End nao selecionou ultima leitura");
-          const nota = await pagina.locator("[role='tabpanel'] [aria-label^='nota estimada:']").getAttribute("aria-label");
-          exigir(nome, nota && !/\d/.test(nota), `ausencia virou numero: ${nota}`);
-          await pagina.keyboard.press("ArrowRight");
-          exigir(nome, await abas.first().getAttribute("aria-selected") === "true", "seta nao circulou entre leituras");
-        }
-        await registrar(`${nome}-snapshot`, pagina);
-        await gravadas.locator("summary").click();
-      } else {
-        exigir(nome, await pagina.locator(".leituras-ausentes [role='status']").count() === 1 && await pagina.getByRole("tab").count() === 0, "ausencia sem explicacao ou com escolhas ficticias");
-      }
-      for (const etapa of [2, 3]) {
-        await irParaEtapa(pagina, etapa);
-        if (viewport.width >= 900 && !opcoes.reduzido && opcoes.javaScriptEnabled !== false) await assentarArte(pagina, etapa);
-        await registrar(`${nome}-etapa-${etapa}`, pagina);
-      }
-      if (viewport.width < 900 || opcoes.reduzido || opcoes.javaScriptEnabled === false) {
-        exigir(nome, !(await pagina.locator(".legenda-arte button").isVisible()), "replay aparece onde a arte deve ser estatica");
-      }
-      await pagina.locator("#limites").scrollIntoViewIfNeeded();
-      const limite = pagina.locator(".limite-detalhe").nth(1);
-      await limite.locator("summary").focus();
-      await pagina.keyboard.press("Enter");
-      exigir(nome, await limite.evaluate((elemento) => elemento.open), "limites nao abriram por teclado");
-      exigir(nome, !(await pagina.evaluate(() => document.documentElement.scrollWidth > innerWidth)), "overflow apos abrir detalhes");
-      await registrar(`${nome}-limites`, pagina);
-      exigir(nome, erros.length === 0, erros.join(" | "));
-      await contexto.close();
-    }
-  }
-
+  // Sem JS: o servidor entrega a pagina inteira, numeros finais e sem preloader.
   {
-    const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 });
-    const animada = await assentarArte(pagina, 0);
-    if (animada) {
-    await irParaEtapa(pagina, 1);
-    await pagina.waitForFunction(() => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEtapa === "1");
-    await pagina.waitForTimeout(100);
-    await irParaEtapa(pagina, 3);
-    await assentarArte(pagina, 3);
-    const final = await pose(pagina);
-    await pagina.waitForTimeout(150);
-    const assentada = await pose(pagina);
-    exigir("retarget rapido", final.etapa === 3 && final.hash === assentada.hash && final.claro > 500 && final.ouro > 500, JSON.stringify({ final, assentada }));
-    await irParaEtapa(pagina, 1);
-    await assentarArte(pagina, 1);
-    const retorno = await pose(pagina);
-    exigir("retorno", retorno.etapa === 1, JSON.stringify(retorno));
-    // Screenshot de elemento pode esperar a composicao e chegar so apos o fim
-    // da animacao em software. Captura pixels no draw real, antes do descarte
-    // do drawing buffer, em vez de confundir estado anterior com imagem tardia.
-    await pagina.evaluate(() => {
-      const original = WebGLRenderingContext.prototype.drawArrays;
-      const imagens = [];
-      window.replayFraus = { imagens, restaurar: () => { WebGLRenderingContext.prototype.drawArrays = original; } };
-      WebGLRenderingContext.prototype.drawArrays = function (...args) {
-        original.apply(this, args);
-        if (this.canvas.matches(".fr-canvas") && imagens.length < 3) imagens.push(this.canvas.toDataURL());
-      };
-    });
-    await pagina.locator(".legenda-arte button").click();
-    await pagina.waitForFunction(() => window.replayFraus.imagens.length > 0);
-    const durante = await pagina.locator(".objeto-desktop [data-fr-etapa]").evaluate((elemento) => ({
-      etapa: Number(elemento.dataset.frEtapa), movimento: elemento.dataset.frMovimento, scroll: window.scrollY,
-    }));
-    await assentarArte(pagina, 1);
-    const quadrosReplay = await pagina.evaluate(() => {
-      const { imagens, restaurar } = window.replayFraus;
-      restaurar();
-      delete window.replayFraus;
-      return { capturados: imagens.length, distintos: new Set(imagens).size };
-    });
-    const repetida = await pose(pagina);
-    exigir("replay", quadrosReplay.distintos > 1 && repetida.hash === retorno.hash && repetida.scroll === retorno.scroll, JSON.stringify({ retorno, durante, repetida, quadrosReplay }));
-    await registrar("replay-retorno", pagina, { retorno, durante, repetida, quadrosReplay });
-    await pagina.emulateMedia({ reducedMotion: "reduce" });
-    await pagina.locator(".objeto-desktop [data-fr-etapa]").waitFor({ state: "detached" });
-    exigir("reduce dinamico", !(await pagina.locator(".legenda-arte button").count()), "replay persistiu");
-    await irParaEtapa(pagina, 2);
-    const poster = pagina.locator(".objeto-desktop .arte-estatica");
-    exigir("reduce dinamico", await poster.isVisible() && await poster.evaluate((imagem) => imagem.complete && imagem.naturalWidth > 0), "FR estatico nao carregou");
-    await pagina.setViewportSize({ width: 899, height: 900 });
-    exigir("breakpoint", !(await pagina.locator(".palco").isVisible()) && await pagina.locator(".arte-compacta").first().isVisible(), "arte mobile/desktop nao alternou");
-    await pagina.setViewportSize({ width: 900, height: 900 });
-    exigir("breakpoint", await pagina.locator(".palco").isVisible() && !(await pagina.locator(".arte-compacta").first().isVisible()), "arte desktop nao voltou");
-    await pagina.emulateMedia({ reducedMotion: "no-preference" });
-    await pagina.locator('.objeto-desktop [data-fr-estado="pronto"]').waitFor();
-    await assentarArte(pagina, 2);
-    const restaurada = await arteVisivel(pagina);
-    exigir("retorno ao 3D", restaurada.claro > 500 && restaurada.ouro > 500, `FR nao visivel: ${JSON.stringify(restaurada)}`);
-    exigir("narrativa", erros.length === 0, erros.join(" | "));
-    } else {
-      evidencias.push({ nome: "retarget/replay/media dinamica GL", exercitado: false, motivo: "Contexto recusado pela politica padrao; executar LP_GL_SOFTWARE=1 para QA forcado, nao para benchmark" });
+    const { contexto, pagina } = await abrir({ width: 1440, height: 900 }, { javaScriptEnabled: false });
+    exigir("sem JS: titulo", (await pagina.locator("h1").innerText()).includes("A análise começa."), "h1 incompleto");
+    exigir("sem JS: preloader", !(await pagina.locator(".lp-pre").isVisible()), "preloader cobre a pagina sem script");
+    exigir("sem JS: fatos", JSON.stringify(await contadores(pagina)) === JSON.stringify(FATOS), JSON.stringify(await contadores(pagina)));
+    for (const destino of ["/entrar", "/cadastrar", "/dashboard"]) {
+      exigir("sem JS: links", await pagina.locator(`a[href="${destino}"]`).count() > 0, `falta ${destino}`);
     }
+    await capturar(pagina, "sem-js");
     await contexto.close();
   }
 
+  // Reduce: nada de preloader, pin ou rolagem suave; FR recua.
+  {
+    const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 }, { reduzido: true });
+    await pagina.waitForTimeout(1200);
+    exigir("reduce: preloader", !(await pagina.locator(".lp-pre").isVisible()), "preloader visivel");
+    exigir("reduce: fatos", JSON.stringify(await contadores(pagina)) === JSON.stringify(FATOS), JSON.stringify(await contadores(pagina)));
+    exigir("reduce: pin", await pagina.locator(".pin-spacer").count() === 0, "faixa fixada com reduce");
+    exigir("reduce: lenis", !(await pagina.evaluate(() => document.documentElement.classList.contains("lenis"))), "rolagem suave com reduce");
+    exigir("reduce: erros", erros.length === 0, erros.join(" | "));
+    await capturar(pagina, "reduce");
+    await contexto.close();
+  }
+
+  // Movimento: preloader na primeira visita, coreografia ativa, inversao no fecho.
+  {
+    const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 });
+    exigir("preloader: entrada", await pagina.locator(".lp-pre").isVisible(), "preloader nao tocou na primeira visita");
+    await pagina.waitForTimeout(3500);
+    exigir("preloader: saida", !(await pagina.locator(".lp-pre").isVisible()), "preloader preso");
+    exigir("contadores", JSON.stringify(await contadores(pagina)) === JSON.stringify(FATOS), JSON.stringify(await contadores(pagina)));
+    exigir("pin", await pagina.locator(".pin-spacer").count() === 1, "faixa nao foi fixada");
+    const estado = await pagina.evaluate(() => ({ fr: document.querySelector(".lp")?.dataset.frEstado, backend: document.querySelector(".lp-gl")?.dataset.frBackend }));
+    evidencias.push({ nome: "palco", ...estado });
+    exigir("palco", estado.fr === "pronto" || estado.fr === "estatico", JSON.stringify(estado));
+    if (GPU) exigir("palco com GPU", estado.fr === "pronto", JSON.stringify(estado));
+    await capturar(pagina, "inicio");
+    await pagina.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await pagina.waitForTimeout(2500);
+    exigir("fecho: inversao", await pagina.locator(".lp.inv").count() === 1, "o mundo nao virou ouro");
+    exigir("indice", (await pagina.locator(".lp-indice").innerText()) === "07 / 07", await pagina.locator(".lp-indice").innerText());
+    await capturar(pagina, "fecho");
+    await pagina.evaluate(() => window.scrollTo(0, 0));
+    await pagina.waitForTimeout(1200);
+    await pagina.reload({ waitUntil: "networkidle" });
+    exigir("preloader: uma vez por sessao", !(await pagina.locator(".lp-pre").isVisible()), "tocou de novo apos reload");
+
+    // Ida e volta pelo App Router: nada da coreografia sobra na outra rota.
+    await pagina.waitForTimeout(1500);
+    await pagina.locator(".lp-cabecalho a[href='/entrar']").click();
+    await pagina.waitForURL((url) => url.pathname === "/entrar");
+    await pagina.waitForTimeout(800);
+    const sobra = await pagina.evaluate(() => ({ pin: document.querySelectorAll(".pin-spacer").length, lenis: document.documentElement.classList.contains("lenis"), lp: !!document.querySelector(".lp") }));
+    exigir("desmontagem", !sobra.pin && !sobra.lenis && !sobra.lp, JSON.stringify(sobra));
+    await pagina.goBack();
+    await pagina.waitForTimeout(2500);
+    const volta = await pagina.evaluate(() => ({ fr: document.querySelector(".lp")?.dataset.frEstado, pin: document.querySelectorAll(".pin-spacer").length }));
+    exigir("volta", volta.pin === 1 && (!GPU || volta.fr === "pronto"), JSON.stringify(volta));
+    exigir("movimento: erros", erros.length === 0, erros.join(" | "));
+    await contexto.close();
+  }
+
+  // Sem WebGL: FR pre-renderizado no lugar do canvas, sem erro.
   {
     const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 }, { semGL: true });
-    await pagina.locator('.objeto-desktop [data-fr-estado="estatico"]').waitFor();
-    await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
-    const estatica = await arteVisivel(pagina);
-    exigir("sem WebGL", estatica.claro > 500 && estatica.ouro > 500 && !(await pagina.locator(".legenda-arte button").count()), `fallback sem marca: ${JSON.stringify(estatica)}`);
-    await irParaEtapa(pagina, 3);
-    await pagina.waitForFunction(() => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frEtapa === "3");
-    await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
-    const final = await arteVisivel(pagina);
-    exigir("sem WebGL", final.hash !== estatica.hash && final.claro > 500 && final.ouro > 500, `fallback nao segue a narrativa: ${JSON.stringify(final)}`);
-    exigir("sem WebGL", erros.length === 0, erros.join(" | "));
-    await registrar("sem-webgl", pagina, final);
+    await pagina.waitForTimeout(3500);
+    exigir("sem WebGL: estado", await pagina.locator('.lp[data-fr-estado="estatico"]').count() === 1, "palco nao caiu para o estatico");
+    exigir("sem WebGL: arte", await pagina.locator(".lp-palco-estatico .arte-estatica").isVisible(), "FR estatico invisivel");
+    exigir("sem WebGL: erros", erros.length === 0, erros.join(" | "));
+    await contexto.close();
+  }
+
+  // Celular: sem rolagem lateral (a faixa de 300vw fica dentro do overflow).
+  {
+    const { contexto, pagina, erros } = await abrir({ width: 390, height: 844 });
+    await pagina.waitForTimeout(3500);
+    exigir("celular: largura", await semRolagemLateral(pagina), "rolagem horizontal");
+    await pagina.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
+    await pagina.waitForTimeout(1200);
+    exigir("celular: largura no meio", await semRolagemLateral(pagina), "rolagem horizontal durante a faixa");
+    exigir("celular: erros", erros.length === 0, erros.join(" | "));
+    await capturar(pagina, "celular");
     await contexto.close();
   }
 
   {
-    const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 });
-    const animada = await assentarArte(pagina, 0);
-    if (animada) {
-    await pagina.evaluate(() => {
-      const desenhar = WebGLRenderingContext.prototype.drawArrays;
-      window.quadrosArteFraus = 0;
-      WebGLRenderingContext.prototype.drawArrays = function (...args) {
-        window.quadrosArteFraus++;
-        return desenhar.apply(this, args);
-      };
-    });
-    await pagina.locator(".legenda-arte button").click();
-    await pagina.waitForFunction(() => document.querySelector(".objeto-desktop [data-fr-etapa]")?.dataset.frMovimento === "animando");
-    await assentarArte(pagina, 0);
-    const quadros = await pagina.evaluate(() => window.quadrosArteFraus);
-    await pagina.waitForTimeout(250);
-    exigir("sem loop ocioso", quadros > 0 && quadros === await pagina.evaluate(() => window.quadrosArteFraus), "drawArrays continuou apos transicao");
-    const extensao = await pagina.locator(".fr-canvas").evaluateHandle((canvas) => canvas.getContext("webgl").getExtension("WEBGL_lose_context"));
-    if (await extensao.evaluate((valor) => !!valor)) {
-      await extensao.evaluate((valor) => valor.loseContext());
-      await pagina.locator('.objeto-desktop [data-fr-estado="estatico"]').waitFor();
-      await pagina.locator(".objeto-desktop .arte-estatica").evaluate((imagem) => imagem.decode());
-      const perdida = await arteVisivel(pagina);
-      exigir("contexto perdido", perdida.claro > 500 && perdida.ouro > 500 && !(await pagina.locator(".legenda-arte button").count()), `marca desapareceu: ${JSON.stringify(perdida)}`);
-      await registrar("contexto-perdido", pagina, perdida);
-      await extensao.evaluate((valor) => valor.restoreContext());
-      await assentarArte(pagina, 0);
-      const restaurada = await arteVisivel(pagina);
-      exigir("contexto restaurado", restaurada.claro > 500 && restaurada.ouro > 500 && await pagina.locator(".legenda-arte button").isVisible(), `marca nao voltou: ${JSON.stringify(restaurada)}`);
-    } else {
-      evidencias.push({ nome: "contexto perdido/restaurado", exercitado: false, motivo: "WEBGL_lose_context indisponivel neste navegador" });
-    }
-    await extensao.dispose();
-    exigir("ciclo WebGL", erros.length === 0, erros.join(" | "));
-    } else {
-      evidencias.push({ nome: "loop ocioso/perda/restauracao GL", exercitado: false, motivo: "Contexto recusado pela politica padrao; arte WebP exercitada nas demais etapas" });
-    }
-    await contexto.close();
-  }
-
-  {
-    const { contexto, pagina } = await abrir({ width: 1280, height: 720 });
-    await pagina.locator(".fecho a[href='/cadastrar']").click();
-    await pagina.waitForURL((url) => url.pathname === "/cadastrar");
-    await pagina.goto(`${BASE}/`, { waitUntil: "networkidle" });
-    await pagina.locator(".fecho a[href='/entrar']").click();
-    await pagina.waitForURL((url) => url.pathname === "/entrar");
+    const { contexto, pagina } = await abrir({ width: 1280, height: 720 }, { reduzido: true });
     const resposta = await pagina.goto(`${BASE}/leitura`, { waitUntil: "networkidle" });
     exigir("redirect", resposta?.status() === 200 && new URL(pagina.url()).pathname === "/", pagina.url());
     await contexto.close();
   }
 } finally {
   await navegador.close();
-  if (DESTINO) await writeFile(path.join(DESTINO, "resultados.json"), JSON.stringify({ base: BASE, data: new Date().toISOString(), softwarePermitido: permitirSoftware, falhas, evidencias }, null, 2));
+  if (DESTINO) await writeFile(path.join(DESTINO, "resultados.json"), JSON.stringify({ base: BASE, data: new Date().toISOString(), gpu: GPU, falhas, evidencias }, null, 2));
 }
-for (const evento of evidencias.filter((item) => item.exercitado === false)) console.warn(`NAO EXERCITADO ${evento.nome}: ${evento.motivo}`);
-console.log("Caminhos exercitados:", JSON.stringify(evidencias.filter((item) => item.caminho)));
+console.log("Palco:", JSON.stringify(evidencias));
 if (falhas.length) { console.error(`FALHOU\n- ${falhas.join("\n- ")}`); process.exit(1); }
-console.log("ok LP: navegacao, teclado, dados/ausencia e arte visivel; consultar evidencias para caminho WebGL/WebP e cenarios GL nao exercitados");
+console.log(`ok LP: sem JS, reduce, coreografia, sem WebGL, celular e redirect${GPU ? " (GPU real)" : " (palco no WebP: rode com LP_GPU=1 para o caminho WebGL)"}`);

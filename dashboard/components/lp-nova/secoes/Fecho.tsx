@@ -1,14 +1,22 @@
 import Link from "next/link";
-import { LogIn, UserRoundPlus } from "lucide-react";
+import { Palavras } from "../Palavras";
 
 export function Fecho() {
   return (
-    <footer className="fecho">
-      <div className="fecho-marca"><span>Fraus</span><p>Contexto, não certeza.</p></div>
-      <div className="fecho-acoes">
-        <Link href="/entrar" prefetch={false} className="acao-lp"><LogIn className="icone-lp" aria-hidden="true" />Entrar no Fraus</Link>
-        <Link href="/cadastrar" prefetch={false} className="acao-lp secundaria"><UserRoundPlus className="icone-lp" aria-hidden="true" />Criar conta</Link>
+    <section id="fecho" className="cena c" aria-labelledby="titulo-fecho">
+      <div className="blk">
+        <h2 id="titulo-fecho"><Palavras texto="Leia o que ficou nas entrelinhas." /></h2>
+        <p className="rv">Contexto, não certeza.</p>
+        <div className="acoes rv">
+          <Link className="btn mag" href="/entrar" prefetch={false} data-embaralhar>Entrar no Fraus</Link>
+          <Link className="btn o mag" href="/cadastrar" prefetch={false} data-embaralhar>Criar conta</Link>
+        </div>
       </div>
-    </footer>
+    </section>
   );
+}
+
+/** Os contadores do topo sao fatos do motor; o que e inferido e a nota. */
+export function Rodape() {
+  return <footer className="rodape-lp">Modelos locais · sem LLM em runtime · toda nota é inferida, nunca declarada</footer>;
 }

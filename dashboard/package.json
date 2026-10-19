@@ -11,7 +11,6 @@
     "test:lp": "node scripts/validar-lp-playwright.mjs",
     "contraste": "node scripts/contraste.mjs",
     "pisos": "node scripts/pisos.mjs",
-    "arte:lp": "node scripts/renderizar-fr-lp.mjs",
     "arte:acesso": "jiti scripts/renderizar-acesso.ts",
     "arte:estudio": "jiti scripts/renderizar-acesso.ts --fundo"
   },
@@ -22,6 +21,8 @@
     "@vgpu/wgsl-std": "0.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.27",
     "lucide-react": "^1.31.0",
     "motion": "^13.1.1",
     "next": "^16.3.6",

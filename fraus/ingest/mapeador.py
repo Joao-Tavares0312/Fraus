@@ -151,6 +151,10 @@ class RelatoDatas:
 
 def _iso(valor: str) -> datetime | None:
     texto = valor.strip().replace("Z", "+00:00").replace("z", "+00:00")
+    # So digitos nao e ISO de atendimento: desde o Python 3.11 o
+    # `fromisoformat` aceita a forma compacta, e um id "20240115" virava data.
+    if texto.isdigit():
+        return None
     try:
         return datetime.fromisoformat(texto)
     except ValueError:
@@ -296,6 +300,13 @@ def papel_do_valor(valor: str) -> Autor | None:
     return None
 
 
+# Numero de dez ou treze digitos que cai na janela de epoch AINDA pode ser id
+# (chat do Telegram, telefone): ele conta como meia evidencia de data. Uma
+# coluna de data escrita como data vence; sozinho, o epoch continua passando
+# do minimo (0.6 * 0.9 = 0.54 > CONFIANCA_MINIMA).
+_PESO_EPOCH = 0.6
+
+
 @dataclass
 class _Perfil:
     frac_data: float
@@ -316,7 +327,10 @@ def _perfil(valores: list[str]) -> _Perfil:
     corridas = 1 + sum(1 for a, b in zip(cheios, cheios[1:]) if a != b)
     caracteres = "".join(cheios)
     return _Perfil(
-        frac_data=sum(d is not None for d in datas) / len(cheios),
+        frac_data=sum(
+            (_PESO_EPOCH if _EPOCH.match(v.strip()) else 1.0)
+            for v, d in zip(cheios, datas) if d is not None
+        ) / len(cheios),
         comprimento_medio=sum(len(v) for v in cheios) / len(cheios),
         frac_distintos=len(contagem) / len(cheios),
         distintos=len(contagem),

@@ -102,78 +102,74 @@ produto; não há busca de fonte no Google no build ou no navegador.
 
 ## LP
 
+A LP segue o mockup GSAP + 3D aprovado em 19/10/2026, que **substituiu** as
+regras de movimento anteriores (palco sticky, troca de pose em 650ms, sem
+partículas nem laço). O conteúdo continua SSR e completo sem JS; a coreografia
+inteira mora em `components/lp-nova/Coreografia.tsx`, o único componente cliente.
+
 ### Estrutura e conteúdo
 
-1. **Abertura:** “O atendimento termina. A análise começa.” e ação para conhecer
-   o método. O FR é arte da marca, não um gráfico de resultados.
-2. **Contexto:** “Ok, obrigado.” vem identificado como **exemplo de linguagem**.
-   Pedido, resposta e desfecho explicam o que conferir; cortesia isolada não
-   comprova satisfação ou insatisfação.
-3. **Sinais:** detalhes nativos separam leitura textual da mensagem,
-   contribuições dos sinais e horários da conversa. Probabilidade textual não
-   vira causa isolada da nota fundida.
-4. **Uso:** panorama → recorte → conversa, com destino real para `/dashboard`.
-5. **Limites:** estimativa, não pesquisa; não avalia atendentes; tempo treinado
+1. **Abertura:** “O atendimento termina. A análise começa.”, ação para conhecer
+   o método e quatro fatos do motor: 7 famílias, 39 features, 3 BERTimbau,
+   0 LLM. Vêm de `FATOS_LP`; `tests/test_lp_fatos.py` falha se o fusor divergir.
+   O servidor já entrega o número final; o contador só anima por cima.
+2. **Letreiro** “Contexto · não certeza · Dito · Medido”, decorativo (`aria-hidden`).
+3. **Contexto:** “Ok, obrigado.” identificado como **exemplo de linguagem**;
+   pedido, resposta e desfecho dizem o que conferir.
+4. **Sinais:** leitura da mensagem, contribuição dos sinais e tempos; as
+   leituras gravadas seguem em expansão nativa logo abaixo.
+5. **Faixa:** TEXTO, EMOJIS e TEMPO, fixada e rolada na horizontal.
+6. **Uso:** panorama → recorte → conversa, com destino real para `/dashboard`.
+7. **Limites:** estimativa, não pesquisa; não avalia atendentes; tempo treinado
    com dados sintéticos; sem sinal não é zero.
-6. **Fecho:** entrar e criar conta, sem links ou rótulos de prancha de estudo.
+8. **Fecho:** o mundo vira ouro; entrar e criar conta.
 
-As leituras gravadas permanecem em expansão nativa. `carregarLeituras` valida o
-snapshot; seletor, transcrição, data, API e hash parcial acompanham resultados
-válidos. O hash das importâncias **não** identifica todos os checkpoints nem o
-pipeline. Sem snapshot válido, a LP nomeia a ausência; não publica resultado do
-dublê nem apresenta escolhas fictícias. Nenhuma análise é executada ao abrir a LP.
+O rodapé diz “toda **nota** é inferida”: os contadores do topo são fatos do
+código, não estimativas. `carregarLeituras` valida o snapshot; sem snapshot
+válido a LP nomeia a ausência e não publica resultado do dublê. Nenhuma análise
+é executada ao abrir a LP.
 
-### Fundo contínuo
+### Tipografia da LP
 
-Uma única camada SVG de pincel cobre **a raiz inteira da LP**, do cabeçalho ao
-fecho. A raiz é posicionada e isolada; o pseudo-elemento usa `inset: 0`. Sua altura
-deve acompanhar a página, inclusive quando detalhes alteram o conteúdo. Não
-voltar a prender o fundo ao palco do FR ou a um viewport de altura fixa.
+Unbounded (títulos, letreiro, preloader) e Space Grotesk (corpo), variáveis,
+locais em `public/identidade/` com SIL OFL, carregadas por `next/font/local`
+**só em `app/page.tsx`**: a dashboard não baixa nenhuma delas. Rótulos, botões
+e números seguem em Chakra Petch.
 
-O SVG é estático, local e sem filtros, scripts ou recursos externos. Não recebe
-interação. Widgets têm superfície opaca; a textura não atravessa o texto deles.
-A dashboard não herda o pincel.
+### Coreografia
 
-### FR e orçamento de renderização
+- **Preloader** dourado com contador, **uma vez por sessão**: o script do
+  `<head>` (`SCRIPT_PRELOADER`) marca `data-lp-pre="visto"` antes do paint;
+  quem volta de `/entrar` não espera de novo.
+- **Lenis** no ticker do GSAP, âncoras pelo próprio Lenis. Títulos sobem palavra
+  a palavra (quebradas no SSR, nunca `innerHTML`), revelações em lote, frase
+  letra a letra com o texto inteiro para leitor de tela, régua e linha dos
+  passos por scrub, botões magnéticos, cursor próprio só com `hover: hover`,
+  texto embaralhado com nome acessível fixo, índice lateral `01 / 07`.
+- **Desmontagem**: cada listener, tween, ticker e o Lenis são revertidos; o QA
+  confere que nada sobra em `/entrar`.
 
-A geometria deriva do **SVG oficial**, incluindo a fenda diagonal. F claro e R
-champanhe, cinco camadas extrudadas. Essas cinco camadas **não representam**
-famílias, features ou contribuições do modelo.
+### FR e palco
 
-- Desktop a partir de 900px, sem movimento reduzido: **um canvas WebGL nativo**
-  quando o contexto é elegível, importado sob demanda. O HTML inicial contém
-  a própria arte pré-renderizada; centenas de faces CSS não permanecem no DOM.
-- Produção pede `failIfMajorPerformanceCaveat` e recusa backends CPU conhecidos,
-  como SwiftShader/llvmpipe. Nesse caso as poses continuam em WebP, sem replay,
-  triangulação ou upload de buffers. Identificação ocultada não prova hardware;
-  a decisão restante depende do caveat do navegador.
-- A seção com maior porção visível escolhe a pose. Nova direção parte da
-  interpolação atual e substitui o alvo; não existe fila nem sequestro da rolagem.
-- Com GL ativo, transições de 650ms; replay reexecuta a entrada sem mover o documento.
-- Mobile: imagens WebP transparentes das mesmas poses, sem iniciar WebGL.
-  `picture` seleciona a variante de 800×640; desktop usa 1280×1024. As imagens
-  inferiores usam carregamento preguiçoso, sem baixar as duas variantes.
-- Sem JS ou com `prefers-reduced-motion`: arte estática e conteúdo completo,
-  sem importar o renderizador nem oferecer replay.
-- Um buffer estático e um draw por quadro, culling de faces traseiras e placas
-  próximas primeiro. rAF existe apenas durante transições; resize redesenha sob
-  demanda. Limites: DPR 1,5 e 1,6 megapixel.
-- O raster só sai após o primeiro draw válido. WebGL indisponível ou contexto
-  perdido mantém a marca estática e remove replay; restauração recria recursos.
-  Desmontar libera buffers, programa, shaders, observadores e rAF.
-- Não há device WebGPU, partículas ou laço permanente na LP. O WebGL serve
-  somente à arte da marca, não à inferência. Motion fica no layout da dashboard.
-- Links para conta e ferramenta não antecipam o download dessas rotas na LP.
+O **modelo é intocável**: contornos de `escultura.ts` (do SVG oficial, com a
+fenda) e o material do shader. Câmera, poses e coreografia são livres. As cinco
+placas **não representam** famílias, features ou contribuições do modelo.
 
-`npm run arte:lp`, com o produto local aberto, gera os WebP da própria escultura.
-`LP_URL` seleciona a prévia; o exportador usa Chromium e FFmpeg. Não recriar a
-geometria num segundo gerador. Depois de gerar novos arquivos públicos, reiniciar
-a prévia de produção antes de conferir as imagens.
-Em ambiente de captura sem aceleração, `LP_GL_SOFTWARE=1 npm run arte:lp`
-autoriza GL em software **somente no Playwright de exportação**. Não falsifica o
-driver nem habilita um modo oculto na LP. Isso produz arte real, não evidência
-de desempenho de hardware.
-
+- Um canvas WebGL fixo de tela cheia (`lib/lp-nova/palco-fr.ts`): câmera de
+  35°, dois programas (FR e 700 partículas em disco, PRNG fixo), dois draws por
+  quadro, DPR até 1,5 e no máximo 2,2 megapixels.
+- Cada pose de `POSES_POR_SECAO` chega com a própria seção (`fromTo` com
+  scrub). Uma timeline única sobre o `<main>` desalinhava por causa da faixa.
+- Pulso entre placas, giro e letreiro leem a velocidade do Lenis **suavizada**
+  a cada quadro. A velocidade crua chega em degraus pela roda do mouse e fazia
+  o FR pular. Passos usam `deltaRatio`, então 120 Hz não gira em dobro.
+- No fecho o FR vira relevo do próprio ouro, um tom abaixo. Grafite apagava o
+  título escuro por cima.
+- Celular: o mesmo palco, centralizado, escala 0,55 e opacidade 0,38.
+- Reduce: um quadro parado, opacidade 0,3, sem preloader, pin, Lenis ou letreiro.
+- Backend de software (SwiftShader, llvmpipe...), contexto recusado ou perdido:
+  `fr-lp-0.webp` (ou a variante compacta) no lugar. O WebP é captura do mesmo
+  modelo; o exportador antigo saiu com a narrativa sticky.
 
 ## Dashboard
 
@@ -272,16 +268,12 @@ contratos do servidor, não efeitos visuais.
 `npm test`, `npm run lint`, `npm run build`, `npm run contraste` e `npm run pisos`
 cobrem contratos diferentes. Nenhum substitui olhar e operar o produto.
 
-`npm run test:lp` exercita desktop/mobile, teclado, snapshots/ausência, fundo com
-altura integral, pixels do FR, retarget/retorno, replay sem scroll, reduce
-inicial/dinâmico, resize, sem JS, indisponibilidade/perda/restauração de WebGL,
-ausência de draws ociosos, acesso e redirect de `/leitura`. `LP_EVIDENCIAS`
-guarda capturas e resultados fora do código.
-O relatório distingue GL exercitado de cenários não elegíveis. Para conferir
-geometria, retarget e ciclo de contexto sem uma GPU disponível,
-`LP_GL_SOFTWARE=1 npm run test:lp` autoriza renderização real em software apenas
-no navegador de QA; não é benchmark do caminho padrão.
-
+`npm run test:lp` exercita sem JS, reduce, preloader por sessão, pin, índice,
+inversão do fecho, ida e volta para `/entrar` sem sobras, sem WebGL, celular sem
+rolagem lateral e o redirect de `/leitura`. `LP_EVIDENCIAS` guarda capturas.
+Sem GPU o Chrome headless usa SwiftShader e o palco cai no WebP, de propósito;
+`LP_GPU=1` pede GPU real para exercitar o WebGL. O vídeo do acesso derruba a GPU
+do headless com Vulkan, por isso o QA bloqueia mídia: é artefato do teste.
 
 `node scripts/validar-navegacao-playwright.mjs` opera rotas reais, período,
 recolhimento/reload, atalhos durante edição, tooltip por foco, tema, marca e

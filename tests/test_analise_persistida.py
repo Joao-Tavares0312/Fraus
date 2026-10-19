@@ -87,3 +87,43 @@ def test_falha_no_fim_da_analise_nao_publica_metade(ambiente, monkeypatch):
     with pytest.raises(RuntimeError, match="falha de inferencia"):
         enviar(cliente, lote)
     assert banco.todas() == []
+
+
+GENERICO_CLARO = (
+    "chat;quem;mensagem;horario\n"
+    "c9;cliente;meu pedido nao chegou ainda e ja faz uma semana;2026-08-13T10:00:00-03:00\n"
+    "c9;bot;vou verificar o status do seu pedido agora;2026-08-13T10:00:20-03:00\n"
+    "c9;cliente;obrigado, fico no aguardo da resposta;2026-08-13T10:01:00-03:00\n"
+)
+
+AMBIGUO = (
+    "a;b;c\n"
+    "x;1;2026-08-13T10:00:00-03:00\n"
+    "y;2;2026-08-13T10:00:20-03:00\n"
+)
+
+
+def test_previa_diz_quando_a_inferencia_e_confiavel(ambiente):
+    cliente, _ = ambiente
+    claro = cliente.post("/analisar/previa", files={"arquivo": ("g.csv", GENERICO_CLARO, "text/csv")}).json()
+    assert claro["mapeamento"] is not None
+    assert claro["confiavel"] is True
+    canonico = cliente.post("/analisar/previa", files={"arquivo": ("c.csv", CSV, "text/csv")}).json()
+    assert canonico["confiavel"] is True
+
+
+def test_previa_ambigua_nao_e_confiavel(ambiente):
+    cliente, _ = ambiente
+    resposta = cliente.post("/analisar/previa", files={"arquivo": ("a.csv", AMBIGUO, "text/csv")})
+    assert resposta.status_code in (200, 400)
+    if resposta.status_code == 200:
+        assert resposta.json()["confiavel"] is False
+
+
+def test_inferencia_confiavel_grava_sem_confirmar(ambiente):
+    # "Arrastar e pronto" (19/10/2026): quando texto e autor sao claros, o
+    # cliente final nao passa pela conferencia de colunas.
+    cliente, banco = ambiente
+    resposta = enviar(cliente, GENERICO_CLARO)
+    assert resposta.status_code == 200, resposta.text
+    assert len(banco.todas()) == 1

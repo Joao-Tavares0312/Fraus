@@ -19,7 +19,7 @@ from fraus import assinatura, credencial
 from fraus.ingest.arquivos import EXTENSOES
 from fraus.api.contexto import Contexto, obter_contexto
 from fraus.api.esquemas import TIPOS_DE_FONTE, PedidoAjusteFonte, PedidoFonte
-from fraus.api.seguranca import exigir_mestra
+from fraus.api.seguranca import exigir_mestra_ou_dev
 
 router = APIRouter()
 
@@ -151,7 +151,7 @@ def gerar_chave(
     rotacao sem risco, mas a antiga seguiria aceita sem ninguem saber quem
     ainda a usa.
     """
-    exigir_mestra(ctx, authorization)
+    exigir_mestra_ou_dev(ctx, authorization)
     if ctx.banco.buscar_fonte(fonte_id) is None:
         raise HTTPException(status_code=404, detail="fonte nao encontrada")
 
@@ -180,7 +180,7 @@ def revogar_chave(
     ctx: Contexto = Depends(obter_contexto),
 ) -> None:
     """Invalida a chave da fonte. A fonte e as conversas dela continuam."""
-    exigir_mestra(ctx, authorization)
+    exigir_mestra_ou_dev(ctx, authorization)
     if ctx.banco.buscar_fonte(fonte_id) is None:
         raise HTTPException(status_code=404, detail="fonte nao encontrada")
     ctx.banco.revogar_chave(fonte_id)
@@ -204,10 +204,10 @@ def gerar_segredo(
     operador tem tres passos e a tela mostra os tres: gerar, por na variavel de
     ambiente da maquina da API, entregar a copia a plataforma.
 
-    Privilegio da mestra, como as demais rotas de credencial: uma chave que
-    emite outra chave nao seria um posto menor.
+    Privilegio da mestra ou de conta `dev` (`exigir_mestra_ou_dev`): o
+    segredo so autentica entregas desta fonte.
     """
-    exigir_mestra(ctx, authorization)
+    exigir_mestra_ou_dev(ctx, authorization)
     fonte = ctx.banco.buscar_fonte(fonte_id)
     if fonte is None:
         raise HTTPException(status_code=404, detail="fonte nao encontrada")

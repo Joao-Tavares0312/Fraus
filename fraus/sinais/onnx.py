@@ -30,6 +30,9 @@ import numpy as np
 from fraus.sinais.texto import temperatura_do_artefato
 
 TAMANHO_MAXIMO = 192
+# Uma fala pode gerar 61 variantes na oclusão. O orçamento de mensagens da
+# API não limita ativações; cada run mantém no máximo quatro sequências.
+TAMANHO_LOTE = 4
 
 
 class ModeloOnnxAusenteError(RuntimeError):
@@ -109,6 +112,12 @@ class SessaoOnnx:
         # o `fraus_receita.json` junto do grafo.
         self._temperatura = temperatura_do_artefato(diretorio)
 
+    def _executar_lotes(self, entradas, saidas=None):
+        quantidade = next(iter(entradas.values())).shape[0]
+        for inicio in range(0, quantidade, TAMANHO_LOTE):
+            lote = {nome: valor[inicio:inicio + TAMANHO_LOTE] for nome, valor in entradas.items()}
+            yield self._sessao.run(saidas, lote)
+
     def prever(self, textos: list[str]) -> list[list[float]]:
         """Probabilidades por texto, na ORDEM DE CLASSES do checkpoint."""
         if not textos:
@@ -125,8 +134,12 @@ class SessaoOnnx:
             for nome, valor in codificado.items()
             if nome in self._entradas
         }
-        (logits,) = self._sessao.run(None, entradas)
-        return _softmax(np.asarray(logits, dtype=np.float32), self._temperatura).tolist()
+        probabilidades = []
+        for (logits,) in self._executar_lotes(entradas):
+            probabilidades.extend(
+                _softmax(np.asarray(logits, dtype=np.float32), self._temperatura).tolist()
+            )
+        return probabilidades
 
 
 class SessaoMultitarefaOnnx(SessaoOnnx):
@@ -168,11 +181,11 @@ class SessaoMultitarefaOnnx(SessaoOnnx):
             if nome in self._entradas
         }
         nomes = list(self.SAIDAS.values())
-        logits = self._sessao.run(nomes, entradas)
-        return {
-            cabeca: _softmax(np.asarray(saida, dtype=np.float32)).tolist()
-            for cabeca, saida in zip(self.SAIDAS, logits)
-        }
+        probabilidades = {cabeca: [] for cabeca in self.SAIDAS}
+        for logits in self._executar_lotes(entradas, nomes):
+            for cabeca, saida in zip(self.SAIDAS, logits):
+                probabilidades[cabeca].extend(_softmax(np.asarray(saida, dtype=np.float32)).tolist())
+        return probabilidades
 
 
 class ClassificadorCabecaOnnx:
