@@ -219,3 +219,58 @@ def test_amostra_estratificada_mantem_proporcao_e_e_deterministica():
     assert abs(sum(r == 1 for r in a.rotulos) / 1000 - 0.2) < 0.02
     assert a.textos == amostra_estratificada(ex, 1000, semente=1).textos
     assert amostra_estratificada(ex, 99999, semente=1).textos == ex.textos
+
+
+def test_pesos_de_classe_favorecem_a_rara():
+    from fraus.receita_treino import pesos_de_classe
+
+    pesos = pesos_de_classe([0, 0, 0, 1], 3)
+    assert pesos[1] > pesos[0]
+    assert pesos[2] == pytest.approx(4 / 3)  # ausente: conta como 1
+
+
+def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path):
+    """Fumaca em CPU: modelo aleatorio de 2 camadas, montado aqui, sem download."""
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("accelerate")
+    import json
+
+    from transformers import BertConfig, BertForSequenceClassification, BertTokenizerFast
+
+    from fraus.corpora import Exemplos
+    from fraus.receita_treino import ARQUIVO_RECEITA, preparar_divisao, treinar_uma_semente
+
+    palavras = ["bom", "otimo", "ruim", "pessimo", "ok", "normal", "atendimento", "foi"]
+    vocab = tmp_path / "vocab.txt"
+    vocab.write_text("\n".join(["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]", *palavras]))
+    base = tmp_path / "base"
+    BertTokenizerFast(vocab_file=str(vocab), do_lower_case=True).save_pretrained(base)
+    torch.manual_seed(0)
+    BertForSequenceClassification(BertConfig(
+        vocab_size=len(palavras) + 5, hidden_size=16, num_hidden_layers=2,
+        num_attention_heads=2, intermediate_size=32, num_labels=3,
+    )).save_pretrained(base)
+
+    frases = {0: ["foi ruim", "pessimo atendimento"], 1: ["foi ok", "atendimento normal"],
+              2: ["foi bom", "otimo atendimento"]}
+    textos, rotulos = [], []
+    for i in range(300):
+        classe = i % 3
+        textos.append(f"{frases[classe][i % 2]} {i}")  # numero vira [UNK]; texto unico
+        rotulos.append(classe)
+    lados = preparar_divisao(Exemplos(textos=textos, rotulos=rotulos, grupos=None,
+                                      nomes_classes=["insatisfeito", "neutro", "satisfeito"]))
+    saida = tmp_path / "saida"
+    r = treinar_uma_semente(
+        modelo_base=str(base), lados=lados, semente=7, dir_checkpoint=str(tmp_path / "ck"),
+        dir_saida=str(saida), epocas=2, lote=16, fp16=False, taxa=5e-3,
+    )
+    assert r["tamanhos"]["teste"] == len(lados["teste"].textos)
+    assert r["temperatura"] > 0
+    assert 0 <= r["f1_macro"] <= 1
+    gravado = json.loads((saida / ARQUIVO_RECEITA).read_text())
+    assert gravado["semente"] == 7 and gravado["impressao_teste"] == r["impressao_teste"]
+    from transformers import AutoConfig
+
+    assert AutoConfig.from_pretrained(saida).id2label == {0: "insatisfeito", 1: "neutro",
+                                                          2: "satisfeito"}

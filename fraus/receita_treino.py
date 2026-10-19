@@ -318,3 +318,131 @@ def amostra_estratificada(exemplos, n: int, *, semente: int = SEMENTE_DIVISAO):
         stratify=exemplos.rotulos,
     )
     return _recorte(exemplos, sorted(int(i) for i in escolhidos))
+
+
+def pesos_de_classe(rotulos: Sequence[int], n_classes: int) -> list[float]:
+    """n / (k * n_c): classe rara pesa mais na perda. Classe ausente pesa como se tivesse 1."""
+    contagem = np.bincount(np.asarray(rotulos, dtype=int), minlength=n_classes)
+    return (len(rotulos) / (n_classes * np.maximum(contagem, 1))).tolist()
+
+
+ARQUIVO_RECEITA = "fraus_receita.json"
+
+
+def treinar_uma_semente(
+    *,
+    modelo_base: str,
+    lados: dict,
+    semente: int,
+    dir_checkpoint: str,
+    dir_saida: str,
+    tamanho_maximo: int = 192,
+    ponderar_classes: bool = True,
+    **ajustes,
+) -> dict:
+    """Treina uma semente, escolhe epoca e temperatura na validacao, mede o teste UMA vez.
+
+    `lados` e o que `preparar_divisao` devolve. Grava modelo, tokenizador e
+    `fraus_receita.json` (semente, temperatura, metricas) em `dir_saida`.
+    `ajustes` sobrescreve `argumentos_padrao` (epocas, taxa, lote, fp16).
+    torch/transformers so sao importados aqui dentro.
+    """
+    import json
+    import os
+
+    import torch
+    from transformers import (
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+        DataCollatorWithPadding,
+        EarlyStoppingCallback,
+        Trainer,
+        TrainingArguments,
+        set_seed,
+    )
+
+    set_seed(semente)
+    nomes = list(lados["treino"].nomes_classes)
+    tokenizador = AutoTokenizer.from_pretrained(modelo_base)
+
+    class _Conjunto(torch.utils.data.Dataset):
+        def __init__(self, exemplos):
+            self.cod = tokenizador(list(exemplos.textos), truncation=True, max_length=tamanho_maximo)
+            self.rotulos = list(exemplos.rotulos)
+
+        def __len__(self):
+            return len(self.rotulos)
+
+        def __getitem__(self, i):
+            item = {k: v[i] for k, v in self.cod.items()}
+            item["labels"] = int(self.rotulos[i])
+            return item
+
+    treino, validacao, teste = (_Conjunto(lados[k]) for k in ("treino", "validacao", "teste"))
+    modelo = AutoModelForSequenceClassification.from_pretrained(
+        modelo_base, num_labels=len(nomes),
+        id2label=dict(enumerate(nomes)), label2id={n: i for i, n in enumerate(nomes)},
+    )
+    pesos = torch.tensor(
+        pesos_de_classe(lados["treino"].rotulos, len(nomes)) if ponderar_classes
+        else [1.0] * len(nomes),
+        dtype=torch.float32,
+    )
+
+    class _Ponderado(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+            rotulos = inputs.pop("labels")
+            saidas = model(**inputs)
+            perda = torch.nn.functional.cross_entropy(
+                saidas.logits, rotulos, weight=pesos.to(saidas.logits.device)
+            )
+            return (perda, saidas) if return_outputs else perda
+
+    def _metricas(predicao):
+        preditos = np.argmax(predicao.predictions, axis=1)
+        return {"f1_macro": f1_macro(predicao.label_ids, preditos, classes=range(len(nomes)))}
+
+    argumentos = argumentos_padrao(os.path.join(dir_checkpoint, f"semente-{semente}"),
+                                   semente=semente, **ajustes)
+    paciencia = argumentos.pop("paciencia")
+    treinador = _Ponderado(
+        model=modelo, args=TrainingArguments(**argumentos),
+        train_dataset=treino, eval_dataset=validacao,  # NUNCA o teste
+        data_collator=DataCollatorWithPadding(tokenizador), compute_metrics=_metricas,
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=paciencia)],
+    )
+    treinador.train()
+
+    logits_val = treinador.predict(validacao).predictions
+    temperatura = ajustar_temperatura(logits_val, lados["validacao"].rotulos)
+    f1_val = f1_macro(lados["validacao"].rotulos, np.argmax(logits_val, axis=1),
+                      classes=range(len(nomes)))
+    logits_teste = treinador.predict(teste).predictions  # a unica leitura do teste
+    metricas_teste = metricas_completas(
+        aplicar_temperatura(logits_teste, temperatura), lados["teste"].rotulos,
+        nomes_classes=nomes,
+    )
+    metricas_teste["ece_sem_temperatura"] = metricas_completas(
+        aplicar_temperatura(logits_teste, 1.0), lados["teste"].rotulos, nomes_classes=nomes
+    )["ece"]
+
+    from fraus.divisao import impressao_dos_textos
+
+    resultado = {
+        "semente": semente,
+        "modelo_base": modelo_base,
+        "temperatura": temperatura,
+        "f1_macro_validacao": f1_val,
+        "f1_macro": metricas_teste["f1_macro"],
+        "epocas_treinadas": float(treinador.state.epoch or 0),
+        "melhor_checkpoint": treinador.state.best_model_checkpoint,
+        "tamanhos": {k: len(lados[k].rotulos) for k in ("treino", "validacao", "teste")},
+        "impressao_teste": impressao_dos_textos(lados["teste"].textos),
+        "teste": metricas_teste,
+    }
+    os.makedirs(dir_saida, exist_ok=True)
+    treinador.save_model(dir_saida)
+    tokenizador.save_pretrained(dir_saida)
+    with open(os.path.join(dir_saida, ARQUIVO_RECEITA), "w", encoding="utf-8") as arquivo:
+        json.dump(resultado, arquivo, ensure_ascii=False, indent=2)
+    return resultado
