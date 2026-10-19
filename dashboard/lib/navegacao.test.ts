@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { consultaDoPeriodo, gruposDoPapel, telaEstaAtiva } from "./navegacao";
+import { consultaDoPeriodo, gruposDoPapel, telaEstaAtiva, telasDaConta } from "./navegacao";
 
 const destinosDoUsuario = [
-  "/dashboard", "/dashboard/atendimentos", "/dashboard/analisar",
-  "/dashboard/grafo", "/dashboard/operacao",
+  "/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo",
 ];
 
 describe("navegação por tarefa e papel", () => {
@@ -12,6 +11,18 @@ describe("navegação por tarefa e papel", () => {
     const grupos = gruposDoPapel("usuario");
     expect(grupos.map((grupo) => grupo.rotulo)).toEqual(["Acompanhar", "Investigar"]);
     expect(grupos.flatMap((grupo) => grupo.telas.map((tela) => tela.href))).toEqual(destinosDoUsuario);
+  });
+
+  it("a lateral do dev ganha só o Modelo; o resto mora no menu da conta", () => {
+    const destinos = gruposDoPapel("dev").flatMap((grupo) => grupo.telas.map((tela) => tela.href));
+    expect(destinos).toEqual([...destinosDoUsuario, "/dashboard/modelo"]);
+  });
+
+  it("o menu da conta respeita o papel", () => {
+    expect(telasDaConta("usuario").map((tela) => tela.href)).toEqual(["/dashboard/operacao"]);
+    expect(telasDaConta("dev").map((tela) => tela.href)).toEqual([
+      "/dashboard/operacao", "/dashboard/integracoes", "/dashboard/configuracoes",
+    ]);
   });
 });
 

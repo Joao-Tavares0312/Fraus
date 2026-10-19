@@ -1,41 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { MouseEvent } from "react";
-import { BookOpen, ExternalLink, LogOut } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { consultaDoPeriodo, gruposDoPapel, telaEstaAtiva } from "@/lib/navegacao";
 import { EstadoSaude } from "./EstadoSaude";
 import { MarcaFraus } from "./MarcaFraus";
-import { SeletorTema } from "./SeletorTema";
+import { MenuDoUsuario } from "./MenuDoUsuario";
 
 const ITEM = "h-11 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active]:bg-sidebar-accent data-[active]:font-semibold data-[active]:text-sidebar-accent-foreground data-[active]:after:absolute data-[active]:after:inset-y-3 data-[active]:after:left-0 data-[active]:after:w-px data-[active]:after:bg-primary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
-
-function SessaoNoRodape({ usuario, papel }: {
-  usuario: { nome: string; email: string };
-  papel: "dev" | "usuario";
-}) {
-  const roteador = useRouter();
-  const [saindo, setSaindo] = useState(false);
-  async function sair() {
-    setSaindo(true);
-    try {
-      await fetch("/api/sessao/sair", { method: "POST" });
-    } finally {
-      roteador.push("/");
-      roteador.refresh();
-    }
-  }
-  return <div className="flex items-center gap-2 rounded-md px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-    <span className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
-      <span className="truncate text-xs font-medium" title={usuario.email}>{usuario.nome}</span>
-      <span className="truncate text-xs text-muted-foreground">{papel === "dev" ? "desenvolvedor" : "analista"}</span>
-    </span>
-    <button type="button" onClick={sair} disabled={saindo} aria-label={saindo ? "Saindo da conta…" : `Sair da conta de ${usuario.nome}`} title="Sair da conta" className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50"><LogOut aria-hidden className="size-4" /></button>
-  </div>;
-}
 
 /** Todos os destinos preservam período, sessão e permissões existentes. */
 export function NavegacaoLateral({ papel, usuario }: {
@@ -44,7 +18,6 @@ export function NavegacaoLateral({ papel, usuario }: {
 }) {
   const caminho = usePathname();
   const parametros = useSearchParams();
-  const urlDaDocumentacao = process.env.NEXT_PUBLIC_URL_DOCS;
   const grupos = gruposDoPapel(papel);
   const sufixo = consultaDoPeriodo(parametros);
   const { isMobile, setOpenMobile } = useSidebar();
@@ -90,15 +63,12 @@ export function NavegacaoLateral({ papel, usuario }: {
     </SidebarContent>
     <SidebarFooter className="gap-1 border-t border-sidebar-border px-2.5 py-3">
       <EstadoSaude />
-      <SidebarMenu className="gap-1">
-        {urlDaDocumentacao ? <SidebarMenuItem>
-          <SidebarMenuButton aria-label="Documentação (abre em nova aba)" tooltip="Documentação (abre em nova aba)" className="h-10 px-3 text-xs text-muted-foreground" render={<a href={urlDaDocumentacao} target="_blank" rel="noopener noreferrer" />}>
-            <BookOpen aria-hidden /><span className="flex flex-1 items-center justify-between gap-2 group-data-[collapsible=icon]:hidden">Documentação<ExternalLink aria-hidden className="size-3" /></span>
-          </SidebarMenuButton>
-        </SidebarMenuItem> : null}
-        <SidebarMenuItem><SeletorTema /></SidebarMenuItem>
-      </SidebarMenu>
-      {usuario ? <SessaoNoRodape usuario={usuario} papel={papel} /> : null}
+      <MenuDoUsuario
+        usuario={usuario}
+        papel={papel}
+        sufixo={sufixo}
+        aoNavegar={() => { if (isMobile) setOpenMobile(false); }}
+      />
     </SidebarFooter>
   </Sidebar>;
 }
