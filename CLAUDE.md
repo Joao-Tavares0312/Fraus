@@ -70,6 +70,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/api/vazao.py` | dois tetos: `/auth/*` por IP em middleware, `/ingestao` por fonte na rota |
 | `fraus/api/registro.py` | o miolo de derivação, compartilhado pelas duas rotas de entrada |
 | `fraus/api/rotas/webhook.py` | webhook assinado por fonte, com registro de entrega |
+| `dashboard/components/integracoes/ConectarTars.tsx` | conecta o TARS: cria a fonte `tars` e gera a chave `frs_`; o TARS chama `POST /ingestao` |
+| `dashboard/components/shell/MenuDoUsuario.tsx` | menu da conta: Operação, Integrações, Configurações, docs, tema, sair — a lateral só tem as tarefas do dia a dia |
 | `scripts/preparar_sentilex.py` | converte o SentiLex bruto em `fraus/dados/sentilex_pt02.csv` |
 | `fraus/fusor.py` | `NOMES_FEATURES` (39) e o `Fusor` |
 | `fraus/indicadores.py` | NPS, CSAT, containment, nota, categoria |
@@ -227,5 +229,6 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
 - `docs/deploy-vercel.md` — procedimento interno; dashboard e API publicam separadamente
 - `docs/auditoria/2026-10-13-relatorio.md` — auditoria de 13/10/2026: features, bugs e segurança
 - `docs/limpeza/2026-10-14-inventario.md` — inventário de limpeza do repositório, com o que saiu e o que ficou
+- `docs/notas/2026-10-19-analisar-simples-e-tars.md` — arrastar e pronto, menu da conta e integração com o TARS
 - `docs/conformidade.md` — EU AI Act: o que obriga e o que **proíbe** (não pontuar atendente)
 - `mkdocs.yml` — site interno; `mkdocs-publico.yml` define o recorte publicado

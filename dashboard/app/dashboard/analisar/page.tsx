@@ -8,7 +8,7 @@ export default function PaginaAnalisar() {
     <>
       <CabecalhoPagina
         titulo="Analisar um atendimento"
-        subtitulo="Analise uma conversa e salve o resultado para acompanhar os indicadores e o grafo. A leitura por mensagem também está disponível em modo avulso."
+        subtitulo="Solte o arquivo da conversa: o Fraus lê cada mensagem, estima a satisfação e soma aos indicadores."
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
