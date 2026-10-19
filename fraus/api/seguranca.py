@@ -269,6 +269,9 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
         return True
     if caminho in ("/conversas/importar", "/conversas/importar/previa", "/conversas/repontuar"):
         return True
+    # Remover atendimento gravado muda os indicadores de todo mundo: dev.
+    if metodo == "DELETE" and caminho.startswith("/conversas/"):
+        return True
     if caminho == "/configuracoes" and metodo != "GET":
         return True
     if caminho.startswith("/lexico") and metodo != "GET":

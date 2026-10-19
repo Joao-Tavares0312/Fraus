@@ -25,6 +25,10 @@ class BancoComEscopo:
         linhas = [l for l in self._banco.listar_com_conversa(de, ate) if l[1].canal in self._canais]
         return linhas[deslocamento:deslocamento + limite] if limite is not None else linhas[deslocamento:]
 
+    def apagar_conversa(self, identificador):
+        # Fora do escopo e o mesmo que inexistente: a recusa nao conta o que ha.
+        return self._banco.apagar_conversa(identificador) if self.buscar(identificador) else False
+
     def regua_da_conversa(self, identificador):
         return self._banco.regua_da_conversa(identificador) if self.buscar(identificador) else None
 
