@@ -75,10 +75,10 @@ export function CartaoIndicador({
       )}
       data-slot="indicador"
     >
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex items-baseline justify-between gap-2 pr-3">
         <h3 className="text-sm font-medium">{rotulo}</h3>
         {qualificacao ? (
-          <Badge variant="outline" className="shrink-0 border-0 px-0 text-muted-foreground">
+          <Badge variant="ghost" className="shrink-0 px-0 text-muted-foreground hover:bg-transparent">
             {qualificacao}
           </Badge>
         ) : null}

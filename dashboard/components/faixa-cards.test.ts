@@ -15,3 +15,19 @@ describe("consumidores da faixa de indicadores usam a mesma linguagem de card", 
     expect(fonte).not.toContain("separadas por régua");
   });
 });
+
+describe("rotulo do indicador e cabecalho de tabela sem canto cortado solto", () => {
+  it("o rotulo estimativa/observado e texto puro: ghost, sem outline com traco", () => {
+    const fonte = readFileSync("components/CartaoIndicador.tsx", "utf8");
+    expect(fonte).toMatch(/<Badge variant="ghost"/);
+    expect(fonte).not.toMatch(/<Badge variant="outline"[^>]*border-0/);
+    expect(fonte).toMatch(/justify-between gap-2 pr-3/);
+  });
+
+  it("o thead nao leva .superficie (cortaria o grupo de linhas)", () => {
+    const fonte = readFileSync("components/ui/table.tsx", "utf8");
+    const thead = fonte.match(/<thead[\s\S]*?\/>/)![0];
+    expect(thead).not.toMatch(/superficie/);
+    expect(thead).toMatch(/bg-card/);
+  });
+});

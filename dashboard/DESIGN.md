@@ -75,7 +75,9 @@ do FR e o canto cortado da fenda. **Uma fonte só:** o polígono do canto e as
 cores das placas existem apenas em `app/camadas.css`, em `@layer camadas`
 (acima dos utilitários, para `rounded-*`, `bg-*` e `outline-none` não apagarem
 o canto nem o foco). A API pública são classes e variáveis; nenhuma classe
-define variável, só lê com valor de reserva.
+define as variáveis PÚBLICAS (`--chanfro`, `--placa-*`, `--cor-*`), só lê com
+valor de reserva; as internas (`--camada-*`, `--traco-cor`) são definidas pelas
+classes.
 
 | Classe | O que desenha |
 |---|---|
@@ -102,6 +104,8 @@ define variável, só lê com valor de reserva.
   clip-path, o anel fica a 6px, longe da face que sobe. CSS sem camada com
   `outline-offset` positivo vence essa regra; a LP repete o −2px em
   `.lp .chanfro:focus-visible`.
+- `.superficie` tem `clip-path`: conteúdo absoluto que não seja portal e
+  transborde a região é cortado.
 - `filter` em `.placas` cria bloco de contenção para `position: fixed`:
   sobreposição dentro de algo com placas vai por portal.
 - **Tokens das placas:** `--placa-2/3` e `--placa-card-2/3` seguem o tema
@@ -197,6 +201,8 @@ e 26 riscos finos a −22° da vertical, que descem em 14 a 30 s.
 - **Fecho:** com `.lp.inv` o ouro entra por opacidade do `::before` em 0,6 s
   (gradiente não interpola), os pontos somem e os riscos escurecem, como na
   arte dourada. Nenhum código da coreografia muda.
+- **O fecho dourado só existe com JS e movimento ligados** (`.inv` vem do
+  ScrollTrigger); em reduce ou sem JS o fecho continua escuro.
 - **Reduce:** o céu fica parado, com os riscos visíveis e a mesma cara da arte.
 - **Sem JS:** o céu é HTML do servidor com animação em CSS; chega completo.
 
