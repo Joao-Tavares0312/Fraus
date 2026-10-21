@@ -132,15 +132,14 @@ export function FaixaIndicadores({
           initial="oculto"
           whileInView="presente"
           viewport={{ once: true, margin: "0px 0px -64px 0px" }}
-          // O HAIRLINE ENTRE CELULAS e o `gap-px` sobre fundo de regua: cada
-          // celula pinta o proprio fundo opaco e o vao de 1px deixa aparecer a
-          // `--linha` por baixo. Uma tecnica so serve a qualquer numero de
-          // colunas (1, 2 ou 4) sem cada breakpoint recontar qual celula leva
-          // qual borda.
+          // QUATRO CARDS SEPARADOS: cada um e uma `.superficie` com canto
+          // cortado; a grade so da o espaco entre eles (2 colunas, 4 a partir
+          // de 1200px) e o NPS carrega o fio dourado.
           className="faixa-indicadores min-w-0"
         >
           <CartaoIndicador
             rotulo="NPS inferido"
+            destaque
             qualificacao="estimativa"
             estimativa
             erro={erro}

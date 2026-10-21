@@ -47,6 +47,7 @@ export function CartaoIndicador({
   erro,
   trilho,
   rodape,
+  destaque,
 }: {
   rotulo: string;
   valor: number | null;
@@ -62,11 +63,16 @@ export function CartaoIndicador({
   erro?: string;
   trilho?: Trilho;
   rodape?: ReactNode;
+  /** O cartao principal da faixa leva o fio dourado do dominante. */
+  destaque?: boolean;
 }) {
   return (
     <motion.div
       variants={itemDaPilha}
-      className="quebra-evitar flex min-w-0 flex-col gap-3 p-4 sm:p-5"
+      className={cn(
+        "superficie quebra-evitar flex min-w-0 flex-col gap-3 p-4 sm:p-5",
+        destaque && "fio",
+      )}
       data-slot="indicador"
     >
       <div className="flex items-baseline justify-between gap-2">

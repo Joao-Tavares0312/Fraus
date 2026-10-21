@@ -7,8 +7,8 @@ vi.mock("@/lib/formato", async () => import("../lib/formato"));
 vi.mock("@/lib/derivacoes", async () => import("../lib/derivacoes"));
 vi.mock("@/lib/movimento", () => ({ pilha: {}, itemDaPilha: {} }));
 vi.mock("./CartaoIndicador", () => ({
-  CartaoIndicador: ({ rotulo, valor, explicacaoVazio }: { rotulo: string; valor: number | null; explicacaoVazio: string }) =>
-    <section aria-label={rotulo}>{valor === null ? explicacaoVazio : String(valor)}</section>,
+  CartaoIndicador: ({ rotulo, valor, explicacaoVazio, destaque }: { rotulo: string; valor: number | null; explicacaoVazio: string; destaque?: boolean }) =>
+    <section aria-label={rotulo} data-destaque={String(!!destaque)}>{valor === null ? explicacaoVazio : String(valor)}</section>,
 }));
 vi.mock("./AparatoDaTela", () => ({ RessalvaDaTela: () => null }));
 vi.mock("./DiscordanciaContida", () => ({ DiscordanciaContida: () => null }));
@@ -24,7 +24,7 @@ const renderizar = (npsIntervalo: { nps: number | null; ic_inferior: number; ic_
     indicadores={{ ...base, nps, npsIntervalo }} tempoMediano={1}
     limiares={{ pico: 10, saudavel: 60, degradando: 180 }} rotuloDoPeriodo="hoje"
   />);
-const cartaoNps = (html: string) => html.match(/<section aria-label="NPS inferido">(.*?)<\/section>/)?.[1];
+const cartaoNps = (html: string) => html.match(/<section aria-label="NPS inferido" data-destaque="true">(.*?)<\/section>/)?.[1];
 
 describe("NPS na faixa de indicadores", () => {
   it("respeita a abstencao do servidor no cartao principal", () => {
@@ -42,5 +42,18 @@ describe("NPS na faixa de indicadores", () => {
   it("cortesia sem score nao e descrita como ausencia de fala", () => {
     expect(cartaoNps(renderizar(null, null))).toContain("sinal de satisfação");
     expect(cartaoNps(renderizar(null, null))).not.toContain("tem fala do cliente");
+  });
+});
+
+describe("destaque do fio", () => {
+  it("so o cartao NPS inferido leva destaque", () => {
+    const html = renderizar(null);
+    const marcas = [...html.matchAll(/aria-label="([^"]+)" data-destaque="(\w+)"/g)].map((m) => [m[1], m[2]]);
+    expect(marcas.filter(([rotulo]) => rotulo !== "Indicadores de hoje")).toEqual([
+      ["NPS inferido", "true"],
+      ["CSAT estimado", "false"],
+      ["Contenção", "false"],
+      ["Latência mediana", "false"],
+    ]);
   });
 });
