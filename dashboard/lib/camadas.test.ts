@@ -46,6 +46,16 @@ describe("primitivas de camadas", () => {
     }
   });
 
+  it("placas anulam borda e anel do proprio elemento", () => {
+    // Sem clip-path no elemento, borda e box-shadow (Button, .superficie)
+    // desenhariam um retangulo em volta das placas, duplicado pela sombra.
+    const css = readFileSync(CAMADAS, "utf8");
+    const regra = bloco(css, /^\s*\.placas,\s*\.placas-so-hover\s*\{[^}]*isolation:/m);
+    expect(regra).toMatch(/isolation:\s*isolate/);
+    expect(regra).toMatch(/border-color:\s*transparent/);
+    expect(regra).toMatch(/box-shadow:\s*none/);
+  });
+
   it("os dois temas definem as placas", () => {
     // Os tokens moram em camadas.css: a guarda acima proibe o hex fora dele.
     const css = readFileSync(CAMADAS, "utf8");

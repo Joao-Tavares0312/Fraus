@@ -96,6 +96,10 @@
     --placa-desvio: calc(var(--placa-fundo, 6px) - var(--placa-repouso, 3px));
     isolation: isolate;
     border-radius: 0;
+    /* sem clip-path aqui: borda e anel do elemento seriam um retangulo em
+       volta das placas; a borda da face vem de --placa-borda */
+    border-color: transparent;
+    box-shadow: none;
     background-color: transparent;
     background-image: none;
     filter: drop-shadow(var(--placa-desvio) var(--placa-desvio) 0 var(--placa-3));
