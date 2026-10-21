@@ -311,7 +311,7 @@
   .rotulo-instrumento { font-family: var(--fonte-sans); font-size: .75rem; line-height: 1.5; color: var(--muted-foreground); }
   .titulo-instrumento { font-family: var(--fonte-sans); font-weight: 500; letter-spacing: -.025em; }
   .filete { border-color: var(--compasso); }
-  .superficie { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  .superficie { background-color: var(--card); border: 1px solid var(--border); }
   .superficie-flutuante { background: var(--popover); border: 1px solid var(--border); border-radius: 12px; }
   .painel-apoio { border-top: 1px solid var(--border); border-radius: 0; }
   .faixa-indicadores { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: .5rem; }

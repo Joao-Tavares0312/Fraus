@@ -68,4 +68,52 @@ describe("primitivas de camadas", () => {
     expect(claro).toMatch(/--placa-3:/);
     expect(claro).toMatch(/color-mix\(in oklch/);
   });
+  it("a regiao .superficie ganha o canto pela primitiva, nao pelo raio", () => {
+    const globals = readFileSync("app/globals.css", "utf8");
+    const regra = bloco(globals, /^\s*\.superficie\s*\{/m);
+    expect(regra).not.toMatch(/border-radius/);
+    // background-color: o atalho `background` apagaria as camadas de fundo
+    expect(regra).not.toMatch(/background\s*:/);
+    expect(regra).toMatch(/background-color:\s*var\(--card\)/);
+    const css = readFileSync(CAMADAS, "utf8");
+    const cabeca = css.slice(css.indexOf("clip-path: polygon") - 400, css.indexOf("clip-path: polygon"));
+    expect(cabeca).toMatch(/\.superficie(?![\w-])/);
+    expect(css).toMatch(/\.superficie(?![\w-])[^{]*\{\s*--camada-fio: none/);
+  });
+
+  it("a sobreposicao .superficie-flutuante continua arredondada", () => {
+    const globals = readFileSync("app/globals.css", "utf8");
+    expect(bloco(globals, /^\s*\.superficie-flutuante\s*\{/m)).toMatch(/border-radius:\s*12px/);
+    expect(bloco(globals, /^\s*\.painel-apoio\s*\{/m)).toMatch(/border-radius:\s*0/);
+  });
+
+  it("campos, gatilho e abas deixam o foco e o raio para a primitiva", () => {
+    const fontes: Record<string, string> = {
+      input: readFileSync("components/ui/input.tsx", "utf8"),
+      textarea: readFileSync("components/ui/textarea.tsx", "utf8"),
+      select: readFileSync("components/ui/select.tsx", "utf8"),
+      tabs: readFileSync("components/ui/tabs.tsx", "utf8"),
+    };
+    const gatilho = fontes.select.slice(fontes.select.indexOf("function SelectTrigger"), fontes.select.indexOf("SelectPrimitive.Icon"));
+    const trigger = fontes.tabs.slice(fontes.tabs.indexOf("function TabsTrigger"), fontes.tabs.indexOf("function TabsContent"));
+    const alvos: Record<string, string> = { input: fontes.input, textarea: fontes.textarea, gatilho, trigger };
+    for (const [nome, fonte] of Object.entries(alvos)) {
+      expect(fonte, nome).not.toMatch(/rounded-md/);
+      expect(fonte, nome).not.toMatch(/focus-visible:ring-2/);
+      expect(fonte, nome).toMatch(/chanfro|superficie/);
+    }
+    // erro continua visivel por dentro do recorte
+    for (const nome of ["input", "textarea", "gatilho"]) {
+      expect(alvos[nome], nome).toMatch(/aria-invalid:\[--cor-borda-chanfro:var\(--destructive\)\]/);
+    }
+  });
+
+  it("o alerta guarda a borda esquerda colorida e o traco do canto na mesma cor", () => {
+    const alerta = readFileSync("components/ui/alert.tsx", "utf8");
+    expect(alerta).toMatch(/border-l-primary/);
+    expect(alerta).toMatch(/border-l-destructive/);
+    expect(alerta).toMatch(/\[--cor-borda-chanfro:var\(--primary\)\]/);
+    expect(alerta).toMatch(/\[--cor-borda-chanfro:var\(--destructive\)\]/);
+    expect(alerta).not.toMatch(/rounded-lg/);
+  });
 });

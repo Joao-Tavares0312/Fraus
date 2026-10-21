@@ -50,6 +50,7 @@
   /* fundo em camadas: fio, fenda e os dois tracos do canto compoem numa
      unica declaracao; cada classe so liga a sua variavel */
   .chanfro,
+  .superficie,
   .chanfro-marco::before,
   .fio,
   .fenda,
@@ -62,6 +63,7 @@
   }
 
   .chanfro,
+  .superficie,
   .chanfro-marco::before,
   .fio,
   .fenda,
@@ -82,10 +84,12 @@
 
   /* traco de 1 px que continua a borda na diagonal dos dois cantos */
   .chanfro,
+  .superficie,
   .chanfro-marco::before { --traco-cor: var(--cor-borda-chanfro, var(--border)); }
   .placas,
   .placas-so-hover { --traco-cor: var(--placa-borda, transparent); }
   .chanfro,
+  .superficie,
   .chanfro-marco::before,
   .placas,
   .placas-so-hover {
@@ -96,6 +100,7 @@
   /* ---------- canto cortado (.chanfro-marco: no ::before, para marcador
      que nao e o proprio elemento, como o ponto da linha do tempo) ---------- */
   .chanfro,
+  .superficie,
   .chanfro-marco::before,
   .placas::before,
   .placas::after,
@@ -105,9 +110,11 @@
   }
 
   .chanfro,
+  .superficie,
   .chanfro-marco::before { border-radius: 0; }
   /* o clip-path corta anel externo: o foco e desenhado por dentro */
-  .chanfro:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+  .chanfro:focus-visible,
+  .superficie:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
 
   /* ---------- placas: face no ::before, placa 2 no ::after, placa 3 e a
      sombra do conjunto. Nenhum filho: data-embaralhar reescreve o texto. ---------- */
