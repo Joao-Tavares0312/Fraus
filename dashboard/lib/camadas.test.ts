@@ -116,4 +116,14 @@ describe("primitivas de camadas", () => {
     expect(alerta).toMatch(/\[--cor-borda-chanfro:var\(--destructive\)\]/);
     expect(alerta).not.toMatch(/rounded-lg/);
   });
+
+  it("sobreposicoes nao recebem .superficie (a gaveta mobile continua arredondada)", () => {
+    const sidebar = readFileSync("components/ui/sidebar.tsx", "utf8");
+    const gaveta = sidebar.slice(sidebar.indexOf("<SheetContent"), sidebar.indexOf("showCloseButton"));
+    expect(gaveta).toMatch(/className=/);
+    expect(gaveta).not.toMatch(/(^|[\s"'`])superficie(?![\w-])/);
+    const sheet = readFileSync("components/ui/sheet.tsx", "utf8");
+    expect(sheet).toMatch(/superficie-flutuante/);
+    expect(sheet).not.toMatch(/(^|[\s"'`])superficie(?![\w-])/);
+  });
 });

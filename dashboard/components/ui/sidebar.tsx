@@ -211,7 +211,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) max-w-[calc(100vw-2rem)] gap-0 superficie p-0 text-sidebar-foreground"
+          className="w-(--sidebar-width) max-w-[calc(100vw-2rem)] gap-0 p-0 text-sidebar-foreground"
           showCloseButton={false}
           finalFocus={() => returnFocusRef.current?.isConnected
             ? returnFocusRef.current
