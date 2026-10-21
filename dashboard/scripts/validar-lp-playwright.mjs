@@ -58,6 +58,7 @@ try {
     for (const destino of ["/entrar", "/cadastrar", "/dashboard"]) {
       exigir("sem JS: links", await pagina.locator(`a[href="${destino}"]`).count() > 0, `falta ${destino}`);
     }
+    exigir("ceu: pontos sem JS", await pagina.locator(".lp-ceu .lp-ponto").count() === 140, "ceu sem os 140 pontos");
     await capturar(pagina, "sem-js");
     await contexto.close();
   }
@@ -70,6 +71,8 @@ try {
     exigir("reduce: fatos", JSON.stringify(await contadores(pagina)) === JSON.stringify(FATOS), JSON.stringify(await contadores(pagina)));
     exigir("reduce: pin", await pagina.locator(".pin-spacer").count() === 0, "faixa fixada com reduce");
     exigir("reduce: lenis", !(await pagina.evaluate(() => document.documentElement.classList.contains("lenis"))), "rolagem suave com reduce");
+    const risco = await pagina.locator(".lp-risco").first().evaluate((el) => ({ animacao: getComputedStyle(el).animationName, opacidade: getComputedStyle(el).opacity }));
+    exigir("ceu: riscos parados e visiveis no reduce", risco.animacao === "none" && risco.opacidade === "1", JSON.stringify(risco));
     exigir("reduce: erros", erros.length === 0, erros.join(" | "));
     await capturar(pagina, "reduce");
     await contexto.close();
@@ -78,6 +81,7 @@ try {
   // Movimento: preloader na primeira visita, coreografia ativa, inversao no fecho.
   {
     const { contexto, pagina, erros } = await abrir({ width: 1440, height: 900 });
+    exigir("ceu: pontos", await pagina.locator(".lp-ceu .lp-ponto").count() === 140, "ceu sem os 140 pontos");
     exigir("preloader: entrada", await pagina.locator(".lp-pre").isVisible(), "preloader nao tocou na primeira visita");
     await pagina.waitForTimeout(3500);
     exigir("preloader: saida", !(await pagina.locator(".lp-pre").isVisible()), "preloader preso");
@@ -91,6 +95,9 @@ try {
     await pagina.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await pagina.waitForTimeout(2500);
     exigir("fecho: inversao", await pagina.locator(".lp.inv").count() === 1, "o mundo nao virou ouro");
+    await pagina.waitForTimeout(800); // a opacidade dos pontos transiciona em 0,6 s
+    const opacidadePonto = await pagina.locator(".lp-ceu .lp-ponto").first().evaluate((el) => getComputedStyle(el).opacity);
+    exigir("ceu: pontos somem no fecho", opacidadePonto === "0", opacidadePonto);
     exigir("indice", (await pagina.locator(".lp-indice").innerText()) === "07 / 07", await pagina.locator(".lp-indice").innerText());
     await capturar(pagina, "fecho");
     await pagina.evaluate(() => window.scrollTo(0, 0));

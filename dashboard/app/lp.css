@@ -22,15 +22,22 @@
   font-synthesis: none;
   transition: background-color .6s, color .6s;
 }
-.lp::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(115deg, transparent 0 140px, rgba(214, 186, 114, .035) 140px 142px),
-    radial-gradient(60% 50% at 80% 10%, rgba(214, 186, 114, .07), transparent);
+/* ---------- ceu vivo (fundo, abaixo do palco WebGL) ---------- */
+.lp-ceu { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: radial-gradient(120% 90% at 30% 20%, #1b1c1f, #131416 70%); }
+/* Gradiente nao interpola: o ouro do fecho entra por opacidade, em 0,6 s como o .lp. */
+.lp-ceu::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, #d5b86f, #c3a663 80%); opacity: 0; transition: opacity .6s; }
+.lp.inv .lp-ceu::before { opacity: 1; }
+.lp-ponto { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #e9cf8e; opacity: var(--o); box-shadow: 0 0 calc(var(--s) * 1.6) rgba(233, 207, 142, .45); transition: opacity .6s; }
+.lp-ponto.pisca { animation: lp-pisca var(--d) ease-in-out infinite; }
+.lp-risco { position: absolute; width: 1px; height: var(--l); background: linear-gradient(transparent, rgba(200, 205, 212, var(--a)), transparent); transform: rotate(-22deg); opacity: 0; animation: lp-cai linear infinite; }
+.lp.inv .lp-ponto { opacity: 0; animation: none; }
+.lp.inv .lp-risco { background: linear-gradient(transparent, rgba(120, 95, 40, calc(var(--a) * 3)), transparent); }
+@keyframes lp-pisca { 0%, 100% { opacity: var(--o); transform: scale(1); } 50% { opacity: .08; transform: scale(.6); } }
+@keyframes lp-cai {
+  0% { translate: 0 0; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { translate: calc(var(--l) * .45) calc(var(--l) * 1.1); opacity: 0; }
 }
 .lp :is(h1, h2, h3, p) { margin-top: 0; }
 .lp a { color: inherit; }
@@ -197,4 +204,5 @@
   .lp #faixa .trk { width: 100%; flex-direction: column; }
   .lp #faixa .pn { height: auto; padding-block: 60px; }
   .lp *, .lp *::before, .lp *::after { transition: none !important; animation: none !important; }
+  .lp-risco { opacity: 1; }
 }
