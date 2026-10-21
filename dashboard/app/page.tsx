@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./lp.css";
+import { Ceu } from "@/components/lp-nova/Ceu";
 import { Coreografia } from "@/components/lp-nova/Coreografia";
 import { Analista } from "@/components/lp-nova/secoes/Analista";
 import { Faixa, Letreiro } from "@/components/lp-nova/secoes/Faixa";
@@ -27,6 +28,7 @@ export default async function PaginaInicial() {
   const conjunto = await carregarLeituras();
   return (
     <div className={`lp ${display.variable} ${corpo.variable}`}>
+      <Ceu />
       <noscript><style>{".lp-pre{display:none}"}</style></noscript>
       <div className="lp-pre" aria-hidden="true"><small>Fraus<br />Contexto, não certeza.</small><b data-pre-contador>000</b></div>
       <a className="lp-pular" href="#inicio">Ir para o conteúdo</a>

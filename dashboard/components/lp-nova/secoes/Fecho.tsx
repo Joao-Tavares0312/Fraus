@@ -8,8 +8,8 @@ export function Fecho() {
         <h2 id="titulo-fecho"><Palavras texto="Leia o que ficou nas entrelinhas." /></h2>
         <p className="rv">Contexto, não certeza.</p>
         <div className="acoes rv">
-          <Link className="btn mag" href="/entrar" prefetch={false} data-embaralhar>Entrar no Fraus</Link>
-          <Link className="btn o mag" href="/cadastrar" prefetch={false} data-embaralhar>Criar conta</Link>
+          <Link className="btn placas mag" href="/entrar" prefetch={false} data-embaralhar>Entrar no Fraus</Link>
+          <Link className="btn o chanfro fio-hover mag" href="/cadastrar" prefetch={false} data-embaralhar>Criar conta</Link>
         </div>
       </div>
     </section>

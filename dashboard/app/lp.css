@@ -11,6 +11,14 @@
   --medido: #8dc8f5;
   --disp: var(--fonte-display), var(--fonte-quadrada), system-ui, sans-serif;
   --ui: var(--fonte-quadrada), system-ui, sans-serif;
+  /* Camadas do FR (app/camadas.css): a LP e sempre escura, entao le as
+     placas do escuro mesmo com a dashboard no tema claro. */
+  --placa-2: var(--placa-escuro-2);
+  --placa-3: var(--placa-escuro-3);
+  --placa-card-2: var(--placa-escuro-card-2);
+  --placa-card-3: var(--placa-escuro-card-3);
+  --pincel-fundo: var(--acao);
+  --pincel-texto: var(--base);
   position: relative;
   isolation: isolate;
   overflow-x: clip;
@@ -22,21 +30,32 @@
   font-synthesis: none;
   transition: background-color .6s, color .6s;
 }
-.lp::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(115deg, transparent 0 140px, rgba(214, 186, 114, .035) 140px 142px),
-    radial-gradient(60% 50% at 80% 10%, rgba(214, 186, 114, .07), transparent);
+/* ---------- ceu vivo (fundo, abaixo do palco WebGL) ---------- */
+.lp-ceu { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: radial-gradient(120% 90% at 30% 20%, #1b1c1f, #131416 70%); }
+/* Gradiente nao interpola: o ouro do fecho entra por opacidade, em 0,6 s como o .lp. */
+.lp-ceu::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, #d5b86f, #c3a663 80%); opacity: 0; transition: opacity .6s; }
+.lp.inv .lp-ceu::before { opacity: 1; }
+.lp-ponto { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #e9cf8e; opacity: var(--o); box-shadow: 0 0 calc(var(--s) * 1.6) rgba(233, 207, 142, .45); transition: opacity .6s; }
+.lp-ponto.pisca { animation: lp-pisca var(--d) ease-in-out infinite; }
+.lp-risco { position: absolute; width: 1px; height: var(--l); background: linear-gradient(transparent, rgba(200, 205, 212, var(--a)), transparent); transform: rotate(-22deg); opacity: 0; animation: lp-cai linear infinite; }
+.lp.inv .lp-ponto { opacity: 0; animation: none; }
+.lp.inv .lp-risco { background: linear-gradient(transparent, rgba(120, 95, 40, calc(var(--a) * 3)), transparent); }
+@keyframes lp-pisca { 0%, 100% { opacity: var(--o); transform: scale(1); } 50% { opacity: .08; transform: scale(.6); } }
+@keyframes lp-cai {
+  0% { translate: 0 0; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { translate: calc(var(--l) * .45) calc(var(--l) * 1.1); opacity: 0; }
 }
 .lp :is(h1, h2, h3, p) { margin-top: 0; }
 .lp a { color: inherit; }
 .lp button { font: inherit; cursor: pointer; }
 .lp :is(a, button, summary) { -webkit-tap-highlight-color: transparent; }
 .lp :is(a, button, summary):focus-visible { outline: 2px solid var(--acao); outline-offset: 3px; }
+/* O clip-path do canto corta o anel externo: no chanfro o foco fica por
+   dentro; nas placas, longe da face que sobe 3 px. */
+.lp .chanfro:focus-visible { outline-offset: -2px; }
+.lp .placas:focus-visible { outline-offset: 6px; }
 .lp ::selection { background: var(--acao); color: var(--base); }
 .lp .icone-lp { display: block; flex: 0 0 auto; width: 20px; height: 20px; stroke-width: 1.75; }
 .lp-so-leitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -80,27 +99,50 @@
 .lp .ouro { color: var(--acao); }
 .lp .w { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .14em; }
 .lp .w > span { display: inline-block; }
+/* A pincelada inclinada passa ~.35em de cada lado da palavra: a mascara
+   ganha essa folga e devolve quase toda no margin; os .16em que sobram
+   afastam a ponta inclinada das palavras vizinhas. */
+.lp .w.w-pincel { padding-inline: .36em; margin-inline: -.2em; }
 .lp p { color: var(--secundario); margin: 0 0 18px; }
 .lp .sobretitulo { margin: 0; }
 .lp .nota-lp { font-size: 14px; }
-.lp .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 26px; border-radius: 8px; border: 1px solid var(--acao); background: var(--acao); color: #171819; font: 600 15px/1 var(--ui); text-decoration: none; white-space: nowrap; }
-.lp .btn.o { background: transparent; color: var(--texto); border-color: var(--borda); }
+/* .btn e placas (face no ::before, sem background nem borda aqui); .btn.o e
+   chanfro com contorno e o fio que cresce embaixo. */
+.lp .btn { --placa-face: var(--acao); display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 26px; color: #171819; font: 600 15px/1 var(--ui); text-decoration: none; white-space: nowrap; }
+.lp .btn.o { --cor-borda-chanfro: var(--borda); border: 1px solid var(--borda); background-color: color-mix(in srgb, var(--superficie) 90%, transparent); color: var(--texto); }
 .lp .acoes { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-.lp .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 40px 0 0; }
-.lp .stat { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column-reverse; }
+.lp .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 40px 0 0; }
+/* Card e stat: placas de card, que se abrem no hover (a face e o ::before). */
+.lp :is(.card, .stat) {
+  --chanfro: 18px;
+  --placa-face: var(--superficie);
+  --placa-borda: var(--borda);
+  --placa-2: var(--placa-card-2);
+  --placa-3: var(--placa-card-3);
+  --placa-repouso: 4px;
+  --placa-fundo: 8px;
+  --placa-sobe: -2px;
+  --placa-afasta: 5px;
+  --placa-abre: 12px;
+  --placa-duracao: 350ms;
+  --placa-curva: cubic-bezier(.3, 1.3, .5, 1);
+}
+.lp .stat { padding: 14px 16px; display: flex; flex-direction: column-reverse; }
 .lp .stat dd { margin: 0; font: 500 34px/1.1 var(--ui); font-variant-numeric: tabular-nums; color: var(--medido); }
 .lp .stat dt { font-size: 12px; color: var(--secundario); line-height: 1.3; }
+/* Reserva o canto da fenda (24 px a 14 px da borda, traco a 38 px da direita) so nas primeiras linhas do rotulo. */
+.lp .stat dt::before { content: ""; float: right; width: 38px; height: 40px; }
 
-.lp .tag { display: inline-block; margin-bottom: 10px; padding: 2px 10px; border: 1px solid var(--borda); border-radius: 8px; font: 12px/1.6 var(--ui); }
-.lp .tag.d { color: var(--dito); border-color: var(--dito); }
-.lp .tag.m { color: var(--medido); border-color: var(--medido); }
+.lp .tag { --chanfro: 6px; --cor-borda-chanfro: var(--borda); display: inline-block; margin-bottom: 10px; padding: 2px 10px; border: 1px solid var(--borda); font: 12px/1.6 var(--ui); }
+.lp .tag.d { --cor-borda-chanfro: var(--dito); color: var(--dito); border-color: var(--dito); }
+.lp .tag.m { --cor-borda-chanfro: var(--medido); color: var(--medido); border-color: var(--medido); }
 .lp .quote { margin: 6px 0 4px; font: 600 clamp(28px, 3.4vw, 48px)/1.2 var(--disp); letter-spacing: -.04em; color: var(--dito); }
 .lp [data-letras] > span { display: inline-block; white-space: pre; }
 .lp .ck { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
-.lp .ck li { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 12px 16px; color: var(--secundario); }
+.lp .ck li { --cor-borda-chanfro: var(--borda); background-color: var(--superficie); border: 1px solid var(--borda); padding: 12px 16px; color: var(--secundario); }
 .lp .ck b { display: block; color: var(--texto); font-weight: 500; }
-.lp .card { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 20px 22px; margin-bottom: 12px; }
+.lp .card { padding: 20px 22px; margin-bottom: 16px; }
 .lp .card h3 { margin: 0 0 4px; font: 600 19px/1.3 var(--ui); color: var(--medido); }
 .lp .card p { margin: 0; font-size: 15px; line-height: 1.6; }
 .lp .ruler { position: relative; height: 6px; margin: 26px 0 8px; border-radius: 3px; background: var(--borda); overflow: hidden; }
@@ -124,10 +166,11 @@
 .lp .stepline { background: var(--acao); transform-origin: 50% 0; }
 .lp .steps ol { list-style: none; margin: 0; padding: 0; }
 .lp .step { position: relative; margin-bottom: 26px; }
-.lp .step::before { content: ""; position: absolute; left: -34px; top: 9px; width: 18px; height: 18px; border-radius: 50%; background: var(--base); border: 2px solid var(--acao); }
+/* Marcador: quadrado de canto cortado (.chanfro-marco); o GSAP move o .step, nao ele. */
+.lp .step::before { --chanfro: 6px; --cor-borda-chanfro: var(--acao); content: ""; position: absolute; left: -34px; top: 9px; box-sizing: border-box; width: 18px; height: 18px; background-color: var(--base); border: 2px solid var(--acao); }
 .lp .step h3 { margin: 0; font: 500 18px/1.5 var(--disp); }
 .lp .step p { margin: 0; }
-.lp .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 36px; text-align: left; }
+.lp .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 36px; text-align: left; }
 .lp .grid .card { margin: 0; }
 .lp .grid .card h3 { color: var(--acao); }
 .lp #fecho h2 { font-size: clamp(32px, 6.2vw, 96px); }
@@ -138,23 +181,26 @@
 .lp.inv :is(p, .ouro, .rodape-lp, .lp-cabecalho nav a, .marca, .lp-indice) { color: #171819; }
 .lp.inv .lp-barra { background: #171819; }
 .lp.inv .lp-cabecalho { background: none; }
-.lp.inv .btn { background: #171819; color: var(--acao); border-color: #171819; }
-.lp.inv .btn.o { background: transparent; color: #171819; }
-.lp.inv .tag { color: #171819; border-color: #171819; }
+.lp.inv .btn { --placa-face: var(--placa-fecho-face); --placa-2: var(--placa-fecho-2); --placa-3: var(--placa-fecho-3); color: var(--acao); }
+.lp.inv .btn.o { --cor-borda-chanfro: #171819; --cor-fio: #171819; background-color: transparent; color: #171819; border-color: #171819; }
+.lp.inv .tag { --cor-borda-chanfro: #171819; color: #171819; border-color: #171819; }
+/* No ouro o anel ouro some: o foco do fecho e grafite. */
+.lp.inv :is(a, button, summary):focus-visible { outline-color: #171819; }
 
 /* Snapshots verificados: mesma funcionalidade, sem competir com a narrativa. */
 .lp .leituras-ausentes { margin-top: 20px; max-width: 570px; }
 .lp .leituras-ausentes p { color: var(--secundario); font-size: 12px; line-height: 1.7; margin: 0; }
 .lp .leituras-ausentes strong { font-weight: 500; color: var(--texto); }
 .lp .leituras-gravadas { margin-top: 22px; border-block: 1px solid var(--borda); max-width: 570px; }
-.lp .leituras-gravadas > summary { padding: 14px 4px; border-radius: 8px; }
+.lp .leituras-gravadas > summary { --cor-borda-chanfro: transparent; padding: 14px 12px; }
+.lp .leituras-gravadas > summary:hover { background-color: var(--superficie); }
 .lp .leituras-gravadas > summary > .icone-lp:first-child { color: var(--medido); }
 .lp .leituras-gravadas > p { color: var(--secundario); font-size: 13px; line-height: 1.7; margin: 12px 0 22px; }
 .lp .ln-seletor { min-width: 0; padding-bottom: 22px; }
 .lp .ln-abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
-.lp .ln-aba { min-height: 44px; padding: 9px 12px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; font-size: 12px; color: var(--secundario); }
-.lp .ln-aba:hover { color: var(--texto); background: #292c2e; }
-.lp .ln-aba[aria-selected="true"] { border-color: var(--acao); color: var(--acao); }
+.lp .ln-aba { --cor-borda-chanfro: var(--borda); min-height: 44px; padding: 9px 12px; background-color: var(--superficie); border: 1px solid var(--borda); font-size: 12px; color: var(--secundario); }
+.lp .ln-aba:hover { color: var(--texto); background-color: #292c2e; }
+.lp .ln-aba[aria-selected="true"] { --cor-borda-chanfro: var(--acao); border-color: var(--acao); color: var(--acao); }
 .lp .ln-painel { display: grid; gap: 25px; }
 .lp .ln-conversa { list-style: none; display: grid; gap: 18px; padding: 0; margin: 0; }
 .lp .ln-msg { padding: 0 0 14px; border-bottom: 1px solid var(--borda); }
@@ -186,7 +232,8 @@
   .lp .grid { grid-template-columns: 1fr; }
   .lp-cabecalho nav a:not(.btn) { display: none; }
   .lp .r .blk { margin-left: 0; }
-  .lp :is(.card, .ck li, .stat) { background: rgba(34, 36, 38, .92); }
+  /* So a lista: a face das placas fica opaca, senao a placa 2 aparece atras dela. */
+  .lp .ck li { background-color: rgba(34, 36, 38, .92); }
   .lp-indice { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -197,4 +244,5 @@
   .lp #faixa .trk { width: 100%; flex-direction: column; }
   .lp #faixa .pn { height: auto; padding-block: 60px; }
   .lp *, .lp *::before, .lp *::after { transition: none !important; animation: none !important; }
+  .lp-risco { opacity: 1; }
 }

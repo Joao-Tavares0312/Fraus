@@ -50,7 +50,7 @@ export function SeletorDeLeituras({ conjunto }: { conjunto: ConjuntoLeituras }) 
             aria-selected={l.id === atual}
             aria-controls={`${base}-painel`}
             tabIndex={l.id === atual ? 0 : -1}
-            className="ln-aba"
+            className="ln-aba chanfro"
             onClick={() => setAtual(l.id)}
             onKeyDown={(e) => {
               const i = conjunto.leituras.findIndex((x) => x.id === atual);

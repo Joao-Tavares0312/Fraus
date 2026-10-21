@@ -22,6 +22,6 @@ export default defineConfig({
   // Componentes puros renderizam via react-dom/server sem ambiente de navegador.
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts", "components/**/*.test.tsx"],
+    include: ["lib/**/*.test.ts", "components/**/*.test.ts", "components/**/*.test.tsx"],
   },
 });

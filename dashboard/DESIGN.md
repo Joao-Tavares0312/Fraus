@@ -23,9 +23,14 @@ typography:
   dado:
     fontFamily: "Chakra Petch, system-ui, sans-serif"
     fontFeature: "tabular-nums"
-rounded:
-  controle: "8px"
-  regiao: "12px"
+chanfro:
+  botao-lp: "12px"
+  card-lp: "18px"
+  botao: "9px"
+  botao-pequeno: "7px"
+  controle: "7px"
+  card: "12px"
+  etiqueta: "6px"
 spacing:
   sidebar: "224px"
   sidebar-recolhida: "64px"
@@ -41,7 +46,9 @@ adicional sobre elas. A comparação histórica está em
 [Antes e depois da interface](redesign-2026-10-16.md).
 
 A verdade de produto continua em `dashboard/PRODUCT.md`. Tokens executáveis
-moram em `dashboard/app/globals.css`; a LP tem seu escopo em `dashboard/app/lp.css`.
+moram em `dashboard/app/globals.css`; a forma das camadas (canto, placas, fio,
+fenda e pincelada) mora em `dashboard/app/camadas.css`; a LP tem seu escopo em
+`dashboard/app/lp.css`.
 Os valores abaixo documentam o código, não constituem uma segunda configuração.
 
 ## Direção
@@ -55,8 +62,59 @@ não como recorte que prejudica texto ou alvo de clique.
 - Grafite, branco mineral e ouro fosco na chegada.
 - Cabeçalhos e navegação em caixa normal; sem telemetria numerada decorativa.
 - Números como texto legível, não polígonos de sete segmentos.
-- Controles de 8px e regiões de 12px; borda simples e superfície opaca.
+- Controles e regiões com **canto cortado** na diagonal da fenda, superfície
+  opaca e borda simples que continua nas duas diagonais. Na LP a peça entra
+  inteira (placas que se abrem); na dashboard, contida (placas só no botão
+  primário).
 - Uma região dominante por tela; apoio não disputa o mesmo peso visual.
+
+### Camadas do FR
+
+Botões, cards e títulos repetem o monograma: placas empilhadas como a extrusão
+do FR e o canto cortado da fenda. **Uma fonte só:** o polígono do canto e as
+cores das placas existem apenas em `app/camadas.css`, em `@layer camadas`
+(acima dos utilitários, para `rounded-*`, `bg-*` e `outline-none` não apagarem
+o canto nem o foco). A API pública são classes e variáveis; nenhuma classe
+define as variáveis PÚBLICAS (`--chanfro`, `--placa-*`, `--cor-*`), só lê com
+valor de reserva; as internas (`--camada-*`, `--traco-cor`) são definidas pelas
+classes.
+
+| Classe | O que desenha |
+|---|---|
+| `.chanfro` | canto cortado no topo-esquerdo e no inferior-direito, com o traço de 1px da borda nas diagonais (`--cor-borda-chanfro`; elemento sem borda usa `transparent`) |
+| `.placas` | face no `::before`, placa 2 no `::after`, placa 3 no `drop-shadow`; no hover a face sobe e as placas abrem |
+| `.placas-so-hover` | as mesmas placas, planas em repouso |
+| `.fio` | 2px de ouro no topo à direita, 40% da largura |
+| `.fio-hover` | sublinhado de 2px que cresce no hover e no foco |
+| `.fenda` | risco diagonal pequeno no canto superior direito |
+| `.pincel` | pincelada inclinada (`skewX(-24deg)`) atrás da palavra-chave |
+| `.chanfro-marco` | o canto no `::before` de um marcador (o ponto do `.step`) |
+
+- Fio, fenda e o traço do canto **compõem** por variáveis numa única
+  `background-image`: `superficie fio`, `stat placas fio fenda` funcionam
+  juntos. Por isso `.superficie` usa `background-color`, nunca o atalho
+  `background`.
+- **Placas são pseudo-elementos, nunca filhos:** `data-embaralhar` reescreve o
+  `textContent` do botão da LP. A camada anula `border`, `ring`, `shadow`, `bg` e
+  `rounded` do próprio elemento, que deve tirar essas classes; a borda da face
+  vem de `--placa-borda`. A transição das placas não inclui `opacity`: o GSAP
+  lê o valor final de `.rv` e o botão nasceria invisível.
+- **Foco visível por dentro.** O `clip-path` corta anel externo: em `.chanfro`
+  e `.superficie` o anel é `outline` com deslocamento −2px; em `.placas`, sem
+  clip-path, o anel fica a 6px, longe da face que sobe. CSS sem camada com
+  `outline-offset` positivo vence essa regra; a LP repete o −2px em
+  `.lp .chanfro:focus-visible`.
+- `.superficie` tem `clip-path`: conteúdo absoluto que não seja portal e
+  transborde a região é cortado.
+- `filter` em `.placas` cria bloco de contenção para `position: fixed`:
+  sobreposição dentro de algo com placas vai por portal.
+- **Tokens das placas:** `--placa-2/3` e `--placa-card-2/3` seguem o tema
+  (`#a8904f`, `#6f5f36`, `#34302a`, `#2a2621` no escuro; no claro, derivados
+  dos tokens do claro por `color-mix`, sem hexadecimal do escuro). A LP é
+  sempre escura e lê `--placa-escuro-*`; o fecho dourado lê `--placa-fecho-*`
+  (face grafite `#171819`, placas `#3a3326` e `#7a6532`, texto ouro).
+- Ouro continua sendo ação e marca: o fio, a fenda e a pincelada são
+  identidade, não valor.
 
 ## Cor e significado
 
@@ -129,6 +187,42 @@ código, não estimativas. `carregarLeituras` valida o snapshot; sem snapshot
 válido a LP nomeia a ausência e não publica resultado do dublê. Nenhuma análise
 é executada ao abrir a LP.
 
+### Céu
+
+O fundo da LP é o céu da arte do João, em movimento: `<Ceu />` (`.lp-ceu`),
+fixo atrás de tudo (`z-index: 0`, abaixo do palco WebGL) e sem ponteiro. São
+140 pontos dourados (`#e9cf8e`, 8% grandes; 60% piscam em ciclos de 2,5 a 7 s)
+e 26 riscos finos a −22° da vertical, que descem em 14 a 30 s.
+
+- **Só CSS:** sem canvas e sem script por quadro; anima apenas `opacity` e
+  `transform`/`translate`. As posições saem de um PRNG de semente fixa
+  (`lib/lp-nova/ceu.ts`), renderizadas no servidor: sem `Math.random()` no
+  render, a hidratação bate.
+- **Fecho:** com `.lp.inv` o ouro entra por opacidade do `::before` em 0,6 s
+  (gradiente não interpola), os pontos somem e os riscos escurecem, como na
+  arte dourada. Nenhum código da coreografia muda.
+- **O fecho dourado só existe com JS e movimento ligados** (`.inv` vem do
+  ScrollTrigger); em reduce ou sem JS o fecho continua escuro.
+- **Reduce:** o céu fica parado, com os riscos visíveis e a mesma cara da arte.
+- **Sem JS:** o céu é HTML do servidor com animação em CSS; chega completo.
+
+É a **única animação contínua permitida** fora do palco, e só porque é CSS e
+fica atrás dele. A dashboard não recebe o céu.
+
+### Widgets da LP
+
+Botão primário `btn placas` com três placas (face ouro, `#a8904f` e
+`#6f5f36`), canto de 12px; no hover a face sobe 3px e a placa de trás desce.
+Botão secundário `btn o chanfro fio-hover`: contorno e fio que cresce embaixo.
+`.card` e `.stat` têm face com canto de 18px, duas placas que se abrem no hover
+e fio no topo; a `.stat` leva a fenda no canto e o rótulo reserva espaço para
+ela. `.ck li`, abas e o resumo das leituras têm canto e contorno, sem placas;
+`.tag` tem canto de 6px; o `.step` muda só o marcador, um quadrado cortado.
+A palavra “análise” do título da abertura leva a pincelada, dentro de uma
+máscara com folga para não sair cortada. No fecho as placas viram grafite com
+texto ouro. Os espaços de `.stats`, `.grid` e `.card` são de 16px, para as
+placas abertas não encostarem na vizinha.
+
 ### Tipografia da LP
 
 Unbounded (títulos, letreiro, preloader) e Space Grotesk (corpo), variáveis,
@@ -198,10 +292,29 @@ Base UI), aberto pelo nome no rodapé: Operação, Integrações e Configuraçõ
 Permissões continuam sendo contratos do servidor, não consequência de mostrar
 ou esconder links. Não converter ausência de papel em permissão administrativa.
 
-A visão geral abre com título e filtro, faixa compacta de quatro indicadores e
-NPS × latência como região dominante. A faixa usa quatro colunas em telas largas
-e duas em larguras menores. Informação de amostra e incerteza continua próxima
+A visão geral abre com título e filtro, faixa de quatro indicadores e
+NPS × latência como região dominante. A faixa são **quatro cards separados**
+(`.superficie`, canto de 12px, espaço entre eles), em quatro colunas em telas
+largas e duas em larguras menores; o NPS leva o fio dourado. O resumo do
+atendimento e o esqueleto de carregamento usam o mesmo card, sem fio: uma
+linguagem só de indicador. Informação de amostra e incerteza continua próxima
 do NPS, sem transformar ressalva em rodapé invisível.
+
+A dashboard recebe as camadas **contidas**:
+
+- **Canto cortado** em botões (9px; `sm`/`xs` 7px), campos, `select`,
+  `textarea`, gatilhos de abas (7px), badges (6px) e regiões com caixa própria
+  (`.superficie` e `alert`, 12px). `.superficie` já é cortada; o tooltip usa
+  `superficie-flutuante`, e a gaveta móvel da sidebar não leva `.superficie`.
+- **Placas só onde se clica:** o botão `default` tem as placas da LP, menores.
+  `outline` e `secondary` têm canto, contorno e fio no hover; `destructive`, só
+  canto (ouro é ação, não alerta). `ghost`, `link` e botões de ícone não têm
+  canto nem placa: num quadrado de 24 a 36px o corte vira ruído. Card que não é
+  clicável não ganha placa, porque a placa avisa “isso é clicável”.
+- **Fio dourado** no NPS da faixa e no painel `dominante` (`superficie fio`).
+  O `apoio` continua só com a linha no topo, sem caixa.
+- Sobreposições (tooltip, popover, sheet e menus) não mudam. O tema claro usa
+  as mesmas formas com placas derivadas dos tokens do claro.
 
 `Painel` preserva dominante/apoio, erros locais, vazios e aparato metodológico.
 Superfície opaca, borda simples; nenhum ateliê, brilho especular, vidro ou fundo

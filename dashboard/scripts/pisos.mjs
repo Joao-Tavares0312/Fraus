@@ -11,7 +11,7 @@ for (const tema of temas) {
 }
 for (const [classe, token] of [["superficie", "card"], ["superficie-flutuante", "popover"]]) {
   const regra = css.match(new RegExp(`\\.${classe}\\s*\\{([^}]+)\\}`));
-  if (!regra || !regra[1].includes(`background: var(--${token})`) || /opacity\s*:|backdrop-filter\s*:/.test(regra[1])) {
+  if (!regra || !new RegExp(`background(?:-color)?:\\s*var\\(--${token}\\)`).test(regra[1]) || /opacity\s*:|backdrop-filter\s*:/.test(regra[1])) {
     throw new Error(`O piso de ${classe} deixou de ser a superfície opaca --${token}. Atualize o modelo de medição antes de liberar transparência.`);
   }
 }

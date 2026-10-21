@@ -21,7 +21,7 @@ export function Faixa() {
       <div className="trk">
         {PAINEIS.map(({ voz, rotulo, nome, texto }) => (
           <div className="pn" key={nome}>
-            <span className={`tag ${voz}`} data-embaralhar>{rotulo}</span>
+            <span className={`tag chanfro ${voz}`} data-embaralhar>{rotulo}</span>
             <h3 className="big">{nome}</h3>
             <p>{texto}</p>
           </div>

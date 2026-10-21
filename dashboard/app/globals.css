@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./camadas.css";
 
 /* Fraus: matéria grafite, tipografia quadrada e duas vozes de dado.
    Âmbar é dito; azul é medido; ouro é marca, ação e foco. */
@@ -310,17 +311,12 @@
   .rotulo-instrumento { font-family: var(--fonte-sans); font-size: .75rem; line-height: 1.5; color: var(--muted-foreground); }
   .titulo-instrumento { font-family: var(--fonte-sans); font-weight: 500; letter-spacing: -.025em; }
   .filete { border-color: var(--compasso); }
-  .superficie { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  .superficie { background-color: var(--card); border: 1px solid var(--border); }
   .superficie-flutuante { background: var(--popover); border: 1px solid var(--border); border-radius: 12px; }
   .painel-apoio { border-top: 1px solid var(--border); border-radius: 0; }
-  .faixa-indicadores { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: .5rem; }
-  .faixa-indicadores > * { border-bottom: 1px solid var(--border); }
-  .faixa-indicadores > :nth-child(odd) { border-right: 1px solid var(--border); }
-  .faixa-indicadores > :nth-last-child(-n+2) { border-bottom: 0; }
+  .faixa-indicadores { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; }
   @media (min-width: 1200px) {
-    .faixa-indicadores { grid-template-columns: repeat(4,minmax(0,1fr)); padding: .75rem; }
-    .faixa-indicadores > * { border-bottom: 0; border-right: 1px solid var(--border); }
-    .faixa-indicadores > :last-child { border-right: 0; }
+    .faixa-indicadores { grid-template-columns: repeat(4,minmax(0,1fr)); }
   }
 }
 
@@ -334,4 +330,6 @@
 @media print {
   .sem-impressao { display: none !important; }
   .quebra-evitar { break-inside: avoid; }
+  /* os cards da faixa mantem a borda inteira no papel (sem o canto cortado) */
+  .faixa-indicadores > * { border: 1px solid var(--border); break-inside: avoid; clip-path: none; }
 }
