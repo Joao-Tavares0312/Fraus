@@ -14,7 +14,7 @@ export function Limites() {
         <p className="ouro sobretitulo">Contexto, não certeza.</p>
         <h2 id="titulo-limites"><Palavras texto="Conheça também os limites" /></h2>
         <div className="grid">
-          {LIMITES.map(({ titulo, texto }) => <div className="card rv" key={titulo}><h3>{titulo}</h3><p>{texto}</p></div>)}
+          {LIMITES.map(({ titulo, texto }) => <div className="card placas fio rv" key={titulo}><h3>{titulo}</h3><p>{texto}</p></div>)}
         </div>
       </div>
     </section>

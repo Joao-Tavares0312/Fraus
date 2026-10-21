@@ -5,12 +5,25 @@
 
 /* ---------- tokens das placas ---------- */
 @layer camadas {
+  /* Valores do escuro com nome proprio: a LP e sempre escura e os le mesmo
+     quando a dashboard esta no claro. As placas do fecho dourado (.lp.inv)
+     invertem para grafite com texto ouro. */
+  :root {
+    --placa-escuro-2: #a8904f;
+    --placa-escuro-3: #6f5f36;
+    --placa-escuro-card-2: #34302a;
+    --placa-escuro-card-3: #2a2621;
+    --placa-fecho-face: #171819;
+    --placa-fecho-2: #3a3326;
+    --placa-fecho-3: #7a6532;
+  }
+
   :root,
   .dark {
-    --placa-2: #a8904f;
-    --placa-3: #6f5f36;
-    --placa-card-2: #34302a;
-    --placa-card-3: #2a2621;
+    --placa-2: var(--placa-escuro-2);
+    --placa-3: var(--placa-escuro-3);
+    --placa-card-2: var(--placa-escuro-card-2);
+    --placa-card-3: var(--placa-escuro-card-3);
   }
 
   .light {
@@ -37,6 +50,7 @@
   /* fundo em camadas: fio, fenda e os dois tracos do canto compoem numa
      unica declaracao; cada classe so liga a sua variavel */
   .chanfro,
+  .chanfro-marco::before,
   .fio,
   .fenda,
   .placas,
@@ -48,6 +62,7 @@
   }
 
   .chanfro,
+  .chanfro-marco::before,
   .fio,
   .fenda,
   .placas::before,
@@ -66,18 +81,22 @@
   }
 
   /* traco de 1 px que continua a borda na diagonal dos dois cantos */
-  .chanfro { --traco-cor: var(--cor-borda-chanfro, var(--border)); }
+  .chanfro,
+  .chanfro-marco::before { --traco-cor: var(--cor-borda-chanfro, var(--border)); }
   .placas,
   .placas-so-hover { --traco-cor: var(--placa-borda, transparent); }
   .chanfro,
+  .chanfro-marco::before,
   .placas,
   .placas-so-hover {
     --camada-traco-inicio: linear-gradient(135deg, transparent calc(50% - .5px), var(--traco-cor) calc(50% - .5px) calc(50% + 1px), transparent calc(50% + 1px));
     --camada-traco-fim: linear-gradient(-45deg, transparent calc(50% - .5px), var(--traco-cor) calc(50% - .5px) calc(50% + 1px), transparent calc(50% + 1px));
   }
 
-  /* ---------- canto cortado ---------- */
+  /* ---------- canto cortado (.chanfro-marco: no ::before, para marcador
+     que nao e o proprio elemento, como o ponto da linha do tempo) ---------- */
   .chanfro,
+  .chanfro-marco::before,
   .placas::before,
   .placas::after,
   .placas-so-hover::before,
@@ -85,7 +104,8 @@
     clip-path: polygon(var(--chanfro, 12px) 0, 100% 0, 100% calc(100% - var(--chanfro, 12px)), calc(100% - var(--chanfro, 12px)) 100%, 0 100%, 0 var(--chanfro, 12px));
   }
 
-  .chanfro { border-radius: 0; }
+  .chanfro,
+  .chanfro-marco::before { border-radius: 0; }
   /* o clip-path corta anel externo: o foco e desenhado por dentro */
   .chanfro:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
 
@@ -103,9 +123,11 @@
     background-color: transparent;
     background-image: none;
     filter: drop-shadow(var(--placa-desvio) var(--placa-desvio) 0 var(--placa-3));
+    /* sem opacity nem transform: o GSAP da LP le o valor final de .rv no
+       computado, e uma transicao ali faz o botao nascer e ficar invisivel */
     transition:
       filter var(--placa-duracao, 300ms) var(--placa-curva, cubic-bezier(.3, 1.4, .5, 1)),
-      color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, opacity 150ms;
+      color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms;
   }
   .placas-so-hover { --placa-desvio: 0px; }
   .placas:is(:hover, :focus-visible),

@@ -13,9 +13,9 @@ export function Sinais({ conjunto }: { conjunto: ConjuntoLeituras | Falta }) {
     <section id="sinais" className="cena" aria-labelledby="titulo-sinais">
       <div className="blk">
         <h2 id="titulo-sinais"><Palavras texto="Sinais que você pode inspecionar." /></h2>
-        <span className="tag m rv" data-embaralhar>Leituras do sistema · medido</span>
+        <span className="tag chanfro m rv" data-embaralhar>Leituras do sistema · medido</span>
         {CARTOES.map(({ titulo, texto }) => (
-          <div className="card rv" key={titulo}><h3>{titulo}</h3><p>{texto}</p></div>
+          <div className="card placas fio rv" key={titulo}><h3>{titulo}</h3><p>{texto}</p></div>
         ))}
         <div className="ruler" aria-hidden="true"><i data-regua /></div>
         <p className="nota-lp">Inferência em CPU. Sem LLM em runtime.</p>

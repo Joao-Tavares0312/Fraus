@@ -15,10 +15,10 @@ export function Analista() {
         <div className="steps">
           <span className="stepline" aria-hidden="true" data-passos />
           <ol aria-label="Percurso de investigação na ferramenta">
-            {PASSOS.map(({ titulo, texto }) => <li className="step" key={titulo}><h3>{titulo}</h3><p>{texto}</p></li>)}
+            {PASSOS.map(({ titulo, texto }) => <li className="step chanfro-marco" key={titulo}><h3>{titulo}</h3><p>{texto}</p></li>)}
           </ol>
         </div>
-        <Link className="btn mag rv" href="/dashboard" prefetch={false} data-embaralhar>Abrir a dashboard</Link>
+        <Link className="btn placas mag rv" href="/dashboard" prefetch={false} data-embaralhar>Abrir a dashboard</Link>
       </div>
     </section>
   );

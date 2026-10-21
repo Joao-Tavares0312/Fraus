@@ -9,7 +9,7 @@ export function Topo() {
         <a href="#como-funciona" data-embaralhar>Como funciona</a>
         <a href="#na-pratica" data-embaralhar>Na prática</a>
         <a href="#limites" data-embaralhar>Limites</a>
-        <Link className="btn o mag entrar-lp" href="/entrar" prefetch={false} data-embaralhar>Entrar</Link>
+        <Link className="btn o chanfro fio-hover mag entrar-lp" href="/entrar" prefetch={false} data-embaralhar>Entrar</Link>
       </nav>
     </header>
   );

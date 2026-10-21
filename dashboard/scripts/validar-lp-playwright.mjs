@@ -85,6 +85,27 @@ try {
     exigir("preloader: entrada", await pagina.locator(".lp-pre").isVisible(), "preloader nao tocou na primeira visita");
     await pagina.waitForTimeout(3500);
     exigir("preloader: saida", !(await pagina.locator(".lp-pre").isVisible()), "preloader preso");
+    // Placas sao pseudo-elementos: o embaralhar reescreve o texto e elas ficam.
+    {
+      const botao = pagina.locator(".lp .btn.placas").first();
+      const original = (await botao.textContent()) ?? "";
+      await botao.hover();
+      await pagina.waitForTimeout(1000);
+      const depois = await botao.evaluate((el) => ({
+        texto: el.textContent,
+        rotulo: el.getAttribute("aria-label"),
+        face: getComputedStyle(el, "::before").content,
+        filtro: getComputedStyle(el).filter,
+        opacidade: getComputedStyle(el).opacity,
+      }));
+      exigir("botao: texto apos embaralhar", depois.texto === original, JSON.stringify(depois.texto));
+      exigir("botao: placas", depois.face !== "none" && depois.filtro.includes("drop-shadow"), JSON.stringify(depois));
+      exigir("botao: nome acessivel", depois.rotulo === original, JSON.stringify(depois.rotulo));
+      // Transicao de opacity nas placas fazia o GSAP gravar 0 como valor final do .rv.
+      exigir("botao: visivel apos a entrada", depois.opacidade === "1", depois.opacidade);
+      await capturar(pagina, "lp-hero");
+      await pagina.mouse.move(0, 0);
+    }
     exigir("contadores", JSON.stringify(await contadores(pagina)) === JSON.stringify(FATOS), JSON.stringify(await contadores(pagina)));
     exigir("pin", await pagina.locator(".pin-spacer").count() === 1, "faixa nao foi fixada");
     const estado = await pagina.evaluate(() => ({ fr: document.querySelector(".lp")?.dataset.frEstado, backend: document.querySelector(".lp-gl")?.dataset.frBackend }));
