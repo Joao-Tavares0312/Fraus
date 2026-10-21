@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./camadas.css";
 
 /* Fraus: matéria grafite, tipografia quadrada e duas vozes de dado.
    Âmbar é dito; azul é medido; ouro é marca, ação e foco. */

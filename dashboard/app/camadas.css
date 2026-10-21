@@ -1,0 +1,177 @@
+/* Camadas do FR: canto cortado, placas empilhadas, fio, fenda e pincelada.
+ * Fonte unica do poligono do canto e das cores das placas. A API publica e
+ * so de variaveis (--chanfro, --placa-*, --cor-*): as classes nunca as
+ * definem, so leem com fallback, para que utilitario e estilo inline vencam. */
+
+/* ---------- tokens das placas ---------- */
+@layer camadas {
+  :root,
+  .dark {
+    --placa-2: #a8904f;
+    --placa-3: #6f5f36;
+    --placa-card-2: #34302a;
+    --placa-card-3: #2a2621;
+  }
+
+  .light {
+    --placa-2: color-mix(in oklch, var(--primary), var(--foreground) 25%);
+    --placa-3: color-mix(in oklch, var(--primary), var(--foreground) 45%);
+    --placa-card-2: color-mix(in oklch, var(--card), var(--foreground) 8%);
+    --placa-card-3: color-mix(in oklch, var(--card), var(--foreground) 14%);
+  }
+}
+
+/* Estrutura que utilitario pode trocar (ex.: `absolute`): fica abaixo dos
+ * utilitarios, na camada de componentes do Tailwind. */
+@layer components {
+  .placas,
+  .placas-so-hover,
+  .fio-hover,
+  .pincel { position: relative; }
+  .pincel { white-space: nowrap; }
+}
+
+/* Forma: acima dos utilitarios. `rounded-*`, `bg-*`, `outline-none` e o
+ * `background` de .superficie nao apagam o canto, as camadas nem o foco. */
+@layer camadas {
+  /* fundo em camadas: fio, fenda e os dois tracos do canto compoem numa
+     unica declaracao; cada classe so liga a sua variavel */
+  .chanfro,
+  .fio,
+  .fenda,
+  .placas,
+  .placas-so-hover {
+    --camada-fio: none;
+    --camada-fenda: none;
+    --camada-traco-inicio: none;
+    --camada-traco-fim: none;
+  }
+
+  .chanfro,
+  .fio,
+  .fenda,
+  .placas::before,
+  .placas-so-hover::before {
+    background-image: var(--camada-fio), var(--camada-fenda), var(--camada-traco-inicio), var(--camada-traco-fim);
+    background-size: 40% 2px, 24px 24px, var(--chanfro, 12px) var(--chanfro, 12px), var(--chanfro, 12px) var(--chanfro, 12px);
+    background-position: right top, right 14px top 14px, left top, right bottom;
+    background-origin: padding-box, padding-box, border-box, border-box;
+    background-repeat: no-repeat;
+  }
+
+  .fio { --camada-fio: linear-gradient(90deg, transparent, var(--cor-fio, var(--primary))); }
+
+  .fenda {
+    --camada-fenda: linear-gradient(135deg, transparent 45%, var(--cor-fenda, color-mix(in oklch, var(--primary) 50%, transparent)) 45% 55%, transparent 55%);
+  }
+
+  /* traco de 1 px que continua a borda na diagonal dos dois cantos */
+  .chanfro { --traco-cor: var(--cor-borda-chanfro, var(--border)); }
+  .placas,
+  .placas-so-hover { --traco-cor: var(--placa-borda, transparent); }
+  .chanfro,
+  .placas,
+  .placas-so-hover {
+    --camada-traco-inicio: linear-gradient(135deg, transparent calc(50% - .5px), var(--traco-cor) calc(50% - .5px) calc(50% + 1px), transparent calc(50% + 1px));
+    --camada-traco-fim: linear-gradient(-45deg, transparent calc(50% - .5px), var(--traco-cor) calc(50% - .5px) calc(50% + 1px), transparent calc(50% + 1px));
+  }
+
+  /* ---------- canto cortado ---------- */
+  .chanfro,
+  .placas::before,
+  .placas::after,
+  .placas-so-hover::before,
+  .placas-so-hover::after {
+    clip-path: polygon(var(--chanfro, 12px) 0, 100% 0, 100% calc(100% - var(--chanfro, 12px)), calc(100% - var(--chanfro, 12px)) 100%, 0 100%, 0 var(--chanfro, 12px));
+  }
+
+  .chanfro { border-radius: 0; }
+  /* o clip-path corta anel externo: o foco e desenhado por dentro */
+  .chanfro:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+  /* ---------- placas: face no ::before, placa 2 no ::after, placa 3 e a
+     sombra do conjunto. Nenhum filho: data-embaralhar reescreve o texto. ---------- */
+  .placas,
+  .placas-so-hover {
+    --placa-desvio: calc(var(--placa-fundo, 6px) - var(--placa-repouso, 3px));
+    isolation: isolate;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: none;
+    filter: drop-shadow(var(--placa-desvio) var(--placa-desvio) 0 var(--placa-3));
+    transition:
+      filter var(--placa-duracao, 300ms) var(--placa-curva, cubic-bezier(.3, 1.4, .5, 1)),
+      color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, opacity 150ms;
+  }
+  .placas-so-hover { --placa-desvio: 0px; }
+  .placas:is(:hover, :focus-visible),
+  .placas-so-hover:is(:hover, :focus-visible) {
+    --placa-desvio: calc(var(--placa-abre, 7px) - var(--placa-afasta, var(--placa-repouso, 3px)));
+  }
+
+  .placas::before,
+  .placas::after,
+  .placas-so-hover::before,
+  .placas-so-hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: transform var(--placa-duracao, 300ms) var(--placa-curva, cubic-bezier(.3, 1.4, .5, 1));
+  }
+  .placas::before,
+  .placas-so-hover::before {
+    z-index: -1;
+    box-sizing: border-box;
+    border: 1px solid var(--placa-borda, transparent);
+    background-color: var(--placa-face, var(--primary));
+  }
+  .placas::after,
+  .placas-so-hover::after {
+    z-index: -2;
+    background: var(--placa-2);
+    transform: translate(var(--placa-repouso, 3px), var(--placa-repouso, 3px));
+  }
+  .placas-so-hover::after { transform: none; }
+  .placas:is(:hover, :focus-visible)::before,
+  .placas-so-hover:is(:hover, :focus-visible)::before {
+    transform: translate(var(--placa-sobe, -3px), var(--placa-sobe, -3px));
+  }
+  .placas:is(:hover, :focus-visible)::after,
+  .placas-so-hover:is(:hover, :focus-visible)::after {
+    transform: translate(var(--placa-afasta, var(--placa-repouso, 3px)), var(--placa-afasta, var(--placa-repouso, 3px)));
+  }
+  /* sem clip-path no elemento: o anel normal aparece, afastado da face que sobe */
+  .placas:focus-visible,
+  .placas-so-hover:focus-visible { outline: 2px solid var(--ring); outline-offset: 6px; }
+
+  /* ---------- sublinhado que cresce (usa ::after: nao combinar com placas) ---------- */
+  .fio-hover::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 2px;
+    background: var(--cor-fio, var(--primary));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 300ms var(--ease-fluid, ease);
+    pointer-events: none;
+  }
+  .fio-hover:is(:hover, :focus-visible)::after { transform: scaleX(1); }
+
+  /* ---------- pincelada da palavra-chave ---------- */
+  .pincel {
+    z-index: 0;
+    padding: 0 .1em;
+    color: var(--pincel-texto, var(--primary-foreground));
+  }
+  .pincel::before {
+    content: "";
+    position: absolute;
+    inset: .08em -.12em .02em;
+    z-index: -1;
+    border-radius: 2px;
+    background: var(--pincel-fundo, var(--primary));
+    transform: skewX(-24deg);
+  }
+}
