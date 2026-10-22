@@ -126,13 +126,18 @@ classes.
 | Texto secundário | `#B3B9C0` | `#565D65` |
 | Ação e foco | `#D6BA72` | `#735713` |
 | Dito | `#EDB466` | `#8A4B00` |
-| Medido | `#8DC8F5` | `#165E9D` |
+| Medido — marcas gráficas | `#8DC8F5` | `#165E9D` |
+| Texto de medidas | `#F3F4F5` | `#202326` |
 | Borda | `#454B52` | `#D5D9DE` |
 
-**Âmbar é dito; azul é medido.** Fala, texto e emoji pertencem ao primeiro.
-Probabilidade, nota, tempo e tendência pertencem ao segundo. Uma régua entre os
-dois só aparece quando existe essa divisão real; NPS × latência são duas medidas,
-não uma fala confrontada com uma medida.
+**Âmbar é dito; azul identifica as marcas gráficas do medido.** Fala, texto e
+emoji pertencem ao primeiro; probabilidade, nota, tempo e tendência, ao segundo.
+Por decisão de 22/10/2026, os textos antes azuis usam branco mineral no escuro e
+grafite no claro (`--medido-texto` acompanha `--foreground`). Na LP, sempre escura,
+o token acompanha `--texto`. Números, títulos e legendas ficam neutros; séries,
+bordas e marcadores continuam com suas cores semânticas.
+Uma régua entre dito e medido só aparece quando existe essa divisão real;
+NPS × latência são duas medidas, não uma fala confrontada com uma medida.
 
 **Ouro não é dado.** Pertence a marca, ação, foco e seleção. Não colore série,
 barra, categoria ou valor de indicador para parecer bom resultado.
@@ -318,8 +323,29 @@ A dashboard recebe as camadas **contidas**:
 
 `Painel` preserva dominante/apoio, erros locais, vazios e aparato metodológico.
 Superfície opaca, borda simples; nenhum ateliê, brilho especular, vidro ou fundo
-animado interfere nos gráficos. `EstadoVazio` nomeia o que falta e a etapa ou o
-endpoint que pode resolver.
+animado interfere nos gráficos. `EstadoVazio` nomeia o que falta e o próximo
+passo; o endpoint de origem fica em **Método e ressalvas**, não na face do painel.
+
+### Leitura progressiva — 22/10/2026
+
+- **Analisar:** mantém “arrastar e pronto”. Depois da leitura, a confirmação de
+  gravação e o resumo vêm primeiro; a conversa fica legível sem marcações.
+  Probabilidades, sinais por mensagem e contribuições só aparecem quando pedidos.
+  Apenas o primeiro resumo do lote é dominante; os demais são apoio.
+- **Vazios confirmados:** sem histórico disponível, orientar ao primeiro arquivo
+  e, com permissão, à integração. Com histórico fora do filtro, oferecer limpar
+  período. Falha de leitura da API não pode virar convite para importar.
+- **Período:** datas manuais e atalhos de 7 dias, 30 dias e todo o período
+  compartilham `de`/`ate` na URL. O fim dos atalhos é o último dia com dados,
+  explicitado junto aos controles; não é a data de hoje.
+- **Apoio legível:** descrições de indicadores, períodos, vazios, método e drivers
+  usam 14px (`text-sm`) com entrelinha confortável. Eixos e outras marcas densas
+  preservam a escala própria, sem aumentar toda a interface indiscriminadamente.
+- **Honestidade não recolhe:** estimativa, sem sinal, limitações do tempo
+  sintético e avisos sobre o arquivo permanecem visíveis. Endpoints, definições
+  técnicas e escala logit entram no aparato existente, sem um segundo sistema
+  de notas explicativas.
+
 
 ### Números, ausência e proveniência
 

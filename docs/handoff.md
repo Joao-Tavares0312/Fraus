@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 19/10/2026 (Analisar simples, menu da conta e Tars)
+# Handoff — Fraus, atualizado em 22/10/2026 (leitura progressiva da dashboard)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -23,6 +23,37 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 + Recharts no front (`dashboard/`).
 
 ---
+
+## Atualização local — UI da dashboard, 22/10/2026
+
+Entrega de UI, **sem deploy de produção nesta sessão**. Mantidos a sidebar, os quatro indicadores,
+o gráfico NPS × latência e o fluxo “arrastar e pronto” de 19/10.
+
+- `Analisador`: confirmação de gravação e resumo antes da conversa; sinais,
+  probabilidades e contribuições recolhidos. O arquivo permanece substituível sem
+  apagar a leitura enquanto não houver nova seleção.
+- `OrientacaoSemAtendimentos`: primeiro arquivo no banco sem histórico; integração
+  condicionada à permissão. Com histórico fora do recorte, “Limpar período”.
+  Erros da API continuam isolados e não ativam a orientação de banco vazio.
+- `FiltroPeriodo`: 7/30 dias e todo o período, terminando no **último dia com
+  dados**, nunca implicitamente hoje. Preserva outros parâmetros da URL.
+- Endpoints e definições técnicas entram no aparato existente. Declarações de
+  estimativa, ausência de sinal, limitações e avisos sobre o arquivo ficam visíveis.
+  Texto de apoio aumentado para 14px; cores neutras de texto de 22/10 preservadas.
+
+Smoke em navegador com banco temporário e **motor dublê explícito**: banco vazio,
+histórico de oito conversas sintéticas, atalhos 7/30/todo (4/6/8 registros) na virada
+do ano, navegação com datas, filtro vazio e limpeza, API parada sem falso
+onboarding, análise TXT sem horário e expansão sem nova chamada de inferência.
+Temas claro/escuro e larguras 1440/390px sem rolagem horizontal.
+
+**Limite da prova:** não houve inferência nem gravação com modelo real. O fusor
+local é incompatível com a escala `log1p`; não contornar a recusa nem promover
+outro artefato para validar UI. Drivers com dublê devolvem 503 explicitamente.
+
+Verificação automatizada: 376 testes da dashboard passaram; geração de tipos
+do Next, `tsc --noEmit` e `npx eslint --ignore-pattern '.next*/**'` concluíram
+sem erro. O lint excluiu os caches gerados da prévia, não arquivos-fonte.
 
 ## 2.0000 Analisar simples, menu da conta e Tars — 19/10/2026
 
@@ -680,8 +711,10 @@ a contagem de rejeitadas esconde exatamente a linha que precisa de conserto.
 
 ### 3.6 Estado vazio nomeia o próximo passo
 
-Nada de "sem dados". O estado vazio diz o endpoint ou o notebook que preenche
-aquilo. Ver `components/EstadoVazio.tsx`.
+Nada de "sem dados" sem orientação. A face nomeia o que falta e o próximo passo;
+o endpoint de origem fica em **Método e ressalvas**. Banco sem histórico, recorte
+sem resultados e falha da API são estados diferentes. Ver
+`components/EstadoVazio.tsx` e `components/OrientacaoSemAtendimentos.tsx`.
 
 ### 3.7 Ressalva repetida vira ruído
 

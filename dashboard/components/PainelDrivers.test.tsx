@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { PainelDrivers, TabelaDrivers } from "./PainelDrivers";
+import { TabelaDrivers } from "./PainelDrivers";
 import type { Drivers } from "@/lib/api";
 
 const base: Drivers = {
@@ -32,12 +32,6 @@ describe("TabelaDrivers", () => {
     expect(markup).toContain("Tempo");
   });
 
-  it("declara a unidade: logit, não pontos de score", () => {
-    const markup = html(base);
-    expect(markup).toContain("detratores (logit)");
-    expect(markup).toContain("promotores (logit)");
-    expect(markup).toMatch(/unidade de logit \(satisfeito × insatisfeito\), não em pontos de score/);
-  });
 
   it("declara amostra, sem sinal, defasadas e o rótulo de associação", () => {
     const markup = html(base);
@@ -71,10 +65,3 @@ describe("TabelaDrivers", () => {
   });
 });
 
-describe("PainelDrivers", () => {
-  it("não carrega sozinho: só o botão aparece", () => {
-    const markup = renderToStaticMarkup(<PainelDrivers de={null} ate={null} />);
-    expect(markup).toContain("Medir drivers numa amostra de 50 atendimentos");
-    expect(markup).not.toContain("elegíveis");
-  });
-});

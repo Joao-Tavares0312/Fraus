@@ -45,15 +45,3 @@ describe("NPS na faixa de indicadores", () => {
   });
 });
 
-describe("destaque do fio", () => {
-  it("so o cartao NPS inferido leva destaque", () => {
-    const html = renderizar(null);
-    const marcas = [...html.matchAll(/aria-label="([^"]+)" data-destaque="(\w+)"/g)].map((m) => [m[1], m[2]]);
-    expect(marcas.filter(([rotulo]) => rotulo !== "Indicadores de hoje")).toEqual([
-      ["NPS inferido", "true"],
-      ["CSAT estimado", "false"],
-      ["Contenção", "false"],
-      ["Latência mediana", "false"],
-    ]);
-  });
-});

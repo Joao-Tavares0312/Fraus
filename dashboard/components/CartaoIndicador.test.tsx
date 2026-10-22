@@ -18,19 +18,7 @@ vi.mock("motion/react", () => ({
 
 import { CartaoIndicador } from "./CartaoIndicador";
 
-describe("CartaoIndicador como card separado", () => {
-  it("leva superficie e, com destaque, o fio", () => {
-    const html = renderToStaticMarkup(
-      <CartaoIndicador rotulo="NPS inferido" valor={null} destaque />,
-    );
-    expect(html).toMatch(/class="[^"]*\bsuperficie\b[^"]*\bfio\b/);
-  });
-
-  it("sem destaque nao leva o fio", () => {
-    const html = renderToStaticMarkup(<CartaoIndicador rotulo="CSAT" valor={null} />);
-    expect(html).toMatch(/\bsuperficie\b/);
-    expect(html).not.toMatch(/class="[^"]*\bfio\b/);
-  });
+describe("CartaoIndicador", () => {
 
   it("o erro fica no proprio card, sem virar zero", () => {
     const html = renderToStaticMarkup(

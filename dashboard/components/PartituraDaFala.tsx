@@ -252,7 +252,7 @@ export function PartituraDaFala({
             nome="ironia"
             valor={ironia}
             forma="tracejada"
-            cor="var(--medido-texto)"
+            cor="var(--medido)"
             corte
             titulo="cabeça pouco confiável"
           />

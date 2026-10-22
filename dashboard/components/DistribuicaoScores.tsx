@@ -140,9 +140,8 @@ export function DistribuicaoScores({
 
       <aside className="flex shrink-0 flex-col justify-center gap-1.5 border-t border-border px-5 py-4 lg:w-56 lg:border-t-0 lg:border-l">
         <p className="rotulo-instrumento">Fora da escala</p>
-        {/* A CONTAGEM de ausencias e um numero, entao vai no display, mas na
-            TINTA (nao no azul do medido): ela conta o que NAO foi medido, e o
-            anel oco + a palavra ao lado dizem isso sem depender da cor. */}
+        {/* A contagem de ausencias e um numero, mas nao e satisfacao medida.
+            O anel oco e o rotulo a mantem fora da escala, sem depender da cor. */}
         <p className="flex items-end gap-2.5">
           <ValorNumerico valor={String(semSinal)}
           rotulo="atendimentos sem sinal, fora da escala" cor="tinta" />

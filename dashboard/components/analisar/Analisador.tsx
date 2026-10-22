@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { anunciarAtualizacao } from "@/lib/atualizacao";
 import { FileText, RefreshCw, Upload } from "lucide-react";
@@ -161,7 +161,37 @@ export function Analisador() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
+      {/* Mantido montado mesmo quando o resultado recolhe a área de envio. */}
+      <input
+        ref={entrada}
+        type="file"
+        accept={ACEITOS}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        disabled={ocupado}
+        onChange={aoEscolher}
+        data-testid="entrada-arquivo"
+      />
+      {resultado ? (
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-linha pb-3">
+          <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
+            <FileText aria-hidden className="size-4 shrink-0" />
+            <span className="break-all">{arquivo}</span>
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => entrada.current?.click()}
+            disabled={ocupado}
+          >
+            <IconeDeAcao acao="arquivo" />
+            Trocar arquivo
+          </Button>
+        </div>
+      ) : (
       <Painel
         titulo="Arquivo do atendimento"
         legenda="As conversas analisadas entram nos indicadores, nos atendimentos e no grafo. Dados pessoais são censurados antes da análise, e reenviar a mesma conversa não duplica nada."
@@ -189,19 +219,6 @@ export function Analisador() {
             }}
             className="group flex flex-col items-center gap-2 rounded-md border border-dashed border-input px-6 py-10 text-center transition-colors duration-200 ease-fluid data-[arrastando]:border-primary data-[arrastando]:bg-primary/5"
           >
-            {/* O controle de verdade é o botão abaixo. Este input só existe para
-                abrir o seletor do sistema: fora da ordem de tabulação e da
-                árvore de acessibilidade. */}
-            <input
-              ref={entrada}
-              type="file"
-              accept={ACEITOS}
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden
-              onChange={aoEscolher}
-              data-testid="entrada-arquivo"
-            />
             <Upload
               aria-hidden
               className="size-5 text-muted-foreground transition-colors duration-200 group-data-[arrastando]:text-primary"
@@ -236,12 +253,13 @@ export function Analisador() {
           ) : null}
         </div>
       </Painel>
+      )}
 
       {resultado?.gravacao ? (
         <Alert role="status">
-          <AlertTitle>{resultado.gravacao.salvas} conversa(s) salva(s)</AlertTitle>
+          <AlertTitle>{resultado.gravacao.salvas} atendimento(s) salvo(s) nos indicadores</AlertTitle>
           <AlertDescription>
-            <p>Os indicadores e o grafo já consideram este arquivo.</p>
+            <p>Os indicadores e o grafo já consideram os atendimentos analisados.</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {[["/dashboard", "Ver indicadores"], ["/dashboard/atendimentos", "Ver atendimentos"], ["/dashboard/grafo", "Ver grafo"]].map(([rota, rotulo]) => <Link key={rota} className="text-sm underline underline-offset-4" href={`${rota}?de=${resultado.gravacao!.de}&ate=${resultado.gravacao!.ate}`}>{rotulo}</Link>)}
             </div>
@@ -249,11 +267,13 @@ export function Analisador() {
         </Alert>
       ) : resultado ? (
         <Alert role="status">
-          <AlertTitle>Analisado, mas não salvo</AlertTitle>
+          <AlertTitle>
+            {resultado.tem_tempo ? "Gravação não confirmada" : "Análise concluída sem salvar nos indicadores"}
+          </AlertTitle>
           <AlertDescription>
-            O arquivo não traz o horário das mensagens. Sem horário não há
-            nota, então a conversa não entra nos indicadores — abaixo está a
-            leitura por mensagem.
+            {resultado.tem_tempo
+              ? "A análise foi concluída, mas a resposta não confirmou a gravação. Não é possível afirmar que estes atendimentos já entraram nos indicadores."
+              : "O arquivo não traz o horário das mensagens. Sem horário não há nota nem gravação nos indicadores; a leitura por mensagem está disponível abaixo."}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -312,15 +332,12 @@ export function Analisador() {
           ocupado={ocupado}
           aoAjustar={ajustar}
           aoConfirmar={(mapeamento, ordem) => confirmar(mapeamento, ordem)}
-          aoCancelar={() => {
-            setPrevia(null);
-            entrada.current?.click();
-          }}
+          aoCancelar={() => entrada.current?.click()}
         />
       ) : null}
 
       {resultado && mapeada && !previa ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           As colunas foram descobertas pelo nome e pelo conteúdo.{" "}
           <button
             type="button"
@@ -340,46 +357,37 @@ export function Analisador() {
 
 function Resultado({ resultado }: { resultado: ResultadoAnalise }) {
   const cortou = resultado.conversas_no_arquivo > resultado.conversas_analisadas;
+  const titulo = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    titulo.current?.focus();
+  }, [resultado]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Como o arquivo foi ENTENDIDO vem antes de tudo. Uma análise cuja
-          procedência não aparece é número sem lastro: o mesmo CSV pode ser
-          lido como formato do Fraus ou como export da Totalk, e as duas
-          leituras inferem coisas diferentes. */}
-      <Alert>
-        <AlertTitle>Lido como {resultado.formato}</AlertTitle>
-        <AlertDescription>
-          {!resultado.tem_tempo ? (
-            <p className="mb-1 text-warning-rich-text">
-              Sem nota para a conversa — o arquivo não traz horário.
-            </p>
-          ) : null}
-          {resultado.avisos.length > 0 ? (
-            <ul className="flex flex-col gap-1">
-              {resultado.avisos.map((aviso) => (
-                <li key={aviso}>{aviso}</li>
-              ))}
-            </ul>
-          ) : (
-            "Nada precisou ser inferido na leitura."
-          )}
-        </AlertDescription>
-      </Alert>
+    <div className="flex min-w-0 flex-col gap-4">
+      <header className="flex flex-col gap-1">
+        <h2 ref={titulo} tabIndex={-1} className="text-lg font-medium text-foreground">
+          Resultado da análise
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          <span className="num">{resultado.conversas_analisadas}</span> de{" "}
+          <span className="num">{resultado.conversas_no_arquivo}</span>{" "}
+          atendimento(s) analisado(s).
+        </p>
+      </header>
 
       {/* O que ficou de FORA vem antes do resultado, na mesma linha do que a
           importação já faz: silenciar o corte faria o operador achar que
           analisou o arquivo inteiro. */}
       {cortou ? (
         <Alert>
-          <AlertTitle>
-            <span className="num">{resultado.conversas_analisadas}</span> de{" "}
-            <span className="num">{resultado.conversas_no_arquivo}</span>{" "}
-            conversas analisadas
-          </AlertTitle>
+          <AlertTitle>Análise parcial do arquivo</AlertTitle>
           <AlertDescription>
-            Esta tela examina um atendimento por vez e para no limite do
-            servidor. Para o arquivo inteiro, use a importação em Integrações.
+            Foram analisados {resultado.conversas_analisadas} de{" "}
+            {resultado.conversas_no_arquivo} atendimentos. Cada análise aceita
+            até 10 atendimentos e 40 mensagens do cliente, preservando
+            atendimentos inteiros. Divida o restante em arquivos menores para
+            analisar o que ficou de fora.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -393,22 +401,40 @@ function Resultado({ resultado }: { resultado: ResultadoAnalise }) {
           <AlertDescription>
             <ul className="mt-1 flex flex-col gap-0.5">
               {resultado.rejeitadas.map((linha) => (
-                <li key={linha.numero_linha} className="text-xs">
+                <li key={linha.numero_linha} className="text-sm break-words">
                   <span className="num">linha {linha.numero_linha}</span>:{" "}
                   {linha.motivo}
                 </li>
               ))}
             </ul>
+            {resultado.rejeitadas.length < resultado.total_rejeitadas ? (
+              <p className="mt-2">
+                Os motivos exibidos cobrem apenas parte das linhas rejeitadas.
+              </p>
+            ) : null}
           </AlertDescription>
         </Alert>
       ) : null}
 
-      {resultado.analises.map((analise) => (
+      {resultado.analises.map((analise, indice) => (
         <Analise
           key={analise.conversa.id}
           analise={analise}
           referencia={resultado.referencia_conversas}
           temTempo={resultado.tem_tempo}
+          dominante={indice === 0}
+          leitura={indice === 0 ? (
+            <Alert>
+              <AlertTitle>Lido como {resultado.formato}</AlertTitle>
+              <AlertDescription>
+                {resultado.avisos.length > 0 ? (
+                  <ul className="flex flex-col gap-1">
+                    {resultado.avisos.map((aviso) => <li key={aviso}>{aviso}</li>)}
+                  </ul>
+                ) : "Nada precisou ser inferido na leitura."}
+              </AlertDescription>
+            </Alert>
+          ) : null}
         />
       ))}
     </div>
@@ -418,8 +444,8 @@ function Resultado({ resultado }: { resultado: ResultadoAnalise }) {
 function Medida({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <dt className="text-xs text-muted-foreground">{rotulo}</dt>
-      <dd className="num text-base leading-none text-foreground">{valor}</dd>
+      <dt className="text-sm text-muted-foreground">{rotulo}</dt>
+      <dd className="num text-base leading-snug break-words text-foreground">{valor}</dd>
     </div>
   );
 }
@@ -428,16 +454,22 @@ function Analise({
   analise,
   referencia,
   temTempo,
+  dominante,
+  leitura,
 }: {
   analise: ConversaAnalisada;
   referencia: number;
   temTempo: boolean;
+  dominante: boolean;
+  leitura: ReactNode;
 }) {
   // Duas causas MUITO diferentes para não haver nota, e a tela precisa
   // distinguir: "o cliente não falou" é um fato sobre o atendimento; "o
   // arquivo não tem horário" é um limite do que foi enviado. Dizer a mesma
   // frase nos dois casos mandaria procurar problema no lugar errado.
   const [tudoAberto, setTudoAberto] = useState(false);
+  const [detalhesDaAnalise, setDetalhesDaAnalise] = useState(false);
+  const transcricaoId = useId();
   const semNota = analise.score === null;
   // SEM HORARIO, o servidor fabrica `inicio + 1 s por mensagem` so para a ordem
   // existir e o modelo canonico aceitar a conversa -- e anula a nota. Os
@@ -454,15 +486,17 @@ function Analise({
       : "sem fala do cliente";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4 break-words">
       <Painel
         titulo={`Resultado — ${analise.conversa.id}`}
+        nivel={dominante ? "dominante" : "apoio"}
+        className="[&_h2]:min-w-0 [&_h2]:break-all"
         legenda="A nota sai do fusor, que aprendeu com 39 medidas das sete famílias do vetor — texto, emoji, tempo, emoção, léxico, estilo e incongruência. Emoção aparece na transcrição abaixo e também entra nessa conta; a ironia aparece junto, mas é leitura por mensagem — desde 04/09/2026 não pesa mais na nota."
       >
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-4">
+        <dl className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-1.5">
             <dt className="rotulo-instrumento">
-              Nota inferida <span className="text-foreground">· estimativa</span>
+              Nota estimada
             </dt>
             <dd className="flex flex-col items-start gap-1.5">
               {/* A nota e do SERVIDOR; nula = display APAGADO + o motivo por
@@ -480,9 +514,9 @@ function Analise({
             </dd>
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <dt className="text-xs text-muted-foreground">Desfecho</dt>
+            <dt className="text-sm text-muted-foreground">Desfecho</dt>
             <dd
-              className="text-base leading-none text-foreground"
+              className="text-base leading-snug text-foreground"
               title={EXPLICACAO_DESFECHO[analise.desfecho]}
             >
               {ROTULO_DESFECHO[analise.desfecho]}
@@ -492,6 +526,12 @@ function Analise({
             rotulo="Mensagens"
             valor={`${analise.qtd_mensagens} (${analise.qtd_cliente} do cliente)`}
           />
+        </dl>
+        <details className="mt-5 border-t border-linha pt-3">
+          <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+            Dados do atendimento
+          </summary>
+          <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Medida
             rotulo="Duração"
             valor={temTempo ? formatarSegundos(analise.duracao_s) : SEM_HORARIO}
@@ -521,95 +561,83 @@ function Analise({
             }
           />
           <Medida rotulo="Canal" valor={analise.conversa.canal} />
-        </dl>
+          </dl>
+        </details>
       </Painel>
+      {leitura}
+
 
       <Painel
-        titulo="Contribuições das features nesta conversa"
-        legenda="Com sinal, ordenadas por magnitude. Isto é `contribuicoes` — o que pesou NESTA conversa —, não `importancias`, que é o peso global do modelo."
-        semPadding
-      >
-        {temTempo ? (
-          <PainelContribuicoes
-            contribuicoes={analise.contribuicoes}
-            sinaisForaDoScore={analise.sinais_fora_do_score}
-            totalDeFeatures={Object.keys(analise.importancias).length}
-            motivoSemSinal={analise.motivo_sem_sinal}
-          />
-        ) : (
-          // O servidor anula a nota mas ainda manda `contribuicoes`, calculadas
-          // sobre o relogio fabricado. Desenha-las seria decompor uma nota que
-          // nao existe -- e com as features de tempo lidas como "respondeu em
-          // 1 s", que e exatamente o motivo de a nota ter sido anulada.
-          <EstadoVazio
-            className="m-5"
-            titulo="Sem contribuições para esta conversa"
-            explicacao="O arquivo não traz horário. Sem horário não há latência, a latência é feature do fusor, e por isso esta conversa não recebe nota — então não há nota para decompor. A leitura por mensagem, logo abaixo, não depende de tempo e continua valendo."
-            etapa="enviar o arquivo com uma coluna de data e hora por mensagem"
-          />
-        )}
-      </Painel>
-
-      <Painel
-        titulo="A conversa, palavra a palavra"
+        titulo="Conversa"
         legenda="O grifo é medido por oclusão: apaga-se a palavra e pergunta-se de novo ao modelo. Verde empurrou a leitura para satisfeito, vermelho puxou para insatisfeito, e a força da cor é o tamanho do efeito. Ressalva do método: apagar uma palavra de dentro de uma expressão fixa deixa um fragmento que ninguém escreveria — o peso é verdadeiro sobre o que o modelo faz, e não deve ser lido como “esta palavra significa insatisfação”. Só a fala do cliente recebe peso: o classificador foi treinado em texto de cliente, e pontuar o roteiro do bot seria número sem lastro. Abrindo os sinais de uma fala aparecem as três probabilidades de satisfação e as oito emoções. Duas ressalvas valem para todas elas: o “desprezo” não é classe treinada — nenhum corpus em português a anota, e ele é derivado da díade raiva + nojo (Plutchik, 1980) pela média geométrica, que exige as duas emoções juntas; e a “ironia” acerta o caso de manual mas marca 6 em 10 falas sinceras de atendimento como irônicas, com 0,999 de confiança, então leia como indício e nunca como veredito. A emoção entra na nota — a ironia, não: desde 04/09/2026 ela é só leitura por mensagem, tirada do vetor do fusor porque em resenha vira detector de sentimento positivo."
         semPadding
       >
-        {/* Abre as oito emoções de TODAS as falas de uma vez. Existe porque a
-            escolha entre "resumo em uma linha" e "detalhe completo" é do
-            leitor, não minha: numa conversa de quarenta mensagens o detalhe
-            aberto por padrão é ilegível, e fechado sem este botão daria
-            quarenta cliques para ver o que a API já mandou. */}
-        <div className="flex justify-end border-b border-linha px-5 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha px-5 py-3">
           <Button
             type="button"
-            size="xs"
-            variant="ghost"
-            onClick={() => setTudoAberto((atual) => !atual)}
-          ><IconeDeAcao acao="expandir" />
-            {tudoAberto ? "Recolher os sinais" : "Abrir todos os sinais"}
+            size="sm"
+            variant="outline"
+            aria-expanded={detalhesDaAnalise}
+            aria-controls={transcricaoId}
+            onClick={() => setDetalhesDaAnalise((atual) => !atual)}
+          >
+            <IconeDeAcao acao="expandir" />
+            {detalhesDaAnalise ? "Ocultar detalhes da análise" : "Mostrar detalhes da análise"}
           </Button>
+          {detalhesDaAnalise ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setTudoAberto((atual) => !atual)}
+            >
+              <IconeDeAcao acao="expandir" />
+              {tudoAberto ? "Recolher os sinais" : "Abrir todos os sinais"}
+            </Button>
+          ) : null}
         </div>
 
-        <ol className="flex flex-col">
+        <ol id={transcricaoId} className="flex min-w-0 flex-col">
           {analise.mensagens.map((mensagem) => {
             const doCliente = mensagem.autor === "cliente";
             return (
               <li
                 key={mensagem.indice}
-                className="flex flex-col gap-1 border-b border-compasso px-5 py-3 last:border-b-0"
+                className="flex min-w-0 flex-col gap-2 border-b border-compasso px-5 py-4 last:border-b-0"
               >
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                   <span
-                    className={`text-xs ${doCliente ? "text-dito-texto" : "text-muted-foreground"}`}
+                    className={`text-sm font-medium ${doCliente ? "text-dito-texto" : "text-foreground"}`}
                   >
                     {ROTULO_AUTOR[mensagem.autor]}
                   </span>
                   {/* Sem horario no arquivo, o `enviada_em` e ordem fabricada
                       pelo servidor (um segundo por fala), nao hora. */}
                   {temTempo ? (
-                    <span className="num text-xs text-muted-foreground">
+                    <span className="num text-sm text-muted-foreground">
                       {formatarHora(
                         analise.conversa.mensagens[mensagem.indice].enviada_em,
                       )}
                     </span>
                   ) : null}
-                  {doCliente && mensagem.prob_satisfeito !== null ? (
-                    <span className="num text-xs text-muted-foreground">
+                  {detalhesDaAnalise && doCliente && mensagem.prob_satisfeito !== null ? (
+                    <span className="num text-sm text-muted-foreground">
                       satisfeito {mensagem.prob_satisfeito.toFixed(2)} ·
                       insatisfeito {mensagem.prob_insatisfeito?.toFixed(2)}
                     </span>
                   ) : null}
                 </div>
 
-                <p className="text-sm leading-relaxed text-foreground">
-                  <TextoComPesos
-                    texto={mensagem.texto}
-                    palavras={mensagem.palavras}
-                  />
+                <p className="whitespace-pre-wrap break-words text-base leading-relaxed text-foreground">
+                  {detalhesDaAnalise ? (
+                    <TextoComPesos
+                      texto={mensagem.texto}
+                      palavras={mensagem.palavras}
+                    />
+                  ) : mensagem.texto}
                 </p>
 
-                {doCliente && (mensagem.emocao || mensagem.prob_ironia !== null) ? (
+                {detalhesDaAnalise && doCliente ? (
                   <SinaisDeLeitura mensagem={mensagem} aberto={tudoAberto} />
                 ) : null}
               </li>
@@ -617,6 +645,33 @@ function Analise({
           })}
         </ol>
       </Painel>
+
+      <details className="min-w-0 border-t border-linha pt-3">
+        <summary className="cursor-pointer text-sm font-medium text-foreground">
+          Como o resultado foi calculado
+        </summary>
+        <div className="mt-4 flex min-w-0 flex-col gap-4">
+          <Painel
+            titulo="Sinais que influenciaram a nota"
+            semPadding
+          >
+            {temTempo ? (
+              <PainelContribuicoes
+                contribuicoes={analise.contribuicoes}
+                sinaisForaDoScore={analise.sinais_fora_do_score}
+                totalDeFeatures={Object.keys(analise.importancias).length}
+                motivoSemSinal={analise.motivo_sem_sinal}
+              />
+            ) : (
+              // Não decompor a nota ausente usando tempos fabricados pelo leitor.
+              <EstadoVazio
+                className="m-5"
+                titulo="Sem contribuições para esta conversa"
+                explicacao="O arquivo não traz horário. Sem horário não há latência, que é um sinal usado para calcular a nota. Por isso não há nota para decompor; a leitura por mensagem continua disponível na conversa acima."
+                etapa="enviar o arquivo com uma coluna de data e hora por mensagem"
+              />
+            )}
+          </Painel>
 
       <Painel
         titulo="Palavras desta conversa"
@@ -638,10 +693,10 @@ function Analise({
             {analise.vocabulario.map((item) => (
               <li
                 key={item.palavra}
-                className="flex items-baseline justify-between gap-4 border-b border-compasso px-5 py-2 last:border-b-0"
+                className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-compasso px-5 py-2 last:border-b-0"
               >
-                <span className="text-sm text-foreground">{item.palavra}</span>
-                <span className="flex items-baseline gap-4 text-xs text-muted-foreground">
+                <span className="min-w-0 break-words text-sm text-foreground">{item.palavra}</span>
+                <span className="flex flex-wrap items-baseline gap-x-4 text-sm text-muted-foreground">
                   <span className="num">{item.vezes}×</span>
                   {item.destaque === null ? (
                     <span title="Não aparece em nenhuma outra conversa do banco.">
@@ -661,6 +716,8 @@ function Analise({
           </ul>
         )}
       </Painel>
+        </div>
+      </details>
     </div>
   );
 }
@@ -672,11 +729,10 @@ function Analise({
  * vencedora -- jogava sete fora, e junto com elas as ressalvas do desprezo
  * derivado e da ironia, que o simulador ja exibia.
  *
- * POR QUE FECHADO POR PADRAO, e nao aberto como no simulador: o simulador
- * analisa UMA frase; aqui uma conversa tem quarenta mensagens, e oito barras
- * em cada uma dariam trezentas barras numa pagina so. A linha de resumo
- * continua mostrando o essencial sem clique -- emocao vencedora e ironia --,
- * e o detalhe fica a um clique de distancia em vez de existir so na API.
+ * Fechado por padrao dentro de "Mostrar detalhes da analise": uma conversa
+ * pode trazer quarenta falas, e oito barras em cada uma tornariam a leitura
+ * inicial ilegivel. O controle global abre ou recolhe os sinais de todas
+ * as falas sem consultar o modelo novamente.
  *
  * O painel em si e o MESMO componente do simulador: duas copias de um painel
  * que explica um modelo envelhecem separadas, e a que envelhece e sempre a que
@@ -699,9 +755,9 @@ function SinaisDeLeitura({
     // `open` so vale na montagem. Remontar e o que faz o controle global de
     // fato valer para a transcricao inteira.
     <details key={String(aberto)} open={aberto} className="group">
-      <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 text-xs text-muted-foreground marker:text-muted-foreground">
-        <span className="text-[11px]">
-          leitura por frase
+      <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 text-sm text-muted-foreground marker:text-muted-foreground">
+        <span>
+          leitura por mensagem
         </span>
         {emocaoTop ? (
           <span>

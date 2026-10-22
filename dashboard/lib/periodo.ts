@@ -12,10 +12,9 @@
  *   3. so existe UM lugar onde o recorte esta escrito, entao indicador,
  *      grafico, tabela e export nunca divergem entre si.
  *
- * A API do Fraus NAO recebe filtro de data em nenhuma rota, entao o corte
- * acontece no cliente sobre `iniciada_em`. Um `GET /conversas?de=&ate=` (e o
- * mesmo par em `/indicadores`) tornaria isso server-side e evitaria baixar o
- * banco inteiro para descartar a maior parte -- esta anotado no relatorio.
+ * As paginas usam o mesmo par `de`/`ate` para pedir agregados a API. A lista
+ * completa tambem permite obter a extensao dos dados e recortar resumos com
+ * `filtrarPorPeriodo`, mantendo os atalhos ancorados no ultimo dia com dado.
  */
 
 import { diaDoProduto } from "./fuso";
