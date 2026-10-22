@@ -245,6 +245,9 @@ e números seguem em Chakra Petch.
   letra a letra com o texto inteiro para leitor de tela, régua e linha dos
   passos por scrub, botões magnéticos, cursor próprio só com `hover: hover`,
   texto embaralhado com nome acessível fixo, índice lateral `01 / 07`.
+- O letreiro só anima dentro da viewport; ao voltar de baixo ele retoma em
+  reverso sem parar no início da timeline. Cursor e magnetismo só registram
+  ponteiro com `hover: hover` e `pointer: fine`.
 - **Desmontagem**: cada listener, tween, ticker e o Lenis são revertidos; o QA
   confere que nada sobra em `/entrar`.
 
@@ -257,6 +260,11 @@ placas **não representam** famílias, features ou contribuições do modelo.
 - Um canvas WebGL fixo de tela cheia (`lib/lp-nova/palco-fr.ts`): câmera de
   35°, dois programas (FR e 700 partículas em disco, PRNG fixo), dois draws por
   quadro, DPR até 1,5 e no máximo 2,2 megapixels.
+- Geometria e shaders carregam no primeiro respiro do navegador, não no bundle
+  inicial da coreografia. O WebP SSR permanece disponível enquanto o palco
+  prepara; formato, material, partículas e poses não foram simplificados.
+- Cada quadro reutiliza o mesmo estado numérico. Perder o contexto destrói a
+  instância anterior antes de restaurar; listeners não se acumulam a cada ciclo.
 - Cada pose de `POSES_POR_SECAO` chega com a própria seção (`fromTo` com
   scrub). Uma timeline única sobre o `<main>` desalinhava por causa da faixa.
 - Pulso entre placas, giro e letreiro leem a velocidade do Lenis **suavizada**
@@ -346,6 +354,15 @@ passo; o endpoint de origem fica em **Método e ressalvas**, não na face do pai
   técnicas e escala logit entram no aparato existente, sem um segundo sistema
   de notas explicativas.
 
+### Atividade e carregamento — 22/10/2026
+
+- A conferência de colunas carrega apenas quando solicitada; a espera tem
+  `role="status"`. Não adicionar uma segunda chamada de leitura ou inferência
+  para preparar os seletores.
+- A sonda de saúde fica suspensa com a aba oculta e consulta ao voltar.
+  Polling e tentativa manual compartilham somente a Promise em curso na mesma
+  instância do provider. Isso não é cache de indicadores, sessão ou credencial;
+  a cadência visível e os estados real/dublê/frio/erro permanecem os mesmos.
 
 ### Números, ausência e proveniência
 
@@ -416,6 +433,13 @@ rolagem lateral e o redirect de `/leitura`. `LP_EVIDENCIAS` guarda capturas.
 Sem GPU o Chrome headless usa SwiftShader e o palco cai no WebP, de propósito;
 `LP_GPU=1` pede GPU real para exercitar o WebGL. O vídeo do acesso derruba a GPU
 do headless com Vulkan, por isso o QA bloqueia mídia: é artefato do teste.
+
+`DASHBOARD_URL=http://127.0.0.1:3017 npm run test:atividade` verifica pausa de
+sondas ocultas, reconsulta ao voltar, concorrência com tentativa manual e
+recuperação da disponibilidade. Só aceita host local; controla visibilidade e
+falhas HTTP no navegador, sem gravar dados nem provar inferência real.
+O QA da LP também confere o letreiro ao voltar do fecho e sua pausa fora da tela;
+com `LP_GPU=1`, inclui ciclos de perda/restauração sem acumular listeners.
 
 `node scripts/validar-navegacao-playwright.mjs` opera rotas reais, período,
 recolhimento/reload, atalhos durante edição, tooltip por foco, tema, marca e

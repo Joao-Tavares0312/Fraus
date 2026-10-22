@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 22/10/2026 (leitura progressiva da dashboard)
+# Handoff — Fraus, atualizado em 22/10/2026 (UI e desempenho da LP/site)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -23,6 +23,75 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 + Recharts no front (`dashboard/`).
 
 ---
+
+## Desempenho da LP e do site — 22/10/2026
+
+Base: `main` após a PR #102 (`042c817`). Sem deploy, mudança de modelo ou
+dependência nesta otimização; a identidade e o fluxo “arrastar e pronto” ficam.
+
+- `Coreografia`: geometria/shaders carregam no primeiro respiro; o WebP SSR
+  permanece disponível. O estado do desenho é reutilizado, sem objeto novo por
+  quadro. O letreiro pausa fora da tela e mantém a volta em reverso; cursor e
+  magnetismo só ouvem ponteiro fino com hover.
+- Perda de contexto destrói o palco anterior antes de descartar sua referência.
+  A reprodução controlada confirmou a quantidade estável de recursos, em vez
+  de crescimento por ciclo. Não é benchmark de GPU real.
+- `SaudeProvider`: nenhuma sonda periódica em aba oculta; reconsulta ao voltar.
+  A tentativa manual e o polling compartilham apenas a Promise em curso desta
+  instância. Sem cache de dados/usuários e sem mudar a cadência da aba visível.
+- `Analisador`: a conferência de colunas baixa seu código quando solicitada.
+  O ajuste foi operado na UI com CSV sintético: cinco associações disponíveis
+  e nenhuma nova inferência ao abrir a conferência.
+
+### Evidência de desempenho
+
+Build de produção local, Chrome headless, cache frio, CPU em 4×, latência
+simulada de 100ms e download de 200.000 bytes/s. Três execuções por rota;
+medianas abaixo. API local com 80 conversas sintéticas e dublê identificado,
+não produção nem avaliação de inferência. No benchmark o FR caiu no WebP por
+renderer de software. JS é o total transferido durante a janela, não só o
+primeiro chunk.
+
+| Rota | LCP antes (ms) | LCP depois (ms) | JS antes (KiB) | JS depois (KiB) |
+|---|---:|---:|---:|---:|
+| LP desktop, 1440×1000 | 2364 | 2288 | 217,3 | 218,7 |
+| LP celular, 390×844 | 1784 | 1824 | 217,3 | 218,7 |
+| Visão geral | 1436 | 1484 | 404,2 | 406,0 |
+| Analisar | 948 | 968 | 310,8 | 300,2 |
+
+**Não foi comprovado ganho consistente de LCP.** O adiamento do palco distribui
+o trabalho; não reduz o JS total da LP. A atividade foi medida separadamente:
+
+| Medida | Antes | Depois |
+|---|---:|---:|
+| Trabalho da thread principal da LP desktop, janela nominal de 2,5s (ms) | 1983 | 1675 |
+| Trabalho da thread principal da LP celular, janela nominal de 2,5s (ms) | 2441 | 2434 |
+| Sondas durante 12,5s com a aba oculta | 3 | 0 |
+| Sonda nos 700ms após voltar à aba | 0 | 1 |
+| Sondas simultâneas no polling + tentativa manual | 2 | 1 |
+| Listeners ao iniciar e após duas restaurações de contexto | 4 → 5 → 6 | 4 → 4 → 4 |
+
+Não interpretar como FPS de GPU real, INP de campo ou ganho percentual
+garantido de carregamento.
+
+Uma alternativa de animação para o céu foi testada sem ganho suficiente; o
+céu original não foi reescrito para “melhorar” o benchmark.
+
+Verificações: 376 testes e lint passaram; build/TypeScript concluíram após o
+aviso de segurança do CLI. `test:atividade` falhou no build anterior e passou
+no otimizado. `test:lp` passou com fallback WebP, incluindo pausa fora da tela,
+volta do letreiro em reverso, sem JS, reduce, pin, fecho, retorno e celular.
+Superfícies operadas em 1440/390px e temas claro/escuro, sem overflow global.
+Inferência/gravação reais e desempenho de GPU física não foram validados.
+
+### Segurança apontada pelo ambiente, não corrigida aqui
+
+O CLI e `npm audit --omit=dev` sinalizaram o Next **16.4.0**; a
+[correção oficial é 16.4.1](https://github.com/advisories/GHSA-2464-fhr4-w9xw).
+A aplicabilidade à implantação não foi auditada; não tratar o build que passou
+após o lembrete como resolução de segurança. O audit também marcou a cadeia
+`vgpu`/SDK MCP como alta. Não aplicar `audit fix --force` às cegas: a sugestão
+para `vgpu` envolve downgrade. Tratar dependências antes de publicar em produção.
 
 ## Atualização local — UI da dashboard, 22/10/2026
 

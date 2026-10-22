@@ -30,6 +30,20 @@ async function abrir(viewport, { reduzido = false, javaScriptEnabled = true, sem
       return tipo === "webgl" || tipo === "webgl2" ? null : original.call(this, tipo, ...args);
     };
   });
+  if (GPU) await contexto.addInitScript(() => {
+    // Invariante de recursos: perder/restaurar nao pode acumular listeners.
+    window.__qaRedimensionadores = new Set();
+    const adicionar = window.addEventListener.bind(window);
+    const remover = window.removeEventListener.bind(window);
+    window.addEventListener = function (tipo, fn, opcoes) {
+      if (tipo === "resize") window.__qaRedimensionadores.add(fn);
+      return adicionar(tipo, fn, opcoes);
+    };
+    window.removeEventListener = function (tipo, fn, opcoes) {
+      if (tipo === "resize") window.__qaRedimensionadores.delete(fn);
+      return remover(tipo, fn, opcoes);
+    };
+  });
   const pagina = await contexto.newPage();
   // O video do acesso derruba a GPU do Chrome headless+Vulkan: artefato do
   // ambiente de teste, nao da LP. Sem ele a volta mede so a remontagem.
@@ -112,6 +126,21 @@ try {
     evidencias.push({ nome: "palco", ...estado });
     exigir("palco", estado.fr === "pronto" || estado.fr === "estatico", JSON.stringify(estado));
     if (GPU) exigir("palco com GPU", estado.fr === "pronto", JSON.stringify(estado));
+    if (GPU && estado.fr === "pronto") {
+      const contagens = [await pagina.evaluate(() => window.__qaRedimensionadores.size)];
+      for (let ciclo = 0; ciclo < 2; ciclo++) {
+        await pagina.evaluate(() => {
+          window.__qaPerda = document.querySelector(".lp-gl").getContext("webgl").getExtension("WEBGL_lose_context");
+          window.__qaPerda.loseContext();
+        });
+        await pagina.waitForFunction(() => document.querySelector(".lp").dataset.frEstado === "estatico");
+        await pagina.evaluate(() => window.__qaPerda.restoreContext());
+        await pagina.waitForFunction(() => document.querySelector(".lp").dataset.frEstado === "pronto");
+        contagens.push(await pagina.evaluate(() => window.__qaRedimensionadores.size));
+      }
+      exigir("contexto: sem recursos acumulados", contagens.every((n) => n === contagens[0]), JSON.stringify(contagens));
+      evidencias.push({ nome: "recuperacao-contexto", contagens });
+    }
     await capturar(pagina, "inicio");
     await pagina.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await pagina.waitForTimeout(2500);
@@ -121,8 +150,21 @@ try {
     exigir("ceu: pontos somem no fecho", opacidadePonto === "0", opacidadePonto);
     exigir("indice", (await pagina.locator(".lp-indice").innerText()) === "07 / 07", await pagina.locator(".lp-indice").innerText());
     await capturar(pagina, "fecho");
+    // A primeira visita ao letreiro pode ser na volta do fecho, em reverso.
+    await pagina.evaluate(() => {
+      const mq = document.querySelector(".mq");
+      window.scrollTo(0, mq.getBoundingClientRect().top + scrollY - innerHeight / 3);
+    });
+    await pagina.waitForTimeout(1200);
+    const letreiro = pagina.locator("[data-letreiro]");
+    const retorno = await letreiro.evaluate((el) => getComputedStyle(el).transform);
+    await pagina.waitForTimeout(400);
+    exigir("letreiro: retorno em reverso", await letreiro.evaluate((el) => getComputedStyle(el).transform) !== retorno, "letreiro parado ao entrar vindo de baixo");
     await pagina.evaluate(() => window.scrollTo(0, 0));
     await pagina.waitForTimeout(1200);
+    const foraDaTela = await letreiro.evaluate((el) => getComputedStyle(el).transform);
+    await pagina.waitForTimeout(400);
+    exigir("letreiro: pausa fora da tela", await letreiro.evaluate((el) => getComputedStyle(el).transform) === foraDaTela, "letreiro continua escrevendo transform fora da tela");
     await pagina.reload({ waitUntil: "networkidle" });
     exigir("preloader: uma vez por sessao", !(await pagina.locator(".lp-pre").isVisible()), "tocou de novo apos reload");
 

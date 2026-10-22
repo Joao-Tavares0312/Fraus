@@ -6,8 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 import { CHAVE_PRELOADER, POSE_INICIAL, POSES_POR_SECAO, SECOES_INDICE, formatarContador, rotuloIndice } from "@/lib/lp-nova/coreografia";
-import { criarPalcoFR } from "@/lib/lp-nova/palco-fr";
-import type { PalcoFR } from "@/lib/lp-nova/palco-fr";
+import type { PalcoFR, QuadroFR } from "@/lib/lp-nova/palco-fr";
 import { ArteEstatica } from "./ArteEstatica";
 
 const SIMBOLOS = "█▓▒░<>/_-+=#%&*";
@@ -33,6 +32,7 @@ export function Coreografia() {
     if (!raiz || !tela) return;
     gsap.registerPlugin(ScrollTrigger);
 
+    let vivo = true;
     // ---------- palco 3D: o FR existente, pose conduzida pelo GSAP ----------
     const pose = { ...POSE_INICIAL };
     const mouse = { x: 0, y: 0 }, flutuacao = { y: 0 };
@@ -40,24 +40,29 @@ export function Coreografia() {
     // `suave` e o que o FR e o letreiro leem, para nao pular a cada clique.
     const estado = { compacto: false, velocidade: 0, suave: 0, giro: 0, poeira: 0 };
     let palco: PalcoFR | null = null;
+    const desenho: QuadroFR = { ...POSE_INICIAL, giroPoeira: 0 };
     const quadro = () => {
       if (!palco) return;
       const base = estado.compacto ? 0.55 : 1;
-      palco.desenhar({
-        rx: pose.rx + mouse.y * 0.12,
-        ry: pose.ry + mouse.x * 0.25 + estado.giro,
-        rz: pose.rz,
-        x: pose.x * (estado.compacto ? 0 : 1),
-        y: pose.y + flutuacao.y,
-        s: pose.s * base,
-        gap: pose.gap + Math.min(Math.abs(estado.suave) * 0.012, 0.7),
-        inv: pose.inv,
-        giroPoeira: estado.poeira,
-      });
+      desenho.rx = pose.rx + mouse.y * 0.12;
+      desenho.ry = pose.ry + mouse.x * 0.25 + estado.giro;
+      desenho.rz = pose.rz;
+      desenho.x = pose.x * (estado.compacto ? 0 : 1);
+      desenho.y = pose.y + flutuacao.y;
+      desenho.s = pose.s * base;
+      desenho.gap = pose.gap + Math.min(Math.abs(estado.suave) * 0.012, 0.7);
+      desenho.inv = pose.inv;
+      desenho.giroPoeira = estado.poeira;
+      palco.desenhar(desenho);
     };
-    const iniciarPalco = () => {
+    const iniciarPalco = async () => {
       palco?.destruir();
+      palco = null;
       try {
+        // Divisao de codigo: import estatico poria geometria/shaders no JS inicial,
+        // mas este modulo so deve carregar no ocioso, depois do conteudo SSR.
+        const { criarPalcoFR } = await import("@/lib/lp-nova/palco-fr");
+        if (!vivo) return;
         palco = criarPalcoFR(tela);
         raiz.dataset.frEstado = "pronto";
         quadro();
@@ -68,23 +73,24 @@ export function Coreografia() {
     };
     const perder = (evento: Event) => {
       evento.preventDefault();
+      palco?.destruir();
       palco = null;
       raiz.dataset.frEstado = "estatico";
     };
     tela.addEventListener("webglcontextlost", perder);
     tela.addEventListener("webglcontextrestored", iniciarPalco);
-    // Contexto e shaders custam ~200ms de thread principal: ficam para o
-    // primeiro respiro, enquanto o preloader (ou o WebP) ocupa a tela.
+    // Carrega e prepara o palco no primeiro respiro; o WebP SSR ja esta visivel.
     const ocioso = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 1));
     const cancelarOcioso = window.cancelIdleCallback ?? window.clearTimeout;
-    const espera = ocioso(iniciarPalco, { timeout: 600 });
+    const espera = ocioso(() => { void iniciarPalco(); }, { timeout: 600 });
 
     const mm = gsap.matchMedia();
     mm.add({
       movimento: "(prefers-reduced-motion: no-preference)",
       compacto: "(max-width: 899px)",
+      ponteiro: "(hover: hover) and (pointer: fine)",
     }, (contexto) => {
-      const { movimento, compacto } = contexto.conditions as { movimento: boolean; compacto: boolean };
+      const { movimento, compacto, ponteiro } = contexto.conditions as { movimento: boolean; compacto: boolean; ponteiro: boolean };
       estado.compacto = compacto;
       if (!movimento) {
         // Reduce: um unico quadro parado; resize redesenha sozinho.
@@ -131,7 +137,7 @@ export function Coreografia() {
 
       // ---------- cursor proprio ----------
       const cur = cursor.current;
-      if (cur) {
+      if (cur && ponteiro) {
         const cx = gsap.quickTo(cur, "x", { duration: 0.35, ease: "power3" });
         const cy = gsap.quickTo(cur, "y", { duration: 0.35, ease: "power3" });
         ouvir(window, "pointermove", (e) => { cx(e.clientX); cy(e.clientY); });
@@ -165,10 +171,21 @@ export function Coreografia() {
       // ---------- letreiro: velocidade e sentido seguem a rolagem ----------
       const letreiro = raiz.querySelector<HTMLElement>("[data-letreiro]");
       if (letreiro) {
-        const giro = gsap.to(letreiro, { xPercent: -50, duration: 20, ease: "none", repeat: -1 });
+        const giro = gsap.to(letreiro, { xPercent: -50, duration: 20, ease: "none", repeat: -1, paused: true });
+        // A primeira entrada pode vir de baixo: ao cruzar zero em reverso,
+        // avancar ciclos inteiros preserva a emenda do texto duplicado.
+        giro.eventCallback("onReverseComplete", () => {
+          giro.totalTime(giro.rawTime() + giro.duration() * 100);
+        });
+        // Fora da tela nao ha texto para mover, mas o estado da rolagem continua.
+        ScrollTrigger.create({
+          trigger: letreiro.parentElement ?? letreiro, start: "top bottom", end: "bottom top",
+          onToggle: (trecho) => { giro.paused(!trecho.isActive); },
+        });
         const inclinar = gsap.quickSetter(letreiro, "skewX", "deg");
         let inclinacao = 0;
         tique(() => {
+          if (giro.paused()) return;
           const v = estado.suave;
           giro.timeScale(gsap.utils.interpolate(giro.timeScale(), (v < 0 ? -1 : 1) * (1 + Math.abs(v) * 0.35), 0.1));
           // Parado, nao reescreve o estilo a cada quadro.
@@ -181,7 +198,7 @@ export function Coreografia() {
       gsap.from(pose, { gap: 2.8, ry: -3.4, s: 0.4, duration: 2.2, delay: atraso, ease: "power3.out" });
       gsap.to(flutuacao, { y: 0.18, duration: 2.6, yoyo: true, repeat: -1, ease: "sine.inOut" });
       const qx = gsap.quickTo(mouse, "x", { duration: 1.2 }), qy = gsap.quickTo(mouse, "y", { duration: 1.2 });
-      ouvir(window, "pointermove", (e) => { qx(e.clientX / innerWidth - 0.5); qy(e.clientY / innerHeight - 0.5); });
+      if (ponteiro) ouvir(window, "pointermove", (e) => { qx(e.clientX / innerWidth - 0.5); qy(e.clientY / innerHeight - 0.5); });
       tique(() => {
         // deltaRatio: em tela de 120 Hz a poeira nao gira no dobro da velocidade.
         const passo = gsap.ticker.deltaRatio(60);
@@ -249,7 +266,7 @@ export function Coreografia() {
       gsap.utils.toArray<HTMLElement>(".step").forEach((passo) => gsap.from(passo, { opacity: 0.2, x: -18, ease: "none", scrollTrigger: { trigger: passo, start: "top 85%", end: "top 60%", scrub: true } }));
 
       // ---------- botoes magneticos ----------
-      raiz.querySelectorAll<HTMLElement>(".mag").forEach((botao) => {
+      if (ponteiro) raiz.querySelectorAll<HTMLElement>(".mag").forEach((botao) => {
         const x = gsap.quickTo(botao, "x", { duration: 0.4, ease: "power3" }), y = gsap.quickTo(botao, "y", { duration: 0.4, ease: "power3" });
         ouvir(botao, "pointermove", (e) => { const r = botao.getBoundingClientRect(); x((e.clientX - r.left - r.width / 2) * 0.3); y((e.clientY - r.top - r.height / 2) * 0.3); });
         ouvir(botao, "pointerleave", () => { x(0); y(0); });
@@ -262,6 +279,7 @@ export function Coreografia() {
     });
 
     return () => {
+      vivo = false;
       cancelarOcioso(espera);
       mm.revert();
       tela.removeEventListener("webglcontextlost", perder);
