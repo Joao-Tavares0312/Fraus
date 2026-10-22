@@ -50,6 +50,8 @@ export function SaudeProvider({ children }: { children: React.ReactNode }) {
   // `reconsultar`): ler `estado` de dentro de um closure velho reintroduziria a
   // oscilacao que `suavizarSaude` existe para impedir.
   const estadoRef = useRef<EstadoDeSaude>("verificando");
+  const montado = useRef(true);
+  const emCurso = useRef<Promise<boolean> | null>(null);
   const aplicar = useCallback((resultado: Parameters<typeof classificarSaude>[0]) => {
     const proximo = suavizarSaude(estadoRef.current, classificarSaude(resultado));
     estadoRef.current = proximo;
@@ -57,31 +59,54 @@ export function SaudeProvider({ children }: { children: React.ReactNode }) {
     return proximo;
   }, []);
 
-  const reconsultar = useCallback(async () => {
-    const resultado = await obterSaude();
-    aplicar(resultado);
-    return resultado.ok;
+  const reconsultar = useCallback(() => {
+    // O clique e a sonda periodica compartilham somente a consulta em curso,
+    // nesta instancia do provider; a proxima consulta sempre busca dado novo.
+    if (emCurso.current) return emCurso.current;
+    const consulta = obterSaude().then((resultado) => {
+      if (montado.current) aplicar(resultado);
+      return resultado.ok;
+    }).finally(() => {
+      emCurso.current = null;
+    });
+    emCurso.current = consulta;
+    return consulta;
   }, [aplicar]);
 
   useEffect(() => {
+    montado.current = true;
     let vivo = true;
-    let relogio: ReturnType<typeof setTimeout>;
+    let verificando = false;
+    let relogio: number | undefined;
+    // A visibilidade pode mudar enquanto a consulta aguarda a resposta.
+    const abaVisivel = () => document.visibilityState === "visible";
 
-    // setTimeout encadeado, e nao setInterval: o intervalo depende do estado
-    // (rapido enquanto aquece, devagar quando pronto).
+    // Mantem a cadencia visivel, sem sondar uma aba que ninguem esta lendo.
     const verificar = async () => {
-      const resultado = await obterSaude();
-      if (!vivo) return;
-      const proximo = aplicar(resultado);
-      relogio = setTimeout(verificar, intervaloDeSaudeMs(proximo));
+      if (!vivo || verificando || !abaVisivel()) return;
+      verificando = true;
+      try {
+        await reconsultar();
+      } finally {
+        verificando = false;
+        if (vivo && abaVisivel()) {
+          relogio = window.setTimeout(verificar, intervaloDeSaudeMs(estadoRef.current));
+        }
+      }
     };
-
-    verificar();
+    const aoMudarVisibilidade = () => {
+      clearTimeout(relogio);
+      if (abaVisivel()) void verificar();
+    };
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
+    void verificar();
     return () => {
       vivo = false;
+      montado.current = false;
       clearTimeout(relogio);
+      document.removeEventListener("visibilitychange", aoMudarVisibilidade);
     };
-  }, [aplicar]);
+  }, [reconsultar]);
 
   return (
     <SaudeContexto.Provider value={{ estado, reconsultar }}>
