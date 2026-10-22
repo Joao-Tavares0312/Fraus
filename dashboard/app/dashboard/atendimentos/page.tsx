@@ -9,6 +9,7 @@ import {
   type LinhaConversa,
 } from "@/components/TabelaConversas";
 import type { ResumoConversa } from "@/lib/api";
+import { OrientacaoSemAtendimentos } from "@/components/OrientacaoSemAtendimentos";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,9 @@ export default async function PaginaAtendimentos(
           esticar ate a altura minima de `main` so cria vazio quando o
           conteudo real e mais baixo que a tela. */}
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
+        {!erro && resumos.length === 0 ? (
+          <OrientacaoSemAtendimentos extensao={extensao} caminho="/dashboard/atendimentos" />
+        ) : (
         <Painel
           titulo={`Atendimentos de ${rotulo}`}
           nivel="dominante"
@@ -96,6 +100,7 @@ export default async function PaginaAtendimentos(
             </>
           )}
         </Painel>
+        )}
       </div>
     </>
   );

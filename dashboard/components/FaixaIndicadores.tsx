@@ -172,7 +172,7 @@ export function FaixaIndicadores({
                 : formatarNumero(indicadores.csat)
             }
             trilho={TRILHO_CSAT}
-            explicacaoVazio="Sem atendimento pontuado no período, não há proporção de satisfeitos a calcular."
+            explicacaoVazio="Nenhum atendimento com nota para estimar a satisfação."
           />
 
           <CartaoIndicador
@@ -187,7 +187,7 @@ export function FaixaIndicadores({
                 : formatarNumero(indicadores.containment)
             }
             trilho={{ minimo: 0, maximo: 100, faixas: [] }}
-            explicacaoVazio="Nenhuma transcrição carregada no período — a contenção sai de escalou_para_humano, que vem com a conversa."
+            explicacaoVazio="Nenhuma conversa disponível para verificar se houve transferência a uma pessoa."
           />
 
           <CartaoIndicador
@@ -206,7 +206,7 @@ export function FaixaIndicadores({
                 : formatarDuracaoCompacta(tempoMediano).unidade
             }
             trilho={trilhoDeLatencia(limiares)}
-            explicacaoVazio="Nenhum par pergunta → resposta no período: sem duas mensagens seguidas não há espera a medir."
+            explicacaoVazio="Nenhuma resposta registrada para medir a espera."
           />
         </motion.section>
 
@@ -232,7 +232,7 @@ export function FaixaIndicadores({
                   Leitura do NPS · quantas conversas sustentam o número
                 </h3>
                 {indicadores.nps === null ? null : (
-                  <p className="text-xs leading-relaxed text-muted-foreground">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
                     Sobre {indicadores.comSinal} atendimento(s) com sinal.{" "}
                     {semSinalTexto ?? ""}
                   </p>
@@ -274,7 +274,7 @@ export function FaixaIndicadores({
           sempre que a tela re-renderiza, em vez de congelar no valor do
           primeiro registro. */}
       <RessalvaDaTela titulo="Indicadores">
-        <dl className="flex max-w-[52ch] flex-col gap-1.5 text-[0.6875rem] leading-snug text-muted-foreground">
+        <dl className="flex max-w-prose flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
           <div>
             <dt className="inline font-medium">CSAT inferido:</dt>{" "}
             <dd className="inline">
@@ -285,8 +285,8 @@ export function FaixaIndicadores({
           <div>
             <dt className="inline font-medium">Taxa de contenção:</dt>{" "}
             <dd className="inline">
-              atendimentos resolvidos sem passar para um humano. Não depende de
-              score.
+              atendimentos sem transferência para uma pessoa, a partir do campo{" "}
+              <code>escalou_para_humano</code>. Não depende da nota nem comprova resolução.
             </dd>
           </div>
           <div>

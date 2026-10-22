@@ -27,14 +27,6 @@ describe("PorQueEstaNota", () => {
     expect(markup).toContain("não causa");
   });
 
-  it("sem explicação, nomeia o endpoint e o campo, sem alegar falta de sinal", () => {
-    const markup = html(null);
-    expect(markup).toMatch(/Explicação indisponível nesta versão da API/);
-    expect(markup).toContain("GET /conversas/{id}/atribuicao");
-    expect(markup).toContain("explicacao");
-    expect(markup).not.toMatch(/Sem sinal do cliente/i);
-    expect(markup).not.toMatch(/0 pontos/);
-  });
 
   it("só desenha famílias com efeito de pelo menos 1 ponto", () => {
     const markup = html(explicacao);

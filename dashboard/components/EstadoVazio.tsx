@@ -8,7 +8,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
-import { Aparato } from "./Aparato";
+import { RessalvaDaTela } from "./AparatoDaTela";
 
 /**
  * Estado vazio HONESTO.
@@ -68,41 +68,28 @@ export function EstadoVazio({
         <EmptyMedia variant="icon" className="mb-1 bg-transparent text-muted-foreground">
           <Files aria-hidden />
         </EmptyMedia>
-        <EmptyTitle className="text-sm text-foreground">{titulo}</EmptyTitle>
+        <EmptyTitle className="text-base text-foreground">{titulo}</EmptyTitle>
 
         {apiFora ? (
-          <EmptyDescription className="text-xs">
+          <EmptyDescription className="text-sm leading-relaxed">
             Sem dado enquanto a API não responde — a ação está na faixa no topo
             da tela.
           </EmptyDescription>
         ) : (
-          <EmptyDescription className="text-xs">{explicacao}</EmptyDescription>
+          <EmptyDescription className="text-sm leading-relaxed">{explicacao}</EmptyDescription>
         )}
 
-        {endpoint ? (
-          <EmptyDescription className="text-xs">
-            Resolvido por{" "}
-            <code className="num rounded-sm bg-muted px-1 py-0.5 text-foreground">
-              {endpoint}
-            </code>
-            .
-          </EmptyDescription>
-        ) : null}
         {etapa ? (
-          <EmptyDescription className="text-xs">
-            Falta rodar: <span className="text-foreground">{etapa}</span>.
+          <EmptyDescription className="text-sm leading-relaxed">
+            Próximo passo: <span className="text-foreground">{etapa}</span>.
           </EmptyDescription>
         ) : null}
 
-        {apiFora && aparato ? (
-          <Aparato
-            className="mt-1"
-            rotulo="por que esta tela não preenche sozinha"
-          >
-            <p className="mt-1.5 max-w-[62ch] text-xs text-muted-foreground">
-              {aparato}
-            </p>
-          </Aparato>
+        {endpoint || (apiFora && aparato) ? (
+          <RessalvaDaTela titulo={titulo} estado={apiFora ? "erro" : "vazio"}>
+            {endpoint ? <p className="text-sm leading-relaxed">Origem dos dados: <code>{endpoint}</code>.</p> : null}
+            {apiFora && aparato ? <p className="mt-1.5 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">{aparato}</p> : null}
+          </RessalvaDaTela>
         ) : null}
       </EmptyHeader>
     </Empty>

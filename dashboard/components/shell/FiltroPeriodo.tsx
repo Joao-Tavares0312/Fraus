@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
-import { CalendarRange, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -21,11 +20,9 @@ import {
  * Os ATALHOS sao ancorados no ULTIMO DIA COM DADO, nao em `hoje`. Ancorar em
  * hoje pareceria mais natural e seria pior: o conjunto pode terminar antes ou
  * depois de hoje, e "ultimos 7 dias" devolveria vazio sem explicar por que.
- * Cada atalho mostra o intervalo real que aplica -- nada de rotulo relativo
- * escondendo qual recorte foi feito.
- *
- * A API nao aceita filtro de data em rota nenhuma, entao o corte acontece no
- * cliente sobre `iniciada_em`; um `GET /conversas?de=&ate=` resolveria.
+ * Os atalhos mantem o intervalo aplicado na URL; o cabecalho mostra suas
+ * datas com o rotulo canonico. A extensao sempre vem do conjunto completo,
+ * mesmo quando o recorte atual esta vazio.
  */
 export function FiltroPeriodo({
   periodo,
@@ -39,6 +36,8 @@ export function FiltroPeriodo({
   const [pendente, iniciar] = useTransition();
 
   const aplicar = (proximo: Periodo) => {
+    if (pendente) return;
+
     const consulta = new URLSearchParams(parametros.toString());
     for (const [chave, valor] of [
       ["de", proximo.de],
@@ -51,49 +50,31 @@ export function FiltroPeriodo({
     iniciar(() => router.replace(texto ? `?${texto}` : "?", { scroll: false }));
   };
 
-  const atalhos = extensao
-    ? [
-        {
-          rotulo: "7 dias",
-          de: somarDias(extensao.ultimo, -6),
-          ate: extensao.ultimo,
-        },
-        {
-          rotulo: "14 dias",
-          de: somarDias(extensao.ultimo, -13),
-          ate: extensao.ultimo,
-        },
-        {
-          rotulo: "30 dias",
-          de: somarDias(extensao.ultimo, -29),
-          ate: extensao.ultimo,
-        },
-      ]
-    : [];
+  const atalhos = [7, 30].map((dias) => ({
+    dias,
+    de: extensao ? somarDias(extensao.ultimo, -(dias - 1)) : null,
+    ate: extensao?.ultimo ?? null,
+  }));
 
   const ativo = periodo.de !== null || periodo.ate !== null;
 
   return (
     <div
-      className="flex min-w-0 max-w-full flex-wrap items-end gap-x-3 gap-y-2"
+      className="flex min-w-0 max-w-full flex-col gap-2"
       data-pendente={pendente || undefined}
+      aria-busy={pendente}
     >
-      {/*
-        Rotulo INLINE, nao empilhado. Empilhado, a caixa de data ficava mais
-        alta que os atalhos ao lado e a linha inteira desalinhava -- dois
-        vocabularios de controle no mesmo lugar. Inline, o filtro vira uma
-        banda horizontal so, na altura dos botoes.
-      */}
-      {/* Os dois campos de data NAO quebram de linha no celular: a 390px o
-          "de ... ate ..." tem que caber numa fileira so, entao a fieldset vira
-          nowrap com os campos flexiveis (`min-w-0 flex-1`) ate o breakpoint
-          `sm`, onde voltam ao tamanho nativo. */}
-      <fieldset className="flex w-full min-w-0 flex-nowrap items-center gap-x-2 sm:w-auto sm:flex-wrap sm:gap-y-2">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-2">
+      {/* Campos flexiveis mantem as duas datas na mesma linha no celular. */}
+      <fieldset
+        disabled={pendente}
+        className="flex w-full min-w-0 flex-nowrap items-center gap-x-2 sm:w-auto sm:flex-wrap sm:gap-y-2"
+      >
         <legend className="sr-only">Período dos atendimentos</legend>
 
         <Label
           htmlFor="periodo-de"
-          className="text-xs font-normal text-muted-foreground"
+          className="text-sm font-normal text-muted-foreground"
         >
           De
         </Label>
@@ -112,7 +93,7 @@ export function FiltroPeriodo({
 
         <Label
           htmlFor="periodo-ate"
-          className="ml-1 text-xs font-normal text-muted-foreground"
+          className="ml-1 text-sm font-normal text-muted-foreground"
         >
           até
         </Label>
@@ -130,43 +111,58 @@ export function FiltroPeriodo({
         />
       </fieldset>
 
-      {/* O filete so existe onde os atalhos ficam NA MESMA linha dos campos
-          (lg+). Abaixo disso eles descem, e o filete ficava solto ao lado da
-          data. */}
-      <span aria-hidden className="hidden h-5 w-px bg-compasso lg:block" />
-
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div
+        className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5"
+        role="group"
+        aria-label="Atalhos de período"
+      >
         {atalhos.map((atalho) => {
           const selecionado =
-            periodo.de === atalho.de && periodo.ate === atalho.ate;
+            atalho.de !== null &&
+            periodo.de === atalho.de &&
+            periodo.ate === atalho.ate;
           return (
             <Button
-              key={atalho.rotulo}
+              key={atalho.dias}
               type="button"
               size="sm"
+              className="min-h-9 px-2 text-xs"
               variant={selecionado ? "default" : "outline"}
               aria-pressed={selecionado}
-              title={`${formatarDia(atalho.de)} – ${formatarDia(atalho.ate)}`}
-              onClick={() => aplicar({ de: atalho.de, ate: atalho.ate })}
+              disabled={pendente || !extensao}
+              title={
+                atalho.de && atalho.ate
+                  ? `${formatarDia(atalho.de)} – ${formatarDia(atalho.ate)}`
+                  : "Disponível quando houver datas dos atendimentos."
+              }
+              onClick={() => {
+                if (!atalho.de || !atalho.ate) return;
+                aplicar({ de: atalho.de, ate: atalho.ate });
+              }}
             >
-              <CalendarRange aria-hidden />
-              {atalho.rotulo}
+              Últimos {atalho.dias} dias
             </Button>
           );
         })}
 
-        {ativo ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => aplicar({ de: null, ate: null })}
-          >
-            <X aria-hidden />
-            Limpar
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          size="sm"
+          className="min-h-9 px-2 text-xs"
+          variant={!ativo ? "default" : "outline"}
+          aria-pressed={!ativo}
+          disabled={pendente}
+          onClick={() => aplicar({ de: null, ate: null })}
+        >
+          Todo o período
+        </Button>
       </div>
+      </div>
+      <p className="text-sm leading-snug text-muted-foreground">
+        {extensao
+          ? `Atalhos até ${formatarDia(extensao.ultimo)}, último dia com dados — não até hoje.`
+          : "Atalhos indisponíveis sem datas dos atendimentos. Você pode retirar o filtro."}
+      </p>
     </div>
   );
 }
