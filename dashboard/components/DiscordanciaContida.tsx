@@ -74,7 +74,7 @@ export function DiscordanciaContida({
 
               <div className="h-px w-full bg-linha" aria-hidden />
 
-              {/* ABAIXO DA LINHA -- o que o log MEDIU (azul). */}
+              {/* ABAIXO DA LINHA -- o que o log MEDIU. */}
               <p className="text-sm text-medido-texto">
                 e mesmo assim <strong>não escalou</strong> para humano
               </p>

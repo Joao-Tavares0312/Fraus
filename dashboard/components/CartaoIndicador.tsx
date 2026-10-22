@@ -98,7 +98,7 @@ export function CartaoIndicador({
             <span className="sr-only">sem dado: a API não respondeu</span>
           </p>
         ) : (
-          <p className="text-xs leading-relaxed text-destructive">{erro}</p>
+          <p className="text-sm leading-relaxed text-destructive">{erro}</p>
         )
       ) : valor === null ? (
         <>
@@ -109,7 +109,7 @@ export function CartaoIndicador({
             className="text-xl sm:text-2xl"
           />
           {explicacaoVazio ? (
-            <p className="text-xs leading-relaxed text-muted-foreground">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {explicacaoVazio}
             </p>
           ) : null}
@@ -142,7 +142,7 @@ export function CartaoIndicador({
       {/* O metodo do indicador e APARATO: fica na tipografia menor, abaixo do
           numero, e nunca entre o rotulo e o valor. */}
       {rodape ? (
-        <p className="text-[0.6875rem] leading-snug text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           {rodape}
         </p>
       ) : null}

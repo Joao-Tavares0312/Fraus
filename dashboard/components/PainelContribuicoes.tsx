@@ -6,6 +6,7 @@ import type { MotivoSemSinal } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BarrasDeFeature } from "./BarrasDeFeature";
 import { EstadoVazio } from "./EstadoVazio";
+import { RessalvaDaTela } from "./AparatoDaTela";
 
 /**
  * As `contribuicoes` DESTE atendimento.
@@ -46,7 +47,7 @@ export function PainelContribuicoes({
       <EstadoVazio
         className="m-5"
         titulo="Sem contribuições para este atendimento"
-        explicacao={`${motivoSemSinal ? EXPLICACAO_SEM_SINAL[motivoSemSinal] : "Não há sinal do cliente neste atendimento."} Sem score não há o que decompor. As contribuições vêm null do servidor exatamente neste caso; preencher com zeros diria que cada sinal pesou nada, quando na verdade nenhum sinal foi medido.`}
+        explicacao={`${motivoSemSinal ? EXPLICACAO_SEM_SINAL[motivoSemSinal] : "Não há sinal do cliente neste atendimento."} Sem nota não há contribuições para mostrar. Ausência de contribuição não significa que cada sinal vale zero.`}
       />
     );
   }
@@ -57,19 +58,20 @@ export function PainelContribuicoes({
   const foraDoScore = sinaisForaDoScore;
 
   return (
+    <>
     <div className="flex flex-col gap-4 px-5 py-4">
       <Alert className="rounded-md">
-        <AlertTitle className="text-xs">
-          Isto não é a importância do modelo.
+        <AlertTitle className="text-sm">
+          O que influenciou esta leitura
         </AlertTitle>
-        <AlertDescription className="text-xs leading-relaxed">
-          O que está abaixo é a contribuição das {totalDeFeatures} features{" "}
+        <AlertDescription className="text-sm leading-relaxed">
+          As barras mostram a contribuição dos {totalDeFeatures} sinais{" "}
           <strong className="font-medium text-foreground">
             neste atendimento
           </strong>
-          , com sinal: positivo empurrou a nota para cima, negativo puxou para
-          baixo. O peso <em>global</em> do modelo — o mesmo para todos os
-          atendimentos — vive na tela{" "}
+          . Valores positivos favorecem a leitura de satisfação; negativos,
+          a de insatisfação. Não são pontos da nota nem efeitos causais.
+          O peso global dos sinais está na tela{" "}
           <Link
             href="/dashboard/modelo"
             className="inline-flex items-center gap-0.5 text-primary underline underline-offset-4"
@@ -83,13 +85,13 @@ export function PainelContribuicoes({
 
       {foraDoScore.length > 0 && (
         <Alert className="rounded-md">
-          <AlertTitle className="text-xs">
+          <AlertTitle className="text-sm">
             {foraDoScore.length === 1
               ? "Um sinal foi lido, mas não pontua."
               : `${foraDoScore.length} sinais foram lidos, mas não pontuam.`}
           </AlertTitle>
-          <AlertDescription className="text-xs leading-relaxed">
-            <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">
+          <AlertDescription className="text-sm leading-relaxed">
+            <code className="break-words rounded bg-muted px-1 py-0.5 text-sm">
               {foraDoScore.join(", ")}
             </code>{" "}
             aparece por mensagem nesta tela, mas não entra na lista de
@@ -98,12 +100,12 @@ export function PainelContribuicoes({
         </Alert>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        <span className="num text-promotor-texto">{paraCima}</span> feature(s)
-        empurraram para cima ·{" "}
-        <span className="num text-detrator-texto">{paraBaixo}</span> puxaram
-        para baixo. Ordenadas por magnitude — a de cima é a que mais mexeu na
-        nota.
+      <p className="text-sm text-muted-foreground">
+        <span className="num text-promotor-texto">{paraCima}</span>{" "}
+        {paraCima === 1 ? "sinal com contribuição positiva" : "sinais com contribuição positiva"} ·{" "}
+        <span className="num text-detrator-texto">{paraBaixo}</span> com
+        contribuição negativa. Ordenados pelo tamanho da contribuição,
+        independentemente do sentido.
       </p>
 
       <BarrasDeFeature
@@ -112,5 +114,14 @@ export function PainelContribuicoes({
         formatarValor={(valor) => formatarComSinal(valor, 2)}
       />
     </div>
+      <RessalvaDaTela titulo="Contribuições dos sinais">
+        As contribuições são termos na diferença entre os logits de
+        satisfeito e insatisfeito, não pontos da nota. A transformação em
+        score é não linear; uma contribuição positiva favorece satisfeito
+        em relação a insatisfeito, mas não mede o efeito isolado sobre a
+        nota nem estabelece causalidade. Estes valores descrevem este
+        atendimento, não a importância global dos sinais no modelo.
+      </RessalvaDaTela>
+    </>
   );
 }

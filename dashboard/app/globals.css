@@ -3,8 +3,9 @@
 @import "shadcn/tailwind.css";
 @import "./camadas.css";
 
-/* Fraus: matéria grafite, tipografia quadrada e duas vozes de dado.
-   Âmbar é dito; azul é medido; ouro é marca, ação e foco. */
+/* Fraus: matéria grafite e tipografia quadrada.
+   Âmbar é dito; azul fica nas marcas medidas; textos de medidas seguem a tinta.
+   Ouro é marca, ação e foco. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -139,7 +140,7 @@
   --dito: #EDB466;
   --dito-texto: #EDB466;
   --medido: #8DC8F5;
-  --medido-texto: #8DC8F5;
+  --medido-texto: var(--foreground);
   --destructive: #F19A94;
   --success: #8BD5A3;
   --warning: #EDC985;
@@ -234,7 +235,7 @@
   --dito: #8A4B00;
   --dito-texto: #8A4B00;
   --medido: #165E9D;
-  --medido-texto: #165E9D;
+  --medido-texto: var(--foreground);
   --destructive: #A12D32;
   --success: #23683C;
   --warning: #795208;

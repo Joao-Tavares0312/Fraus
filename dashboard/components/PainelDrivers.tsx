@@ -5,6 +5,9 @@ import { obterDrivers } from "@/lib/api";
 import type { Drivers, GrupoDeDrivers } from "@/lib/api";
 import { ROTULO_SINAL, type SinalDaFeature } from "@/lib/derivacoes";
 import { formatarComSinal } from "@/lib/formato";
+import { Painel } from "@/components/Painel";
+import { Button } from "@/components/ui/button";
+import { RessalvaDaTela } from "@/components/AparatoDaTela";
 
 const AMOSTRA = 50;
 
@@ -39,24 +42,24 @@ export function PainelDrivers({
   }
 
   return (
-    <section className="flex min-w-0 flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-sm text-foreground">O que mais pesa na nota, por sinal</h2>
-        <button
-          type="button"
-          onClick={medir}
-          disabled={carregando}
-          className="h-8 border border-linha px-3 text-xs text-foreground hover:bg-accent disabled:opacity-50"
-        >
-          {carregando
-            ? "Medindo…"
-            : `Medir drivers numa amostra de ${AMOSTRA} atendimentos`}
-        </button>
-      </div>
-      <div aria-live="polite" className="flex flex-col gap-2">
-        {erro && <p className="text-xs text-detrator-texto">{erro}</p>}
-        {drivers && <TabelaDrivers drivers={drivers} />}
-      </div>
+    <section className="min-w-0">
+      <Painel
+        titulo="O que influenciou as notas"
+        legenda="Contribuições médias por família de sinal, calculadas sob demanda. Os valores medem a diferença entre as classes satisfeito e insatisfeito na escala interna do modelo (logit), não pontos da nota. Não demonstram causa."
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" onClick={medir} disabled={carregando}>
+              {carregando ? "Calculando influência…" : "Ver influência dos sinais"}
+            </Button>
+            <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">O cálculo examina até {AMOSTRA} atendimentos elegíveis do período e só começa quando você pedir.</p>
+          </div>
+          <div aria-live="polite" className="flex flex-col gap-2">
+            {erro && <p role="alert" className="text-sm text-detrator-texto">{erro}</p>}
+            {drivers && <TabelaDrivers drivers={drivers} />}
+          </div>
+        </div>
+      </Painel>
     </section>
   );
 }
@@ -99,29 +102,29 @@ function descreverRecorte(recorte: Drivers["recorte"]): string {
 export function TabelaDrivers({ drivers }: { drivers: Drivers }) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <p className="num text-xs text-foreground">{descreverRecorte(drivers.recorte)}</p>
-      <p className="num text-xs text-foreground">
+      <p className="num text-sm text-foreground">{descreverRecorte(drivers.recorte)}</p>
+      <p className="num text-sm text-foreground">
         amostra de {drivers.amostra} de {drivers.elegiveis} elegíveis ·{" "}
         {drivers.sem_sinal} sem sinal · {drivers.defasadas} de outra régua
         (repontuar para incluir)
       </p>
-      <p className="text-xs text-foreground">{drivers.rotulo}</p>
-      <p className="text-xs text-muted-foreground">
-        valores em unidade de logit (satisfeito × insatisfeito), não em pontos de score
+      <p className="text-sm text-foreground">{drivers.rotulo}</p>
+      <p className="text-sm text-muted-foreground">
+        Contribuições na escala interna do modelo, não pontos da nota.
       </p>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[32rem] border-collapse text-left text-xs">
+        <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th scope="col" className="py-1.5 pr-3 font-normal">
                 sinal
               </th>
               <th scope="col" className="py-1.5 pr-3 font-normal">
-                detratores (logit)
+                detratores
               </th>
               <th scope="col" className="py-1.5 font-normal">
-                promotores (logit)
+                promotores
               </th>
             </tr>
           </thead>
@@ -149,7 +152,9 @@ export function TabelaDrivers({ drivers }: { drivers: Drivers }) {
         </table>
       </div>
 
-      <p className="max-w-[62ch] text-xs text-muted-foreground">{drivers.metodo}</p>
+      <RessalvaDaTela titulo="Influência dos sinais — método da amostra">
+        <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">{drivers.metodo}</p>
+      </RessalvaDaTela>
     </div>
   );
 }

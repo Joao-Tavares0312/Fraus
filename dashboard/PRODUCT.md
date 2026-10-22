@@ -54,8 +54,14 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
 - Atendimentos entram pela tela Analisar (solta o arquivo, salva direto quando
   a leitura é confiável) ou sozinhos pelas fontes de Integrações — o Tars
   conecta em dois cliques. A importação por pasta do servidor saiu da tela.
-- O analista filtra por período e desce da visão agregada para a transcrição de
-  um atendimento.
+  O resultado prioriza confirmação de gravação, resumo e conversa; inspeção
+  técnica fica disponível sem competir com essa leitura.
+- O analista filtra por datas ou pelos atalhos de 7 dias, 30 dias e todo o
+  período, ancorados no último dia com dados. O período ativo acompanha a
+  navegação da visão agregada para os atendimentos.
+- Sem histórico disponível, a tela orienta ao primeiro arquivo e oferece
+  integração só a quem pode configurá-la. Um filtro sem resultados oferece
+  limpar período; uma API indisponível continua sendo erro, não banco vazio.
 - A API oferece autenticação JWT de usuários e credenciais técnicas. Produção
   usa PostgreSQL/Supabase; SQLite permanece para desenvolvimento e testes.
 - Oito telas. Na lateral, o dia a dia: Visão geral, Atendimentos, Analisar,
@@ -105,7 +111,8 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
 - Vinculante por decisão do usuário nesta sessão:
   - os **textos de honestidade** ("estimativa", "sem sinal", nota metodológica,
     estados vazios que nomeiam o que falta) permanecem;
-  - o encoding **âmbar = o que foi dito / azul = o que foi medido**;
+  - o encoding **âmbar = dito / azul = medido nas marcas gráficas**; desde
+    22/10/2026, textos de medidas usam branco mineral no escuro e grafite no claro;
   - o **gráfico sobreposto de NPS × latência** — pode mudar de forma, mas a
     sobreposição continua, porque é o trade-off que cartão isolado esconde.
   - o **FR escultórico**, derivado do monograma oficial, a tipografia quadrada

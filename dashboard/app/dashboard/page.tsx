@@ -46,6 +46,7 @@ import { Painel } from "@/components/Painel";
 import { PainelDrivers } from "@/components/PainelDrivers";
 import { PainelLexico } from "@/components/PainelLexico";
 import { PioresAtendimentos } from "@/components/PioresAtendimentos";
+import { OrientacaoSemAtendimentos } from "@/components/OrientacaoSemAtendimentos";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +98,21 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   );
 
   const { periodo, extensao, rotulo, sufixo, resumos, erro } = recorte;
+
+  // Só trocar os painéis por orientação quando as leituras confirmaram o vazio.
+  // Uma falha parcial continua no painel que a produziu, nunca vira onboarding.
+  if (!erro && resumos.length === 0 && indicadoresDoServidor.ok &&
+      indicadoresDoServidor.dado.total_conversas === 0 && serieDaApi.ok && lexicoDaApi.ok) {
+    return (
+      <>
+        <CabecalhoPagina titulo="Visão geral" periodo={periodo} extensao={extensao} />
+        <div className="flex min-w-0 flex-col gap-7 px-4 py-5 sm:px-8">
+          <OrientacaoSemAtendimentos extensao={extensao} caminho="/dashboard" />
+          <NotaMetodologica />
+        </div>
+      </>
+    );
+  }
 
   /*
    * O SERVIDOR responde pelo recorte: `/indicadores?de=&ate=` recebe o mesmo

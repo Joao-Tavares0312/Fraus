@@ -21,7 +21,7 @@ export function CabecalhoPagina({
   periodo,
   extensao,
   acoes,
-  escopo = "indicadores, série, tabela e export",
+  escopo = "dados desta tela",
 }: {
   titulo: string;
   /** Opcional: tela cuja tarefa e obvia pelo titulo nao paga um paragrafo. */
@@ -30,16 +30,15 @@ export function CabecalhoPagina({
   extensao?: Extensao;
   acoes?: ReactNode;
   /**
-   * O QUE nesta tela obedece ao periodo, em uma frase curta. O padrao descreve
-   * a Visao geral; toda tela cujo conteudo e outro (o Grafo tem nos e arestas,
-   * nao serie nem export) passa o seu -- dizer "serie" onde nao ha serie e o
-   * tipo de promessa vazia que este cabecalho veio evitar.
+   * O QUE nesta tela obedece ao periodo, em uma frase curta. O padrao e
+   * generico; telas com escopo especifico (como nos e arestas do Grafo)
+   * passam o seu, sem prometer grafico ou export onde nao existem.
    */
   escopo?: string;
 }) {
   return (
     <header className="sticky top-0 z-20 bg-background">
-      <div className="flex flex-col gap-4 px-4 py-6 sm:px-8">
+      <div className="flex flex-col gap-3 px-4 py-4 sm:px-8 sm:py-5">
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <SidebarTrigger className="sem-impressao -ml-1 mt-0.5 shrink-0 md:hidden" />
           {/* `basis-64`: sem base, o titulo encolhia sem limite e as acoes
@@ -67,15 +66,15 @@ export function CabecalhoPagina({
                 titulo e filtro sao o MESMO bloco de contexto, e a divisoria
                 forte os apresentava como secoes independentes. */}
             <div aria-hidden className="h-px bg-compasso" />
-            <div className="sem-impressao flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-              <FiltroPeriodo periodo={periodo} extensao={extensao ?? null} />
-              <p className="text-xs text-muted-foreground">
-                Tudo nesta tela — {escopo} — fala de{" "}
+            <div className="sem-impressao flex min-w-0 flex-col gap-2">
+              <p className="text-sm leading-snug text-muted-foreground">
+                Período ativo:{" "}
                 <strong className="font-medium text-foreground">
                   {rotuloPeriodo(periodo, extensao ?? null)}
                 </strong>
-                .
+                . Aplica-se a {escopo}.
               </p>
+              <FiltroPeriodo periodo={periodo} extensao={extensao ?? null} />
             </div>
           </>
         ) : null}

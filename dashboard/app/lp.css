@@ -9,6 +9,7 @@
   --acao: #d6ba72;
   --dito: #edb466;
   --medido: #8dc8f5;
+  --medido-texto: var(--texto);
   --disp: var(--fonte-display), var(--fonte-quadrada), system-ui, sans-serif;
   --ui: var(--fonte-quadrada), system-ui, sans-serif;
   /* Camadas do FR (app/camadas.css): a LP e sempre escura, entao le as
@@ -129,21 +130,21 @@
   --placa-curva: cubic-bezier(.3, 1.3, .5, 1);
 }
 .lp .stat { padding: 14px 16px; display: flex; flex-direction: column-reverse; }
-.lp .stat dd { margin: 0; font: 500 34px/1.1 var(--ui); font-variant-numeric: tabular-nums; color: var(--medido); }
+.lp .stat dd { margin: 0; font: 500 34px/1.1 var(--ui); font-variant-numeric: tabular-nums; color: var(--medido-texto); }
 .lp .stat dt { font-size: 12px; color: var(--secundario); line-height: 1.3; }
 /* Reserva o canto da fenda (24 px a 14 px da borda, traco a 38 px da direita) so nas primeiras linhas do rotulo. */
 .lp .stat dt::before { content: ""; float: right; width: 38px; height: 40px; }
 
 .lp .tag { --chanfro: 6px; --cor-borda-chanfro: var(--borda); display: inline-block; margin-bottom: 10px; padding: 2px 10px; border: 1px solid var(--borda); font: 12px/1.6 var(--ui); }
 .lp .tag.d { --cor-borda-chanfro: var(--dito); color: var(--dito); border-color: var(--dito); }
-.lp .tag.m { --cor-borda-chanfro: var(--medido); color: var(--medido); border-color: var(--medido); }
+.lp .tag.m { --cor-borda-chanfro: var(--medido); color: var(--medido-texto); border-color: var(--medido); }
 .lp .quote { margin: 6px 0 4px; font: 600 clamp(28px, 3.4vw, 48px)/1.2 var(--disp); letter-spacing: -.04em; color: var(--dito); }
 .lp [data-letras] > span { display: inline-block; white-space: pre; }
 .lp .ck { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
 .lp .ck li { --cor-borda-chanfro: var(--borda); background-color: var(--superficie); border: 1px solid var(--borda); padding: 12px 16px; color: var(--secundario); }
 .lp .ck b { display: block; color: var(--texto); font-weight: 500; }
 .lp .card { padding: 20px 22px; margin-bottom: 16px; }
-.lp .card h3 { margin: 0 0 4px; font: 600 19px/1.3 var(--ui); color: var(--medido); }
+.lp .card h3 { margin: 0 0 4px; font: 600 19px/1.3 var(--ui); color: var(--medido-texto); }
 .lp .card p { margin: 0; font-size: 15px; line-height: 1.6; }
 .lp .ruler { position: relative; height: 6px; margin: 26px 0 8px; border-radius: 3px; background: var(--borda); overflow: hidden; }
 .lp .ruler i { position: absolute; inset: 0; background: var(--medido); transform-origin: 0 50%; }
@@ -207,12 +208,12 @@
 .lp .ln-rotulo { display: block; font-size: 11px; color: var(--secundario); }
 .lp .ln-msg--cliente .ln-rotulo { color: var(--dito); }
 .lp .ln-msg__texto { font-size: 14px; line-height: 1.75; color: var(--texto); margin: 6px 0; overflow-wrap: anywhere; }
-.lp .ln-msg__marca { font-size: 11px; line-height: 1.7; color: var(--medido); }
+.lp .ln-msg__marca { font-size: 11px; line-height: 1.7; color: var(--medido-texto); }
 .lp .ln-veredito { display: grid; gap: 18px; }
 .lp .ln-veredito__tese { font-size: 22px; font-weight: 500; line-height: 1.35; margin: 8px 0 0; }
 .lp .ln-veredito__nota { display: flex; align-items: center; gap: 18px; }
 .lp .ln-veredito__nota > :first-child { font-size: 48px; line-height: 1.1; }
-.lp .ln-veredito__nota .valor-numerico { color: var(--medido); }
+.lp .ln-veredito__nota .valor-numerico { color: var(--medido-texto); }
 .lp .ln-veredito__nota .valor-numerico.text-muted-foreground { color: var(--secundario); font-size: 25px; }
 .lp .ln-veredito__nota strong { font-weight: 500; color: var(--texto); }
 .lp :is(.ln-veredito__discorda, .ln-veredito__decisiva) { color: var(--secundario); font-size: 13px; line-height: 1.75; margin: 0; }
