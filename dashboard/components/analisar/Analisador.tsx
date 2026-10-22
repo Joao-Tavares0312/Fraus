@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { anunciarAtualizacao } from "@/lib/atualizacao";
 import { FileText, RefreshCw, Upload } from "lucide-react";
 import {
@@ -36,9 +37,15 @@ import { EstadoVazio } from "@/components/EstadoVazio";
 import { PainelContribuicoes } from "@/components/PainelContribuicoes";
 import { TextoComPesos } from "./TextoComPesos";
 import { formatarProbabilidade } from "@/lib/partitura";
-import { ConferenciaDeColunas } from "./ConferenciaDeColunas";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
 import { deveSalvar, proximoPasso } from "@/lib/fluxo-analise";
+
+// Divisao de codigo: import estatico baixaria os seletores de associacao no
+// upload inicial, mesmo quando o arquivo nem precisa de conferencia.
+const ConferenciaDeColunas = dynamic(
+  () => import("./ConferenciaDeColunas").then((modulo) => modulo.ConferenciaDeColunas),
+  { loading: () => <p role="status" className="py-6 text-sm text-muted-foreground">Preparando conferência das colunas…</p> },
+);
 
 /** Teto do lado do cliente, espelhando o do servidor -- recusa antes de subir. */
 const TETO_BYTES = 200_000;

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:lp": "node scripts/validar-lp-playwright.mjs",
+    "test:atividade": "node scripts/validar-atividade-playwright.mjs",
     "contraste": "node scripts/contraste.mjs",
     "pisos": "node scripts/pisos.mjs",
     "arte:acesso": "jiti scripts/renderizar-acesso.ts",
