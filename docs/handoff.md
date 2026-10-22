@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 16/10/2026 (LP e dashboard)
+# Handoff — Fraus, atualizado em 19/10/2026 (Analisar simples, menu da conta e Tars)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -23,6 +23,35 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 + Recharts no front (`dashboard/`).
 
 ---
+
+## 2.0000 Analisar simples, menu da conta e Tars — 19/10/2026
+
+Em produção (Fraus #97 e #98; Tars #28, #29 e #30). Nota completa em
+`docs/notas/2026-10-19-analisar-simples-e-tars.md`.
+
+- **Analisar "arrastar e pronto".** A prévia devolve `confiavel`
+  (`leitura_confiavel`, em `fraus/ingest/arquivos.py`, critério único). Leitura
+  confiável analisa e salva direto; duvidosa mostra conferência enxuta (fala e
+  quem falou). Sem horário a leitura é avulsa e não salva. A UI de perfil
+  salvo, colar conversa e o texto de formatos saíram — as rotas de perfil ficam.
+- **Perfil salvo errado cede.** Perfil que recusa metade das linhas ou mais é
+  descartado naquela leitura e a heurística assume, com aviso. Era a causa do
+  "data ilegível na coluna 'Chat ID'" num export que a heurística lia certo.
+- **Planilha nunca vira 500**; data de célula ganha -03:00; epoch de 10/13
+  dígitos vale meia evidência de data (id de chat não empata com a data).
+- **O 500 de `/analisar/registrar`** era o OOM de 16/10. O hotfix `580c16d`
+  estava só no deploy; entrou na `main` com o #97.
+- **Menu da conta.** Lateral: Visão geral, Atendimentos, Analisar, Grafo,
+  Modelo. Operação, Integrações, Configurações, docs, tema e sair no rodapé.
+- **Integrações + Tars.** Conta `dev` gera chave de fonte
+  (`exigir_mestra_ou_dev`); "Conectar o TARS" na tela; importação por pasta
+  saiu da tela. Contrato e decisões em `docs/integracao-tars.md`.
+- **Remover atendimento** (`DELETE /conversas/{id}`, só `dev`, auditado), para
+  limpar o registro de 2243 e duplicatas de teste.
+
+Pendências: `chat_id` do Telegram vai em claro no id do Tars (trocar por hash);
+"Resolveu/Não resolveu" do Tars ainda não vira `feedback_declarado`; fusor
+local em segundos crus (o `fusor.joblib` local é recusado no boot).
 
 ## 2.000 Interface — direção FR, 16/10/2026
 

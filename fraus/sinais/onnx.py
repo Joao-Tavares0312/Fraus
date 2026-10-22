@@ -27,6 +27,8 @@ from pathlib import Path
 
 import numpy as np
 
+from fraus.sinais.texto import temperatura_do_artefato
+
 TAMANHO_MAXIMO = 192
 # Uma fala pode gerar 61 variantes na oclusão. O orçamento de mensagens da
 # API não limita ativações; cada run mantém no máximo quatro sequências.
@@ -41,13 +43,14 @@ class ModeloOnnxAusenteError(RuntimeError):
     """
 
 
-def _softmax(logits: np.ndarray) -> np.ndarray:
+def _softmax(logits: np.ndarray, temperatura: float = 1.0) -> np.ndarray:
     """Softmax estavel por linha -- o maximo sai antes de exponenciar.
 
     Sem subtrair o maximo, um logit grande estoura o `exp` em `inf` e a linha
     inteira vira `nan`. Com int8 os logits chegam com magnitude ligeiramente
     diferente da do fp32, entao a estabilidade aqui deixa de ser preciosismo.
     """
+    logits = logits / temperatura
     deslocado = logits - logits.max(axis=-1, keepdims=True)
     exponenciais = np.exp(deslocado)
     return exponenciais / exponenciais.sum(axis=-1, keepdims=True)
@@ -105,6 +108,9 @@ class SessaoOnnx:
         # Perguntar ao grafo em vez de assumir evita o erro mais chato do
         # ONNX Runtime, que e recusar uma entrada a mais sem dizer qual.
         self._entradas = {entrada.name for entrada in self._sessao.get_inputs()}
+        # A mesma temperatura do checkpoint torch: `encolher_modelos.py` copia
+        # o `fraus_receita.json` junto do grafo.
+        self._temperatura = temperatura_do_artefato(diretorio)
 
     def _executar_lotes(self, entradas, saidas=None):
         quantidade = next(iter(entradas.values())).shape[0]
@@ -130,7 +136,9 @@ class SessaoOnnx:
         }
         probabilidades = []
         for (logits,) in self._executar_lotes(entradas):
-            probabilidades.extend(_softmax(np.asarray(logits, dtype=np.float32)).tolist())
+            probabilidades.extend(
+                _softmax(np.asarray(logits, dtype=np.float32), self._temperatura).tolist()
+            )
         return probabilidades
 
 

@@ -1,7 +1,7 @@
 // dashboard/lib/hierarquia.test.ts
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DOMINANTE_POR_TELA, dominanteDaTela } from "./hierarquia";
+import { DOMINANTE_POR_TELA, classesDoNivel, dominanteDaTela } from "./hierarquia";
 
 
 describe("dominanteDaTela", () => {
@@ -35,6 +35,15 @@ describe("dominanteDaTela", () => {
   });
 });
 
+
+describe("classesDoNivel", () => {
+  it("o dominante leva o fio dourado e o apoio nao muda", () => {
+    expect(classesDoNivel("dominante").split(" ")).toEqual(
+      expect.arrayContaining(["superficie", "fio"]),
+    );
+    expect(classesDoNivel("apoio")).toBe("painel-apoio p-4 sm:p-5");
+  });
+});
 
 describe("aparato", () => {
   it("o Painel nao hospeda mais um Aparato proprio", () => {

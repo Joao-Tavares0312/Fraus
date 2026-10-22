@@ -52,7 +52,9 @@ CAMINHO_CONFORMAL = artefato("FRAUS_CONFORMAL", "fraus/dados/conformal_fusor.jso
 #
 # A variante aceita em docs/encolhimento.md: satisfacao e emocao em fp32 (as
 # duas pontuam e nao toleram int8) e ironia em int8 (nao pontua) -- 0 de 180
-# categorias trocadas, e ~1,5x mais rapida que o torch na mesma CPU.
+# categorias trocadas, e ~1,5x mais rapida que o torch na mesma CPU. Desde
+# 19/10/2026 a ironia do MultiPICo vai em fp32: em int8 ela troca de classe em
+# 2 sondas de `scripts/encolher_modelos.py` (ver docs/treinamento.md).
 BACKENDS = ("torch", "onnx", "onnx-multitarefa")
 BACKENDS_IRONIA = ("padrao", "laya", "laya-onnx")
 CAMINHO_ONNX_TEXTO = artefato("FRAUS_CAMINHO_ONNX_TEXTO", "modelos-onnx/bertimbau-satisfacao")

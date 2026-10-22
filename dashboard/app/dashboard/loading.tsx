@@ -11,12 +11,12 @@ export default function Carregando() {
         <Skeleton className="h-8 w-64" />
       </div>
 
-      {/* A armadura: quatro celulas em fileira, separadas por regua. */}
+      {/* A armadura: quatro cards separados, do mesmo formato dos reais. */}
       <div className="faixa-indicadores">
         {[0, 1, 2, 3].map((indice) => (
           <div
             key={indice}
-            className="flex min-w-0 flex-col gap-3 p-4"
+            className="superficie flex min-w-0 flex-col gap-3 p-4 sm:p-5"
           >
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-10 w-28" />

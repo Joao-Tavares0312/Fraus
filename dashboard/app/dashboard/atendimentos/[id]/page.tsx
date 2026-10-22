@@ -27,6 +27,8 @@ import { PorQueEstaNota } from "@/components/PorQueEstaNota";
 import { Sinalizadores } from "@/components/Sinalizadores";
 import { Transcricao } from "@/components/Transcricao";
 import { idDaRota } from "@/lib/rota";
+import { sessaoAtual } from "@/lib/sessao";
+import { RemoverAtendimento } from "@/components/atendimentos/RemoverAtendimento";
 
 export const dynamic = "force-dynamic";
 
@@ -41,12 +43,16 @@ export default async function PaginaDoAtendimento(
 
   // As duas leituras sao independentes de proposito: se a atribuicao falhar,
   // so os paineis dela mostram falha -- a transcricao continua na tela.
-  const [resultado, resultadoAtribuicao, configuracoes, resultadoConfianca] = await Promise.all([
+  const [resultado, resultadoAtribuicao, configuracoes, resultadoConfianca, sessao] = await Promise.all([
     obterConversa(id),
     obterAtribuicao(id),
     obterConfiguracoes(),
     obterConfianca(id),
+    sessaoAtual(),
   ]);
+  // O mesmo critério do layout: sem login, a instalação local é dev. A API
+  // confere de novo — esconder o botão é conforto, não permissão.
+  const ehDev = (sessao.estado === "logada" ? sessao.usuario.papel : "dev") === "dev";
 
   const limiares = limiaresDe(
     configuracoes.ok ? configuracoes.dado.vigente.limiares_latencia_s : null,
@@ -106,13 +112,16 @@ export default async function PaginaDoAtendimento(
         titulo={`Atendimento ${conversa.id}`}
         subtitulo="Nota, categoria e a transcrição inteira, com o tempo de espera anotado em cada resposta e os trechos marcados pela probabilidade que o classificador deu a cada fala."
         acoes={
-          <Link
-            href={`/dashboard/atendimentos${sufixo}`}
-            className="rotulo-instrumento inline-flex min-h-9 items-center gap-1.5 px-2 outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ArrowLeft aria-hidden className="size-4" />
-            Todos os atendimentos
-          </Link>
+          <span className="flex flex-wrap items-center gap-2">
+            {ehDev ? <RemoverAtendimento id={conversa.id} voltarPara={`/dashboard/atendimentos${sufixo}`} /> : null}
+            <Link
+              href={`/dashboard/atendimentos${sufixo}`}
+              className="rotulo-instrumento inline-flex min-h-9 items-center gap-1.5 px-2 outline-none transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ArrowLeft aria-hidden className="size-4" />
+              Todos os atendimentos
+            </Link>
+          </span>
         }
       />
 

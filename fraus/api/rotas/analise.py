@@ -18,7 +18,7 @@ from fraus.api.esquemas import PedidoAnalise
 from fraus.api.identidade import id_pelo_conteudo, no_dia_ja_gravado
 from fraus.fuso import dia_do_produto
 from fraus.indicadores import nota_0_10
-from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair
+from fraus.ingest.arquivos import ArquivoIlegivelError, OpcoesDeLeitura, extrair, leitura_confiavel
 from fraus.ingest.mapeador import ORDENS_DE_DATA
 from fraus.resumo import resumir
 from fraus.sinais.palavras import contar_palavras
@@ -84,7 +84,8 @@ def _analisar_e_registrar(ctx: Contexto, nome: str, dados: bytes, opcoes) -> dic
     extracao = extrair_ou_400(nome, dados, opcoes)
     if not extracao.tem_tempo:
         raise HTTPException(422, "Para salvar nos indicadores, envie horarios reais das mensagens. Sem horarios, use a analise avulsa.")
-    if extracao.mapeamento is not None and extracao.perfil is None and not opcoes.forcado:
+    if extracao.mapeamento is not None and extracao.perfil is None and not opcoes.forcado \
+            and not leitura_confiavel(extracao):
         raise HTTPException(409, "Confirme as colunas antes de salvar a conversa.")
     # Canonico a partir da conversa censurada, nunca do nome local do arquivo.
     # IDs de uploads nao podem sobrescrever IDs de integracoes ou da demo.
@@ -225,6 +226,7 @@ def resumo_da_previa(extracao) -> dict:
         "mapeamento": extracao.mapeamento,
         "amostra": extracao.amostra,
         "perfil": extracao.perfil,
+        "confiavel": leitura_confiavel(extracao),
     }
 
 

@@ -322,3 +322,33 @@ def test_docx_com_tabela_sem_cabecalho_nao_perde_a_primeira_fala():
     extracao = extrair("conversa.docx", dados)
     textos = [m.texto for m in extracao.conversas[0].mensagens]
     assert any("cobranca veio duplicada" in t for t in textos)
+
+
+def test_planilha_do_fraus_com_data_de_celula():
+    # Data de celula do Excel sai naive do openpyxl. O driver canonico exige
+    # fuso, e cada linha morria: "nenhuma conversa valida" para um arquivo
+    # perfeitamente no formato do Fraus.
+    from datetime import datetime
+
+    dados = _xlsx([
+        CABECALHO.split(","),
+        ["c1", "webchat", "cliente", "meu pedido nao chegou", datetime(2026, 5, 14, 10, 0), "false"],
+        ["c1", "webchat", "bot", "vou verificar", datetime(2026, 5, 14, 10, 0, 12), "false"],
+    ])
+    extracao = extrair("planilha.xlsx", dados)
+    assert len(extracao.conversas[0].mensagens) == 2
+    assert extracao.conversas[0].mensagens[0].enviada_em.utcoffset() is not None
+
+
+def test_planilha_que_quebra_na_leitura_vira_erro_explicado(monkeypatch):
+    # Em modo read-only o XML da aba e lido DURANTE a iteracao: uma falha ali
+    # escapava do try do load_workbook e virava 500.
+    import openpyxl.worksheet._read_only as ro
+
+    def quebra(*_a, **_k):
+        raise ValueError("xml corrompido")
+
+    monkeypatch.setattr(ro.ReadOnlyWorksheet, "_cells_by_row", quebra)
+    dados = _xlsx([CABECALHO.split(","), ["c1", "webchat", "cliente", "oi", "x", "false"]])
+    with pytest.raises(ArquivoIlegivelError):
+        extrair("planilha.xlsx", dados)

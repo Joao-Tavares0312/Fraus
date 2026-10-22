@@ -81,9 +81,15 @@ def _tamanho_mb(caminho: Path) -> float:
 
 
 def _probabilidades_torch(diretorio: Path, textos: list[str]) -> list[list[float]]:
-    """A opiniao do modelo ORIGINAL -- a referencia contra a qual se compara."""
+    """A opiniao do modelo ORIGINAL -- a referencia contra a qual se compara.
+
+    Com a temperatura do artefato, como o runtime: o lado ONNX a aplica, e
+    comparar com o softmax cru recusaria todo modelo calibrado.
+    """
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    from fraus.sinais.texto import temperatura_do_artefato
 
     tokenizador = AutoTokenizer.from_pretrained(str(diretorio))
     modelo = AutoModelForSequenceClassification.from_pretrained(str(diretorio))
@@ -92,7 +98,8 @@ def _probabilidades_torch(diretorio: Path, textos: list[str]) -> list[list[float
         entradas = tokenizador(
             textos, truncation=True, max_length=192, padding=True, return_tensors="pt"
         )
-        return torch.softmax(modelo(**entradas).logits, dim=-1).tolist()
+        logits = modelo(**entradas).logits / temperatura_do_artefato(diretorio)
+        return torch.softmax(logits, dim=-1).tolist()
 
 
 def _probabilidades_onnx(diretorio: Path, textos: list[str]) -> list[list[float]]:
@@ -158,7 +165,9 @@ def converter(nome: str, precisao: str = "int8") -> dict:
     # classes (0 insatisfeito, 1 neutro, 2 satisfeito) e a invariante 8, e
     # perde-la na conversao faria o sistema pontuar ao contrario em silencio.
     shutil.copy2(origem / "config.json", destino / "config.json")
-    for extra in ("metricas.json",):
+    # `fraus_receita.json` leva a temperatura: sem ele o ONNX serviria
+    # softmax cru e divergiria do torch no mesmo checkpoint.
+    for extra in ("metricas.json", "fraus_receita.json"):
         if (origem / extra).exists():
             shutil.copy2(origem / extra, destino / extra)
 

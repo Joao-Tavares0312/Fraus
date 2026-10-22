@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "tarefa": "ironia",
+  "gerado_em": "2026-10-19T19:41:27+00:00",
+  "procedencia": {
+    "commit": "72763aa",
+    "modelos": {
+      "atual": "../Fraus/modelos/bertimbau-ironia",
+      "candidata": "../Fraus/modelos/candidatos/ironia-2026-10-19-19h11"
+    },
+    "amostra": null
+  },
+  "conjuntos": [
+    {
+      "id": "ironia_multipico",
+      "nome": "MultiPICo-PT, respostas de Reddit/Twitter",
+      "independente": true,
+      "exemplos": 462,
+      "impressao": "4eee9c62e8c9a11fb5e39d1609238b7175420ca171e8352a3516e4785693595e",
+      "classes": [
+        "nao_ironico",
+        "ironico"
+      ],
+      "classes_presentes": [
+        0,
+        1
+      ],
+      "ressalvas": [
+        "Rotulo por maioria de ~5 anotadores; empates fora. As duas classes vem das mesmas fontes (sem atalho de procedencia). PT-BR e PT-PT juntos. A ironia foi anotada VENDO o post; o modelo le so a resposta.",
+        "Deixa de ser independente para candidato treinado com o MultiPICo (o teste continua disjunto do treino)."
+      ],
+      "modelos": {
+        "atual": {
+          "exemplos": 462,
+          "acuracia": 0.5670995670995671,
+          "f1_macro": 0.5113903166444571,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 297,
+              "vp": 209,
+              "fp": 112,
+              "fn": 88,
+              "vn": 53,
+              "precisao": 0.6510903426791277,
+              "recall": 0.7037037037037037,
+              "f1": 0.6763754045307443
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 165,
+              "vp": 53,
+              "fp": 88,
+              "fn": 112,
+              "vn": 209,
+              "precisao": 0.375886524822695,
+              "recall": 0.3212121212121212,
+              "f1": 0.3464052287581699
+            }
+          ],
+          "matriz": [
+            [
+              209,
+              88
+            ],
+            [
+              112,
+              53
+            ]
+          ],
+          "ece": 0.340996440096851
+        },
+        "candidata": {
+          "exemplos": 462,
+          "acuracia": 0.683982683982684,
+          "f1_macro": 0.6602941176470588,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 297,
+              "vp": 219,
+              "fp": 68,
+              "fn": 78,
+              "vn": 97,
+              "precisao": 0.7630662020905923,
+              "recall": 0.7373737373737373,
+              "f1": 0.75
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 165,
+              "vp": 97,
+              "fp": 78,
+              "fn": 68,
+              "vn": 219,
+              "precisao": 0.5542857142857143,
+              "recall": 0.5878787878787879,
+              "f1": 0.5705882352941176
+            }
+          ],
+          "matriz": [
+            [
+              219,
+              78
+            ],
+            [
+              68,
+              97
+            ]
+          ],
+          "ece": 0.05543865824674631
+        }
+      },
+      "comparacao": {
+        "candidato": "candidata",
+        "referencia": "atual",
+        "diferenca_f1_macro": 0.1489038010026017,
+        "ic95": [
+          0.0876793653202907,
+          0.2099639536274138
+        ],
+        "mcnemar": {
+          "so_candidato": 130,
+          "so_referencia": 76,
+          "p_valor": 0.00020560691138247234
+        },
+        "diferenca_demonstrada": true
+      }
+    },
+    {
+      "id": "ironia_regua_20",
+      "nome": "Regua de 20 frases de atendimento",
+      "independente": true,
+      "exemplos": 20,
+      "impressao": "90f3ab25892bef90b09167120808ae9357919384667fdd74ec4132d4ef27e668",
+      "classes": [
+        "nao_ironico",
+        "ironico"
+      ],
+      "classes_presentes": [
+        0,
+        1
+      ],
+      "ressalvas": [
+        "20 frases: IC de cerca de +-0,22. Serve de alarme, nao de medida fina. A regua de pares minimos substitui esta quando congelar."
+      ],
+      "modelos": {
+        "atual": {
+          "exemplos": 20,
+          "acuracia": 0.4,
+          "f1_macro": 0.3939393939393939,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 10,
+              "vp": 3,
+              "fp": 5,
+              "fn": 7,
+              "vn": 5,
+              "precisao": 0.375,
+              "recall": 0.3,
+              "f1": 0.33333333333333326
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 10,
+              "vp": 5,
+              "fp": 7,
+              "fn": 5,
+              "vn": 3,
+              "precisao": 0.4166666666666667,
+              "recall": 0.5,
+              "f1": 0.45454545454545453
+            }
+          ],
+          "matriz": [
+            [
+              3,
+              7
+            ],
+            [
+              5,
+              5
+            ]
+          ],
+          "ece": 0.5698599278926849
+        },
+        "candidata": {
+          "exemplos": 20,
+          "acuracia": 0.55,
+          "f1_macro": 0.52,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 10,
+              "vp": 8,
+              "fp": 7,
+              "fn": 2,
+              "vn": 3,
+              "precisao": 0.5333333333333333,
+              "recall": 0.8,
+              "f1": 0.64
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 10,
+              "vp": 3,
+              "fp": 2,
+              "fn": 7,
+              "vn": 8,
+              "precisao": 0.6,
+              "recall": 0.3,
+              "f1": 0.4
+            }
+          ],
+          "matriz": [
+            [
+              8,
+              2
+            ],
+            [
+              7,
+              3
+            ]
+          ],
+          "ece": 0.2426883786916733
+        }
+      },
+      "comparacao": {
+        "candidato": "candidata",
+        "referencia": "atual",
+        "diferenca_f1_macro": 0.1260606060606061,
+        "ic95": [
+          -0.18932819886848026,
+          0.4167499999999995
+        ],
+        "mcnemar": {
+          "so_candidato": 7,
+          "so_referencia": 4,
+          "p_valor": 0.548828125
+        },
+        "diferenca_demonstrada": false
+      }
+    }
+  ]
+}

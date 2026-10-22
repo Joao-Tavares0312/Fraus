@@ -12,7 +12,7 @@ export function Leituras({ conjunto }: { conjunto: ConjuntoLeituras | Falta }) {
   }
   return (
     <details id="leituras" className="leituras-gravadas">
-      <summary><ScanText className="icone-lp" aria-hidden="true" /><span>Inspecionar conversas analisadas</span><ChevronDown className="icone-lp chevron-lp" aria-hidden="true" /></summary>
+      <summary className="chanfro"><ScanText className="icone-lp" aria-hidden="true" /><span>Inspecionar conversas analisadas</span><ChevronDown className="icone-lp chevron-lp" aria-hidden="true" /></summary>
       <p>Conversas sintéticas escritas para esta página, com análises gravadas pelo motor real. Escolha uma conversa e confira o que foi lido.</p>
       <SeletorDeLeituras conjunto={conjunto} />
     </details>

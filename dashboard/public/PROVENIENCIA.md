@@ -1,36 +1,35 @@
 # Proveniência dos ativos visuais
 
+## LP coreografada — 19/10/2026
+
+| Ativo | Origem e uso |
+|---|---|
+| `identidade/unbounded-variavel.woff2` | Unbounded, Google Fonts, fonte variável (500–700), subconjunto latin com os acentos do português. SIL OFL em `identidade/OFL-Unbounded.txt`. Títulos da LP, por `next/font/local` só em `app/page.tsx`. |
+| `identidade/space-grotesk-variavel.woff2` | Space Grotesk, Google Fonts, fonte variável (400–500), subconjunto latin. SIL OFL em `identidade/OFL-Space-Grotesk.txt`. Corpo de texto da LP. |
+| `lib/lp-nova/palco-fr.ts` | Palco WebGL nativo do mockup GSAP + 3D: os mesmos contornos e o mesmo material da escultura, com câmera de perspectiva e poeira de 700 pontos (PRNG fixo). Não contém modelo de IA nem executa inferência. |
+
+Os arquivos foram baixados uma vez de `fonts.gstatic.com`; o produto não
+consulta esses endereços no build nem ao abrir a página. Licenças obtidas do
+repositório `google/fonts` (`ofl/unbounded`, `ofl/spacegrotesk`).
+
 ## Direção FR — 16/10/2026
 
 | Ativo | Origem e uso |
 |---|---|
-| `identidade/fundo-pincel.svg` | Composição vetorial autoral de traços diagonais. Uma camada cobre toda a LP; sem scripts, animação, filtros ou recursos externos. |
 | `identidade/chakra-petch-{400,500,600}.woff2` | Chakra Petch, Google Fonts, convertida para WOFF2 com FontTools, preservando os glifos recebidos, incluindo português. SIL OFL em `identidade/OFL-Chakra-Petch.txt`. Servida localmente por `next/font/local`. |
-| `identidade/fr-lp-{0,1,2,3}.webp` | Capturas transparentes da própria escultura WebGL, regeneradas em 16/10: Chromium, redução para 1280×1024 e WebP qualidade 82 via FFmpeg. Desktop sem JS, com reduce, sem contexto elegível ou em backend de software; também antes do primeiro draw interativo. |
-| `identidade/fr-lp-{0,1,2,3}-compacto.webp` | As mesmas poses em 800×640; selecionadas por `picture` abaixo de 900px, sem baixar a variante desktop. |
-| `lib/lp-nova/escultura.ts` | Contornos do F e R derivados de `fraus-logo.svg`, com a fenda diagonal subtraída, ilhas separadas e arestas extrudadas. Arte de marca, não representação de features ou famílias. |
-| `lib/lp-nova/renderizador-fr.ts` | Renderizador WebGL nativo dos mesmos contornos, poses e materiais. Um buffer estático; não contém modelo de IA nem executa inferência. |
+| `identidade/fr-lp-0.webp` | Captura transparente da própria escultura WebGL (16/10): Chromium, 1280×1024, WebP qualidade 82 via FFmpeg. Desde 19/10 é o fallback do palco: sem JS, sem contexto elegível, backend de software ou contexto perdido. As poses 1–3 saíram com a narrativa sticky. |
+| `identidade/fr-lp-0-compacto.webp` | A mesma pose em 800×640, escolhida por `picture` abaixo de 900px. |
+| `lib/lp-nova/escultura.ts` | Contornos do F e R derivados de `fraus-logo.svg`, com a fenda diagonal subtraída, ilhas separadas e arestas extrudadas. Arte de marca, não representação de features ou famílias. **O modelo não muda**; câmera e poses, sim. |
 
 Fontes originais: [Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch)
 e [licença/família no repositório Google Fonts](https://github.com/google/fonts/tree/main/ofl/chakrapetch).
 Os arquivos foram obtidos das variantes 400, 500 e 600 da família; o produto
 não consulta esses endereços ao abrir a página.
 
-Para regenerar os WebP, com a dashboard em execução:
-
-```bash
-npm run arte:lp
-# LP_URL seleciona outra prévia local. Argumentos 0 1 2 3 selecionam poses.
-# Só na captura offline sem aceleração; não é configuração do produto:
-LP_GL_SOFTWARE=1 npm run arte:lp
-```
-
-O exportador usa os componentes, poses e materiais do produto; não mantém uma
-segunda geometria. A caixa de captura tem margem para a pose aberta, sem cortar
-a ponta do R. Reiniciar uma prévia de produção após criar arquivos públicos.
-A captura em SwiftShader requer autorização explícita no exportador. O driver
-continua sendo software; os pixels vêm do mesmo GL real, sem forjar um perfil
-de hardware ou medir produção nessa condição.
+O exportador `npm run arte:lp` saiu junto com a narrativa sticky, porque
+dependia do DOM dela. O WebP continua fiel: o modelo e o material são os
+mesmos. Para gerar uma pose nova, um exportador precisa ler o palco atual, sem
+criar uma segunda geometria.
 
 Os ícones de interface vêm de `lucide-react`, já dependência do projeto.
 

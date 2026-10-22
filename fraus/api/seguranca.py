@@ -269,6 +269,9 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
         return True
     if caminho in ("/conversas/importar", "/conversas/importar/previa", "/conversas/repontuar"):
         return True
+    # Remover atendimento gravado muda os indicadores de todo mundo: dev.
+    if metodo == "DELETE" and caminho.startswith("/conversas/"):
+        return True
     if caminho == "/configuracoes" and metodo != "GET":
         return True
     if caminho.startswith("/lexico") and metodo != "GET":
@@ -297,6 +300,30 @@ def exigir_mestra(ctx: Contexto, authorization: str | None) -> None:
         raise HTTPException(
             status_code=403, detail="esta rota exige a chave mestra"
         )
+
+
+def exigir_mestra_ou_dev(ctx: Contexto, authorization: str | None) -> None:
+    """A mestra, ou a sessao de quem tem papel `dev` -- so para credencial de FONTE.
+
+    Em producao a dashboard fala com a API pelo proxy, que manda o JWT da
+    sessao, nunca a mestra: com `exigir_mestra` o botao de gerar chave da tela
+    de Integracoes dava 403 para o proprio desenvolvedor (19/10/2026).
+
+    Chave de fonte so escreve conversas naquela fonte, e quem tem papel `dev`
+    ja administra as integracoes (`rota_administrativa`). Chave de ACESSO e a
+    mestra continuam atras de `exigir_mestra`: elas leem e administram tudo.
+    """
+    if not ctx.autenticacao_ligada():
+        return
+    chave = chave_do_cabecalho(authorization)
+    if e_mestra(ctx, chave):
+        return
+    sessao = sessao_do_jwt(ctx, chave)
+    if sessao is not None and sessao.get("papel") == "dev":
+        return
+    raise HTTPException(
+        status_code=403, detail="esta rota exige a chave mestra ou uma conta de desenvolvedor"
+    )
 
 
 def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:

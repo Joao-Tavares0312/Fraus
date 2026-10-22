@@ -3,7 +3,7 @@
 export type Nivel = "dominante" | "apoio";
 
 const CLASSES: Record<Nivel, string> = {
-  dominante: "superficie p-4 sm:p-6",
+  dominante: "superficie fio p-4 sm:p-6",
   apoio: "painel-apoio p-4 sm:p-5",
 };
 

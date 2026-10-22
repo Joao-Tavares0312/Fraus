@@ -135,7 +135,7 @@ function Celula({
   children: ReactNode;
 }) {
   return (
-    <div className="quebra-evitar flex min-w-0 flex-col gap-2.5 px-4 py-3.5">
+    <div className="superficie quebra-evitar flex min-w-0 flex-col gap-2.5 px-4 py-3.5">
       <div className="flex items-start justify-between gap-2">
         <h2 className="rotulo-instrumento">{rotulo}</h2>
         {qualificacao ? (

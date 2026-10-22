@@ -28,12 +28,20 @@ Fraus, a divindade romana da fraude e do engano — contraparte latina de
 
 ### Da análise à operação
 
-Na tela **Analisar**, envie um arquivo ou cole CSV/JSON/transcrição. A opção
-**Salvar as conversas analisadas nos indicadores e no grafo** publica o lote no
-banco configurado da API (`FRAUS_DATABASE_URL` para PostgreSQL/Supabase).
-Horários reais e motor real são obrigatórios; o mesmo conteúdo não duplica os
-atendimentos. A confirmação abre o período correto nos indicadores e no grafo.
-Desmarque salvar para manter a análise avulsa.
+Na tela **Analisar**, solte o arquivo — planilha, CSV, JSON ou conversa
+exportada do WhatsApp. Se o servidor tem certeza das colunas (`confiavel` na
+prévia), o Fraus analisa e **salva** direto no banco configurado da API
+(`FRAUS_DATABASE_URL` para PostgreSQL/Supabase); se não tem, pede só para
+conferir a fala e quem falou. Arquivo sem horário é lido em modo avulso e não
+entra nos indicadores — a tela diz por quê. O mesmo conteúdo não duplica os
+atendimentos, e a confirmação abre o período certo nos indicadores e no grafo.
+
+Conversas também chegam sozinhas: o chatbot **Tars** manda cada atendimento ao
+Fraus depois de cada resposta ([Integração com o Tars](docs/integracao-tars.md)).
+
+A barra lateral traz o dia a dia — Visão geral, Atendimentos, Analisar, Grafo e
+Modelo. **Operação**, **Integrações** e **Configurações**, documentação, tema e
+sair ficam no **menu da conta**, no rodapé.
 
 **Operação** reúne sete ferramentas sobre esses registros:
 
@@ -235,7 +243,7 @@ vence RAG em acurácia e latência[^3].
 - [Deploy gratuito](docs/deploy-vercel.md) — dashboard e API na Vercel, modelos no Oracle Object Storage e estado no Supabase
 - [Diferenciais — relatório](docs/diferenciais/relatorio.md) — o que entrou em E1, E2, E5 e E6, o que foi medido e o que não foi verificado
 - [Limitações conhecidas](docs/limitacoes.md) — limites científicos e operacionais que permanecem
-- [Integração com o Tars](docs/integracao-tars.md) — sincronização idempotente entre os projetos, sem banco compartilhado
+- [Integração com o Tars](docs/integracao-tars.md) — cada atendimento do chatbot chega por `POST /ingestao`, um por pausa de 30 min, sem banco compartilhado
 
 ## Como rodar
 

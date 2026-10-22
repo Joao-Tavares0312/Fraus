@@ -69,3 +69,70 @@ def test_id_confirmado_como_data_rejeita_as_linhas_em_vez_de_inventar_o_ano():
     opcoes = OpcoesDeLeitura(forcado={"texto": "texto", "autor": "autor", "enviada_em": "chat_id"})
     with pytest.raises(ArquivoIlegivelError, match="data ilegível"):
         extrair("telegram.csv", SEM_DATA.encode(), opcoes)
+
+
+def _xlsx(linhas):
+    import io
+
+    from openpyxl import Workbook
+
+    pasta = Workbook()
+    aba = pasta.active
+    for linha in linhas:
+        aba.append(linha)
+    saida = io.BytesIO()
+    pasta.save(saida)
+    return saida.getvalue()
+
+
+def test_id_de_chat_plausivel_como_epoch_perde_para_a_coluna_de_data():
+    # Export do TARS (16/10/2026): "Chat ID" do Telegram ao lado de "Data e
+    # hora" com datetime de celula. Um id de dez digitos DENTRO da janela de
+    # epoch empatava com a data verdadeira -- e quem ganhava o desempate
+    # decidia se a conversa tinha horario ou virava "data ilegivel".
+    agora = datetime(2026, 9, 23, 12, 2, 44)
+    cabecalho = ["ID", "Instância ID", "Instância", "Canal", "Chat ID", "Papel",
+                 "Conteúdo", "Data e hora", "Latência (ms)", "Provedor", "Modelo", "Sucesso"]
+    linhas = [cabecalho]
+    for i, (papel, texto) in enumerate([
+        ("user", "Tu faz o L?"), ("assistant", "Não, sou um assistente de suporte"),
+        ("user", "O que é wascer"), ("assistant", "A Wascer é a plataforma de tracking"),
+    ]):
+        linhas.append([str(42 + i), "inst_x", "TARS", "telegram", "1712345678", papel,
+                       texto, agora + timedelta(seconds=30 * i), None, None, None, True])
+    extracao = extrair("tars.xlsx", _xlsx(linhas))
+    papeis = extracao.mapeamento["papeis"]
+    assert papeis["enviada_em"]["coluna"] == "Data e hora"
+    assert papeis["conversa_id"]["coluna"] == "Chat ID"
+    assert extracao.tem_tempo is True
+    assert len(extracao.conversas[0].mensagens) == 4
+
+
+def test_oito_digitos_nao_e_data_compacta():
+    # `datetime.fromisoformat("20240115")` aceita desde o Python 3.11: um id
+    # numerico de oito digitos virava data.
+    datas, _ = mapeador.interpretar_datas(["20240115", "20240116"], ["c", "c"], None)
+    assert datas == [None, None]
+
+
+def test_perfil_salvo_errado_nao_estraga_a_leitura():
+    # Producao, 19/10/2026: um perfil salvo dizia que a data era a coluna
+    # "Chat ID". Perfil vence a heuristica, e o arquivo inteiro voltava como
+    # "data ilegivel" -- mesmo a heuristica sozinha lendo o export certo.
+    from fraus.ingest.arquivos import OpcoesDeLeitura
+
+    agora = datetime(2026, 9, 23, 12, 2, 44)
+    cabecalho = ["Chat ID", "Papel", "Conteúdo", "Data e hora"]
+    linhas = [cabecalho] + [
+        ["8624457065", papel, texto, agora + timedelta(seconds=30 * i)]
+        for i, (papel, texto) in enumerate([("user", "oi tudo bem"), ("assistant", "olá, como posso ajudar"),
+                                            ("user", "quero saber dos planos"), ("assistant", "temos três planos")])
+    ]
+    perfil_errado = {"id": 7, "nome": "tars antigo", "ordem_data": None, "papeis": {
+        "texto": "Conteúdo", "autor": "Papel", "enviada_em": "Chat ID", "conversa_id": None, "canal": None}}
+    extracao = extrair("tars.xlsx", _xlsx(linhas), OpcoesDeLeitura(perfil_para=lambda _a: perfil_errado))
+    assert extracao.tem_tempo is True
+    assert len(extracao.conversas[0].mensagens) == 4
+    assert extracao.mapeamento["papeis"]["enviada_em"]["coluna"] == "Data e hora"
+    assert extracao.perfil is None
+    assert any("tars antigo" in aviso for aviso in extracao.avisos)

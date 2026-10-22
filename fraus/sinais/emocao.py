@@ -21,7 +21,12 @@ from pathlib import Path
 
 
 from fraus.modelos import Conversa
-from fraus.sinais.texto import ModeloAusenteError, carregar_torch, prever_torch
+from fraus.sinais.texto import (
+    ModeloAusenteError,
+    carregar_torch,
+    prever_torch,
+    temperatura_do_artefato,
+)
 
 # A ORDEM E CANONICA e vale no notebook 03, aqui e no fusor. Inverter nao gera
 # erro: faz o sistema atribuir a emocao errada em silencio. Mesma armadilha da
@@ -53,10 +58,11 @@ class ClassificadorEmocao:
                 "Ver docs/treinamento.md."
             )
         self._tokenizador, self._modelo = carregar_torch(caminho_modelo, "Modelo de emocao")
+        self._temperatura = temperatura_do_artefato(caminho_modelo)
 
     def prever_mensagens(self, textos: list[str]) -> list[list[float]]:
         """Probabilidades das sete classes, na ordem de NOMES_EMOCOES."""
-        return prever_torch(self._tokenizador, self._modelo, textos)
+        return prever_torch(self._tokenizador, self._modelo, textos, self._temperatura)
 
 
 def features_emocao(conversa: Conversa, classificador) -> dict[str, float]:

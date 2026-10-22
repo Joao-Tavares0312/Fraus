@@ -969,6 +969,10 @@ export const obterGrafo = (de?: string | null, ate?: string | null) =>
 export const obterConversa = (id: string) =>
   proteger(buscar<DetalheConversa>(`/conversas/${encodeURIComponent(id)}`));
 
+/** Remove o atendimento gravado. Só conta `dev`; a API registra na auditoria. */
+export const removerConversa = (id: string) =>
+  proteger(escrever<void>(`/conversas/${encodeURIComponent(id)}`, "DELETE"));
+
 export const obterAtribuicao = (id: string) =>
   proteger(
     buscar<Atribuicao>(`/conversas/${encodeURIComponent(id)}/atribuicao`),
@@ -1575,6 +1579,8 @@ export type PreviaLeitura = {
   /** Primeiras linhas, já censuradas pelo servidor. */
   amostra: string[][];
   perfil: { id: number; nome: string } | null;
+  /** O servidor diz se a leitura pode seguir sem o analista conferir as colunas. */
+  confiavel: boolean;
 };
 
 export type PerfilMapeamento = {
