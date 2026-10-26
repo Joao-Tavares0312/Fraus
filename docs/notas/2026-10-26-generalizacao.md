@@ -188,10 +188,10 @@ que a cabeça antiga nunca viu os textos de teste.
 
 A primeira tentativa registrou **Google Colab CLI 0.7.5 instalada** e falhou
 por ausência de ADC (`DefaultCredentialsError`), sem alocar GPU ou treinar.
-Na retomada de 26/10, o usuário concluiu o login OAuth2 na conta autorizada;
-isso remove o bloqueio de login, mas não comprova quota T4 nem execução.
-Ainda não há bundles de candidatos da nova campanha. O diagnóstico científico
-depende de evidência efetivamente exportada, não de notebooks instrumentados.
+Na retomada de 26/10, o usuário concluiu o login OAuth2 na conta autorizada.
+A CLI alocou uma T4 na sessão própria; isso comprova alocação, não nove
+treinos concluídos. Ainda não há bundles de candidatos da nova campanha.
+O diagnóstico depende de evidência exportada, não de notebooks instrumentados.
 
 Nesta fatia foram feitas inspeção estática e a medição de sobreposição acima.
 Não foram executados testes, builds, lint ou carga de `fusor.joblib`,
@@ -311,6 +311,29 @@ os avisos registrados acima.
 
 Abas e serviços de QA foram encerrados; scripts temporários de smoke e a
 fixture foram removidos. Relatórios, manifestos, bundles de smoke e capturas
-permanecem no workspace externo temporário. Após o login OAuth2, ainda é
-necessário observar a alocação T4 e recuperar os candidatos; a migração local
-não representa execução dessas nove rodadas ou das ablações independentes.
+permanecem no workspace externo temporário. Após o login OAuth2 e a alocação
+T4, ainda é necessário recuperar os candidatos; a migração local não representa
+execução concluída dessas nove rodadas ou das ablações independentes.
+
+## PR isolada e retomada autenticada
+
+A PR #104 foi preparada sobre `origin/main` em `acc2791`, com 46 caminhos
+da entrega e sem os trabalhos históricos de LP/desempenho. A fonte congelada
+da campanha é `03f91770ec92dec934d794cbad50ea3224f4cb8a`. A worktree de revisão
+foi movida para `/home/joaopedro/.cache/fraus/worktrees/docs-modelo-20261026`:
+o tmpfs de `/tmp` atingiu sua quota ao preparar dependências e payloads.
+Nenhum peso ou artefato científico antigo foi apagado para liberar espaço.
+
+Na base integrada passaram 352 testes focados, os builds estritos interno
+e público e a geração do PDF; os diagramas geral/Transformer foram conferidos
+por rasterização. O HTML público não contém fontes de funções, páginas
+restritas ou JSONL. No GitHub, os checks de SQLite, PostgreSQL e dashboard
+passaram. A Vercel criou automaticamente um ambiente **Preview**, com
+`production_environment: false`; não houve publicação em produção.
+
+O explorador integrado foi operado com dublê explícito: as três frases
+responderam 200, com um POST por classificação e texto preservado; selecionar
+etapa não disparou inferência. Desktop 1440px e celular 390px foram observados;
+no celular, movimento reduzido ativo e sem overflow horizontal. A aba e os
+serviços desse QA foram encerrados. As métricas Torch reais continuam sendo
+evidência separada dessa interação sintética.

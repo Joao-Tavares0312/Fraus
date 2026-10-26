@@ -6,10 +6,10 @@
     Há atalhos históricos documentados e sobreposição de produtos na receita
     posicional reconstruída. Isso não recupera as curvas dos pesos antigos nem
     identifica o checkpoint de produção. A campanha fechada no Colab e o novo
-    experimento independente do fusor **ainda não têm resultados**. A CLI oficial
-    está instalada e o login OAuth2 na conta autorizada foi concluído na retomada;
-    alocação T4, quota e exportação dos candidatos ainda precisam ser observadas.
-    Não houve promoção de modelo ou deploy nesta investigação.
+    experimento independente do fusor **ainda não têm resultados**. O login
+    OAuth2 na conta autorizada foi concluído e uma T4 foi alocada; ainda faltam
+    os bundles e relatórios finais das nove rodadas.
+    Não houve promoção de modelo nem publicação em produção.
 
 Esta página distingue quatro perguntas: **vazamento**, **sobreajuste**,
 **transferência de domínio** e **insuficiência de evidência**. Uma métrica alta
@@ -36,7 +36,7 @@ A data é a da observação, não uma alegação sobre quando o modelo foi trein
 | `emocao-atual.json` / cabeça local de emoção | teste GoEmotions-PT reconstruído, 7.328 exemplos | 26/10/2026 | F1-macro **0,691023**, acurácia **0,720524**, ECE **0,056790** | pesos anteriores à nova divisão podem ter visto parte dos exemplos; independência histórica não verificável |
 | `emocao-atual.json` / mesma cabeça | XED-pt, 4.286 exemplos, seis classes presentes (sem neutro) | 26/10/2026 | F1-macro **sete classes 0,240398**; **seis presentes 0,280465**; acurácia **0,285814**, ECE **0,451814** | transferência já consultada; rótulos projetados de outras línguas, não validação de suporte real |
 | satisfação e emoção locais / curvas antigas | treino supervisionado histórico | 26/10/2026 | curvas e manifestos individuais antigos não recuperados | não permite medir gap treino–validação dos pesos atuais |
-| nova campanha das três cabeças | B2W, GoEmotions-PT e MultiPICo PT; três sementes por cabeça | 26/10/2026 | **OAuth2 concluído; execução e quota T4 ainda pendentes** | sem nove rodadas, curvas novas ou média/desvio a reportar |
+| nova campanha das três cabeças | B2W, GoEmotions-PT e MultiPICo PT; três sementes por cabeça | 26/10/2026 | **OAuth2 concluído e T4 alocada; nove rodadas ainda sem relatório final** | sem curvas novas ou média/desvio a reportar |
 | candidato independente do fusor | B2W agrupado + conversas sintéticas | 26/10/2026 | **pendente da campanha e dos manifestos das cabeças** | sem avaliação nova de sistema independente |
 | produção | checkpoint não identificado | 26/10/2026 | nenhuma inferência autenticada ou proveniência de pesos demonstrada nesta investigação | saúde da API não comprova inferência nem igualdade com artefatos locais |
 
@@ -168,7 +168,7 @@ Em 26/10/2026, a verificação integrada da receita registrou 77 testes focados
 aprovados e um smoke real com BERT **aleatório e minúsculo**, treinado por duas
 épocas em dados construídos. O smoke salvou/recarregou o modelo, executou a
 avaliação final separada e recusou manifesto divergente. As 18 células Python
-dos três notebooks foram compiladas; o caminho de GPU não foi executado.
+dos três notebooks foram compiladas; esse smoke local não executou o caminho de GPU.
 Isso verifica contratos do código, **não** mede satisfação, emoção, ironia ou
 generalização do Fraus e não substitui as nove rodadas pendentes.
 
