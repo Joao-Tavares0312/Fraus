@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Play, RotateCcw } from "lucide-react";
 import { simularTexto, type Simulacao } from "@/lib/api";
 import { CabecasDeLeitura, LeituraDeEstilo } from "@/components/CabecasDeLeitura";
@@ -67,38 +67,49 @@ const PARTIDAS = [
  * isso duplicaria a regra e e o mesmo erro que ja causou divergencia de
  * arredondamento na nota.
  */
-export function Simulador() {
+export function Simulador({ onResultado }: { onResultado?: (resultado: Simulacao | null) => void }) {
   const [texto, setTexto] = useState(PARTIDAS[0]);
   const [resultado, setResultado] = useState<Simulacao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [rodando, setRodando] = useState(false);
+  // O estado desabilita o botão; a ref bloqueia atalhos no mesmo ciclo de render.
+  const emCurso = useRef(false);
   const idCampo = useId();
 
   const simular = async () => {
+    if (emCurso.current) return;
     const limpo = texto.trim();
+    setResultado(null);
+    onResultado?.(null);
+    setErro(null);
     if (!limpo) {
       setErro("Digite alguma coisa: a API recusa texto vazio.");
-      setResultado(null);
       return;
     }
+    emCurso.current = true;
     setRodando(true);
-    setErro(null);
-    const resposta = await simularTexto(limpo);
-    setRodando(false);
-    if (resposta.ok) {
-      setResultado(resposta.dado);
-    } else {
-      setErro(resposta.erro);
-      setResultado(null);
+    try {
+      const resposta = await simularTexto(limpo);
+      if (resposta.ok) {
+        setResultado(resposta.dado);
+        onResultado?.(resposta.dado);
+      } else {
+        setErro(resposta.erro);
+      }
+    } catch (erro) {
+      setErro(erro instanceof Error ? erro.message : "Não foi possível classificar a frase.");
+    } finally {
+      emCurso.current = false;
+      setRodando(false);
     }
   };
 
   const excedeu = texto.length > TETO;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 px-5 py-4">
+    <div className="flex min-w-0 flex-col gap-4 py-4" aria-busy={rodando}>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={idCampo} className="text-xs text-muted-foreground">
+        <Label htmlFor={idCampo} className="text-sm text-muted-foreground">
           Fala do cliente
         </Label>
         <Textarea
@@ -116,10 +127,10 @@ export function Simulador() {
           rows={3}
           maxLength={TETO}
           placeholder="ok, obrigado 🙂"
-          className="resize-y font-normal"
+          className="resize-y font-normal text-dito-texto"
         />
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" onClick={simular} disabled={rodando}>
+          <Button type="button" size="sm" className="min-h-11 px-4 text-sm motion-reduce:transition-none" onClick={simular} disabled={rodando}>
             <Play aria-hidden />
             {rodando ? "Classificando…" : "Classificar"}
           </Button>
@@ -135,37 +146,43 @@ export function Simulador() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">Começar de:</span>
+        <span className="text-sm text-muted-foreground">Começar de:</span>
         {PARTIDAS.map((partida) => (
           <Button
             key={partida}
             type="button"
             size="xs"
             variant="outline"
+            disabled={rodando}
             onClick={() => {
               setTexto(partida);
               setResultado(null);
+              onResultado?.(null);
               setErro(null);
             }}
-            className="max-w-[22rem] justify-start truncate"
+            className="h-auto min-h-11 max-w-full justify-start px-3 py-2 text-left text-sm whitespace-normal motion-reduce:transition-none"
           >
             <RotateCcw aria-hidden />
-            <span className="truncate">{partida}</span>
+            <span className="min-w-0">{partida}</span>
           </Button>
         ))}
       </div>
 
+      <p role="status" className="sr-only">
+        {rodando ? "Classificando a frase. Aguarde." : resultado ? "Classificação concluída." : ""}
+      </p>
+
       {erro ? (
-        <EstadoVazio
-          titulo="A simulação não rodou"
-          explicacao={erro}
-          endpoint="POST /modelo/simular"
-        />
+        <div role="alert">
+          <EstadoVazio
+            titulo="A simulação não rodou"
+            explicacao={erro}
+            endpoint="POST /modelo/simular"
+          />
+        </div>
       ) : resultado === null ? (
-        <p className="rounded-lg border border-dashed border-border px-4 py-6 text-xs leading-relaxed text-muted-foreground">
-          Nada foi classificado ainda. Este espaço fica vazio de propósito: um
-          resultado de exemplo aqui seria um número inventado numa tela cujo
-          trabalho é não inventar números.
+        <p className="chanfro border border-dashed border-border px-4 py-6 text-sm leading-relaxed text-muted-foreground">
+          {rodando ? "Classificando a frase; os resultados anteriores foram limpos." : "Nada foi classificado ainda. Escolha um exemplo ou escreva uma frase e use Classificar. Nenhum resultado é preenchido automaticamente."}
         </p>
       ) : (
         <Resultado resultado={resultado} />
@@ -185,6 +202,12 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="border-b border-border pb-3">
+        <p className="text-sm text-muted-foreground">Frase classificada</p>
+        <blockquote className="mt-1 break-words text-base text-dito-texto">
+          {resultado.texto}
+        </blockquote>
+      </div>
       <div className="flex flex-col gap-2">
         <p className="flex flex-wrap items-baseline gap-2 text-sm">
           <span className="text-muted-foreground">Classe mais provável:</span>
@@ -258,24 +281,18 @@ function Resultado({ resultado }: { resultado: Simulacao }) {
  * ainda mais literal: desde 04/09/2026 ela nao entra no vetor de jeito nenhum
  * -- e leitura, nao nota. Encostar "ironia 99%" na barra de satisfacao
  * convidaria a ler esta frase como causa direta de uma nota que ela nao move.
- *
- * E aqui que a frase ironica se denuncia ao vivo: "que atendimento
- * maravilhoso, so esperei 3 horas" sai com satisfeito ALTO e ironia ALTA ao
- * mesmo tempo. As duas coisas juntas sao a informacao -- e a divergencia entre
- * elas e justamente o que o fusor ainda NAO sabe usar (ver a pendencia da
- * incongruencia implicita em docs/superpowers/specs/).
  */
 function OutrasCabecas({ resultado }: { resultado: Simulacao }) {
-  if (!resultado.emocao && resultado.prob_ironia === null) return null;
+  if (!resultado.emocao && resultado.prob_ironia == null && !resultado.estilo) return null;
   return (
     <div className="border-t border-linha pt-3">
       {/* Uma frase só: as sete emoções à vista, nada recolhido. */}
       <CabecasDeLeitura
-        emocao={resultado.emocao}
-        ironia={resultado.prob_ironia}
+        emocao={resultado.emocao ?? null}
+        ironia={resultado.prob_ironia ?? null}
         recolher={false}
       />
-      <LeituraDeEstilo estilo={resultado.estilo} />
+      <LeituraDeEstilo estilo={resultado.estilo ?? null} />
     </div>
   );
 }
@@ -290,8 +307,8 @@ function EmojisDetectados({ resultado }: { resultado: Simulacao }) {
   if (resultado.emojis.length === 0) {
     return (
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Nenhum emoji nesta frase — o sinal de emoji não contribuiu. A
-        classificação acima veio só do sinal de texto.
+        Nenhum emoji detectado nesta frase. As probabilidades acima são da
+        cabeça de satisfação, não do fusor.
       </p>
     );
   }

@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 22/10/2026 (UI e desempenho da LP/site)
+# Handoff — Fraus, atualizado em 26/10/2026 (generalização, Modelo e documentação)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -23,6 +23,31 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 + Recharts no front (`dashboard/`).
 
 ---
+
+## Generalização, Modelo e documentação — 26/10/2026
+
+- A [matriz de evidências](generalizacao.md) mantém o diagnóstico de
+  overfitting **inconclusivo**. A receita posicional histórica compartilha
+  41 produtos entre pools; isso não recupera o treino dos pesos antigos.
+  Auditoria integral, reconstrução e baselines ficam separados.
+- `receita_treino` e notebooks 01/03/04 selecionam pela validação e gravam a
+  decisão antes do teste final. Curvas têm diagnóstico de treino fixo.
+  Retomada e bundles foram exercitados com BERT minúsculo, não com novos
+  candidatos Fraus. Na retomada, o login OAuth2 na conta autorizada foi
+  concluído e uma T4 foi alocada; as nove rodadas ainda não têm bundles exportados.
+- O notebook 02 e a CLI do fusor agora exigem manifesto explícito,
+  `--b2w` e saída externa. `--promover` foi removido. Cache depende dos bytes
+  das cabeças, fontes e escala; ablações científicas aguardam candidatos
+  independentes. Não contorne a recusa do fusor antigo em segundos crus.
+- A tela Modelo ganhou explorador didático; preserva o simulador e reutiliza
+  uma única resposta HTTP. Não observa atenção/ativações nem pontua uma
+  conversa a partir da frase. Oito famílias observadas, sete/39 no vetor.
+- O site tem percursos para banca, usuários e desenvolvimento. O PDF usa
+  Chromium e `pdf_event_hook.py` para preservar Mermaid em SVG; biblioteca
+  fixada por hash, baixada no build, nunca no caminho de predição.
+- Sem promoção nem publicação em produção. Evidências e limites completos na
+  [nota interna](notas/2026-10-26-generalizacao.md); resultados brutos e
+  manifestos privados em `/tmp/fraus-overfitting-20261026/`, fora do site.
 
 ## Desempenho da LP e do site — 22/10/2026
 

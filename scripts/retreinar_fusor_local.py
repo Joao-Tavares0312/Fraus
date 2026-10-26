@@ -1,32 +1,20 @@
-"""Retreina o fusor LOCALMENTE, reproduzindo o notebook 02, e so grava com --promover.
+"""Experimento candidato do fusor: manifesto prospectivo, tres ablacões, sem promocao.
 
-POR QUE EXISTE. O notebook 02 roda no Colab, mas nao treina nada pesado: os
-BERTimbau ja existem e so extraem features, e o que treina e uma
-`LogisticRegression`. Em CPU com `FRAUS_BACKEND=onnx` a extracao das 1.200
-conversas leva ~10 min -- e isso tornou possivel MEDIR uma mudanca de feature
-antes de decidir, em vez de ir e voltar do Colab.
+Primeiro reserve B2W ANTES de treinar a cabeca de satisfacao:
+    python scripts/retreinar_fusor_local.py --b2w /dados/B2W.csv \
+        --manifesto /tmp/experimento/manifesto.json --gerar-manifesto
+Depois passe esse manifesto ao notebook 01 (FRAUS_MANIFESTO_FUSOR).
+Somente apos exportar os candidatos das cabecas:
+    python scripts/retreinar_fusor_local.py --b2w /dados/B2W.csv \
+        --manifesto /tmp/experimento/manifesto.json --modelos /tmp/cabecas \
+        --cache /tmp/experimento/features.json --saida /tmp/experimento/candidato
 
-A HISTORIA DELE. Nasceu em 15/09/2026 como `medir_compressao_do_tempo.py`, que
-comparou as tres saidas do P0 do tempo (teto p99, log1p, os dois) contra o
-fusor vigente reproduzido -- a tabela esta em `docs/treinamento.md`. A escolha
-foi `log1p`, que agora mora em `fraus.fusor.vetorizar`; as variantes deixaram de
-fazer sentido aqui, e o instrumento virou a ferramenta de retreino.
-
-O QUE ELE CONFERE ANTES DE GRAVAR:
-
-1. o mesmo B2W, balanceamento, sementes e `montar_features` do notebook -- a
-   regra de feature nao e redigitada;
-2. acuracia e F1-macro no conjunto de teste disjunto;
-3. quantas CATEGORIAS mudam contra o artefato em disco, que pode ser de uma
-   escala anterior (lido cru, sem a recusa de `Fusor.carregar`, so para medir).
-
-Sem `--promover` nao escreve nada. Com ele, guarda o artefato anterior ao lado
-(`fusor.joblib.bak-<escala>`) e grava `fusor.joblib` e `importancias.json`.
-
-    FRAUS_BACKEND=onnx uv run --with pandas python scripts/retreinar_fusor_local.py \\
-        --cache features-fusor.json [--promover]
+Schema privado v1 documentado em fraus.experimento_fusor. O manifesto usa
+indices aceitos por ler_b2w, hashes de fonte/texto/grupo e fingerprints dos
+lados completos. Cache antigo sem identidade e recusado, nao migrado por nome.
+Nenhum fusor ativo e lido ou escrito. A avaliacao e sintetica, nao evidencia
+em atendimentos reais. Proveniencia historica ausente continua nao verificavel.
 """
-
 from __future__ import annotations
 
 import argparse
@@ -38,118 +26,126 @@ RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
-from fraus.api.caminhos import CAMINHO_FUSOR, backend_declarado  # noqa: E402
-from fraus.api.main import montar_classificadores  # noqa: E402
-from fraus.fusor import (ESCALA_DO_TEMPO, NOMES_FEATURES,  # noqa: E402
-                         PESO_NEUTRO_NO_SCORE, Fusor, montar_features, vetorizar)
-from fraus.indicadores import categoria_nps, nota_0_10  # noqa: E402
+from fraus.experimento_fusor import (  # noqa: E402
+    ROTULO_FUSOR, SIMULACAO, avaliar_ablacao, carregar_cache, carregar_manifesto,
+    conferir_saida, conferir_satisfacao, frases_por_lado, gerar_manifesto,
+    hash_json, identidade_cache, treinar_ablacao,
+)
+from fraus.fusor import ESCALA_DO_TEMPO, Fusor, montar_features  # noqa: E402
+from fraus.generalizacao import LADOS  # noqa: E402
 from fraus.ingest.simulador import gerar_lote  # noqa: E402
 
-URL_B2W = "https://raw.githubusercontent.com/americanas-tech/b2w-reviews01/main/B2W-Reviews01.csv"
+
+def _gravar(caminho: Path, dados: dict) -> None:
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    caminho.write_text(json.dumps(dados, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
 
 
-def _extrair(b2w: str) -> dict:
-    """Celulas 3-5 do notebook 02, sem redigitar regra nenhuma de feature."""
-    import pandas as pd
-
-    dados = pd.read_csv(b2w, low_memory=False)
-    dados = dados[["review_text", "overall_rating", "recommend_to_a_friend"]].dropna()
-    dados = dados.rename(columns={"review_text": "texto"})
-    dados["recomenda"] = dados["recommend_to_a_friend"].str.strip().str.lower()
-    dados = dados[dados["recomenda"].isin(["yes", "no"])]
-    dados["rotulo"] = [
-        1 if nota == 3 else 2 if rec == "yes" else 0
-        for nota, rec in zip(dados["overall_rating"], dados["recomenda"])
-    ]
-    menor = dados["rotulo"].value_counts().min()
-    # `concat` e nao `groupby.apply`: o pandas 3 tira a coluna do grupo de
-    # dentro do apply. Mesma ordem de grupos, mesmas sementes do notebook.
-    dados = (
-        pd.concat([g.sample(menor, random_state=42) for _, g in dados.groupby("rotulo")])
-        .sample(frac=1, random_state=42)
-        .reset_index(drop=True)
-    )
-
-    def frases(rotulo, inicio, fim):
-        textos = dados[dados["rotulo"] == rotulo]["texto"].tolist()[inicio:fim]
-        return [t.strip() for t in textos if t and t.strip()]
-
-    corte = 400 * 3 // 4
-    treino = gerar_lote({r: frases(r, 0, corte) for r in (0, 1, 2)}, quantidade=900, semente=20260813)
-    teste = gerar_lote({r: frases(r, corte, 400) for r in (0, 1, 2)}, quantidade=300, semente=999)
-    texto, emocao, _ironia = montar_classificadores(backend_declarado())
-
-    def vetores(lote):
-        return [montar_features(c, texto, emocao) for c, _ in lote], [r for _, r in lote]
-
-    xt, yt = vetores(treino)
-    xe, ye = vetores(teste)
-    return {"xt": xt, "yt": yt, "xe": xe, "ye": ye}
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--b2w", default=URL_B2W)
-    ap.add_argument("--cache", type=Path, required=True)
-    ap.add_argument("--promover", action="store_true", help="grava modelos/fusor.joblib")
-    args = ap.parse_args()
-
-    if args.cache.exists():
-        dados = json.loads(args.cache.read_text())
+def _extrair(b2w: Path, manifesto: dict, lados: dict, texto: Path, emocao: Path,
+             *, backend: str, identidade: dict) -> dict:
+    if backend == "torch":
+        from fraus.sinais.emocao import ClassificadorEmocao
+        from fraus.sinais.texto import ClassificadorTexto
+        classificador = ClassificadorTexto(texto)
+        classificador_emocao = ClassificadorEmocao(emocao)
     else:
-        dados = _extrair(args.b2w)
-        args.cache.write_text(json.dumps(dados))
-    xt, yt, xe, ye = dados["xt"], dados["yt"], dados["xe"], dados["ye"]
+        from fraus.sinais.onnx import ClassificadorOnnx
+        classificador = ClassificadorOnnx(texto)
+        classificador_emocao = ClassificadorOnnx(emocao)
+    frases, metadados = frases_por_lado(b2w, manifesto, lados)
+    dados = {"identidade": identidade, "identidade_sha256": hash_json(identidade),
+             "pools": metadados}
+    for lado, sufixo in zip(LADOS, ("t", "v", "e")):
+        config = SIMULACAO[lado]
+        lote = gerar_lote(frases[lado], quantidade=config["quantidade"], semente=config["semente"])
+        dados[f"x{sufixo}"] = [montar_features(c, classificador, classificador_emocao) for c, _ in lote]
+        dados[f"y{sufixo}"] = [r for _, r in lote]
+    return dados
 
-    import joblib
-    from sklearn.metrics import accuracy_score, f1_score
 
-    novo = Fusor()
-    novo.treinar(xt, yt)
-    preditos = [novo.prever(e) for e in xe]
-    acuracia = accuracy_score(ye, preditos)
-    f1 = f1_score(ye, preditos, average="macro")
-    print(f"novo fusor (espera em {ESCALA_DO_TEMPO}): acuracia {acuracia:.4f}  F1-macro {f1:.4f}")
-
-    anterior = None
-    if CAMINHO_FUSOR.exists():
-        pipeline = joblib.load(CAMINHO_FUSOR)
-        escala = getattr(pipeline, "fraus_escala_do_tempo", "segundos")
-
-        def score_anterior(features):
-            vetor = [float(features[n]) for n in NOMES_FEATURES] if escala == "segundos" else vetorizar(features)
-            classes = list(pipeline.named_steps["modelo"].classes_)
-            p = dict(zip(classes, pipeline.predict_proba([vetor])[0]))
-            return 100.0 * (p.get(2, 0.0) + PESO_NEUTRO_NO_SCORE * p.get(1, 0.0))
-
-        trocas = sum(categoria_nps(score_anterior(e)) != categoria_nps(novo.pontuar(e)) for e in xe)
-        notas = sum(nota_0_10(score_anterior(e)) != nota_0_10(novo.pontuar(e)) for e in xe)
-        print(f"contra o artefato em disco (escala '{escala}'): {notas} notas e "
-              f"{trocas} categorias diferentes em {len(xe)} conversas de teste")
-        anterior = escala
-
-    if not args.promover:
-        print("\nnada gravado (use --promover).")
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--b2w", type=Path, required=True, help="CSV local exato; bytes conferidos pelo manifesto")
+    ap.add_argument("--manifesto", type=Path, required=True)
+    ap.add_argument("--gerar-manifesto", action="store_true", help="reserva split42 antes do treino; nao faz inferencia")
+    ap.add_argument("--modelos", type=Path, help="raiz explicita contendo bertimbau-satisfacao e bertimbau-emocao")
+    ap.add_argument("--modelo-texto", type=Path, help="checkpoint candidato de satisfacao (sobrepoe --modelos)")
+    ap.add_argument("--modelo-emocao", type=Path, help="checkpoint candidato de emocao (sobrepoe --modelos)")
+    ap.add_argument("--backend", choices=("torch", "onnx"), default="torch")
+    ap.add_argument("--cache", type=Path)
+    ap.add_argument("--saida", type=Path, help="diretorio externo ao repositorio e checkpoints; nunca modelos ativos")
+    args = ap.parse_args(argv)
+    if args.gerar_manifesto:
+        if args.manifesto.exists():
+            ap.error("manifesto ja existe; nao sobrescrever uma reserva congelada")
+        manifesto = gerar_manifesto(args.b2w)
+        _gravar(args.manifesto, manifesto)
+        print(f"manifesto reservado: {args.manifesto}; sha256 canonico {hash_json(manifesto)}")
         return 0
-
-    if anterior is not None:
-        copia = CAMINHO_FUSOR.with_name(f"{CAMINHO_FUSOR.name}.bak-{anterior}")
-        CAMINHO_FUSOR.replace(copia)
-        print(f"anterior guardado em {copia}")
-    novo.salvar(CAMINHO_FUSOR)
-    importancias = CAMINHO_FUSOR.with_name("importancias.json")
-    importancias.write_text(json.dumps({
-        "importancias": novo.importancias(),
-        "acuracia": float(acuracia),
-        "f1_macro": float(f1),
-        "conversas_treino": len(xt),
-        "conversas_teste": len(xe),
-        "escala_do_tempo": ESCALA_DO_TEMPO,
-        "rotulo": "recommend_to_a_friend (Yes/No) + overall_rating == 3 para o neutro",
-        "classes": ["insatisfeito", "neutro", "satisfeito"],
-        "origem": "scripts/retreinar_fusor_local.py (reproducao local do notebook 02)",
-    }, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"gravado {CAMINHO_FUSOR} e {importancias}")
+    if args.cache is None or args.saida is None:
+        ap.error("treino exige --cache e --saida")
+    texto = args.modelo_texto or (args.modelos / "bertimbau-satisfacao" if args.modelos else None)
+    emocao = args.modelo_emocao or (args.modelos / "bertimbau-emocao" if args.modelos else None)
+    if texto is None or emocao is None:
+        ap.error("declare --modelos ou ambos --modelo-texto e --modelo-emocao")
+    saida = conferir_saida(args.saida, [texto, emocao])
+    conferir_saida(args.cache, [texto, emocao])
+    manifesto, lados = carregar_manifesto(args.manifesto, args.b2w)
+    proveniencia = {
+        "satisfacao": conferir_satisfacao(texto, manifesto),
+        "emocao": {"estado": "independencia_nao_verificavel", "independence_unverifiable": True,
+                   "motivo": "fingerprint agregado de outro corpus nao comprova ausencia de sobreposicao textual com B2W"},
+    }
+    identidade = identidade_cache(manifesto, texto, emocao, backend=args.backend)
+    if args.cache.exists():
+        dados = carregar_cache(args.cache, identidade)
+    else:
+        dados = _extrair(args.b2w, manifesto, lados, texto, emocao,
+                         backend=args.backend, identidade=identidade)
+        _gravar(args.cache, dados)
+        dados = carregar_cache(args.cache, identidade)
+    # Congelar antes de qualquer leitura de metricas de teste; nao ha selecao por teste.
+    selecao = {"versao": 1, "manifesto_sha256": hash_json(manifesto),
+               "cache_identidade_sha256": hash_json(identidade),
+               "variantes": ["completo", "somente_texto", "somente_tempo"],
+               "modelo": "LogisticRegression", "max_iter": 1000, "random_state": 42,
+               "scaler": "StandardScaler ajustado somente no treino", "selecao": "configuracao fixa; nenhuma busca"}
+    _gravar(saida / "configuracao_congelada.json", selecao)
+    relatorio = {
+        "versao": 1, "configuracao": selecao, "proveniencia": proveniencia,
+        "teste_independente_sistema": False,
+        "independence_unverifiable": True,
+        "limites": ["conversas e tempos sinteticos; nao valida atendimentos reais rotulados",
+                    "sem manifesto historico individual de todas as cabecas, independencia do sistema nao verificavel",
+                    "novo candidato nao constitui campanha Colab executada nem promove modelo"],
+        "rotulo": ROTULO_FUSOR, "escala_do_tempo": ESCALA_DO_TEMPO,
+        "pools": dados["pools"], "ablacoes": {},
+    }
+    import joblib
+    for variante in selecao["variantes"]:
+        pipeline = treinar_ablacao(dados["xt"], dados["yt"], variante=variante)
+        validacao = avaliar_ablacao(pipeline, dados["xv"], dados["yv"])
+        teste = avaliar_ablacao(pipeline, dados["xe"], dados["ye"])
+        relatorio["ablacoes"][variante] = {
+            "features": pipeline.fraus_nomes_features, "validacao": validacao, "teste": teste,
+        }
+        if variante == "completo":
+            fusor = Fusor()
+            fusor._pipeline = pipeline
+            fusor.salvar(saida / "fusor.joblib")
+            _gravar(saida / "importancias.json", {
+                "importancias": fusor.importancias(), "acuracia": teste["acuracia"],
+                "f1_macro": teste["f1_macro"], "rotulo": ROTULO_FUSOR,
+                "escala_do_tempo": ESCALA_DO_TEMPO, "candidato": True,
+                "conversas_treino": len(dados["yt"]), "conversas_validacao": len(dados["yv"]),
+                "conversas_teste": len(dados["ye"]), "teste_independente_sistema": False,
+            })
+        else:
+            # Artefatos experimentais com matriz reduzida: nao sao Fusor de runtime.
+            joblib.dump(pipeline, saida / f"ablacao-{variante}.joblib")
+    _gravar(saida / "metricas.json", relatorio)
+    _gravar(saida / "manifesto.json", manifesto)
+    print(f"candidato externo salvo em {saida}; independencia do sistema NAO comprovada; sem promocao")
     return 0
 
 

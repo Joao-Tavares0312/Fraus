@@ -4,6 +4,33 @@ Esta página existe porque um sistema que estima satisfação **precisa** declar
 onde erra. Nada aqui é segredo, e nada aqui está escondido na tela: cada item
 tem contrapartida visível na interface.
 
+## Generalização e proveniência — atualização de 26/10/2026
+
+O [relatório público de generalização](generalizacao.md) centraliza protocolo,
+baselines locais e limites de independência. As medições datadas abaixo são
+**históricas**: não identificam automaticamente os pesos publicados hoje.
+Uma resposta de saúde da API não demonstra inferência real nem proveniência
+do checkpoint.
+
+Há dependência por produto na antiga divisão posicional do fusor reconstruída
+agora, mas faltam curvas e manifestos antigos suficientes para diagnosticar
+overfitting dos pesos atuais. A campanha de três sementes por cabeça e o novo
+experimento do fusor estão **pendentes de autenticação Colab**; o diagnóstico
+atual é **inconclusivo**, não “sem overfitting”.
+
+ConsumerBR e XED já foram consultados como benchmarks de transferência e não
+são testes virgens. No XED, F1-macro nas sete classes não é o mesmo indicador
+que F1-macro apenas nas classes presentes. A cabeça de ironia também tem
+baselines locais recentes, sem que isso converta a régua pequena em avaliação
+independente de atendimentos. Ver os resultados e respectivas condições em
+[Generalização](generalizacao.md), sem misturá-los às tabelas históricas.
+
+O novo manifesto/caches do fusor reduzem uma fonte de dependência, mas não
+comprovam retroativamente quais exemplos treinaram cabeças antigas. Sem essa
+cadeia, a independência do sistema completo não é verificável. Mesmo um teste
+agrupado correto de conversas sintéticas não valida acurácia em suporte real.
+
+
 ## Limitações operacionais do deploy gratuito
 
 A hospedagem da API deixou de ser pendência em 17/09/2026, mas “publicada” não
@@ -157,14 +184,17 @@ fusor em segundos crus, essa conversa dava `|z| = 124,9` em
 
 ## A cabeça de ironia é pouco confiável
 
-Ela reporta acurácia `1.0` no corpus gerado e erra **6 em 10** falas sinceras de
-atendimento, com 0,999 de confiança — vazamento de marcador de discurso no
-gerador, já corrigido no gerador e pendente de retreino.
+As medições antigas desta página se referem a um checkpoint treinado em corpus
+gerado, que reportava acurácia `1.0` e falhava em frases de atendimento com
+alta confiança. O atalho de marcador de discurso foi observado nesse contexto;
+ele **não diagnostica por si só a cabeça local ou publicada hoje**.
 
-**O vazamento não chega mais à nota**, porque a ironia saiu do vetor em
-04/09/2026 por um motivo diferente e mais grave (ver
-[Arquitetura](arquitetura.md)). Ela continua sendo exibida por mensagem, com a
-ressalva colada ao número.
+Os baselines de 26/10/2026 e a campanha diagnóstica proposta com MultiPICo
+estão em [Generalização](generalizacao.md); campanha proposta não é retreino
+executado. A ironia continua fora do vetor desde 04/09/2026 por outro motivo
+medido historicamente (ver [Arquitetura](arquitetura.md)), e é exibida por
+mensagem, com ressalva. Não há promessa de que detecte ironia corretamente em
+atendimentos reais.
 
 ---
 
@@ -222,8 +252,8 @@ tela não deve esconder:
 
 ## O que não dá para consertar sem corpus de atendimento real
 
-Duas coisas ficam condicionadas ao mesmo recurso que não existe publicamente em
-português — um corpus de **diálogo de atendimento** rotulado:
+O projeto não dispõe de corpus novo de **diálogo de atendimento** rotulado e
+com proveniência suficiente para validar estas duas frentes:
 
 1. **retreinar a cabeça de ironia** em domínio certo;
 2. **a interação tempo × texto** como feature. Ela nasceria com o peso
