@@ -29,7 +29,7 @@ import { LIMIAR_SUSPEITO } from "./MetricasTreino";
  * letra miuda ao lado. Por isso os dois -- etiqueta E manchete -- ramificam
  * no MESMO dado que o paragrafo le.
  */
-export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
+export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaModelo; nivel?: "dominante" | "apoio" }) {
   const ironia = modelo.cabecas.find((cabeca) => cabeca.nome === "ironia") ?? null;
   const metricasIronia = ironia?.metricas ?? null;
 
@@ -48,7 +48,7 @@ export function EstadoDoModelo({ modelo }: { modelo: FichaModelo }) {
   return (
     <Painel
       titulo="O veredito, antes do número"
-      nivel="dominante"
+      nivel={nivel}
       legenda={
         <>
           A ironia foi a primeira família a entrar no vetor do fusor, em

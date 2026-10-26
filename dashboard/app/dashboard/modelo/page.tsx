@@ -26,7 +26,7 @@ import { LexiconEmoji } from "@/components/modelo/LexiconEmoji";
 import { LexicoCurado } from "@/components/modelo/LexicoCurado";
 import { MetricasTreino } from "@/components/modelo/MetricasTreino";
 import { PesosFeatures } from "@/components/modelo/PesosFeatures";
-import { Simulador } from "@/components/modelo/Simulador";
+import { VisualizacaoModelo } from "@/components/modelo/VisualizacaoModelo";
 import { SimuladorIroniaLaya } from "@/components/modelo/SimuladorIroniaLaya";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -88,20 +88,23 @@ export default async function PaginaModelo() {
           </TabsList>
 
           <TabsContent value="fraus" className="flex min-w-0 flex-col gap-4">
-        <EstadoDoModelo modelo={modelo} />
-
         <Painel
-          titulo="Simulador ao vivo"
-          legenda="Escreva uma fala de cliente e veja a resposta do classificador agora. Nada é persistido, nada é inventado: as três probabilidades e os emojis detectados vêm inteiros de POST /modelo/simular."
+          titulo="Como o modelo processa uma conversa"
+          nivel="dominante"
+          legenda="Explore o caminho entre conversa, famílias de sinais e fusor. A classificação de frase usa uma única chamada a POST /modelo/simular e não persiste dados."
           semPadding
           rodape="A ordem das classes é fixa em todo o sistema — 0 insatisfeito, 1 neutro, 2 satisfeito — no notebook, no sinal de texto, no fusor e aqui. Inverter não geraria erro: faria o sistema pontuar ao contrário em silêncio."
         >
-          <Simulador />
+          <div className="px-4 sm:px-6">
+            <VisualizacaoModelo modelo={modelo} />
+          </div>
         </Painel>
+
+        <EstadoDoModelo modelo={modelo} nivel="apoio" />
 
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <Painel
-            titulo={`Peso global das ${Object.keys(modelo.importancias).length} features`}
+            titulo={Object.keys(modelo.importancias).length ? `Peso global das ${Object.keys(modelo.importancias).length} features observadas` : "Pesos globais indisponíveis"}
             legenda="Coeficientes do fusor (regressão logística), agrupados pelas sete famílias do trabalho. Este é o peso do MODELO — vale para todos os atendimentos e não explica nenhum em particular."
             semPadding
             rodape={
@@ -125,7 +128,7 @@ export default async function PaginaModelo() {
           <div className="flex min-w-0 flex-col gap-4">
             <Painel
               titulo="Métricas do treino"
-              legenda="Medidas no conjunto de teste pelos notebooks, não recalculadas aqui. As três cabeças aparecem juntas porque só comparando dá para ver o que cada número vale: a satisfação é a única que entra no fusor, a emoção reporta também o F1 num corpus independente que ela nunca viu, e a ironia reporta 100% — que é verdade no corpus dela e não sobrevive a fala de atendimento. Cada procedência e cada limitação vêm do arquivo que o próprio notebook exportou, inteiras."
+              legenda="Medidas exportadas pelos notebooks, não recalculadas aqui. Satisfação e emoção alimentam o fusor conforme o campo pontua da ficha; ironia permanece leitura por mensagem no contrato vigente. As métricas históricas não provam generalização para atendimentos reais nem recuperam curvas antigas. Procedência e limitações vêm dos arquivos exportados."
               semPadding
             >
               <MetricasTreino

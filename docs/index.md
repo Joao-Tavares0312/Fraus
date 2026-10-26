@@ -9,12 +9,12 @@ hide:
 
 <p class="fx-hero__rotulo">Fraus — documentação</p>
 
-# O cliente <em>diz</em> uma coisa. O texto <span>mede</span> outra.
+# O cliente <em>diz</em>. O Fraus <span>estima</span>.
 
 <p class="fx-hero__sub">Ferramenta que lê atendimento por chatbot e estima satisfação
-<strong>sem perguntar nada ao cliente</strong>. O caso que uma pesquisa de NPS
-declarada não captura: quem escreve <em>"ok, obrigado 🙂"</em> e sai
-insatisfeito não responde pesquisa — e é ele que o sistema precisa enxergar.</p>
+<strong>sem perguntar nada ao cliente</strong>. Um encerramento como
+<em>"ok, obrigado 🙂"</em> não prova satisfação nem insatisfação: o contexto
+traz sinais, não acesso ao estado real de quem escreveu.</p>
 
 <div class="fx-hero__acoes" markdown>
 [Ler as invariantes](invariantes.md){ .md-button .md-button--primary }
@@ -30,55 +30,37 @@ insatisfeito não responde pesquisa — e é ele que o sistema precisa enxergar.
 <div class="fx-fato"><small>LLMs na inferência</small><svg viewBox="0 0 146 108" role="img" aria-label="0 LLMs na inferência"><polygon transform="translate(0 0)" points="14,4 54,4 60,10 54,16 14,16 8,10" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="62,12 68,18 68,44 62,50 56,44 56,18" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="62,58 68,64 68,90 62,96 56,90 56,64" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="14,92 54,92 60,98 54,104 14,104 8,98" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="6,58 12,64 12,90 6,96 0,90 0,64" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="6,12 12,18 12,44 6,50 0,44 0,18" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="14,48 54,48 60,54 54,60 14,60 8,54" fill="currentColor" opacity="0.1"/><polygon transform="translate(78 0)" points="14,4 54,4 60,10 54,16 14,16 8,10" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="62,12 68,18 68,44 62,50 56,44 56,18" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="62,58 68,64 68,90 62,96 56,90 56,64" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="14,92 54,92 60,98 54,104 14,104 8,98" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="6,58 12,64 12,90 6,96 0,90 0,64" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="6,12 12,18 12,44 6,50 0,44 0,18" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="14,48 54,48 60,54 54,60 14,60 8,54" fill="currentColor" opacity="0.1"/></svg></div>
 </div>
 
-!!! warning "Todo número aqui é inferido"
+!!! warning "NPS inferido, não declarado"
     O NPS do Fraus **não é perguntado**: ele é derivado do texto do
     atendimento. Toda exibição carrega a etiqueta de estimativa, e apresentá-lo
     como NPS declarado seria falso. Ver [Limitações](limitacoes.md) e
     [Conformidade](conformidade.md).
 
-## O que ler primeiro
+## Escolha seu percurso
 
 <div class="fx-cards" markdown>
 
--   **[A tese](tese.md)**
+-   **[Banca e metodologia — a tese](tese.md)**
 
-    A aposta do projeto e o caso que ela cobre.
+    Entenda a pergunta, as unidades de análise e o que sustenta as conclusões.
+    Siga por [arquitetura](arquitetura.md), [treinamento](treinamento.md),
+    [generalização e evidências](generalizacao.md) e
+    [cartão do modelo](cartao-do-modelo.md). Leia os limites antes de
+    interpretar uma métrica como prova em atendimentos reais.
 
--   **[As invariantes](invariantes.md)**
+-   **[Usuários — guia de uso](guia-de-uso.md)**
 
-    Para mexer no código: comece por aqui, sem exceção.
+    Leve um arquivo à análise, confira a gravação e encontre os atendimentos
+    no período certo. Aprenda a distinguir estimativa, ausência de sinal e
+    indisponibilidade. Para receber conversas automaticamente, siga a
+    [integração com o Tars](integracao-tars.md).
 
--   **[Arquitetura](arquitetura.md)**
+-   **[Desenvolvedores — desenvolvimento local](desenvolvimento.md)**
 
-    Como as peças se ligam, do adaptador de ingestão ao dashboard.
-
--   **[Treinamento](treinamento.md)**
-
-    Como os modelos foram treinados e o que foi medido.
-
--   **[Design da interface](design.md)**
-
-    FR em camadas, tipografia quadrada, temas e a distinção dito/medido.
-
--   **[Antes e depois da interface](redesign-2026-10-16.md)**
-
-    LP e dashboard comparadas em desktop e celular, com limites da verificação.
-
--   **[Limitações](limitacoes.md)**
-
-    O que o sistema **não** sabe, dito sem rodeio.
-
--   **[Conformidade](conformidade.md)**
-
-    O que o produto lê e o que ele se recusa a fazer.
-
--   **[Encolher os modelos](encolhimento.md)**
-
-    Como o runtime ficou pequeno sem trocar o modelo, medido.
-
--   **[Cartão do modelo](cartao-do-modelo.md)**
-
-    Desempenho por fatia, sem esconder a fatia ruim.
+    Prepare os extras e artefatos, execute API e dashboard e encontre os
+    comandos de testes e documentação. Comece pelas
+    [invariantes](invariantes.md); consulte o [design](design.md) e a
+    [referência de código](referencia/modelos.md) antes de alterar contratos.
 
 </div>
 
@@ -88,10 +70,9 @@ Três BERTimbau fine-tunados (satisfação, emoção, ironia) e um fusor
 `LogisticRegression` sobre 39 features de sete famílias de sinal. Inferência
 local, em CPU, sem nenhuma chamada de rede no caminho de predição.
 
-Isso é **requisito**, não otimização: o trabalho existe para demonstrar que dá
-para medir isso com modelos pequenos e interpretáveis — coeficiente de regressão
-logística responde *por que* um atendimento recebeu a nota, e floresta densa
-não.
+Isso é **requisito**, não otimização. As probabilidades por mensagem e a
+decomposição do fusor permitem inspecionar a leitura do sistema; não são
+ativações internas do Transformer nem prova causal sobre palavras.
 
 ## Baixar
 

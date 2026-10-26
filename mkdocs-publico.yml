@@ -71,28 +71,34 @@ exclude_docs: |
 nav:
   - "← Dashboard": !ENV [FRAUS_URL_DASHBOARD, "https://fraus-one.vercel.app/dashboard"]
   - Início: index.md
-  - A tese: tese.md
-  - Invariantes: invariantes.md
-  - Arquitetura: arquitetura.md
-  - Treinamento: treinamento.md
-  - "Ironia: corpus e Laya": ironia.md
-  - Integração com o Tars: integracao-tars.md
-  - Design da interface: design.md
-  - Antes e depois da interface: redesign-2026-10-16.md
-  - Conformidade (AI Act): conformidade.md
-  - Encolher os modelos: encolhimento.md
-  - Limitações conhecidas: limitacoes.md
-  - Cartão do modelo: cartao-do-modelo.md
-  - Diferenciais:
-      - Relatório de entrega: diferenciais/relatorio.md
-      - Concorrentes: diferenciais/concorrentes.md
-      - Roteiro da demonstração: diferenciais/roteiro-demo.md
-  - Referência de código:
-      - Indicadores: referencia/indicadores.md
-      - Modelo canônico: referencia/modelos.md
-      - Fusor: referencia/fusor.md
-      - Sinais: referencia/sinais.md
-      - Evidência e deriva: referencia/diagnostico.md
+  - Banca e metodologia:
+      - A tese: tese.md
+      - Arquitetura: arquitetura.md
+      - Treinamento: treinamento.md
+      - Generalização e evidências: generalizacao.md
+      - Cartão do modelo: cartao-do-modelo.md
+      - Limitações conhecidas: limitacoes.md
+      - Conformidade (AI Act): conformidade.md
+      - "Ironia: corpus e Laya": ironia.md
+      - Diferenciais:
+          - Relatório de entrega: diferenciais/relatorio.md
+          - Concorrentes: diferenciais/concorrentes.md
+          - Roteiro da demonstração: diferenciais/roteiro-demo.md
+  - Usuários:
+      - Guia de uso: guia-de-uso.md
+      - Integração com o Tars: integracao-tars.md
+  - Desenvolvedores:
+      - Desenvolvimento local: desenvolvimento.md
+      - Invariantes: invariantes.md
+      - Design da interface: design.md
+      - Antes e depois da interface: redesign-2026-10-16.md
+      - Encolher os modelos: encolhimento.md
+      - Referência de código:
+          - Indicadores: referencia/indicadores.md
+          - Modelo canônico: referencia/modelos.md
+          - Fusor: referencia/fusor.md
+          - Sinais: referencia/sinais.md
+          - Evidência e deriva: referencia/diagnostico.md
 
 plugins:
   - search:

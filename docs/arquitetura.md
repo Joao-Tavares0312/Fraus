@@ -2,36 +2,68 @@
 
 ```mermaid
 flowchart TD
-    A["CSV / Discord / WhatsApp / webhook"] -->|"adapter de ingestão<br/>fraus/ingest/"| B["Conversa<br/><small>modelo canônico único — fraus/modelos.py</small>"]
-
-    B --> texto["texto<br/><small>BERTimbau por mensagem</small>"]
-    B --> emoji["emoji<br/><small>lexicon + posição</small>"]
-    B --> tempo["tempo<br/><small>latência, escalação</small>"]
-    B --> emocao["emoção<br/><small>7 classes + desprezo</small>"]
-    B --> lexico["léxico<br/><small>SentiLex-PT02 + negação</small>"]
-    B --> estilo["estilo<br/><small>caixa alta, palavrão</small>"]
-    B --> incong["incongruência<br/><small>emoji × texto</small>"]
-    B -.-> ironia["ironia*<br/><small>cabeça binária — só tela</small>"]
-
-    texto --> V["39 features"]
-    emoji --> V
-    tempo --> V
-    emocao --> V
-    lexico --> V
-    estilo --> V
-    incong --> V
-
-    V --> F["Fusor<br/><small>LogisticRegression + StandardScaler</small>"]
-    F -->|"score 0–100"| N["nota 0–10 → categoria NPS → indicadores agregados"]
+    A["CSV / Discord<br/>WhatsApp / webhook"] -->|"adapter de ingestão"| B["Conversa<br/>modelo canônico único"]
+    B --> S["Sete famílias do vetor<br/>texto · emoji · tempo<br/>emoção · léxico · estilo<br/>incongruência"]
+    B -.-> I["Ironia<br/>por mensagem<br/>só leitura na tela"]
+    S --> V["39 features"]
+    V --> F["Fusor<br/>StandardScaler<br/>LogisticRegression"]
+    F -->|"score 0–100"| N["Nota 0–10<br/>categoria NPS<br/>indicadores agregados"]
     N --> API["FastAPI"]
-    API --> D["dashboard Next.js"]
-    ironia -.->|"por mensagem, direto pra tela"| D
-
-    style ironia stroke-dasharray: 4 4
+    API --> D["Dashboard Next.js"]
+    I -.-> D
+    style I stroke-dasharray: 4 4
 ```
 
 *\* a cabeça de ironia é lida por mensagem e mostrada na tela, mas **não
 entra** nas 39 features do Fusor — ver a seção abaixo.*
+
+São **oito famílias de sinais**, não oito cabeças neurais: satisfação textual,
+emoção e ironia usam três classificadores; as demais famílias são calculadas.
+Sete famílias alimentam o fusor. A ausência de fala informativa do cliente
+produz score nulo, nunca zero.
+
+## Dentro de uma cabeça Transformer
+
+```mermaid
+flowchart TD
+    M["Texto de uma mensagem"] --> T["Tokenização<br/>IDs e máscara de atenção"]
+    T --> E["Encoder Transformer<br/>representações contextuais"]
+    E --> C["Cabeça de classificação<br/>logits por classe"]
+    C --> P["Temperatura do artefato + softmax<br/>probabilidades por classe"]
+    P --> R["Leitura por mensagem"]
+    R --> A["Agregação por conversa<br/>texto e emoção"]
+    R -.-> I["Ironia: leitura por mensagem<br/>fora do fusor"]
+```
+
+**Equivalente textual:** o tokenizador converte o texto em identificadores de
+tokens e indica quais posições são válidas. O encoder constrói representações
+contextuais; a cabeça de classificação as transforma em logits das classes.
+A temperatura, quando registrada no artefato, ajusta a escala desses logits
+antes do softmax. A saída é uma distribuição de probabilidades, não uma nota
+da conversa. Texto e emoção entram em agregações de suas famílias; ironia
+segue para leitura por mensagem. Emoção tem sete classes treinadas e desprezo
+derivado da díade raiva + nojo. Não se fixa aqui número de camadas ou dimensões
+sem metadados do checkpoint.
+
+O explorador da tela **Modelo** é um esquema didático desse fluxo. A simulação
+de uma frase mostra somente os sinais devolvidos pela classificação; não mede
+tempo, não processa uma conversa completa e não calcula o score do fusor.
+Selecionar uma etapa não é executar inferência.
+
+### Quatro coisas diferentes que a visualização não deve confundir
+
+| grandeza | significado | limite |
+|---|---|---|
+| Probabilidade por classe | saída de uma cabeça para a mensagem, ou do fusor para suas classes | confiança do modelo, não verdade sobre o cliente |
+| Peso global | coeficiente aprendido pelo fusor para uma feature padronizada | não é a importância causal de uma palavra ou o efeito fixo em pontos |
+| Contribuição local em logits | coeficiente multiplicado pela feature padronizada daquela conversa | soma com o intercepto em cada logit; não soma diretamente o score |
+| Ativações e atenção internas | estados intermediários do Transformer | não são expostos pela API nem observados pelo esquema didático |
+
+O fusor **não é uma rede densa ilustrativa**: as 39 features passam pelo
+`StandardScaler` e pela regressão logística. O softmax e a projeção em score
+são não lineares; contribuições por família não demonstram causalidade.
+Esquema e saídas reais não autorizam desenhar “palavras que causaram a nota”.
+
 
 ## A decisão que explica o desenho
 
@@ -67,10 +99,12 @@ de um container sempre ligado (ver [Limitações](limitacoes.md)).
 
 ## A ironia continua carregada, e não pontua
 
-A oitava cabeça existe, é obrigatória para a API subir e aparece na tela **por
-mensagem** — mas **saiu do vetor** em 04/09/2026.
+A família de ironia usa uma das **três cabeças neurais** e é obrigatória no
+**motor de inferência**, não para a API subir. A API pode estar no estado frio,
+carregando ou erro; predição exige todos os artefatos válidos, sem fallback.
+A ironia aparece na tela **por mensagem**, mas **saiu do vetor** em 04/09/2026.
 
-Medida no próprio corpus de treino do fusor (B2W-Reviews01), ela marca **74% das
+Em medição histórica no corpus de treino do fusor (B2W-Reviews01), ela marcou **74% das
 resenhas satisfeitas** como irônicas contra **9% das insatisfeitas**: naquele
 corpus ela é um detector de sentimento **positivo**, não de ironia. O fusor
 aprendeu peso **+0,77** para `ironia_prob_media`, empurrando ironia para
@@ -114,31 +148,31 @@ já carrega sua própria `lexico_versao` e régua).
 sequenceDiagram
     actor T as Tela
     participant API as FastAPI
-    participant R as Repontuacao (thread)
-    participant M as Motor (3× BERTimbau)
+    participant R as Trabalho
+    participant M as Motor
     participant DB as banco
 
-    T->>API: POST /conversas/repontuar
+    T->>API: POST<br/>/conversas/repontuar
     API->>R: iniciar(ctx)
-    Note over R: le curadoria, faixas e régua<br/>UMA vez — janela fechada
-    R-->>API: estado=rodando, total=N
-    API-->>T: 202 (ou 409 se já rodando)
-    R->>M: dispara thread em segundo plano
+    Note over R: curadoria, faixas,<br/>régua: uma leitura
+    R-->>API: rodando, total=N
+    API-->>T: 202 ou 409
+    R->>M: iniciar thread
 
     loop cada conversa do lote
         M->>M: pontuar_conversa
-        M->>DB: salvar(score, lexico_versao, régua)
+        M->>DB: salvar(score,<br/>lexico_versao,<br/>régua)
         R->>R: feitas += 1
     end
 
     loop enquanto roda
-        T->>API: GET /conversas/repontuar
+        T->>API: GET<br/>/conversas/repontuar
         API-->>T: {total, feitas, estado}
         Note over T: barra de progresso
     end
 
-    R-->>API: estado=concluido (ou falhou)
-    T->>API: GET /conversas/repontuar
+    R-->>API: concluído ou falhou
+    T->>API: GET<br/>/conversas/repontuar
     API-->>T: estado final
 ```
 

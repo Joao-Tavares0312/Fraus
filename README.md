@@ -235,6 +235,9 @@ vence RAG em acurácia e latência[^3].
 
 ## Documentação
 
+- [Banca e metodologia](docs/tese.md) — pergunta de pesquisa, método e evidências
+- [Usuários](docs/guia-de-uso.md) — analisar arquivos, conferir gravação e interpretar indicadores
+- [Desenvolvedores](docs/desenvolvimento.md) — ambiente local, contratos, testes e documentação
 - [Estado operacional — 30/09/2026](docs/notas/2026-09-30-operacao-producao.md) — análise persistida, sete abas de Operação, convites, permissões e evidências da publicação
 - [Handoff interno](docs/handoff.md) — estado atual e histórico de decisões
 - [Spec de design](docs/superpowers/specs/2026-08-13-dolos-design.md) — decisões e referências
