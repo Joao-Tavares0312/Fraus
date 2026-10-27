@@ -232,10 +232,14 @@ permissões, sessão e aviso de dublê integral. Ctrl/Meta+B não intercepta edi
 gaveta móvel fecha na navegação comum e devolve foco ao fechar/Escape.
 
 O segredo dos cinco cliques foi substituído em 27/10/2026 pela **Fraus-chan**:
-ela espia, puxa a fenda e aparece; toque ou teclado alternam saudação,
-piscadinha e uma fala cúmplice. Replay reinicia a entrada; reduce pula o
-movimento. As quatro artes do `fraus-video` são WebP locais em
-`dashboard/public/fraus-chan/`, baixadas só ao abrir. Sem imagem gerada em runtime,
+ela espia, puxa a fenda, dá um passo e acena; toque ou teclado alternam saudação,
+piscadinha e uma fala cúmplice. A entrada agora usa **quatro sprites novos**,
+gerados pelo gerador nativo do Codex com pedido de `gpt-image-2` e as artes do
+`fraus-video` como referência. Os WebP de entrada têm 480×720 e prompts
+`.webp.json`; as reações `face`/`wink` continuam. A pose `pull` antiga saiu.
+As seis imagens locais em `dashboard/public/fraus-chan/` só baixam ao abrir.
+A sequência avança por `animationend`; replay remonta o palco. Reduce pula
+o movimento mesmo se ativado durante a entrada. Sem imagem gerada em runtime,
 LLM, áudio, leitura de conversas ou persistência; indicadores intactos.
 O diálogo Base UI preserva foco e a gaveta móvel. O smoke
 `node scripts/validar-segredo-playwright.mjs` foi operado em 1440, 1280,

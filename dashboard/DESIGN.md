@@ -383,22 +383,31 @@ Zero observado continua zero; `null` continua ausência.
 ### Fraus-chan atrás da logo
 
 Cinco cliques consecutivos na marca, com até dois segundos entre eles, revelam
-a Fraus-chan. Ela espia pela fenda, puxa a abertura e aparece inteira numa
-entrada de 1,75 s. A personagem e “Dar um oi” percorrem as mesmas três reações:
+a Fraus-chan. Quatro sprites novos compõem a entrada: espiar, puxar a fenda,
+dar um passo e acenar. A coreografia dura cerca de três segundos, com
+deslocamento do corpo, peso no passo e uma cortina diagonal que se abre.
+Cada fase avança pelo `animationend` da personagem, sem temporizadores
+paralelos ao CSS. A personagem e “Dar um oi” percorrem as mesmas três reações:
 saudação, piscadinha cúmplice e comentário sobre a curiosidade de quem clicou.
-“Rever entrada” reinicia a coreografia, inclusive durante uma entrada em curso.
+“Rever entrada” remonta o palco e reinicia a coreografia mesmo na mesma fase.
 
-As quatro artes transparentes vêm dos assets da Fraus-chan do projeto
-`fraus-video`, convertidas em WebP em `public/fraus-chan/`. Componente e imagens
-carregam só depois de descobrir o segredo; a entrada espera as quatro imagens.
-Falha de imagem é explícita. Não há geração de imagem, LLM, leitura de conversas,
+As quatro poses de entrada foram geradas pelo gerador nativo do Codex,
+solicitando `gpt-image-2` e usando a folha da Fraus-chan do `fraus-video` como
+referência. Vieram numa folha única, recortada em quatro WebP transparentes
+de 480×720, com escala e base dos pés alinhadas. Os prompts acompanham as
+artes nos arquivos `.webp.json`; `face` e `wink` preservam as reações anteriores.
+A pose antiga de puxar foi removida. Há seis imagens em `public/fraus-chan/`.
+Componente e imagens carregam só depois de descobrir o segredo; a entrada
+espera todas as imagens. Falha de imagem é explícita.
+Não há geração de imagem em runtime, LLM, leitura de conversas,
 áudio, canvas, persistência ou chamada de API dentro da brincadeira. As falas
 são fixas; não são respostas de um assistente nem resultados do modelo.
 
 Grafite, ouro e Chakra Petch seguem a ferramenta; o tema claro também é
 respeitado. No celular, a personagem fica acima da fala e dos controles.
 `prefers-reduced-motion` pula a entrada espacial e mantém todas as reações em
-corte seco. Não há movimento em loop nem fechamento automático.
+corte seco, inclusive ao ativar a preferência durante a animação. Não há
+movimento em loop nem fechamento automático.
 O diálogo Base UI contém foco, fecha por Escape/botão/clique fora e devolve
 foco à marca. No celular, fechar o segredo não fecha a gaveta que o abriu.
 O quebra-cabeça de fragmentos foi substituído, não conservado como outro modo.
@@ -455,9 +464,10 @@ válida ou o modo local aberto. Também conferir dashboard vazia, atendimento se
 sinal, temas, grafo e navegação LP ↔ ferramenta.
 
 `node scripts/validar-segredo-playwright.mjs` opera a entrada, as reações por
-teclado/toque, replay interrompido, reabertura, foco e modais aninhados.
-Confere as quatro imagens reais, carregamento sob demanda e indicadores
-intactos em desktop/celular/paisagem, temas claro/escuro e reduce.
+teclado/toque, replay na mesma fase, reabertura, foco e modais aninhados.
+Confere mudança real dos pixels nas reações, carregamento sob demanda,
+indicadores intactos e ativação de reduce durante a entrada, além de
+desktop/celular/paisagem e temas claro/escuro.
 `SEGREDO_EVIDENCIAS` guarda as capturas opcionais; `DASHBOARD_URL` aceita só host local.
 
 
