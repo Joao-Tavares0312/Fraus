@@ -106,8 +106,8 @@ try {
   const antesDoSegredo = pagina.url();
   for (let clique = 0; clique < 5; clique++) await marca.click({ delay: 70 });
   await pagina.waitForFunction(() => document.querySelector('button[aria-label="Fraus — revelar o segredo com cinco cliques"]')?.getAttribute("aria-expanded") === "true");
-  // O jogo e carregado sob demanda; estado expandido nao significa dialogo pronto.
-  await pagina.getByRole("dialog", { name: "Encaixe secreto", exact: true }).waitFor();
+  // A cena e carregada sob demanda; estado expandido nao significa dialogo pronto.
+  await pagina.getByRole("dialog", { name: "Fraus-chan", exact: true }).waitFor();
   await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fechar segredo");
   assert.equal(pagina.url(), antesDoSegredo, "segredo da marca não navega");
   await pagina.keyboard.press("Escape");

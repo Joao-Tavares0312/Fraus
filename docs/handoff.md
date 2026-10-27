@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 27/10/2026 (campanha de generalização concluída)
+# Handoff — Fraus, atualizado em 27/10/2026 (Fraus-chan e campanha de generalização concluída)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -231,12 +231,18 @@ Sidebar restaura cookie no servidor, mantém nomes no rail, período `de`/`ate`,
 permissões, sessão e aviso de dublê integral. Ctrl/Meta+B não intercepta edição;
 gaveta móvel fecha na navegação comum e devolve foco ao fechar/Escape.
 
-O segredo dos cinco cliques agora é **Encaixe secreto**: três fragmentos do
-FR, trilhos nativos e conclusão visual, sem áudio ou cronômetro. O código de
-revelação vaporwave, pontuação de cliques e falsificação dos indicadores saiu
-inteiro. Nenhum indicador muda enquanto se joga. O novo diálogo usa Base UI,
-com foco contido/devolvido e suporte a abertura sobre a gaveta móvel. O smoke
-é `node scripts/validar-segredo-playwright.mjs`.
+O segredo dos cinco cliques foi substituído em 27/10/2026 pela **Fraus-chan**:
+ela espia, puxa a fenda e aparece; toque ou teclado alternam saudação,
+piscadinha e uma fala cúmplice. Replay reinicia a entrada; reduce pula o
+movimento. As quatro artes do `fraus-video` são WebP locais em
+`dashboard/public/fraus-chan/`, baixadas só ao abrir. Sem imagem gerada em runtime,
+LLM, áudio, leitura de conversas ou persistência; indicadores intactos.
+O diálogo Base UI preserva foco e a gaveta móvel. O smoke
+`node scripts/validar-segredo-playwright.mjs` foi operado em 1440, 1280,
+390, 320 e 844px (paisagem), com temas claro/escuro e reduce, usando API
+local com snapshot sintético e motor dublê explícito — não valida inferência.
+Sem deploy nesta entrega. O antigo quebra-cabeça saiu; os contratos de
+cinco cliques e intervalo de dois segundos continuam.
 
 Leituras gravadas continuam exigindo snapshot validado do motor real; a
 otimização não autoriza gerar resultados com o dublê.
