@@ -380,21 +380,28 @@ Zero observado continua zero; `null` continua ausência.
 - Erro de uma consulta não apaga indicadores que responderam.
 - O segredo da marca nunca modifica indicadores, gráficos ou transcrições.
 
-### Encaixe secreto
+### Fraus-chan atrás da logo
 
-Cinco cliques consecutivos na marca, com até dois segundos entre eles, abrem
-um quebra-cabeça do FR. Três fragmentos da arte pré-renderizada deslizam em
-trilhos nativos; o centro de cada trilho recompõe o monograma. A conclusão
-é uma brincadeira visual, não score, leitura psicológica ou resultado do modelo.
+Cinco cliques consecutivos na marca, com até dois segundos entre eles, revelam
+a Fraus-chan. Ela espia pela fenda, puxa a abertura e aparece inteira numa
+entrada de 1,75 s. A personagem e “Dar um oi” percorrem as mesmas três reações:
+saudação, piscadinha cúmplice e comentário sobre a curiosidade de quem clicou.
+“Rever entrada” reinicia a coreografia, inclusive durante uma entrada em curso.
 
-O componente carrega apenas ao descobrir o segredo. Não usa canvas, áudio,
-relógio de jogo, API ou persistência; não fecha sozinho. Embaralhar oferece
-outro arranjo. `prefers-reduced-motion` elimina transições sem retirar o jogo.
-O diálogo contém foco, fecha por Escape/botão/clique fora e devolve foco à
-marca. No celular, fechar o segredo não fecha a gaveta que o abriu.
+As quatro artes transparentes vêm dos assets da Fraus-chan do projeto
+`fraus-video`, convertidas em WebP em `public/fraus-chan/`. Componente e imagens
+carregam só depois de descobrir o segredo; a entrada espera as quatro imagens.
+Falha de imagem é explícita. Não há geração de imagem, LLM, leitura de conversas,
+áudio, canvas, persistência ou chamada de API dentro da brincadeira. As falas
+são fixas; não são respostas de um assistente nem resultados do modelo.
 
-A antiga revelação vaporwave, a pontuação do ritmo e o contexto que falsificava
-indicadores foram removidos, não mantidos como um segundo modo.
+Grafite, ouro e Chakra Petch seguem a ferramenta; o tema claro também é
+respeitado. No celular, a personagem fica acima da fala e dos controles.
+`prefers-reduced-motion` pula a entrada espacial e mantém todas as reações em
+corte seco. Não há movimento em loop nem fechamento automático.
+O diálogo Base UI contém foco, fecha por Escape/botão/clique fora e devolve
+foco à marca. No celular, fechar o segredo não fecha a gaveta que o abriu.
+O quebra-cabeça de fragmentos foi substituído, não conservado como outro modo.
 
 ### Temas
 
@@ -447,10 +454,11 @@ gaveta móvel. `DASHBOARD_URL` aponta para o produto já iniciado; exige sessão
 válida ou o modo local aberto. Também conferir dashboard vazia, atendimento sem
 sinal, temas, grafo e navegação LP ↔ ferramenta.
 
-`node scripts/validar-segredo-playwright.mjs` resolve o jogo por teclado,
-confere mudança dos pixels, reinício, embaralhar, foco e modais aninhados.
-Compara os quatro indicadores antes/durante/depois em desktop e celular,
-incluindo Claro e reduce. `SEGREDO_EVIDENCIAS` guarda as capturas opcionais.
+`node scripts/validar-segredo-playwright.mjs` opera a entrada, as reações por
+teclado/toque, replay interrompido, reabertura, foco e modais aninhados.
+Confere as quatro imagens reais, carregamento sob demanda e indicadores
+intactos em desktop/celular/paisagem, temas claro/escuro e reduce.
+`SEGREDO_EVIDENCIAS` guarda as capturas opcionais; `DASHBOARD_URL` aceita só host local.
 
 
 A documentação MkDocs mantém sua aparência própria nesta entrega; não presumir

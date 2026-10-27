@@ -152,8 +152,8 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
    quebra outro.
 5. **O servidor é a fonte da verdade.** Score e categoria vêm dele; a interface
    apresenta e não recalcula.
-6. **Brincadeira não falsifica dado.** O Encaixe secreto da marca só manipula
-   fragmentos do FR. Não altera indicadores nem pontua o usuário.
+6. **Brincadeira não falsifica dado.** A Fraus-chan escondida na marca usa
+   artes e falas fixas. Não lê conversas, altera indicadores nem pontua o usuário.
 
 ## Accessibility & Inclusion
 
