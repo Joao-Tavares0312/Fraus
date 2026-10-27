@@ -113,7 +113,7 @@ try {
     await esperarPersonagem(pagina);
     await segredo.getByRole("button", { name: "Fechar segredo", exact: true }).focus();
     await pagina.keyboard.press("Shift+Tab");
-    assert.equal(await segredo.evaluate((elemento) => elemento.contains(document.activeElement)), true, "foco contido");
+    await pagina.waitForFunction(() => document.querySelector('button[aria-label="Interagir com Fraus-chan"]')?.closest('[role="dialog"]')?.contains(document.activeElement));
     await pagina.keyboard.press("Escape");
     await segredo.waitFor({ state: "hidden" });
     await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fraus — revelar o segredo com cinco cliques");
