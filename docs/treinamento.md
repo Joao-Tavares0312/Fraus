@@ -2,12 +2,14 @@
 
 ## Receita vigente de pesquisa — 26/10/2026
 
-!!! warning "Protocolo instrumentado não é treino executado"
-    A campanha fechada de nove rodadas (três cabeças × três sementes) e o novo
-    experimento independente do fusor estão **pendentes de autenticação do
-    Google Colab CLI**. Nenhum resultado dessa campanha foi produzido e nenhum
-    peso ativo foi substituído. Veja [Generalização e evidências](generalizacao.md)
-    para separar protocolo, resultados locais e histórico.
+!!! info "Campanha de 26–27/10/2026 concluída, sem promoção"
+    As nove rodadas (três cabeças × três sementes) foram executadas em T4 pela
+    CLI oficial do Google Colab, com nove bundles recuperados. O candidato do
+    fusor e as ablações também foram avaliados. A sessão própria foi encerrada;
+    nenhum peso ativo foi substituído nem houve publicação em produção.
+    [Generalização e evidências](generalizacao.md) centraliza resultados,
+    curvas e limites: há sobreajuste nesta reprodução; os pesos antigos
+    continuam sem diagnóstico conclusivo.
 
 O contrato de inferência continua sendo **39 features de sete famílias**,
 quatro esperas em `log1p`, `StandardScaler` e `LogisticRegression`.
@@ -46,10 +48,10 @@ antes de descartar checkpoints.
 
 | # | Notebook | Papel atual | Situação |
 |---|---|---|---|
-| 1 | `notebooks/01_treino_bertimbau.ipynb` | candidato de satisfação, três classes, BERTimbau sobre B2W por estrelas | instrumentado; campanha GPU pendente |
-| 2 | `notebooks/02_treino_fusor.ipynb` | candidato de fusor, manifesto explícito e caches vinculados aos artefatos | experimento independente pendente |
-| 3 | `notebooks/03_treino_emocao.ipynb` | candidato de emoção, sete classes, GoEmotions-PT | instrumentado; campanha GPU pendente |
-| 4 | `notebooks/04_treino_ironia.ipynb` | candidato binário de ironia, **MultiPICo PT, sem IDPT auxiliar** | instrumentado; campanha GPU pendente |
+| 1 | `notebooks/01_treino_bertimbau.ipynb` | candidato de satisfação, três classes, BERTimbau sobre B2W por estrelas | três sementes GPU concluídas; escolhida 42 pela validação |
+| 2 | `notebooks/02_treino_fusor.ipynb` | candidato de fusor, manifesto explícito e caches vinculados aos artefatos | experimento via CLI local concluído; completo/texto/tempo, sem promoção |
+| 3 | `notebooks/03_treino_emocao.ipynb` | candidato de emoção, sete classes, GoEmotions-PT | três sementes GPU concluídas; escolhida 13 pela validação |
+| 4 | `notebooks/04_treino_ironia.ipynb` | candidato binário de ironia, **MultiPICo PT, sem IDPT auxiliar** | três sementes GPU concluídas; escolhida 42 pela validação |
 | 5 | `notebooks/05_treino_multitarefa.ipynb` | candidato ONNX com encoder compartilhado e três cabeças | fora desta campanha; não promovido |
 | 6 | `notebooks/06_exportar_laya_onnx.ipynb` | exportação de Laya para ONNX INT8 | fora desta campanha; não implica uso em produção |
 | 7 | `notebooks/07_treino_laya.ipynb` | comparação histórica de Laya com BERTimbau | histórico de 02/10/2026; não promovido |
@@ -64,6 +66,16 @@ e `FRAUS_DADOS` para caminhos explícitos, sem montagem interativa do Drive.
 O modo interativo continua disponível. Todos os destinos de pesquisa são
 diretórios de **candidatos**, separados dos pesos ativos; executar a receita
 não autoriza promoção ou publicação.
+
+A fonte da campanha foi congelada em
+`03f91770ec92dec934d794cbad50ea3224f4cb8a`. Como o upload não levou `.git`,
+o commit interno dos notebooks é nulo; `manifesto-bundles.json` externo
+vincula os três manifestos de código, comparados integralmente ao `git archive`
+dessa fonte. Bundles, receitas individuais, logs, corpora e pesos não são
+publicados no Git/site. As médias/desvios amostrais, ECE bruto/calibrado e
+evidências por época permanecem em uma única tabela de referência em
+[Generalização](generalizacao.md), sem confundir a mediana do teste com a
+semente escolhida pela validação.
 
 ### Auditoria e fusor com manifesto
 

@@ -4,10 +4,11 @@
 > foi treinada, o que mediu, **onde erra** e para que **não** pode ser usada.
 > **Métricas históricas de 15/09/2026**, não uma reavaliação do checkpoint
 > publicado hoje. As fatias foram medidas com `scripts/avaliar_por_fatias.py`
-> (`--n 600`, semente `20260915`). A investigação de 26/10/2026, os baselines
-> locais e seus limites de independência estão em
-> [Generalização e evidências](generalizacao.md); eles não sobrescrevem estas
-> medições. A campanha Colab de três sementes por cabeça permanece pendente.
+> (`--n 600`, semente `20260915`). A investigação de 26–27/10/2026, os baselines
+> locais e a campanha concluída de três sementes por cabeça estão em
+> [Generalização e evidências](generalizacao.md); não sobrescrevem estas
+> medições nem identificam os pesos publicados. As curvas sustentam sobreajuste
+> **dos candidatos novos**, não um diagnóstico dos modelos antigos.
 
 ## Uso pretendido e uso proibido
 
@@ -129,6 +130,14 @@ medido**: o fusor compatível com `log1p` não estava disponível na máquina
 de desenvolvimento em 14/10/2026. O cache posicional antigo não comprova
 isolamento por produto ou independência das cabeças e não deve ser reutilizado
 no novo experimento.
+
+A campanha de 26–27/10/2026 produziu um **candidato novo**, com avaliação
+sintética e ECE top-1, descritos em [Generalização](generalizacao.md).
+Essa medição não preenche retroativamente a tabela histórica abaixo:
+MCE, calibração por classe/fatia e cobertura/abstenção conformal não foram
+medidos nessa campanha. O relatório original conservador de independência
+foi preservado e complementado por cruzamentos textuais dos treinos reais;
+isso não transforma conversas sintéticas em atendimento real rotulado.
 
 ### Comandos atuais para preparar um candidato
 

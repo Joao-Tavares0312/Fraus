@@ -1,11 +1,13 @@
-# Generalização — inventário e evidência histórica de 26/10/2026
+# Generalização — inventário de 26/10 e campanha concluída em 26–27/10/2026
 
 ## Escopo e base congelada
 
-Esta nota registra a investigação local de proveniência e a reconstrução da
-separação posicional usada pelo fusor. **Não é um novo treinamento nem um
-laudo conclusivo de sobreajuste dos pesos atuais.** Não houve promoção,
-deploy, inferência em produção nem identificação do checkpoint publicado.
+Esta nota preserva a investigação local de proveniência e a reconstrução da
+separação posicional usada pelo fusor, seguidas do fechamento da **nova campanha
+de candidatos de 26–27/10/2026**. A primeira parte não recupera o treino antigo;
+as curvas novas sustentam sobreajuste somente desta reprodução. Não houve
+promoção, publicação em produção, inferência em produção nem identificação
+do checkpoint publicado. O Preview automático da PR é descrito separadamente.
 
 - Commit de referência: `836d440bbe246018fb8808a4ede4c6f84d6a0ef9`.
 - Inventário já existente:
@@ -178,10 +180,11 @@ que a cabeça antiga nunca viu os textos de teste.
 2. **Histórico documentado:** seleção no teste e atalhos do corpus/simulador
    comprometeram avaliações antigas. Não são diagnóstico automático do
    checkpoint local nem do publicado.
-3. **Sobreajuste atual inconclusivo:** faltam curvas comparáveis de treino em
-   modo de avaliação e validação, além de proveniência suficiente dos pesos.
-   Métrica alta, desempenho de transferência baixo ou falta de significância
-   não comprovam, isoladamente, presença ou ausência de sobreajuste.
+3. **Sobreajuste dos pesos antigos/publicados inconclusivo:** faltam curvas
+   comparáveis e proveniência suficiente desses pesos. Métrica alta,
+   transferência baixa ou falta de significância não comprovam isoladamente
+   presença ou ausência de sobreajuste. As curvas da reprodução nova são outra
+   evidência, detalhada em [Generalização](../generalizacao.md).
 4. **Domínio:** o fusor avalia conversas sintéticas; não há aqui validação em
    atendimentos reais rotulados. Benchmarks já consultados não são teste
    virgem.
@@ -189,9 +192,10 @@ que a cabeça antiga nunca viu os textos de teste.
 A primeira tentativa registrou **Google Colab CLI 0.7.5 instalada** e falhou
 por ausência de ADC (`DefaultCredentialsError`), sem alocar GPU ou treinar.
 Na retomada de 26/10, o usuário concluiu o login OAuth2 na conta autorizada.
-A CLI alocou uma T4 na sessão própria; isso comprova alocação, não nove
-treinos concluídos. Ainda não há bundles de candidatos da nova campanha.
-O diagnóstico depende de evidência exportada, não de notebooks instrumentados.
+A CLI alocou uma T4 na sessão própria. Depois da recuperação operacional
+descrita no fechamento abaixo, foram concluídos os nove treinos e recuperados
+os nove bundles. A sessão foi encerrada pela CLI antes do experimento local
+do fusor. O diagnóstico se apoia nas curvas exportadas, não apenas na alocação.
 
 Nesta fatia foram feitas inspeção estática e a medição de sobreposição acima.
 Não foram executados testes, builds, lint ou carga de `fusor.joblib`,
@@ -241,8 +245,8 @@ O fusor passou em 56 testes focados (incluindo contrato de runtime e escala).
 Um smoke de CLI com **features construídas** gravou e recarregou um candidato
 externo e artefatos experimentais completo/texto/tempo, com 39/4/7 colunas.
 Não usou cabeças reais para gerar essas features e não produz resultado
-científico de generalização. O experimento independente exige os candidatos
-Colab ainda não obtidos.
+científico de generalização. O experimento posterior com cabeças reais foi
+concluído separadamente após a recuperação dos candidatos Colab.
 
 ## Verificação da interface e documentação
 
@@ -311,9 +315,9 @@ os avisos registrados acima.
 
 Abas e serviços de QA foram encerrados; scripts temporários de smoke e a
 fixture foram removidos. Relatórios, manifestos, bundles de smoke e capturas
-permanecem no workspace externo temporário. Após o login OAuth2 e a alocação
-T4, ainda é necessário recuperar os candidatos; a migração local não representa
-execução concluída dessas nove rodadas ou das ablações independentes.
+desse QA permanecem no workspace externo temporário. A campanha científica
+posterior tem armazenamento durável sob `/home`, separado desses smokes,
+conforme o fechamento abaixo.
 
 ## PR isolada e retomada autenticada
 
@@ -337,3 +341,145 @@ etapa não disparou inferência. Desktop 1440px e celular 390px foram observados
 no celular, movimento reduzido ativo e sem overflow horizontal. A aba e os
 serviços desse QA foram encerrados. As métricas Torch reais continuam sendo
 evidência separada dessa interação sintética.
+
+## Fechamento científico e operacional — 26–27/10/2026
+
+### Fonte, ambiente e recuperação
+
+A fonte científica congelada é
+`03f91770ec92dec934d794cbad50ea3224f4cb8a`, não a revisão documental posterior.
+O upload não continha `.git`: os notebooks registraram `commit_fraus: null`.
+Os três `codigo_manifesto.json` foram comparados integralmente com os bytes de
+`git archive` dessa fonte. O vínculo fica em **manifesto externo**, sem alterar
+receitas para fingir um commit interno disponível:
+
+- `manifesto-bundles.json`: código enviado, hashes dos dados e bundles,
+  proveniência externa e artefatos do fusor; hash do tar de código
+  `8f36fe926f0e611a2c71f8fbbd1d10f048cd5eca63b476190f3da4d137bd945c`.
+- `completude-bundles.json`: nove bundles de semente completos, cada um com
+  pesos, tokenizador, receita, histórico, manifesto da divisão, avaliação final
+  e marcador de rodada concluída; os bundles agregados das três tarefas e seus
+  hashes também foram recuperados. Não confundir nove treinos com doze treinos
+  por haver arquivos agregados adicionais.
+
+Execução pela **Google Colab CLI 0.7.5**, OAuth2 na conta autorizada, na mesma
+sessão própria `fraus-generalizacao-20261026`. Não houve compra nem conta
+alternativa. `gpu-prova.json` e as nove entradas de `gpu-treinos.jsonl`
+registram **Tesla T4, Torch 2.13.0+cu130, CUDA runtime 13.0**; as nove entradas
+registram parâmetros do modelo em `cuda:0`, uma por tarefa/semente.
+Dependências vieram do lock. As ocorrências de recuperação foram operacionais,
+não alterações oportunistas da receita:
+
+1. O tmpfs de `/tmp` atingiu quota preparando dependências/payloads. A worktree
+   e a campanha migraram para armazenamento em `/home`, com cerca de 72 GB
+   disponíveis naquela observação, sem apagar artefatos antigos.
+2. O upload único de dados de cerca de 1,83 GB recebeu HTTP 400. O pacote de
+   treino de cerca de 70,6 MB foi transferido em nove partes de 8 MiB.
+   ConsumerBR foi obtido pela fonte pública canônica no runtime, com SHA-256
+   igual ao corpus local; foi usado somente para transferência, não no treino.
+3. Instalar as versões fixadas no kernel já carregado causou `ImportError`
+   de NumPy (`_slice`); reiniciar o kernel resolveu esse estado. A importação
+   do Trainer encontrou depois `torchvision::nms`: o Torchvision pré-instalado
+   `0.26.0+cu130`, fora do lock, era incompatível. Removeu-se **somente esse
+   Torchvision** e reiniciou-se o kernel, sem remover dependências fixadas.
+4. Uma execução perdeu conexão antes de executar o código, no ajuste inicial
+   de diretório da CLI, e expirou após 660 s. A causa raiz do transporte
+   **não foi estabelecida**; não atribuí-la à quota. `colab status`
+   ressincronizou a sessão, que estava IDLE; uma execução curta confirmou
+   novamente CUDA/T4 no mesmo runtime, sem nova alocação.
+5. Nenhuma semente havia começado nessas falhas. Depois, 13/42/77 foram
+   executadas **uma vez por cabeça**, sem repetir sementes concluídas ou mudar
+   a receita. Bundles, hashes, exportação da sessão e provas GPU foram
+   recuperados antes de `colab stop`. `estado.json` registra nove treinos,
+   nove bundles, etapas com saída zero e `sessao_encerrada: true`.
+   `gpu_alocada: false` é o estado final após o stop, não negação da GPU usada.
+6. O fusor candidato foi extraído, treinado e avaliado **localmente em CPU após
+   o stop**, com os candidatos escolhidos na validação; sua etapa terminou com
+   saída zero. As ablações 39/4/7 são experimentos, não substitutos do runtime.
+
+A saída terminal do HTTP 400 estampou uma URL temporária assinada.
+**Não copiar logs brutos para PR, site ou esta nota.** O registro
+`higiene-logs.json` informa 23 arquivos examinados, nenhum marcador de
+credencial encontrado nos logs persistidos redigidos; isso não autoriza
+publicação automática desses arquivos.
+
+### Evidência científica preservada e limites
+
+A [página pública](../generalizacao.md) concentra a matriz
+artefato/dataset/divisão/data, as nove avaliações, médias e desvios amostrais,
+ECE bruto/calibrado, todas as épocas das curvas comparáveis e as ablações.
+Não duplicamos essas tabelas nesta nota.
+
+- **Seleção:** satisfação 42, emoção 13, ironia 42, medianas da **validação**.
+  A mediana calculada depois no teste não foi usada para trocar candidatos.
+- **Sobreajuste novo:** séries comparáveis mostram treino melhorando e perda
+  de validação piorando em intervalos persistentes. A perda de validação e
+  o F1 não precisam atingir seus ótimos na mesma época. Esses padrões valem
+  para a reprodução datada, não identificam causa única e não diagnosticam
+  os pesos antigos ou publicados, ainda inconclusivos.
+- **Sistema:** `independencia-sistema.json` confronta os fingerprints dos
+  treinos efetivamente executados com os holdouts B2W reservados. Os seis
+  cruzamentos textuais normalizados dão zero; há isolamento por produto B2W.
+  O relatório original `fusor-candidato/metricas.json` conserva
+  `teste_independente_sistema: false` e a ressalva de emoção baseada apenas
+  em fingerprints agregados; **não foi reescrito**. A prova complementar
+  estabelece independência observável pelos identificadores comparados, não
+  ausência universal de vazamento. Grupos entre fontes não são comparáveis;
+  paráfrases, tradução e proveniência sem identificador continuam limitações.
+- **Transferência:** `transferencia-sobreposicoes.json` registra zero colisões
+  textuais da amostra ConsumerBR de 5.000 com o treino B2W e seis colisões
+  do XED integral de 4.286 com o treino GoEmotions, duas conflitantes.
+  Holdouts não foram alterados. São benchmarks já consultados, não testes
+  virgens; no XED, F1-macro de sete classes difere do das seis presentes.
+- **Fusor:** 900/120/300 conversas sintéticas, scalers ajustados só no treino,
+  quatro esperas em `log1p` e cache identificado por manifesto/checkpoints/
+  contrato. Uma execução por variante não fornece desvio entre sementes.
+  Não foram medidos conformal ou desempenho em atendimentos reais rotulados.
+- **Histórico e produção:** auditoria/baselines de 26/10 e resultados de
+  setembro mantêm suas datas e limites. Nenhum peso foi promovido ou copiado
+  para diretório ativo; nenhum deploy de produção ou merge foi realizado.
+  O Preview automático já registrado não identifica um checkpoint publicado.
+
+### Armazenamento e retomada
+
+Raiz durável da campanha:
+`/home/joaopedro/.cache/fraus/campanhas/2026-10-26/`.
+`bundles/` preserva os nove bundles individuais e três agregados;
+`fusor-candidato/` preserva candidato, importâncias e ablações.
+`resumo-cientifico.json`, `conclusoes-cientificas.json`,
+`manifesto-bundles.json`, `completude-bundles.json`,
+`independencia-sistema.json`, `transferencia-sobreposicoes.json`,
+`estado.json` e as provas CUDA são as referências da campanha concluída.
+`colab.ipynb` é a exportação privada da sessão, não uma página publicável.
+O histórico de auditoria/baselines continua em
+`/tmp/fraus-overfitting-20261026/`; não confundir esse workspace temporário
+com a raiz durável dos candidatos.
+
+“Durável” aqui significa fora do tmpfs, não prova de backup externo.
+Pesos, corpora, logs e manifestos individuais não entram no Git nem no site.
+Uma retomada deve partir dos artefatos exportados, sem reabrir GPU ou refazer
+sementes já concluídas apenas para reconstruir evidência disponível.
+
+### Conferência independente após a recuperação
+
+O agente principal conferiu os bytes e SHA-256 de **19 arquivos**: os nove
+bundles individuais, três agregados e sete artefatos do fusor.
+`verificacao-integridade-pai.json`, fora do repositório, registra essa prova.
+O candidato completo foi carregado pela API real `Fusor.carregar`, na escala
+`log1p`; ele e as duas ablações reproduziram os F1 registrados nos 300 exemplos
+sintéticos de teste. `Fusor.pontuar` também foi exercitado com features reais
+desse cache, sem tocar no artefato ativo.
+
+A revisão científica independente conferiu avaliações, médias/desvios
+amostrais, seleção pela validação, nove históricos, vínculo externo de código,
+provas CUDA e limites de independência, sem achado material nesse escopo.
+A consulta final `colab --auth oauth2 sessions` não encontrou sessões ativas.
+A régua operacional nova de ironia também foi preservada na página pública:
+é a régua já consultada, não um novo corpus nem garantia de qualidade.
+
+O vínculo de código foi conferido também contra o próprio Git: SHA-256 dos
+116 arquivos do mapa externo iguais aos bytes de `git show 03f9177:caminho`;
+os 106 arquivos de cada um dos três manifestos internos correspondem ao mesmo
+mapa. `vinculo-codigo-pai.json` registra essa camada externa, sem alterar o
+`commit_fraus: null` observado dentro dos notebooks.
+
