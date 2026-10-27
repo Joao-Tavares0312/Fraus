@@ -45,9 +45,10 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 - Tela Modelo: explorador didático e uma única resposta do simulador;
   oito famílias observadas, sete/39 no vetor. Não observa atenção/ativações.
   Site com percursos banca/usuários/desenvolvimento e Mermaid preservado no PDF.
-- Sessão própria encerrada pela CLI após recuperação. **Sem promoção nem
-  publicação em produção**; houve Preview automático da PR, não deploy de
-  produção. Estado e provas na [nota interna](notas/2026-10-26-generalizacao.md).
+- Sessão própria encerrada pela CLI após recuperação, **sem promoção de pesos**.
+  A PR #104 da base documental foi mergeada fora desta execução; os resultados
+  posteriores seguem em PR complementar. Estado e provas na
+  [nota interna](notas/2026-10-26-generalizacao.md).
   Campanha durável em `/home/joaopedro/.cache/fraus/campanhas/2026-10-26/`;
   auditoria/baselines antigos em `/tmp/fraus-overfitting-20261026/`.
   Pesos, corpora, logs e manifestos individuais ficam fora do Git/site.

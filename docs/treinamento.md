@@ -6,7 +6,7 @@
     As nove rodadas (três cabeças × três sementes) foram executadas em T4 pela
     CLI oficial do Google Colab, com nove bundles recuperados. O candidato do
     fusor e as ablações também foram avaliados. A sessão própria foi encerrada;
-    nenhum peso ativo foi substituído nem houve publicação em produção.
+    nenhum peso ativo foi substituído. Publicar site/API é uma operação separada.
     [Generalização e evidências](generalizacao.md) centraliza resultados,
     curvas e limites: há sobreajuste nesta reprodução; os pesos antigos
     continuam sem diagnóstico conclusivo.

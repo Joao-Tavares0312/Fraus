@@ -5,9 +5,9 @@
 Esta nota preserva a investigação local de proveniência e a reconstrução da
 separação posicional usada pelo fusor, seguidas do fechamento da **nova campanha
 de candidatos de 26–27/10/2026**. A primeira parte não recupera o treino antigo;
-as curvas novas sustentam sobreajuste somente desta reprodução. Não houve
-promoção, publicação em produção, inferência em produção nem identificação
-do checkpoint publicado. O Preview automático da PR é descrito separadamente.
+as curvas novas sustentam sobreajuste somente desta reprodução. O agente não
+promoveu pesos nem realizou inferência em produção; o checkpoint publicado
+não foi identificado. O merge externo da PR #104 é registrado ao final.
 
 - Commit de referência: `836d440bbe246018fb8808a4ede4c6f84d6a0ef9`.
 - Inventário já existente:
@@ -333,7 +333,7 @@ e público e a geração do PDF; os diagramas geral/Transformer foram conferidos
 por rasterização. O HTML público não contém fontes de funções, páginas
 restritas ou JSONL. No GitHub, os checks de SQLite, PostgreSQL e dashboard
 passaram. A Vercel criou automaticamente um ambiente **Preview**, com
-`production_environment: false`; não houve publicação em produção.
+`production_environment: false`; o ambiente conferido era Preview, não produção.
 
 O explorador integrado foi operado com dublê explícito: as três frases
 responderam 200, com um POST por classificação e texto preservado; selecionar
@@ -437,7 +437,7 @@ Não duplicamos essas tabelas nesta nota.
   Não foram medidos conformal ou desempenho em atendimentos reais rotulados.
 - **Histórico e produção:** auditoria/baselines de 26/10 e resultados de
   setembro mantêm suas datas e limites. Nenhum peso foi promovido ou copiado
-  para diretório ativo; nenhum deploy de produção ou merge foi realizado.
+  para diretório ativo. O agente não executou comandos de publicação nem merge.
   O Preview automático já registrado não identifica um checkpoint publicado.
 
 ### Armazenamento e retomada
@@ -482,4 +482,14 @@ O vínculo de código foi conferido também contra o próprio Git: SHA-256 dos
 os 106 arquivos de cada um dos três manifestos internos correspondem ao mesmo
 mapa. `vinculo-codigo-pai.json` registra essa camada externa, sem alterar o
 `commit_fraus: null` observado dentro dos notebooks.
+
+### Resultados posteriores ao merge da base
+
+A PR #104 foi mergeada fora desta execução em `2026-10-26T23:57:18Z`,
+com head `e06d413` e merge `6d7278e`. Os resultados finais foram commitados
+depois, em `51cb74b`: eles não fazem parte do diff mergeado naquela PR.
+A entrega complementar usa a branch `docs/resultados-generalizacao-20261027`,
+baseada na `main` já mergeada, e altera somente os seis documentos de resultados.
+O código dos treinos permanece vinculado a `03f9177`; essa reorganização Git
+não muda pesos, dados, receita ou avaliação e não exige refazer a campanha.
 

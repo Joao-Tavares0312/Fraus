@@ -7,8 +7,8 @@
     bundles e avaliou o candidato do fusor e suas ablações. As curvas comparáveis
     sustentam **sobreajuste nesta reprodução**, com padrões detalhados abaixo.
     O diagnóstico dos pesos antigos e dos publicados continua **inconclusivo**:
-    suas curvas e proveniência não foram recuperadas. Não houve promoção de
-    modelo nem publicação em produção; a sessão própria foi encerrada pela CLI.
+    suas curvas e proveniência não foram recuperadas. Os candidatos não foram
+    promovidos; a sessão própria foi encerrada pela CLI.
 
 Esta página distingue quatro perguntas: **vazamento**, **sobreajuste**,
 **transferência de domínio** e **insuficiência de evidência**. Uma métrica alta

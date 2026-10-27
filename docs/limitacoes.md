@@ -22,7 +22,7 @@ experimento sintético do fusor. Suas curvas comparáveis mostram treino
 melhorando enquanto a perda de validação piora persistentemente em fases
 explicitadas no relatório: **evidência de sobreajuste desses candidatos novos**,
 sem identificar uma causa única ou invalidar a seleção isolada por validação.
-Nenhum candidato foi promovido e não houve publicação em produção.
+Nenhum candidato foi promovido; esta medição não identifica o checkpoint em produção.
 
 ConsumerBR e XED já foram consultados e não são testes virgens. A amostra
 ConsumerBR não tem colisões textuais normalizadas com o treino B2W novo;
