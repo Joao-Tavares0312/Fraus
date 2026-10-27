@@ -1,15 +1,14 @@
 # Generalização e evidências
 
-## Estado da investigação — 26/10/2026
+## Estado da investigação — 27/10/2026
 
-!!! warning "Diagnóstico de overfitting atual: inconclusivo"
-    Há atalhos históricos documentados e sobreposição de produtos na receita
-    posicional reconstruída. Isso não recupera as curvas dos pesos antigos nem
-    identifica o checkpoint de produção. A campanha fechada no Colab e o novo
-    experimento independente do fusor **ainda não têm resultados**. O login
-    OAuth2 na conta autorizada foi concluído e uma T4 foi alocada; ainda faltam
-    os bundles e relatórios finais das nove rodadas.
-    Não houve promoção de modelo nem publicação em produção.
+!!! warning "Campanha concluída; candidatos novos, não modelos publicados"
+    A reprodução de 26–27/10 concluiu **nove treinos em T4**, exportou os nove
+    bundles e avaliou o candidato do fusor e suas ablações. As curvas comparáveis
+    sustentam **sobreajuste nesta reprodução**, com padrões detalhados abaixo.
+    O diagnóstico dos pesos antigos e dos publicados continua **inconclusivo**:
+    suas curvas e proveniência não foram recuperadas. Não houve promoção de
+    modelo nem publicação em produção; a sessão própria foi encerrada pela CLI.
 
 Esta página distingue quatro perguntas: **vazamento**, **sobreajuste**,
 **transferência de domínio** e **insuficiência de evidência**. Uma métrica alta
@@ -24,6 +23,14 @@ público. Não são links para manifestos individuais, dados brutos ou pesos.
 Base do inventário: commit `836d440bbe246018fb8808a4ede4c6f84d6a0ef9`.
 A data é a da observação, não uma alegação sobre quando o modelo foi treinado.
 
+A campanha nova usa a fonte congelada
+`03f91770ec92dec934d794cbad50ea3224f4cb8a`, vinculada por
+`manifesto-bundles.json`. O upload não continha `.git`: o campo de commit
+interno dos notebooks ficou nulo. A ligação externa com o commit resulta da
+comparação integral dos três `codigo_manifesto.json` com os bytes de
+`git archive` dessa fonte, não de um commit interno inventado. Pesos, logs e
+manifestos individuais permanecem fora do Git e do site.
+
 | artefato / componente | dataset e divisão | data | o que foi observado | limite |
 |---|---|---|---|---|
 | `inventario.json` / três cabeças Torch locais | arquivos, configurações e hashes; sem inferência | 26/10/2026 | checkpoints locais identificados por bytes | não identifica produção nem recupera manifestos históricos |
@@ -36,8 +43,10 @@ A data é a da observação, não uma alegação sobre quando o modelo foi trein
 | `emocao-atual.json` / cabeça local de emoção | teste GoEmotions-PT reconstruído, 7.328 exemplos | 26/10/2026 | F1-macro **0,691023**, acurácia **0,720524**, ECE **0,056790** | pesos anteriores à nova divisão podem ter visto parte dos exemplos; independência histórica não verificável |
 | `emocao-atual.json` / mesma cabeça | XED-pt, 4.286 exemplos, seis classes presentes (sem neutro) | 26/10/2026 | F1-macro **sete classes 0,240398**; **seis presentes 0,280465**; acurácia **0,285814**, ECE **0,451814** | transferência já consultada; rótulos projetados de outras línguas, não validação de suporte real |
 | satisfação e emoção locais / curvas antigas | treino supervisionado histórico | 26/10/2026 | curvas e manifestos individuais antigos não recuperados | não permite medir gap treino–validação dos pesos atuais |
-| nova campanha das três cabeças | B2W, GoEmotions-PT e MultiPICo PT; três sementes por cabeça | 26/10/2026 | **OAuth2 concluído e T4 alocada; nove rodadas ainda sem relatório final** | sem curvas novas ou média/desvio a reportar |
-| candidato independente do fusor | B2W agrupado + conversas sintéticas | 26/10/2026 | **pendente da campanha e dos manifestos das cabeças** | sem avaliação nova de sistema independente |
+| `resumo-cientifico.json` + nove bundles / satisfação, emoção e ironia novas | B2W, GoEmotions-PT e MultiPICo PT; splits congelados e sementes 13/42/77 | 26–27/10/2026 | nove avaliações finais, ECE bruto/calibrado e curvas por época; tabelas abaixo | reprodução nova, não recuperação do histórico nem identificação de produção |
+| `fusor-candidato/metricas.json` / completo e ablações | B2W agrupado + 900/120/300 conversas sintéticas de treino/validação/teste | 26–27/10/2026 | extração real com cabeças candidatas e avaliação de 39/4/7 features concluídas | uma execução por variante, não atendimento real rotulado |
+| `independencia-sistema.json` / prova complementar | validação/teste B2W contra treinos reais das três cabeças novas | 27/10/2026 | fingerprints correspondem às receitas; zero colisões textuais normalizadas nos seis cruzamentos | não detecta paráfrases; grupos entre fontes não são comparáveis |
+| `transferencia-sobreposicoes.json` + `resumo-cientifico.json` / candidatos selecionados | ConsumerBR amostrado (5.000) e XED integral (4.286) contra os treinos reais correspondentes | 27/10/2026 | zero colisões ConsumerBR × treino B2W; seis XED × treino GoEmotions, dois conflitos | benchmarks já consultados, não testes virgens; XED não é textualmente independente |
 | produção | checkpoint não identificado | 26/10/2026 | nenhuma inferência autenticada ou proveniência de pesos demonstrada nesta investigação | saúde da API não comprova inferência nem igualdade com artefatos locais |
 
 Os pesos locais de ironia medidos têm SHA-256
@@ -62,9 +71,10 @@ ficaram fora de todo ajuste supervisionado ou de decisões históricas.
 No XED, o campo `f1_macro` do JSON representa as sete classes do contrato,
 enquanto `f1_macro_classes_presentes` representa as seis observadas. A leitura
 de console pode destacar o segundo; não é intercambiável com o primeiro.
-As métricas das três cabeças acima são **baselines dos artefatos locais**,
-não resultados das nove rodadas propostas. As quedas B2W → ConsumerBR e
-GoEmotions → XED mostram limites de transferência sob essas condições, sem
+As métricas das três cabeças nas linhas de 26/10 acima são **baselines dos
+artefatos locais anteriores**, não resultados das nove rodadas novas.
+As quedas B2W → ConsumerBR e GoEmotions → XED mostram limites de transferência
+sob essas condições, sem
 identificar isoladamente a causa (domínio, variedade, projeção dos rótulos
 ou sobreajuste).
 
@@ -137,6 +147,181 @@ são posições **aceitas pelo leitor**, não números de linhas brutas.
 - Hash calculado hoje não substitui manifesto histórico. Sem cadeia de
   proveniência, escrever **independência não verificável**, não “sem vazamento”.
 
+## Resultados da reprodução — 26–27/10/2026
+
+Fonte: `resumo-cientifico.json`, derivado das receitas, históricos e avaliações
+finais preservados nos bundles. Os valores abaixo são arredondados, não
+substituem os registros completos. Precisão/recall/F1/suporte por classe,
+matrizes de confusão, temperaturas e hashes estão nesses artefatos externos;
+não publicamos exemplos individuais.
+
+### Três sementes por cabeça
+
+O desvio é **amostral** (`n − 1`, três sementes), não intervalo de confiança.
+Os tamanhos são os efetivamente usados, após limpeza e divisão agrupada.
+A semente escolhida é a mediana **da validação**, congelada antes do teste.
+
+| cabeça / corpus | treino / validação / teste | F1-macro validação, média ± desvio | F1-macro teste, média ± desvio | semente escolhida na validação |
+|---|---:|---:|---:|---:|
+| satisfação / B2W | 95.722 / 12.058 / 18.895 | 0,757917 ± 0,002995 | **0,755156 ± 0,005943** | **42** |
+| emoção / GoEmotions-PT | 36.806 / 4.874 / 7.328 | 0,578719 ± 0,001800 | **0,592371 ± 0,005218** | **13** |
+| ironia / MultiPICo PT | 1.126 / 292 / 462 | 0,688503 ± 0,015942 | **0,647941 ± 0,023741** | **42** |
+
+Detalhamento dos nove treinos. “Época” é a do checkpoint escolhido por
+F1-macro de validação, não necessariamente a de menor perda.
+
+| cabeça / semente | época | F1 validação | F1 teste | acurácia teste |
+|---|---:|---:|---:|---:|
+| satisfação / 13 | 1 | 0,760614 | 0,754337 | 0,830590 |
+| satisfação / **42** | 4 | 0,758444 | 0,761466 | 0,847208 |
+| satisfação / 77 | 1 | 0,754693 | 0,749664 | 0,817253 |
+| emoção / **13** | 3 | 0,578321 | 0,597280 | 0,657751 |
+| emoção / 42 | 5 | 0,577151 | 0,586892 | 0,659934 |
+| emoção / 77 | 4 | 0,580685 | 0,592943 | 0,666075 |
+| ironia / 13 | 4 | 0,675866 | 0,665176 | 0,681818 |
+| ironia / **42** | 2 | 0,683228 | 0,620862 | 0,670996 |
+| ironia / 77 | 4 | 0,706413 | 0,657787 | 0,686147 |
+
+ECE top-1 no mesmo teste: **bruto, sem temperatura**, e **com temperatura
+ajustada somente na validação**.
+
+| cabeça / semente | ECE bruto | ECE com temperatura |
+|---|---:|---:|
+| satisfação / 13 | 0,023847 | 0,024383 |
+| satisfação / **42** | 0,075406 | 0,020136 |
+| satisfação / 77 | 0,030691 | 0,022800 |
+| emoção / **13** | 0,106976 | 0,037097 |
+| emoção / 42 | 0,158665 | 0,036317 |
+| emoção / 77 | 0,129541 | 0,026192 |
+| ironia / 13 | 0,056899 | 0,033080 |
+| ironia / **42** | 0,047387 | 0,066038 |
+| ironia / 77 | 0,135616 | 0,057866 |
+
+A mediana retrospectiva do **teste** seria 13/77/77, respectivamente; ela
+**não** substituiu 42/13/42. Temperatura não garante melhora de ECE em todo
+teste: piorou na satisfação 13 e na ironia 42. Não escolher outra temperatura
+ou semente por esse resultado final.
+
+### Curvas comparáveis: evidência de sobreajuste
+
+São medições por época em modo **eval**, sem dropout, no diagnóstico fixo
+estratificado de treino (até 2.000 exemplos, semente 42) e na validação, com
+a mesma função de perda ponderada. Não são médias de minibatches do treino.
+As séries completas observadas estão abaixo; o treino diagnóstico não é uma
+estimativa em dados independentes.
+
+| cabeça / semente | época | perda treino eval | perda validação | F1 treino eval | F1 validação |
+|---|---:|---:|---:|---:|---:|
+| satisfação / 13 | 1 | 0,4540 | 0,5316 | 0,8015 | 0,7606 |
+| satisfação / 13 | 2 | 0,3661 | 0,5393 | 0,8063 | 0,7474 |
+| satisfação / 13 | 3 | 0,2742 | 0,5789 | 0,8581 | 0,7545 |
+| satisfação / 42 | 1 | 0,4754 | 0,5455 | 0,7538 | 0,7195 |
+| satisfação / 42 | 2 | 0,3681 | 0,5231 | 0,8314 | 0,7567 |
+| satisfação / 42 | 3 | 0,2823 | 0,5619 | 0,8349 | 0,7424 |
+| satisfação / 42 | 4 | 0,2231 | 0,7633 | 0,9054 | 0,7584 |
+| satisfação / 42 | 5 | 0,1816 | 0,8071 | 0,9165 | 0,7560 |
+| satisfação / 77 | 1 | 0,4444 | 0,5172 | 0,7930 | 0,7547 |
+| satisfação / 77 | 2 | 0,3507 | 0,5359 | 0,8343 | 0,7513 |
+| satisfação / 77 | 3 | 0,2565 | 0,6102 | 0,8620 | 0,7488 |
+| emoção / 13 | 1 | 0,8665 | 1,1082 | 0,5909 | 0,5518 |
+| emoção / 13 | 2 | 0,6800 | 1,1377 | 0,6426 | 0,5593 |
+| emoção / 13 | 3 | 0,4778 | 1,3006 | 0,7625 | 0,5783 |
+| emoção / 13 | 4 | 0,3429 | 1,3887 | 0,7960 | 0,5729 |
+| emoção / 13 | 5 | 0,3100 | 1,4869 | 0,8175 | 0,5769 |
+| emoção / 42 | 1 | 0,8804 | 1,0785 | 0,5890 | 0,5567 |
+| emoção / 42 | 2 | 0,6518 | 1,0771 | 0,6619 | 0,5691 |
+| emoção / 42 | 3 | 0,4384 | 1,2388 | 0,7589 | 0,5729 |
+| emoção / 42 | 4 | 0,3380 | 1,3445 | 0,8057 | 0,5709 |
+| emoção / 42 | 5 | 0,2917 | 1,4710 | 0,8454 | 0,5772 |
+| emoção / 77 | 1 | 0,8492 | 1,0976 | 0,5838 | 0,5311 |
+| emoção / 77 | 2 | 0,6131 | 1,0670 | 0,6961 | 0,5805 |
+| emoção / 77 | 3 | 0,4550 | 1,1954 | 0,7433 | 0,5741 |
+| emoção / 77 | 4 | 0,3308 | 1,3682 | 0,8109 | 0,5807 |
+| emoção / 77 | 5 | 0,2968 | 1,4625 | 0,8246 | 0,5760 |
+| ironia / 13 | 1 | 0,6619 | 0,6637 | 0,5546 | 0,4816 |
+| ironia / 13 | 2 | 0,5648 | 0,6067 | 0,7101 | 0,6546 |
+| ironia / 13 | 3 | 0,4430 | 0,5903 | 0,7829 | 0,6638 |
+| ironia / 13 | 4 | 0,3703 | 0,6040 | 0,8391 | 0,6759 |
+| ironia / 13 | 5 | 0,3441 | 0,6132 | 0,8608 | 0,6746 |
+| ironia / 42 | 1 | 0,6415 | 0,6541 | 0,6574 | 0,5798 |
+| ironia / 42 | 2 | 0,5308 | 0,6095 | 0,7471 | 0,6832 |
+| ironia / 42 | 3 | 0,3764 | 0,6069 | 0,8175 | 0,6430 |
+| ironia / 42 | 4 | 0,2986 | 0,6320 | 0,8714 | 0,6520 |
+| ironia / 77 | 1 | 0,6073 | 0,6280 | 0,6501 | 0,6199 |
+| ironia / 77 | 2 | 0,4684 | 0,5897 | 0,7915 | 0,6826 |
+| ironia / 77 | 3 | 0,3241 | 0,5940 | 0,8615 | 0,6925 |
+| ironia / 77 | 4 | 0,2517 | 0,6364 | 0,9152 | 0,7064 |
+| ironia / 77 | 5 | 0,2337 | 0,6524 | 0,9220 | 0,7029 |
+
+- **Satisfação:** perda de treino cai enquanto a de validação sobe nas épocas
+  1–3 de 13/77 e 2–5 de 42. O F1 de validação não acompanha o ganho do treino.
+- **Emoção:** o padrão de perdas persiste em 1–5 de 13 e 2–5 de 42/77.
+  O F1 de validação ainda melhora em algumas épocas, mas muito menos que o
+  de treino; seleção por F1 e seleção por perda não são a mesma decisão.
+- **Ironia:** perda de validação sobe em 3–5 de 13 e 2–5 de 77 enquanto o
+  treino melhora. Na 42, o F1 perde o pico da época 2; a perda só aumenta de
+  3 para 4, não desde a época 2. Não atribuímos uma subida monotônica inexistente.
+
+Esses padrões sustentam **sobreajuste nas fases indicadas desta reprodução**,
+não uma causa única, um limiar universal de gap ou um diagnóstico dos pesos
+publicados. O checkpoint continuou selecionado somente pela validação.
+
+### Transferência e régua operacional dos candidatos escolhidos
+
+| candidato / benchmark | n | F1-macro | acurácia | ECE com temperatura |
+|---|---:|---:|---:|---:|
+| satisfação 42 / ConsumerBR amostrado | 5.000 | 0,573398 | 0,756600 | 0,063823 |
+| emoção 13 / XED-pt integral | 4.286 | **sete classes 0,233188; seis presentes 0,272053** | 0,278115 | 0,371403 |
+| ironia 42 / régua de atendimento já consultada | 20 | 0,520000 | não registrada | não registrado |
+
+O notebook 04 também registrou a régua operacional em
+`ironia-generalizacao-20261026/metricas.json`, campo `regua_20`: dois falsos
+positivos e sete falsos negativos. Não é um corpus novo de atendimento;
+acurácia e ECE dessa régua não constam nesse relatório, por isso ficam ausentes.
+ConsumerBR amostrado não colide textualmente com os 95.722 exemplos de treino B2W;
+isso não o torna teste virgem nem prova independência por empresa/autor.
+XED tem seis colisões textuais com os 36.806 exemplos de treino GoEmotions,
+duas com conflito de rótulo; o benchmark integral foi preservado, sem limpar
+retrospectivamente o holdout para melhorar a comparação. Grupos entre fontes
+não são comparáveis. Não há ECE bruto de transferência no resumo: não inferir
+uma melhora de calibração sem essa medição.
+
+As quedas fora do corpus-fonte descrevem transferência sob mudança de domínio,
+distribuição e alvo; não isolam causalmente sobreajuste. XED ainda usa rótulos
+projetados entre línguas e não contém neutro. Nenhum dos dois é um corpus novo
+de atendimentos reais rotulados.
+
+### Candidato do fusor e ablações
+
+São **900/120/300 conversas sintéticas** de treino/validação/teste, equilibradas
+por classe em cada lado, com textos dos grupos correspondentes do manifesto
+B2W reservado antes do treino de satisfação. Usaram os candidatos escolhidos
+pela validação; não os baselines locais antigos. Features excluídas foram
+removidas da matriz, cada scaler foi ajustado somente no treino, e as quatro
+esperas mantêm `log1p`. O cache vincula manifesto, checkpoints e contrato.
+
+| variante experimental | features | F1 validação | F1 teste | acurácia teste | ECE teste |
+|---|---:|---:|---:|---:|---:|
+| completo | 39 | 0,932486 | **0,931557** | 0,933333 | 0,030091 |
+| somente texto | 4 | 0,836454 | **0,883318** | 0,886667 | 0,044542 |
+| somente tempo | 7 | 0,509600 | **0,558372** | 0,573333 | 0,048255 |
+
+Há uma execução por variante: **não há média/desvio de três sementes do
+fusor**. O ECE é das probabilidades do candidato; não houve nova temperatura
+do fusor nem avaliação conformal nesta campanha. Essas ablações não substituem
+o runtime nem medem causalidade dos sinais.
+
+O relatório original do instrumento conservou a ressalva de independência
+não verificável da emoção, pois só examina fingerprints agregados de outro
+corpus. Ele **não foi sobrescrito**. A prova complementar
+`independencia-sistema.json` confirma os fingerprints dos treinos reais das
+três cabeças e encontra zero colisões textuais normalizadas com validação e
+teste B2W. Em satisfação, há também isolamento por produto no manifesto.
+Isso estabelece independência **observável por esses identificadores nesta
+reprodução**; não cobre paráfrases, traduções, proveniência ausente ou grupos
+incomparáveis entre fontes. Não altera a insuficiência histórica dos pesos
+antigos, nem converte o teste sintético em generalização comprovada em suporte.
+
 ## Protocolo da campanha fechada
 
 A [receita vigente](treinamento.md#receita-vigente-de-pesquisa-26102026) fixa
@@ -170,7 +355,7 @@ aprovados e um smoke real com BERT **aleatório e minúsculo**, treinado por dua
 avaliação final separada e recusou manifesto divergente. As 18 células Python
 dos três notebooks foram compiladas; esse smoke local não executou o caminho de GPU.
 Isso verifica contratos do código, **não** mede satisfação, emoção, ironia ou
-generalização do Fraus e não substitui as nove rodadas pendentes.
+generalização do Fraus. A campanha T4 posterior é evidência separada, acima.
 
 ### Teste do sistema e ablações do fusor
 
@@ -187,10 +372,10 @@ fusor. Treino, validação e teste do fusor só usam seus respectivos grupos.
 Comparar completo, somente texto e somente tempo removendo colunas e ajustando
 cada scaler **só no treino**. Nenhuma ablação é artefato de runtime.
 
-Mesmo com B2W isolado, se os manifestos de emoção e ironia não comprovarem
-independência supervisionada, não chamar o teste de independente do sistema
-inteiro. E conversas sintéticas continuam não sendo atendimentos reais
-rotulados, ainda que os grupos de texto sejam disjuntos.
+O experimento concluído preserva o relatório conservador original e o
+complementa com a comparação textual dos treinos reais, conforme a seção de
+resultados. Conversas sintéticas continuam não sendo atendimentos reais
+rotulados, ainda que os identificadores observados sejam disjuntos.
 
 ## Como interpretar as conclusões
 
@@ -198,21 +383,22 @@ rotulados, ainda que os grupos de texto sejam disjuntos.
    receita posicional reconstruída. Os atalhos históricos de latência e de
    marcadores de ironia estão documentados no diário; não são diagnóstico
    automático dos pesos publicados hoje.
-2. **Overfitting:** exige curvas comparáveis em que treino melhora e validação
-   piora persistentemente, junto de contexto de seleção e incerteza. Essas
-   curvas antigas não estão disponíveis, e as novas rodadas não ocorreram.
-   O diagnóstico atual permanece **inconclusivo**; ausência de evidência não é
-   ausência de sobreajuste.
+2. **Sobreajuste:** as curvas novas mostram treino melhorando e perda de
+   validação piorando persistentemente nos intervalos explicitados acima.
+   A conclusão vale para **esta reprodução de 26–27/10**, sem limiar universal
+   de gap e sem diagnóstico causal. Para pesos antigos/publicados, faltam
+   curvas e proveniência: o diagnóstico continua **inconclusivo**, não
+   “sem sobreajuste”.
 3. **Transferência:** ConsumerBR, XED e as réguas de ironia já foram consultados.
    Medem desempenho em outro domínio sob essas condições, não teste virgem.
    Para XED, distinguir **F1-macro nas sete classes** de F1-macro somente nas
    classes presentes; não comparar os dois como se fossem a mesma métrica.
    MultiPICo anota ironia vendo o post; o modelo lê só a resposta, uma limitação
    contextual adicional.
-4. **Insuficiência:** faltam curvas históricas, proveniência completa dos
-   treinos, checkpoint publicado identificado e corpus novo de atendimento
-   rotulado. Nenhum baseline de uma cabeça, sozinho, valida a satisfação
-   inferida de ponta a ponta nem autoriza promessa de acurácia operacional.
+4. **Insuficiência:** faltam curvas e proveniência completa dos treinos
+   **históricos**, checkpoint publicado identificado e corpus novo de
+   atendimento rotulado. Nem o baseline isolado de uma cabeça nem o teste
+   sintético novo autorizam promessa de acurácia operacional em suporte real.
 
 Para os limites de uso, veja [Limitações](limitacoes.md) e
 [Conformidade](conformidade.md). O método e a hipótese estão em [A tese](tese.md).
