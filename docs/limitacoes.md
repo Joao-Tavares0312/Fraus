@@ -4,31 +4,40 @@ Esta página existe porque um sistema que estima satisfação **precisa** declar
 onde erra. Nada aqui é segredo, e nada aqui está escondido na tela: cada item
 tem contrapartida visível na interface.
 
-## Generalização e proveniência — atualização de 26/10/2026
+## Generalização e proveniência — atualização de 27/10/2026
 
 O [relatório público de generalização](generalizacao.md) centraliza protocolo,
-baselines locais e limites de independência. As medições datadas abaixo são
-**históricas**: não identificam automaticamente os pesos publicados hoje.
-Uma resposta de saúde da API não demonstra inferência real nem proveniência
-do checkpoint.
+baselines locais, resultados dos nove treinos e ablações do fusor. As medições
+datadas nas demais seções abaixo são **históricas**: não identificam
+automaticamente os pesos publicados hoje. Uma resposta de saúde da API não
+demonstra inferência real nem proveniência do checkpoint.
 
 Há dependência por produto na antiga divisão posicional do fusor reconstruída
-agora, mas faltam curvas e manifestos antigos suficientes para diagnosticar
-overfitting dos pesos atuais. A campanha de três sementes por cabeça e o novo
-experimento do fusor estão **pendentes de autenticação Colab**; o diagnóstico
-atual é **inconclusivo**, não “sem overfitting”.
+em 26/10. Faltam curvas e manifestos históricos suficientes para diagnosticar
+sobreajuste dos pesos antigos/publicados: esse diagnóstico permanece
+**inconclusivo**, não “sem sobreajuste”.
 
-ConsumerBR e XED já foram consultados como benchmarks de transferência e não
-são testes virgens. No XED, F1-macro nas sete classes não é o mesmo indicador
-que F1-macro apenas nas classes presentes. A cabeça de ironia também tem
-baselines locais recentes, sem que isso converta a régua pequena em avaliação
-independente de atendimentos. Ver os resultados e respectivas condições em
-[Generalização](generalizacao.md), sem misturá-los às tabelas históricas.
+A reprodução de 26–27/10 concluiu as três sementes por cabeça em T4 e o novo
+experimento sintético do fusor. Suas curvas comparáveis mostram treino
+melhorando enquanto a perda de validação piora persistentemente em fases
+explicitadas no relatório: **evidência de sobreajuste desses candidatos novos**,
+sem identificar uma causa única ou invalidar a seleção isolada por validação.
+Nenhum candidato foi promovido; esta medição não identifica o checkpoint em produção.
 
-O novo manifesto/caches do fusor reduzem uma fonte de dependência, mas não
-comprovam retroativamente quais exemplos treinaram cabeças antigas. Sem essa
-cadeia, a independência do sistema completo não é verificável. Mesmo um teste
-agrupado correto de conversas sintéticas não valida acurácia em suporte real.
+ConsumerBR e XED já foram consultados e não são testes virgens. A amostra
+ConsumerBR não tem colisões textuais normalizadas com o treino B2W novo;
+XED tem seis com o treino GoEmotions novo, duas com conflito de rótulo.
+No XED, F1-macro nas sete classes não é o mesmo indicador que F1-macro nas
+seis presentes. Queda fora de domínio, isoladamente, não diagnostica
+sobreajuste. A régua pequena de ironia tampouco valida atendimento real.
+
+O manifesto do fusor novo isola produtos B2W. A prova complementar confirma
+zero colisões textuais normalizadas da validação/teste B2W com os treinos
+reais das três cabeças novas, sem sobrescrever o relatório conservador original.
+Essa independência observável não cobre paráfrases, traduções ou proveniência
+ausente; grupos entre fontes não são comparáveis. Nada disso comprova
+retroativamente a independência das cabeças antigas, nem valida acurácia em
+suporte real: as conversas e os tempos do experimento do fusor são sintéticos.
 
 
 ## Limitações operacionais do deploy gratuito

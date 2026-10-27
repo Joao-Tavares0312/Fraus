@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 26/10/2026 (generalização, Modelo e documentação)
+# Handoff — Fraus, atualizado em 27/10/2026 (campanha de generalização concluída)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -24,30 +24,34 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 
 ---
 
-## Generalização, Modelo e documentação — 26/10/2026
+## Generalização, Modelo e documentação — 26–27/10/2026
 
-- A [matriz de evidências](generalizacao.md) mantém o diagnóstico de
-  overfitting **inconclusivo**. A receita posicional histórica compartilha
-  41 produtos entre pools; isso não recupera o treino dos pesos antigos.
-  Auditoria integral, reconstrução e baselines ficam separados.
-- `receita_treino` e notebooks 01/03/04 selecionam pela validação e gravam a
-  decisão antes do teste final. Curvas têm diagnóstico de treino fixo.
-  Retomada e bundles foram exercitados com BERT minúsculo, não com novos
-  candidatos Fraus. Na retomada, o login OAuth2 na conta autorizada foi
-  concluído e uma T4 foi alocada; as nove rodadas ainda não têm bundles exportados.
-- O notebook 02 e a CLI do fusor agora exigem manifesto explícito,
-  `--b2w` e saída externa. `--promover` foi removido. Cache depende dos bytes
-  das cabeças, fontes e escala; ablações científicas aguardam candidatos
-  independentes. Não contorne a recusa do fusor antigo em segundos crus.
-- A tela Modelo ganhou explorador didático; preserva o simulador e reutiliza
-  uma única resposta HTTP. Não observa atenção/ativações nem pontua uma
-  conversa a partir da frase. Oito famílias observadas, sete/39 no vetor.
-- O site tem percursos para banca, usuários e desenvolvimento. O PDF usa
-  Chromium e `pdf_event_hook.py` para preservar Mermaid em SVG; biblioteca
-  fixada por hash, baixada no build, nunca no caminho de predição.
-- Sem promoção nem publicação em produção. Evidências e limites completos na
-  [nota interna](notas/2026-10-26-generalizacao.md); resultados brutos e
-  manifestos privados em `/tmp/fraus-overfitting-20261026/`, fora do site.
+- A [matriz de evidências](generalizacao.md) separa baselines/auditoria de
+  26/10 da nova reprodução. Os **nove treinos em T4 e nove bundles** estão
+  concluídos; sementes escolhidas **pela validação**: satisfação 42, emoção 13,
+  ironia 42. As curvas sustentam sobreajuste **desses candidatos novos**.
+  Pesos antigos/publicados continuam inconclusivos, sem curvas/proveniência.
+- Fonte congelada: `03f91770ec92dec934d794cbad50ea3224f4cb8a`. Upload sem
+  `.git`, commit interno nulo; manifesto externo vincula três manifestos de
+  código comparados integralmente ao `git archive`. Não inventar commit interno.
+- O fusor candidato e ablações de 39/4/7 features foram avaliados com cabeças
+  novas, manifesto/cache vinculados e scalers só no treino. Prova complementar
+  encontra zero colisões normalizadas entre holdouts B2W e treinos das três
+  cabeças; preserva o relatório original conservador. Independência observável
+  não cobre paráfrases nem valida atendimento real: o teste é **sintético**.
+  Não contorne a recusa do fusor antigo em segundos crus.
+- ConsumerBR/XED continuam transferência já consultada; XED tem seis colisões
+  com treino GoEmotions, duas conflitantes. Não chamar de teste virgem.
+- Tela Modelo: explorador didático e uma única resposta do simulador;
+  oito famílias observadas, sete/39 no vetor. Não observa atenção/ativações.
+  Site com percursos banca/usuários/desenvolvimento e Mermaid preservado no PDF.
+- Sessão própria encerrada pela CLI após recuperação, **sem promoção de pesos**.
+  A PR #104 da base documental foi mergeada fora desta execução; os resultados
+  posteriores seguem em PR complementar. Estado e provas na
+  [nota interna](notas/2026-10-26-generalizacao.md).
+  Campanha durável em `/home/joaopedro/.cache/fraus/campanhas/2026-10-26/`;
+  auditoria/baselines antigos em `/tmp/fraus-overfitting-20261026/`.
+  Pesos, corpora, logs e manifestos individuais ficam fora do Git/site.
 
 ## Desempenho da LP e do site — 22/10/2026
 
