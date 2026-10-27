@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { AnimationEvent, RefObject } from "react";
 import Image from "next/image";
 import { Dialog } from "@base-ui/react/dialog";
 import { Hand, RotateCcw, X } from "lucide-react";
@@ -10,15 +10,19 @@ import estilos from "./SegredoFraus.module.css";
 
 const POSES = [
   { nome: "face", largura: 960, altura: 640 },
-  { nome: "pull", largura: 800, altura: 1200 },
-  { nome: "hello", largura: 800, altura: 1200 },
+  { nome: "espiar", largura: 480, altura: 720 },
+  { nome: "puxar", largura: 480, altura: 720 },
+  { nome: "passo", largura: 480, altura: 720 },
+  { nome: "hello", largura: 480, altura: 720 },
   { nome: "wink", largura: 800, altura: 1200 },
 ] as const;
 
-type Cena = "espiar" | "puxar" | "ola" | "cumplice" | "curiosa";
+type Cena = "espiar" | "puxar" | "entrar" | "ola" | "cumplice" | "curiosa";
+const PROXIMA_CENA: Partial<Record<Cena, Cena>> = { espiar: "puxar", puxar: "entrar", entrar: "ola" };
 const CENAS = {
-  espiar: { pose: "face", fala: "Tem alguém do outro lado da logo…", acao: "Dar um oi" },
-  puxar: { pose: "pull", fala: "Só um instante. Essa fenda estava apertada.", acao: "Dar um oi" },
+  espiar: { pose: "espiar", fala: "Tem alguém do outro lado da logo…", acao: "Dar um oi" },
+  puxar: { pose: "puxar", fala: "Só um instante. Essa fenda estava apertada.", acao: "Dar um oi" },
+  entrar: { pose: "passo", fala: "Com licença. Mascote passando!", acao: "Dar um oi" },
   ola: { pose: "hello", fala: "Cinco toques? Você queria mesmo me encontrar. Oi, eu sou a Fraus-chan!", acao: "Dar um oi" },
   cumplice: { pose: "wink", fala: "Oi pra você também. Minha presença aqui fica entre a gente, combinado?", acao: "Guardar segredo" },
   curiosa: { pose: "face", fala: "Combinado. Agora, sobre esse seu hábito de clicar em tudo…", acao: "Eu? Imagina…" },
@@ -38,21 +42,28 @@ export function SegredoFraus({
   const [carregadas, setCarregadas] = useState<string[]>([]);
   const [erroImagem, setErroImagem] = useState(false);
   const prontas = carregadas.length === POSES.length && !erroImagem;
-  const entrando = cena === "espiar" || cena === "puxar";
+  const entrando = cena in PROXIMA_CENA;
   const atual = CENAS[cena];
 
   useEffect(() => {
     if (!prontas) return;
-    // A preferencia e lida so no cliente. CSS tambem interrompe o movimento
-    // se ela mudar com a cena aberta. Nenhum loop ou relogio de jogo.
-    const reduzir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const puxar = reduzir ? undefined : window.setTimeout(() => setCena("puxar"), 750);
-    const aparecer = window.setTimeout(() => setCena("ola"), reduzir ? 0 : 1750);
+    // A sequencia avanca pelo fim de cada animacao CSS, nao por dois relogios
+    // independentes. Reduce pula direto para a saudacao, inclusive se mudar
+    // durante uma entrada. O frame unico tambem cobre imagens ja em cache.
+    const consulta = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const concluirSemMovimento = () => { if (consulta.matches) setCena("ola"); };
+    const quadro = window.requestAnimationFrame(concluirSemMovimento);
+    consulta.addEventListener("change", concluirSemMovimento);
     return () => {
-      window.clearTimeout(puxar);
-      window.clearTimeout(aparecer);
+      window.cancelAnimationFrame(quadro);
+      consulta.removeEventListener("change", concluirSemMovimento);
     };
   }, [entrada, prontas]);
+
+  function avancarEntrada(evento: AnimationEvent<HTMLButtonElement>) {
+    if (evento.target !== evento.currentTarget) return;
+    setCena((anterior) => PROXIMA_CENA[anterior] ?? anterior);
+  }
 
   function interagir() {
     setCena((anterior) => anterior === "ola" ? "cumplice" : anterior === "cumplice" ? "curiosa" : "ola");
@@ -104,7 +115,7 @@ export function SegredoFraus({
             </div>
           </div>
 
-          <div className={estilos.palco}>
+          <div key={entrada} className={estilos.palco}>
             <div className={estilos.fenda} aria-hidden />
             <button
               type="button"
@@ -112,6 +123,7 @@ export function SegredoFraus({
               aria-label="Interagir com Fraus-chan"
               disabled={!prontas || entrando}
               onClick={interagir}
+              onAnimationEnd={avancarEntrada}
             >
               {POSES.map((pose) => (
                 <Image
@@ -131,6 +143,7 @@ export function SegredoFraus({
                 />
               ))}
             </button>
+            <div className={estilos.cortina} aria-hidden />
           </div>
 
           <footer className={estilos.rodape}>

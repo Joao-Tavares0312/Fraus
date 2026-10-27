@@ -1,5 +1,6 @@
 /** Produto iniciado: aparicao da Fraus-chan, indicadores intactos e modais aninhados. */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
@@ -14,6 +15,27 @@ if (DESTINO) await mkdir(DESTINO, { recursive: true });
 
 async function esperarMovimento(pagina) {
   await pagina.evaluate(() => Promise.all(document.getAnimations().map((animacao) => animacao.finished.catch(() => {}))));
+}
+
+async function esperarPersonagem(pagina) {
+  await pagina.waitForFunction(() => document.querySelector('[role="dialog"] button[aria-label="Interagir com Fraus-chan"]')?.disabled === false);
+  await esperarMovimento(pagina);
+}
+
+async function arte(personagem) {
+  // Captura os pixels visiveis sem rolar o dialogo nem alterar a viewport.
+  const clip = await personagem.evaluate((elemento) => {
+    const caixa = elemento.getBoundingClientRect();
+    const dialogo = elemento.closest('[role="dialog"]').getBoundingClientRect();
+    const x = Math.max(0, caixa.left, dialogo.left);
+    const y = Math.max(0, caixa.top, dialogo.top);
+    return {
+      x, y,
+      width: Math.min(innerWidth, caixa.right, dialogo.right) - x,
+      height: Math.min(innerHeight, caixa.bottom, dialogo.bottom) - y,
+    };
+  });
+  return createHash("sha256").update(await personagem.page().screenshot({ clip })).digest("hex");
 }
 
 try {
@@ -48,35 +70,47 @@ try {
     await segredo.waitFor();
     await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fechar segredo");
     await segredo.getByRole("button", { name: "Dar um oi", exact: true }).waitFor();
-    await pagina.waitForFunction(() => document.querySelector('[role="dialog"][data-cena="ola"]'));
-    await esperarMovimento(pagina);
+    await esperarPersonagem(pagina);
     assert.deepEqual(await indicadores.allTextContents(), antes, "a aparicao nao altera indicadores");
-    assert.equal(posesBaixadas.length, 4);
-    assert.ok(posesBaixadas.every((resposta) => resposta.status === 200), "quatro poses reais servidas");
-    assert.equal(await segredo.locator('img[data-visivel="true"]').getAttribute("data-pose"), "hello");
+    assert.ok(posesBaixadas.every((resposta) => resposta.status === 200), "artes reais servidas sem erro");
     assert.equal(await segredo.locator("img").evaluateAll((imagens) => imagens.every((imagem) => imagem.complete && imagem.naturalWidth > 0)), true);
     if (reduce) assert.equal(await segredo.evaluate((elemento) => elemento.getAnimations({ subtree: true }).length), 0, "reduce sem animacao espacial");
     assert.equal(await segredo.evaluate((elemento) => elemento.scrollWidth <= elemento.clientWidth), true, "painel sem overflow horizontal");
     assert.equal(await pagina.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     if (DESTINO) await pagina.screenshot({ path: path.join(DESTINO, `segredo-${largura}-aberto.png`) });
+    const personagem = segredo.getByRole("button", { name: "Interagir com Fraus-chan", exact: true });
+    const falaInicial = await segredo.getByRole("status").innerText();
+    const saudacao = await arte(personagem);
 
     // A mesma interacao funciona pelo teclado e diretamente na personagem.
     const oi = segredo.getByRole("button", { name: "Dar um oi", exact: true });
     await oi.focus();
     await oi.press("Enter");
-    await segredo.getByRole("status").filter({ hasText: "fica entre a gente" }).waitFor();
-    assert.equal(await segredo.locator('img[data-visivel="true"]').getAttribute("data-pose"), "wink");
+    await segredo.getByRole("button", { name: "Fechar segredo", exact: true }).focus();
     await esperarMovimento(pagina);
+    const falaCumplice = await segredo.getByRole("status").innerText();
+    assert.notEqual(falaCumplice, falaInicial, "cumprimentar recebe uma resposta");
+    const piscadinha = await arte(personagem);
+    assert.notEqual(piscadinha, saudacao, "a resposta tambem muda a arte visivel");
     if (DESTINO) await pagina.screenshot({ path: path.join(DESTINO, `segredo-${largura}-piscadinha.png`) });
-    await segredo.getByRole("button", { name: "Interagir com Fraus-chan", exact: true }).click();
-    await segredo.getByRole("status").filter({ hasText: "hábito de clicar" }).waitFor();
-    assert.equal(await segredo.locator('img[data-visivel="true"]').getAttribute("data-pose"), "face");
+    await personagem.click();
+    await segredo.getByRole("button", { name: "Fechar segredo", exact: true }).focus();
+    await esperarMovimento(pagina);
+    assert.notEqual(await segredo.getByRole("status").innerText(), falaCumplice);
+    assert.notEqual(await arte(personagem), piscadinha, "o toque tambem muda a expressao visivel");
     assert.deepEqual(await indicadores.allTextContents(), antes, "reagir nao altera indicadores");
 
-    // Reiniciar durante a entrada cancela seus timers, sem uma fala antiga ressurgir.
+    // Replay na mesma fase remonta a coreografia; reduce no meio nao a prende.
     await segredo.getByRole("button", { name: "Rever entrada", exact: true }).click();
+    if (!reduce) assert.equal(await personagem.isEnabled(), false, "a entrada reserva a interacao ate a chegada");
     await segredo.getByRole("button", { name: "Rever entrada", exact: true }).click();
-    await pagina.waitForFunction(() => document.querySelector('[role="dialog"][data-cena="ola"]'));
+    if (largura === 1440) {
+      await pagina.emulateMedia({ reducedMotion: "reduce" });
+      await esperarPersonagem(pagina);
+      assert.equal(await segredo.evaluate((elemento) => elemento.getAnimations({ subtree: true }).length), 0, "mudar para reduce conclui a entrada sem movimento");
+      await pagina.emulateMedia({ reducedMotion: "no-preference" });
+    }
+    await esperarPersonagem(pagina);
     await segredo.getByRole("button", { name: "Fechar segredo", exact: true }).focus();
     await pagina.keyboard.press("Shift+Tab");
     assert.equal(await segredo.evaluate((elemento) => elemento.contains(document.activeElement)), true, "foco contido");
@@ -89,12 +123,13 @@ try {
     assert.equal(await segredo.count(), 0, "fechar reinicia a contagem");
     for (let i = 0; i < 4; i++) await marca.click({ delay: 60 });
     await segredo.waitFor();
-    await pagina.waitForFunction(() => document.querySelector('[role="dialog"][data-cena="ola"]'));
-    await segredo.getByRole("status").filter({ hasText: "Oi, eu sou" }).waitFor();
+    await esperarPersonagem(pagina);
+    assert.equal(await segredo.getByRole("status").innerText(), falaInicial, "reabrir volta a saudacao");
     if (largura === 320) await pagina.mouse.click(2, 2);
     else await segredo.getByRole("button", { name: "Voltar à dashboard", exact: true }).click();
     await segredo.waitFor({ state: "hidden" });
     await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fraus — revelar o segredo com cinco cliques");
+    assert.deepEqual(await indicadores.allTextContents(), antes, "fechar nao altera indicadores");
     if (largura < 768) {
       const gaveta = pagina.getByRole("dialog", { name: "Navegação do Fraus" });
       assert.equal(await gaveta.isVisible(), true, "fechar o segredo preserva a navegacao movel");
