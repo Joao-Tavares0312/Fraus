@@ -15,9 +15,16 @@ const POSES = [
   { nome: "passo", largura: 480, altura: 720 },
   { nome: "hello", largura: 480, altura: 720 },
   { nome: "wink", largura: 800, altura: 1200 },
+  { nome: "promotor", largura: 425, altura: 720 },
+  { nome: "detrator", largura: 399, altura: 720 },
+  { nome: "semsinal", largura: 397, altura: 720 },
+  { nome: "ironia", largura: 545, altura: 720 },
+  { nome: "dormindo", largura: 973, altura: 720 },
 ] as const;
 
-type Cena = "espiar" | "puxar" | "entrar" | "ola" | "cumplice" | "curiosa";
+type Cena = "espiar" | "puxar" | "entrar" | "ola" | "cumplice" | "curiosa" | "promotor" | "detrator" | "semsinal" | "ironia" | "dormindo";
+/* Depois da saudacao, cada toque leva a proxima cena; a ultima volta ao ola. */
+const CICLO: readonly Cena[] = ["ola", "cumplice", "curiosa", "promotor", "detrator", "semsinal", "ironia", "dormindo"];
 const PROXIMA_CENA: Partial<Record<Cena, Cena>> = { espiar: "puxar", puxar: "entrar", entrar: "ola" };
 const CENAS = {
   espiar: { pose: "espiar", fala: "Tem alguém do outro lado da logo…", acao: "Dar um oi" },
@@ -26,6 +33,11 @@ const CENAS = {
   ola: { pose: "hello", fala: "Cinco toques? Você queria mesmo me encontrar. Oi, eu sou a Fraus-chan!", acao: "Dar um oi" },
   cumplice: { pose: "wink", fala: "Oi pra você também. Minha presença aqui fica entre a gente, combinado?", acao: "Guardar segredo" },
   curiosa: { pose: "face", fala: "Combinado. Agora, sobre esse seu hábito de clicar em tudo…", acao: "Eu? Imagina…" },
+  promotor: { pose: "promotor", fala: "Promotor! Pela leitura, essa conversa terminou bem. É estimativa, viu? Mas eu comemoro igual.", acao: "E quando não termina bem?" },
+  detrator: { pose: "detrator", fala: "“Ok, obrigado” depois de três minutos esperando? Não me engana. Detrator.", acao: "E se o cliente não falar nada?" },
+  semsinal: { pose: "semsinal", fala: "Sem fala do cliente é sem sinal, não nota zero. Ausência não é insatisfação.", acao: "E a ironia?" },
+  ironia: { pose: "ironia", fala: "“Adorei esperar uma hora.” Eu leio a ironia em cada mensagem, mas ela não decide a nota.", acao: "E sem conversa nenhuma?" },
+  dormindo: { pose: "dormindo", fala: "Nenhuma conversa por aqui… me acorda quando chegar a primeira.", acao: "Acordar" },
 } as const;
 
 /** Cena local: as falas sao fixas; nao le conversas nem altera indicadores. */
@@ -66,7 +78,7 @@ export function SegredoFraus({
   }
 
   function interagir() {
-    setCena((anterior) => anterior === "ola" ? "cumplice" : anterior === "cumplice" ? "curiosa" : "ola");
+    setCena((anterior) => CICLO[(CICLO.indexOf(anterior) + 1) % CICLO.length]);
   }
 
   function repetir() {
