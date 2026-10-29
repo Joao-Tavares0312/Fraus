@@ -19,7 +19,7 @@ describe("Ceu", () => {
     expect(html.match(/class="lp-plano"/g)).toHaveLength(3);
   });
 
-  it("traz nevoa, grade e feixe da fenda como camadas de fundo", () => {
-    for (const camada of ["lp-nevoa", "lp-grade", "lp-feixe"]) expect(html).toContain(`class="${camada}"`);
+  it("traz nevoa e feixe da fenda como camadas de fundo", () => {
+    for (const camada of ["lp-nevoa", "lp-feixe"]) expect(html).toContain(`class="${camada}"`);
   });
 });

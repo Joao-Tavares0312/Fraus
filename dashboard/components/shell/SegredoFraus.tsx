@@ -15,12 +15,15 @@ const POSES = [
   { nome: "passo", largura: 480, altura: 720 },
   { nome: "hello", largura: 480, altura: 720 },
   { nome: "wink", largura: 800, altura: 1200 },
-  { nome: "promotor", largura: 425, altura: 720 },
-  { nome: "detrator", largura: 399, altura: 720 },
-  { nome: "semsinal", largura: 397, altura: 720 },
-  { nome: "ironia", largura: 545, altura: 720 },
-  { nome: "dormindo", largura: 973, altura: 720 },
+  { nome: "promotor", largura: 354, altura: 600 },
+  { nome: "detrator", largura: 333, altura: 600 },
+  { nome: "semsinal", largura: 331, altura: 600 },
+  { nome: "ironia", largura: 455, altura: 600 },
+  { nome: "dormindo", largura: 811, altura: 600 },
 ] as const;
+
+/* So a entrada segura o palco; as cenas do ciclo carregam em segundo plano. */
+const POSES_DA_ENTRADA: readonly string[] = ["espiar", "puxar", "passo", "hello"];
 
 type Cena = "espiar" | "puxar" | "entrar" | "ola" | "cumplice" | "curiosa" | "promotor" | "detrator" | "semsinal" | "ironia" | "dormindo";
 /* Depois da saudacao, cada toque leva a proxima cena; a ultima volta ao ola. */
@@ -53,7 +56,7 @@ export function SegredoFraus({
   const [entrada, setEntrada] = useState(0);
   const [carregadas, setCarregadas] = useState<string[]>([]);
   const [erroImagem, setErroImagem] = useState(false);
-  const prontas = carregadas.length === POSES.length && !erroImagem;
+  const prontas = POSES_DA_ENTRADA.every((nome) => carregadas.includes(nome)) && !erroImagem;
   const entrando = cena in PROXIMA_CENA;
   const atual = CENAS[cena];
 
@@ -147,6 +150,7 @@ export function SegredoFraus({
                   draggable={false}
                   unoptimized
                   loading="eager"
+                  fetchPriority={POSES_DA_ENTRADA.includes(pose.nome) ? "high" : "low"}
                   className={estilos.pose}
                   data-visivel={prontas && atual.pose === pose.nome}
                   data-pose={pose.nome}

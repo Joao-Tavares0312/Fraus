@@ -24,13 +24,12 @@ function PontoDoCeu({ p }: { p: Ponto }) {
 }
 
 /** Fundo vivo da LP: renderizado no servidor, so opacity/transform animam.
- * Nevoa, grade e feixe respiram em CSS; o parallax vem da linha do tempo da
+ * Nevoa (com a grade da fenda) e feixe respiram em CSS; o parallax vem da linha do tempo da
  * rolagem (CSS), sem script por quadro. */
 export function Ceu() {
   return (
     <div className="lp-ceu" aria-hidden="true">
       <div className="lp-nevoa" />
-      <div className="lp-grade" />
       <div className="lp-feixe" />
       {PLANOS.map((pontos, plano) => (
         <div className="lp-plano" key={plano} style={{ "--z": plano } as CSSProperties}>

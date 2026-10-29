@@ -37,23 +37,32 @@
 .lp-ceu::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, #d5b86f, #c3a663 80%); opacity: 0; transition: opacity .6s; }
 .lp.inv .lp-ceu::before { opacity: 1; }
 .lp-ceu { contain: strict; }
-/* Camadas do filme "A fenda": nevoa (placa do Higgsfield, 3 KB), grade no
-   angulo da fenda e o feixe. Respiram em CSS; so opacity/transform animam. */
-.lp-nevoa, .lp-grade, .lp-feixe, .lp-plano { position: absolute; transition: opacity .6s; }
-.lp-nevoa { inset: -8%; background: url(/lp-nova/nevoa.webp) center / cover no-repeat; opacity: .32; animation: lp-respira 18s ease-in-out infinite alternate; }
-.lp-grade { inset: -50%; opacity: .05; background: repeating-linear-gradient(-32.8deg, transparent 0 141px, #f3f4f5 141px 142px, transparent 142px 284px, rgba(214, 186, 114, .9) 284px 285px, transparent 285px 426px); }
-.lp-feixe { top: -40%; bottom: -40%; left: calc(50% - 260px); width: 520px; rotate: 32.8deg; background: linear-gradient(90deg, transparent, rgba(232, 207, 150, .55), transparent); mix-blend-mode: screen; opacity: .05; animation: lp-feixe 9s ease-in-out infinite alternate; }
+/* Camadas do filme "A fenda". Medido em 29/10 (headless, CPU 4x): o feixe com
+   mix-blend-mode custava ~60 ms por quadro e a grade em 4x a area da tela
+   vinha logo atras. Por isso a grade e um segundo fundo da propria nevoa (uma
+   camada so) e o feixe e alfa puro, sem blend. So opacity/transform animam. */
+.lp-nevoa, .lp-feixe, .lp-plano { position: absolute; transition: opacity .6s; }
+.lp-nevoa {
+  inset: -4%; opacity: .32; animation: lp-respira 18s ease-in-out infinite alternate;
+  background:
+    repeating-linear-gradient(-32.8deg, transparent 0 141px, rgba(243, 244, 245, .16) 141px 142px, transparent 142px 284px, rgba(214, 186, 114, .3) 284px 285px, transparent 285px 426px),
+    url(/lp-nova/nevoa.webp) center / cover no-repeat;
+}
+.lp-feixe { top: -25%; bottom: -25%; left: calc(50% - 200px); width: 400px; rotate: 32.8deg; background: linear-gradient(90deg, transparent, rgba(232, 207, 150, .5), transparent); opacity: .05; animation: lp-feixe 9s ease-in-out infinite alternate; }
 .lp-plano { inset: 0; }
-.lp.inv :is(.lp-nevoa, .lp-grade, .lp-feixe) { opacity: 0; animation: none; }
-@keyframes lp-respira { to { transform: scale(1.06) translate(-1.5%, 1%); opacity: .4; } }
-@keyframes lp-feixe { 0% { translate: -60px 0; opacity: .035; } 100% { translate: 60px 0; opacity: .075; } }
+.lp.inv :is(.lp-nevoa, .lp-feixe) { opacity: 0; animation: none; }
+@keyframes lp-respira { to { transform: scale(1.04) translate(-1%, .8%); } }
+@keyframes lp-feixe { 0% { translate: -60px 0; opacity: .035; } 100% { translate: 60px 0; opacity: .07; } }
 /* Parallax pela rolagem, sem script: onde o navegador nao tem linha do tempo
-   de rolagem, as camadas so ficam paradas. */
+   de rolagem, os planos so ficam parados. */
 @supports (animation-timeline: scroll()) {
-  .lp-grade { animation: lp-desliza-grade linear both; animation-timeline: scroll(root); }
   .lp-plano { animation: lp-desliza linear both; animation-timeline: scroll(root); }
-  @keyframes lp-desliza-grade { to { transform: translateY(-6%); } }
   @keyframes lp-desliza { to { transform: translateY(calc(-4vh - var(--z) * 7vh)); } }
+}
+/* Celular: sem feixe e sem parallax; a nevoa respira e basta. */
+@media (max-width: 899px) {
+  .lp-feixe { display: none; }
+  .lp-plano { animation: none; }
 }
 .lp-ponto { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #e9cf8e; opacity: var(--o); box-shadow: 0 0 calc(var(--s) * 1.6) rgba(233, 207, 142, .45); transition: opacity .6s; }
 .lp-ponto.pisca { animation: lp-pisca var(--d) ease-in-out infinite; }
