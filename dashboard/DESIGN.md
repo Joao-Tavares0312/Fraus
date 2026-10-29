@@ -211,6 +211,14 @@ e 26 riscos finos a −22° da vertical, que descem em 14 a 30 s.
 - **Reduce:** o céu fica parado, com os riscos visíveis e a mesma cara da arte.
 - **Sem JS:** o céu é HTML do servidor com animação em CSS; chega completo.
 
+- **Camadas de 29/10/2026** (linguagem do filme “A fenda”): `.lp-nevoa` (placa
+  de névoa gerada no Higgsfield, `public/lp-nova/nevoa.webp`, 3 KB, a 32%),
+  `.lp-grade` (grade a −32,8°, o ângulo da fenda) e `.lp-feixe` (feixe dourado
+  ao longo da fenda). Névoa e feixe **respiram sozinhos** por decisão do João;
+  grade e os três planos de pontos (`.lp-plano`, `--z` 0–2) fazem parallax pela
+  linha do tempo da rolagem em CSS (`animation-timeline: scroll(root)`), sem
+  script. Sem suporte, ficam parados. No fecho dourado as três camadas somem.
+
 É a **única animação contínua permitida** fora do palco, e só porque é CSS e
 fica atrás dele. A dashboard não recebe o céu.
 
