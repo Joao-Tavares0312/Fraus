@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { consultaDoPeriodo, gruposDoPapel, telaEstaAtiva, telasDaConta } from "./navegacao";
 
 const destinosDoUsuario = [
-  "/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo",
+  "/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo", "/dashboard/modelo",
 ];
 
 describe("navegação por tarefa e papel", () => {
@@ -13,9 +13,9 @@ describe("navegação por tarefa e papel", () => {
     expect(grupos.flatMap((grupo) => grupo.telas.map((tela) => tela.href))).toEqual(destinosDoUsuario);
   });
 
-  it("a lateral do dev ganha só o Modelo; o resto mora no menu da conta", () => {
+  it("a lateral é a mesma para os dois papéis; o que muda mora no menu da conta", () => {
     const destinos = gruposDoPapel("dev").flatMap((grupo) => grupo.telas.map((tela) => tela.href));
-    expect(destinos).toEqual([...destinosDoUsuario, "/dashboard/modelo"]);
+    expect(destinos).toEqual(destinosDoUsuario);
   });
 
   it("o menu da conta respeita o papel", () => {

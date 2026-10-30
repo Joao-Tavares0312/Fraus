@@ -30,7 +30,7 @@ async function conferirLinks(pagina, escopo) {
   const destinos = await links.evaluateAll((elementos) => elementos.map((link) => ({
     href: link.getAttribute("href"), nome: link.getAttribute("aria-label"),
   })));
-  assert.ok([5, 8].includes(destinos.length), "cinco destinos para usuario ou oito para dev");
+  assert.ok([6, 8].includes(destinos.length), "seis destinos para usuario ou oito para dev");
   for (const { href, nome } of destinos) {
     assert.ok(nome?.trim(), `nome acessível ausente: ${href}`);
     const url = new URL(href, pagina.url());

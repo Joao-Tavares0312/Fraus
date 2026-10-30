@@ -249,7 +249,6 @@ def test_usuario_comum_recebe_403_em_rota_administrativa(tmp_path):
     assert cliente.get("/indicadores", headers=cabecalho).status_code == 200
     for metodo, caminho in (
         ("GET", "/integracoes/fontes"),
-        ("GET", "/modelo"),
         ("PUT", "/configuracoes"),
         ("POST", "/conversas/importar"),
         ("POST", "/conversas/repontuar"),
@@ -257,6 +256,26 @@ def test_usuario_comum_recebe_403_em_rota_administrativa(tmp_path):
     ):
         resposta = cliente.request(metodo, caminho, headers=cabecalho, json={})
         assert resposta.status_code == 403, f"{metodo} {caminho}: {resposta.status_code}"
+
+
+def test_modelo_e_leitura_publica_para_usuario(tmp_path):
+    # 30/10/2026: a tela Modelo saiu do dev. Tudo sob /modelo le a ficha ou
+    # simula uma frase sem gravar; a curadoria do lexico (escrita) segue dev.
+    cliente = _cliente(tmp_path, chave_mestra=MESTRA)
+    token = _token(cliente)  # papel usuario
+    cabecalho = {"Authorization": f"Bearer {token}"}
+    for metodo, caminho in (
+        ("GET", "/modelo"),
+        ("GET", "/modelo/lexicon"),
+        ("GET", "/modelo/comparacao"),
+    ):
+        resposta = cliente.request(metodo, caminho, headers=cabecalho)
+        assert resposta.status_code != 403, f"{metodo} {caminho}: {resposta.status_code}"
+    # As simulacoes precisam de motor real; o portao e por caminho.
+    from fraus.api.seguranca import rota_administrativa
+    assert not rota_administrativa("POST", "/modelo/simular")
+    assert not rota_administrativa("POST", "/modelo/ironia-laya/simular")
+    assert cliente.post("/lexico/curado", headers=cabecalho, json={}).status_code == 403
 
 
 def test_dev_passa_nas_rotas_administrativas(tmp_path):

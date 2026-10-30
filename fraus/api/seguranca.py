@@ -248,8 +248,9 @@ def sessao_do_jwt(ctx: Contexto, chave: str | None) -> dict | None:
 def rota_administrativa(metodo: str, caminho: str) -> bool:
     """As rotas que so o papel `dev` alcanca (spec 2026-08-31, §2.2).
 
-    O corte e o da decisao de produto: dev administra (integracoes, modelo,
-    configuracoes, importacao, curadoria do lexico), usuario analisa. Leitura
+    O corte e o da decisao de produto: dev administra (integracoes,
+    configuracoes, importacao, curadoria do lexico), usuario analisa e le o
+    modelo. Leitura
     que a tela de analise usa -- conversas, indicadores, lexico curado LIDO --
     fica fora de proposito.
 
@@ -265,7 +266,9 @@ def rota_administrativa(metodo: str, caminho: str) -> bool:
         ("/anotacao/anotadores/", "/anotacao/grupos/")
     ):
         return True
-    if caminho.startswith("/integracoes") or caminho == "/modelo" or caminho.startswith("/modelo/"):
+    # /modelo saiu daqui em 30/10/2026: a tela Modelo e publica. Tudo sob
+    # /modelo le a ficha ou simula uma frase sem gravar nada.
+    if caminho.startswith("/integracoes"):
         return True
     if caminho in ("/conversas/importar", "/conversas/importar/previa", "/conversas/repontuar"):
         return True
