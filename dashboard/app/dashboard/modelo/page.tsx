@@ -19,6 +19,7 @@ import { URL_RELATORIO_COMPARACAO, obterComparacao, obterModelo } from "@/lib/ap
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
+import { PainelDrivers } from "@/components/PainelDrivers";
 import { ComparacaoAoVivo } from "@/components/modelo/ComparacaoAoVivo";
 import { LaudoDaComparacao, TempoDeResposta } from "@/components/modelo/ComparacaoModelos";
 import { EstadoDoModelo } from "@/components/modelo/EstadoDoModelo";
@@ -26,9 +27,10 @@ import { LexiconEmoji } from "@/components/modelo/LexiconEmoji";
 import { LexicoCurado } from "@/components/modelo/LexicoCurado";
 import { MetricasTreino } from "@/components/modelo/MetricasTreino";
 import { PesosFeatures } from "@/components/modelo/PesosFeatures";
-import { Simulador } from "@/components/modelo/Simulador";
+import { VisualizacaoModelo } from "@/components/modelo/VisualizacaoModelo";
 import { SimuladorIroniaLaya } from "@/components/modelo/SimuladorIroniaLaya";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { sessaoAtual } from "@/lib/sessao";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +43,9 @@ const COR_DA_CATEGORIA: Record<string, string> = {
 export default async function PaginaModelo() {
   // As duas leituras em paralelo: o laudo de comparacao falha SOZINHO, dentro
   // da aba dele, sem derrubar a ficha do modelo.
-  const [resultado, comparacao] = await Promise.all([obterModelo(), obterComparacao()]);
+  const [resultado, comparacao, sessao] = await Promise.all([obterModelo(), obterComparacao(), sessaoAtual()]);
+  // Mesmo criterio do detalhe do atendimento: sem login, a instalacao local e dev.
+  const ehDev = (sessao.estado === "logada" ? sessao.usuario.papel : "dev") === "dev";
 
   if (!resultado.ok) {
     return (
@@ -73,7 +77,6 @@ export default async function PaginaModelo() {
     <>
       <CabecalhoPagina
         titulo="Modelo"
-        subtitulo="A ficha da IA que pontua os atendimentos: quanto cada sinal pesa, o que o treino mediu, que tabela de emoji está em uso e o que o classificador responde a uma frase nova."
       />
 
       {/* SEM flex-1: ver o comentario identico em app/dashboard/page.tsx.
@@ -88,20 +91,23 @@ export default async function PaginaModelo() {
           </TabsList>
 
           <TabsContent value="fraus" className="flex min-w-0 flex-col gap-4">
-        <EstadoDoModelo modelo={modelo} />
-
         <Painel
-          titulo="Simulador ao vivo"
-          legenda="Escreva uma fala de cliente e veja a resposta do classificador agora. Nada é persistido, nada é inventado: as três probabilidades e os emojis detectados vêm inteiros de POST /modelo/simular."
+          titulo="Classifique uma frase"
+          nivel="dominante"
+          legenda="Explore o caminho entre conversa, famílias de sinais e fusor. A classificação de frase usa uma única chamada a POST /modelo/simular e não persiste dados."
           semPadding
           rodape="A ordem das classes é fixa em todo o sistema — 0 insatisfeito, 1 neutro, 2 satisfeito — no notebook, no sinal de texto, no fusor e aqui. Inverter não geraria erro: faria o sistema pontuar ao contrário em silêncio."
         >
-          <Simulador />
+          <div className="px-4 pb-2 sm:px-6">
+            <VisualizacaoModelo modelo={modelo} />
+          </div>
         </Painel>
+
+        <EstadoDoModelo modelo={modelo} nivel="apoio" />
 
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <Painel
-            titulo={`Peso global das ${Object.keys(modelo.importancias).length} features`}
+            titulo={Object.keys(modelo.importancias).length ? `Peso global das ${Object.keys(modelo.importancias).length} features observadas` : "Pesos globais indisponíveis"}
             legenda="Coeficientes do fusor (regressão logística), agrupados pelas sete famílias do trabalho. Este é o peso do MODELO — vale para todos os atendimentos e não explica nenhum em particular."
             semPadding
             rodape={
@@ -125,7 +131,7 @@ export default async function PaginaModelo() {
           <div className="flex min-w-0 flex-col gap-4">
             <Painel
               titulo="Métricas do treino"
-              legenda="Medidas no conjunto de teste pelos notebooks, não recalculadas aqui. As três cabeças aparecem juntas porque só comparando dá para ver o que cada número vale: a satisfação é a única que entra no fusor, a emoção reporta também o F1 num corpus independente que ela nunca viu, e a ironia reporta 100% — que é verdade no corpus dela e não sobrevive a fala de atendimento. Cada procedência e cada limitação vêm do arquivo que o próprio notebook exportou, inteiras."
+              legenda="Medidas exportadas pelos notebooks, não recalculadas aqui. Satisfação e emoção alimentam o fusor conforme o campo pontua da ficha; ironia permanece leitura por mensagem no contrato vigente. As métricas históricas não provam generalização para atendimentos reais nem recuperam curvas antigas. Procedência e limitações vêm dos arquivos exportados."
               semPadding
             >
               <MetricasTreino
@@ -177,6 +183,10 @@ export default async function PaginaModelo() {
           </div>
         </div>
 
+        {/* Veio da Visao geral em 30/10/2026 (KISS): influencia dos sinais e
+            leitura de modelo, nao de operacao. Sem recorte: todo o periodo. */}
+        <PainelDrivers de={null} ate={null} />
+
         <Painel
           titulo={`Lexicon de emoji (${modelo.total_emojis_lexicon} entradas)`}
           legenda="Tabela do Emoji Sentiment Ranking usada pelo sinal de emoji. O score de cada linha vem da mesma função que pontua a conversa e o simulador — não há fórmula reimplementada na interface. As contagens são as anotações humanas originais."
@@ -187,7 +197,8 @@ export default async function PaginaModelo() {
 
         {/* Depois do lexicon de emoji de propósito: primeiro o que o projeto
             trouxe pronto, depois o que esta instalação acrescentou por cima. */}
-        <LexicoCurado totalEmojisLexicon={modelo.total_emojis_lexicon} />
+        {/* Curar e escrever (POST /lexico): segue dev mesmo com a tela publica. */}
+        {ehDev ? <LexicoCurado totalEmojisLexicon={modelo.total_emojis_lexicon} /> : null}
           </TabsContent>
 
           <TabsContent value="laya" className="flex min-w-0 flex-col gap-4">
