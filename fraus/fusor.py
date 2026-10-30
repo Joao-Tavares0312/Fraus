@@ -552,9 +552,10 @@ class Fusor:
                 f"Fusor em {caminho} aprendeu as features de espera em "
                 f"'{fusor.escala_do_tempo}', mas o runtime as entrega em "
                 f"'{ESCALA_DO_TEMPO}' desde 15/09/2026. Retreine "
-                "notebooks/02_treino_fusor.ipynb (ou "
-                "scripts/retreinar_fusor_local.py --promover) e substitua "
-                "o artefato. Ver docs/treinamento.md."
+                "notebooks/02_treino_fusor.ipynb ou "
+                "scripts/retreinar_fusor_local.py com manifesto e saida "
+                "candidata. Valide antes de substituir o artefato. "
+                "Ver docs/treinamento.md."
             )
         # Invariante 8: o score busca probabilidade PELO ROTULO (0, 1, 2).
         # Rotulo 1-based ou em texto carregava e pontuava ao contrario, e um

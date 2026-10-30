@@ -64,7 +64,10 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/impacto.py` | impacto do tema no NPS inferido, IC por bootstrap; associação, não causa |
 | `fraus/deterioracao.py` | virada retrospectiva sobre os scores por prefixo do replay; nunca alerta ao vivo |
 | `fraus/api/repontuacao.py` | repontuar em segundo plano, com progresso e 409 se já rodando |
-| `scripts/retreinar_fusor_local.py` | reproduz o notebook 02 em CPU e só grava o fusor com `--promover` |
+| `scripts/retreinar_fusor_local.py` | candidato CPU com `--b2w`, manifesto explícito e saída externa; sem `--promover`, sem tocar pesos ativos |
+| `fraus/experimento_fusor.py` | manifestos, identidade do cache e ablações completo/texto/tempo com scaler ajustado só no treino |
+| `fraus/receita_treino.py` | seleção pela validação, curvas comparáveis e avaliação final separada; teste não escolhe semente |
+| `fraus/generalizacao.py` | auditoria integral, fingerprints fortes, colisões de texto/grupo e isolamento de corpora auxiliares |
 | `fraus/api/rotas/lexico.py` | cadastrar, listar e revogar termo curado |
 | `fraus/assinatura.py` | HMAC do webhook — o segredo mora no ambiente, nunca no banco |
 | `fraus/api/vazao.py` | dois tetos: `/auth/*` por IP em middleware, `/ingestao` por fonte na rota |

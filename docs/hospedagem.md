@@ -1,21 +1,23 @@
-# Hospedar o Fraus
+# Hospedagem — proposta histórica de Oracle VM
 
-> **Estado atual (30/09/2026).** A aplicação real roda em **dois projetos
-> Vercel** — dashboard `fraus` e API `fraus-api` (ONNX, sem torch) —, com
-> **Supabase Postgres** para o estado e **Oracle Object Storage** só para o ZIP
-> de modelos, baixado no build. O passo a passo está em
-> [Deploy gratuito na Vercel](deploy-vercel.md).
-> Operação, análise persistida e convites estão publicados desde 30/09/2026;
-> [contratos e validação](notas/2026-09-30-operacao-producao.md). Dashboard e
-> API publicam separadamente; o workflow manual da API ainda exige configuração.
->
-> Essa API é serverless e **esfria**. O aquecimento em segundo plano e o
-> workflow `api-aquecer` reduzem o cold start, mas não o eliminam. O caminho
-> definitivo é um **container sempre ligado** com pelo menos 1,5–2 GB de RAM
-> (este documento). O **Render gratuito não serve**: 512 MB contra ~1.056 MB
-> medidos, e ainda dorme em 15 min. O Cloud Run
-> ([API no Google Cloud Run](cloud-run.md)) e a Oracle Ampere continuam como
-> alternativas documentadas, não como produção.
+!!! warning "HISTÓRICA — não é o procedimento vigente"
+    Esta página preserva a proposta de Oracle Ampere A1 de 11/09/2026,
+    anterior à publicação da API ONNX na Vercel. Os passos de VM, limites de
+    planos e decisões abaixo são registro daquela avaliação, não instrução
+    atual de produção. **Não execute este roteiro como se fosse uma migração
+    aprovada.**
+
+O procedimento vigente documentado é [Deploy na Vercel](deploy-vercel.md):
+**dashboard e API são dois projetos**, com PostgreSQL/Supabase para o estado
+e Oracle Object Storage **somente para distribuir o ZIP dos modelos no
+build**, não para executar inferência. Oracle VM e
+[Cloud Run](cloud-run.md) são alternativas documentadas, não uma mudança de
+produção comprovada por esta página.
+
+O registro de publicação e seus limites estão em
+[Contratos e validação](notas/2026-09-30-operacao-producao.md).
+Uma resposta de saúde não identifica o checkpoint nem comprova inferência.
+Atualizar esta documentação **não realiza deploy nem promove modelos**.
 
 O Fraus são **duas peças com necessidades opostas**, e é por isso que elas não
 moram no mesmo lugar:
@@ -25,7 +27,7 @@ moram no mesmo lugar:
 | **dashboard** (Next.js) | CPU por milissegundos, nenhum estado | sim |
 | **API atual** (FastAPI + ONNX) | pacote de 1,95 GB, RAM e Postgres externo | **sim**, com Large Functions; sujeita a cold start |
 
-## O que mudou em 2026, e o que não mudou
+## Histórico: o que mudou em 2026
 
 > **Atualizado em 11/09/2026.** Duas premissas desta página envelheceram, e uma
 > delas era o argumento principal. Os números abaixo foram medidos nesta data,
@@ -48,22 +50,19 @@ Caber em 500 MB exigiria a quantização int8 — que foi **medida e recusada**:
 1,7% dos atendimentos trocavam de categoria, um deles de detrator para
 promotor. Ver [Encolher os modelos](encolhimento.md).
 
-## Por que a API não vai para a Vercel
+## Argumento obsoleto: “Por que a API não vai para a Vercel”
 
-Não é preferência, é medida:
+Na proposta original, o pacote Torch e os pesos excediam o teto adotado, o
+SQLite dependia de disco persistente e o cold start era uma preocupação.
+**Isso não descreve a implantação vigente documentada:** a API usa ONNX,
+Large Functions e PostgreSQL externo. O argumento de impossibilidade na
+Vercel foi superado; os limites e a operação atuais devem ser consultados no
+[guia Vercel](deploy-vercel.md).
 
-- `torch` instalado ocupa **497 MB**, contra teto de **500 MB** — e sobram 3 MB
-  para os 1,3 GB de pesos, o FastAPI e o scikit-learn.
-- Os três BERTimbau somam **1,3 GB** de pesos.
-- Cada requisição roda inferência em CPU. A rota `/analisar` faz uma passada de
-  modelo **por palavra** do cliente; isso leva segundos e estoura o tempo máximo
-  de uma função serverless.
-- O SQLite precisa de disco que sobreviva entre requisições. Em sistema de
-  arquivos efêmero, toda importação some no próximo boot.
+Também não vale a descrição antiga de uma inferência por palavra: o
+classificador de texto opera **por mensagem**.
 
-O mesmo raciocínio vale para Lambda e Cloud Functions.
-
-## Onde a API cabe — as opções gratuitas, conferidas em 11/09/2026
+## Histórico: opções gratuitas avaliadas em 11/09/2026
 
 O requisito que elimina quase todo mundo é **~1,1 GB de RAM medidos** mais um
 **volume que persista**.
@@ -95,7 +94,7 @@ reiniciar sozinho, e TLS. Meia tarde, uma vez.
 > **Na semana da banca isso importa mais que tudo:** uma instância que não
 > dorme não tem o momento "professor, espera carregar".
 
-## As três peças, e onde cada uma mora
+## Topologia proposta em 11/09/2026 — não implantada por este documento
 
 ```
 dashboard (Next.js)     -> Vercel                  grátis, já está lá
@@ -179,11 +178,12 @@ persistente do Render/Fly é o caminho mais curto.
 
 ### RAM
 
-Três BERTimbau carregados em CPU pedem **~2 GB**. Plano de 512 MB mata o
-processo no boot, sem mensagem clara. Se o orçamento apertar, `FRAUS_CAMINHO_
-MODELO_EMOCAO` e `_IRONIA` podem ficar apontando para pasta inexistente: a API
-sobe sem essas duas cabeças e o score sai **idêntico**, porque nenhuma delas
-entra no fusor. O que some é a leitura de emoção e ironia na tela.
+Na avaliação histórica, três BERTimbau carregados em CPU pediam **~2 GB**.
+Isso não autoriza omitir cabeças para economizar memória: no contrato
+vigente, satisfação, emoção e ironia são **obrigatórias no motor de
+inferência**, assim como o fusor compatível. A API pode subir antes de
+carregá-los, mas a primeira operação que exige o motor falha explicitamente
+se faltarem artefatos; não há score parcial nem fallback silencioso.
 
 ## Dashboard na Vercel
 
@@ -302,10 +302,11 @@ Sem a mestra, vale o aviso de sempre: feche o túnel depois de demonstrar.
 
 ---
 
-# Passo a passo: subir a API na Oracle Ampere A1
+# Proposta histórica: subir a API na Oracle Ampere A1
 
-> Escrito em 11/09/2026. O alvo é **custo zero e sempre no ar**. São ~40 minutos
-> na primeira vez, e a maior parte é espera de download.
+> Roteiro escrito em 11/09/2026, preservado para consulta histórica.
+> O alvo proposto era custo zero e uma VM sempre ligada; isso não comprova
+> disponibilidade atual, gratuidade dos planos nem implantação em produção.
 >
 > Esta página **não vai para o site público** (`exclude_docs` em
 > `mkdocs-publico.yml`): ela nomeia variáveis de segredo e descreve a topologia.

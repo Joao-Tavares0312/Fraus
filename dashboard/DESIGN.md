@@ -211,6 +211,18 @@ e 26 riscos finos a −22° da vertical, que descem em 14 a 30 s.
 - **Reduce:** o céu fica parado, com os riscos visíveis e a mesma cara da arte.
 - **Sem JS:** o céu é HTML do servidor com animação em CSS; chega completo.
 
+- **Camadas de 29/10/2026** (linguagem do filme “A fenda”): `.lp-nevoa` (placa
+  de névoa gerada no Higgsfield, `public/lp-nova/nevoa.webp`, 3 KB, a 32%),
+  `.lp-grade` (grade a −32,8°, o ângulo da fenda) e `.lp-feixe` (feixe dourado
+  ao longo da fenda). Névoa e feixe **respiram sozinhos** por decisão do João;
+  os três planos de pontos (`.lp-plano`, `--z` 0–2) fazem parallax pela linha
+  do tempo da rolagem em CSS (`animation-timeline: scroll(root)`), sem script.
+  Sem suporte, ficam parados. No fecho dourado as camadas somem.
+- **Custo medido** (headless, CPU 4×): o feixe com `mix-blend-mode` custava
+  ~60 ms por quadro, então ele é alfa puro; a grade é um segundo fundo da
+  própria `.lp-nevoa`, não uma camada. No celular (< 900 px) o feixe some e o
+  parallax para. Nada de blend nem de camada de tela inteira nova sem medir.
+
 É a **única animação contínua permitida** fora do palco, e só porque é CSS e
 fica atrás dele. A dashboard não recebe o céu.
 
@@ -380,21 +392,37 @@ Zero observado continua zero; `null` continua ausência.
 - Erro de uma consulta não apaga indicadores que responderam.
 - O segredo da marca nunca modifica indicadores, gráficos ou transcrições.
 
-### Encaixe secreto
+### Fraus-chan atrás da logo
 
-Cinco cliques consecutivos na marca, com até dois segundos entre eles, abrem
-um quebra-cabeça do FR. Três fragmentos da arte pré-renderizada deslizam em
-trilhos nativos; o centro de cada trilho recompõe o monograma. A conclusão
-é uma brincadeira visual, não score, leitura psicológica ou resultado do modelo.
+Cinco cliques consecutivos na marca, com até dois segundos entre eles, revelam
+a Fraus-chan. Quatro sprites novos compõem a entrada: espiar, puxar a fenda,
+dar um passo e acenar. A coreografia dura cerca de três segundos, com
+deslocamento do corpo, peso no passo e uma cortina diagonal que se abre.
+Cada fase avança pelo `animationend` da personagem, sem temporizadores
+paralelos ao CSS. A personagem e “Dar um oi” percorrem as mesmas três reações:
+saudação, piscadinha cúmplice e comentário sobre a curiosidade de quem clicou.
+“Rever entrada” remonta o palco e reinicia a coreografia mesmo na mesma fase.
 
-O componente carrega apenas ao descobrir o segredo. Não usa canvas, áudio,
-relógio de jogo, API ou persistência; não fecha sozinho. Embaralhar oferece
-outro arranjo. `prefers-reduced-motion` elimina transições sem retirar o jogo.
-O diálogo contém foco, fecha por Escape/botão/clique fora e devolve foco à
-marca. No celular, fechar o segredo não fecha a gaveta que o abriu.
+As quatro poses de entrada foram geradas pelo gerador nativo do Codex,
+solicitando `gpt-image-2` e usando a folha da Fraus-chan do `fraus-video` como
+referência. Vieram numa folha única, recortada em quatro WebP transparentes
+de 480×720, com escala e base dos pés alinhadas. Os prompts acompanham as
+artes nos arquivos `.webp.json`; `face` e `wink` preservam as reações anteriores.
+A pose antiga de puxar foi removida. Há seis imagens em `public/fraus-chan/`.
+Componente e imagens carregam só depois de descobrir o segredo; a entrada
+espera todas as imagens. Falha de imagem é explícita.
+Não há geração de imagem em runtime, LLM, leitura de conversas,
+áudio, canvas, persistência ou chamada de API dentro da brincadeira. As falas
+são fixas; não são respostas de um assistente nem resultados do modelo.
 
-A antiga revelação vaporwave, a pontuação do ritmo e o contexto que falsificava
-indicadores foram removidos, não mantidos como um segundo modo.
+Grafite, ouro e Chakra Petch seguem a ferramenta; o tema claro também é
+respeitado. No celular, a personagem fica acima da fala e dos controles.
+`prefers-reduced-motion` pula a entrada espacial e mantém todas as reações em
+corte seco, inclusive ao ativar a preferência durante a animação. Não há
+movimento em loop nem fechamento automático.
+O diálogo Base UI contém foco, fecha por Escape/botão/clique fora e devolve
+foco à marca. No celular, fechar o segredo não fecha a gaveta que o abriu.
+O quebra-cabeça de fragmentos foi substituído, não conservado como outro modo.
 
 ### Temas
 
@@ -447,10 +475,12 @@ gaveta móvel. `DASHBOARD_URL` aponta para o produto já iniciado; exige sessão
 válida ou o modo local aberto. Também conferir dashboard vazia, atendimento sem
 sinal, temas, grafo e navegação LP ↔ ferramenta.
 
-`node scripts/validar-segredo-playwright.mjs` resolve o jogo por teclado,
-confere mudança dos pixels, reinício, embaralhar, foco e modais aninhados.
-Compara os quatro indicadores antes/durante/depois em desktop e celular,
-incluindo Claro e reduce. `SEGREDO_EVIDENCIAS` guarda as capturas opcionais.
+`node scripts/validar-segredo-playwright.mjs` opera a entrada, as reações por
+teclado/toque, replay na mesma fase, reabertura, foco e modais aninhados.
+Confere mudança real dos pixels nas reações, carregamento sob demanda,
+indicadores intactos e ativação de reduce durante a entrada, além de
+desktop/celular/paisagem e temas claro/escuro.
+`SEGREDO_EVIDENCIAS` guarda as capturas opcionais; `DASHBOARD_URL` aceita só host local.
 
 
 A documentação MkDocs mantém sua aparência própria nesta entrega; não presumir

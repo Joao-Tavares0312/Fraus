@@ -2,9 +2,13 @@
 
 > Formato de *model card* (Mitchell et al., 2019): o que cada peça é, com o que
 > foi treinada, o que mediu, **onde erra** e para que **não** pode ser usada.
-> Números de 15/09/2026. Os da seção de fatias são reproduzíveis com
-> `FRAUS_BACKEND=onnx uv run python scripts/avaliar_por_fatias.py --n 600`
-> (semente `20260915`).
+> **Métricas históricas de 15/09/2026**, não uma reavaliação do checkpoint
+> publicado hoje. As fatias foram medidas com `scripts/avaliar_por_fatias.py`
+> (`--n 600`, semente `20260915`). A investigação de 26–27/10/2026, os baselines
+> locais e a campanha concluída de três sementes por cabeça estão em
+> [Generalização e evidências](generalizacao.md); não sobrescrevem estas
+> medições nem identificam os pesos publicados. As curvas sustentam sobreajuste
+> **dos candidatos novos**, não um diagnóstico dos modelos antigos.
 
 ## Uso pretendido e uso proibido
 
@@ -25,7 +29,7 @@ problemático. Toda exibição carrega a etiqueta de estimativa: o NPS é
   A nota de uma conversa é evidência para um humano olhar, não veredito.
 - **Apresentar a nota como NPS declarado.**
 
-## As peças
+## As peças — métricas históricas de 15/09/2026
 
 | peça | o que é | treino | métrica declarada | onde a métrica engana |
 |---|---|---|---|---|
@@ -38,12 +42,12 @@ Os três BERTimbau rodam em CPU, por torch ou por ONNX Runtime
 (`FRAUS_BACKEND`), com **0 de 180 categorias trocadas** entre os dois
 executores. Ver [Encolher os modelos](encolhimento.md).
 
-## Onde o fusor erra — avaliação por fatia
+## Onde o fusor erra — avaliação histórica por fatia
 
 600 conversas do simulador, fora das sementes usadas em outras medições.
 **Isto mede onde o modelo erra dentro do domínio sintético, não desempenho em
-atendimento real**: o projeto não tem corpus PT-BR de atendimento rotulado com
-timestamps, e nenhum corpus público tem.
+atendimento real**: o projeto não dispõe de corpus PT-BR de atendimento
+rotulado com timestamps para essa validação.
 
 Acurácia geral: **0,940** (598 conversas com sinal; 2 eram só cortesia).
 
@@ -68,8 +72,8 @@ O que a tabela diz, e o que ela **não** pode dizer:
 2. **Sem emoji, o acerto cai 10 pontos.** Suspeita declarada: o simulador sorteia
    o emoji **por rótulo** (`EMOJIS_POR_ROTULO`), então parte do acerto "com
    emoji" pode ser o modelo lendo uma pista que o gerador plantou — a mesma
-   família de defeito da invariante 10. Em atendimento real, onde emoji é mais
-   raro, **espere o número da linha "sem"**, não o da "com".
+   família de defeito da invariante 10. Isso não permite prever a acurácia
+   em atendimento real; a linha “sem emoji” ainda pertence ao simulador.
 3. **A fatia de latência é parcialmente circular** pelo mesmo motivo: o
    simulador sorteia a latência por rótulo. O F1 menor acima de 180 s é a
    fatia a acompanhar: mesmo com a espera em `log1p` desde 15/09/2026, o relógio
@@ -99,7 +103,7 @@ lista é fechada e conservadora (`fraus/cortesia.py`): só casa a fala inteira, 
 "valeu, resolveu na hora" continua pontuada. O conserto de verdade é retreinar a
 emoção separando gratidão de alegria.
 
-## A cabeça de ironia — taxa de erro publicada
+## A cabeça de ironia — taxa de erro histórica publicada
 
 Contra-exemplos escritos para quebrar o atalho que o gerador ensinou: falas
 **sinceras com marcador de discurso** ("nossa", "realmente", "né", "que ...") e
@@ -118,27 +122,49 @@ completa, fala a fala, sai do script.
 
 ## Calibração e conformal do fusor
 
-O fusor tem agora conjunto conformal (Mondrian por classe, sobre o score
-gravado) e instrumentos de calibração. O holdout B2W de 300 conversas é
-dividido em calibração (150) e avaliação (150), estratificado, com semente
-fixa. **Nenhum número abaixo foi medido**: o fusor log1p vigente não está na
-máquina de desenvolvimento em 14/10/2026. O cache de features do holdout
-(900 de treino, 300 de teste; só as cabeças do BERTimbau, sem treinar nada) já
-foi extraído localmente e fica fora do repositório; a medição está pronta para
-rodar quando o fusor estiver presente.
+O fusor dispõe de conjunto conformal (Mondrian por classe, sobre o score
+gravado) e instrumentos de calibração. O protocolo histórico dividia um
+holdout B2W de 300 conversas em calibração (150) e avaliação (150),
+estratificado, com semente fixa. **Nenhum número da tabela abaixo foi
+medido**: o fusor compatível com `log1p` não estava disponível na máquina
+de desenvolvimento em 14/10/2026. O cache posicional antigo não comprova
+isolamento por produto ou independência das cabeças e não deve ser reutilizado
+no novo experimento.
 
-Comandos, nesta ordem (nenhum usa `--promover`):
+A campanha de 26–27/10/2026 produziu um **candidato novo**, com avaliação
+sintética e ECE top-1, descritos em [Generalização](generalizacao.md).
+Essa medição não preenche retroativamente a tabela histórica abaixo:
+MCE, calibração por classe/fatia e cobertura/abstenção conformal não foram
+medidos nessa campanha. O relatório original conservador de independência
+foi preservado e complementado por cruzamentos textuais dos treinos reais;
+isso não transforma conversas sintéticas em atendimento real rotulado.
+
+### Comandos atuais para preparar um candidato
+
+Defina `B2W` como o CSV exato, `EXPERIMENTO` como diretório de pesquisa
+**externo ao repositório e aos checkpoints** e `CABECAS` como a raiz dos
+checkpoints candidatos. Reserve o manifesto **antes** do treino de satisfação
+e passe-o ao notebook 01 por `FRAUS_MANIFESTO_FUSOR`; só execute a extração
+depois de congelar os candidatos. Não há opção de promoção nesta sequência.
 
 ```bash
-# 1. gera o cache. O script extrai as features, grava o cache e treina um fusor
-#    SÓ EM MEMÓRIA; sem --promover não escreve nada em modelos/.
-uv run --with pandas python scripts/retreinar_fusor_local.py --cache features-fusor.json
-# 2. artefato conformal (só --gravar escreve fraus/dados/conformal_fusor.json)
-uv run python scripts/calibrar_conformal.py --cache features-fusor.json [--alvo 0.9] [--gravar]
-# 3. ECE/MCE/classwise com bootstrap, reliability diagram e ECE por fatia
-uv run --with matplotlib python scripts/medir_calibracao.py --cache features-fusor.json --png docs/diferenciais/img/calibracao.png
-# 4. curva cobertura x acurácia por abstenção
-uv run python scripts/medir_abstencao.py --cache features-fusor.json
+# 1. Reserva a divisão agrupada; não faz inferência.
+uv run python scripts/retreinar_fusor_local.py \
+  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" --gerar-manifesto
+# 2. Extrai features e avalia candidatos/ablações, sem ler ou substituir fusor ativo.
+uv run python scripts/retreinar_fusor_local.py \
+  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" \
+  --modelos "$CABECAS" --backend torch \
+  --cache "$EXPERIMENTO/features-fusor.json" --saida "$EXPERIMENTO/candidato"
+# 3. Instrumentos sobre o candidato explícito, sem ler fusor ativo ou gravar conformal ativo.
+# É outra medição; não sobrescreve a tabela histórica abaixo.
+uv run python scripts/calibrar_conformal.py \
+  --fusor "$EXPERIMENTO/candidato/fusor.joblib" --cache "$EXPERIMENTO/features-fusor.json"
+uv run --with matplotlib python scripts/medir_calibracao.py \
+  --fusor "$EXPERIMENTO/candidato/fusor.joblib" \
+  --cache "$EXPERIMENTO/features-fusor.json" --png "$EXPERIMENTO/calibracao.png"
+uv run python scripts/medir_abstencao.py \
+  --fusor "$EXPERIMENTO/candidato/fusor.joblib" --cache "$EXPERIMENTO/features-fusor.json"
 ```
 
 | Medida | Valor |
@@ -165,7 +191,8 @@ com uma nota de viés.
   distribuições da literatura, não de atendimento observado.
 - **Texto fora de domínio.** Satisfação aprendeu com resenha de produto; emoção,
   com Reddit traduzido por máquina.
-- **Acurácia alta é sintoma, não vitória** (invariante 10). Os 0,947 e 0,940 acima
-  são de domínio sintético e devem ser lidos como teto, nunca como expectativa.
+- **Acurácia alta pede investigação**, não celebração automática (invariante 10).
+  Os 0,947 e 0,940 acima são medidas sintéticas históricas, não uma estimativa
+  ou um teto demonstrado de desempenho em atendimentos reais.
 
 Ver também [Limitações conhecidas](limitacoes.md).

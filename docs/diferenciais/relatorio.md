@@ -161,14 +161,28 @@ Nenhum caminho sumiu.
 
 ## Reproduzir
 
-Os comandos abaixo pressupõem o fusor `log1p` em `modelos/`. Sem ele, cada um falha alto, com o motivo.
+Os instrumentos de medição do fusor pressupõem o artefato `log1p` compatível.
+Para a extração atual, `B2W` identifica o CSV, `EXPERIMENTO` um diretório
+externo ao repositório/checkpoints e `CABECAS` a raiz dos candidatos. Reserve
+o manifesto antes do notebook 01 (`FRAUS_MANIFESTO_FUSOR`), não depois do
+treino da cabeça. Cache posicional antigo não é reutilizável por nome; ver
+[Generalização](../generalizacao.md).
 
 ```bash
 uv run python scripts/medir_aditividade.py
-uv run python scripts/retreinar_fusor_local.py --cache features.json   # só extrai; não promove
-uv run python scripts/calibrar_conformal.py --cache features.json --gravar
-uv run --with matplotlib python scripts/medir_calibracao.py --cache features.json --png docs/diferenciais/img/calibracao.png
-uv run python scripts/medir_abstencao.py --cache features.json
+uv run python scripts/retreinar_fusor_local.py \
+  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" --gerar-manifesto
+uv run python scripts/retreinar_fusor_local.py \
+  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" \
+  --modelos "$CABECAS" --backend torch \
+  --cache "$EXPERIMENTO/features.json" --saida "$EXPERIMENTO/candidato"
+uv run python scripts/calibrar_conformal.py \
+  --fusor "$EXPERIMENTO/candidato/fusor.joblib" --cache "$EXPERIMENTO/features.json"
+uv run --with matplotlib python scripts/medir_calibracao.py \
+  --fusor "$EXPERIMENTO/candidato/fusor.joblib" \
+  --cache "$EXPERIMENTO/features.json" --png "$EXPERIMENTO/calibracao.png"
+uv run python scripts/medir_abstencao.py \
+  --fusor "$EXPERIMENTO/candidato/fusor.joblib" --cache "$EXPERIMENTO/features.json"
 uv run python scripts/medir_sinalizadores.py --simulador 600 [--anotada amostra.jsonl]
 uv run python scripts/medir_deterioracao.py --n 300
 ```

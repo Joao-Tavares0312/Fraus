@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 22/10/2026 (UI e desempenho da LP/site)
+# Handoff — Fraus, atualizado em 27/10/2026 (Fraus-chan e campanha de generalização concluída)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -23,6 +23,35 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 + Recharts no front (`dashboard/`).
 
 ---
+
+## Generalização, Modelo e documentação — 26–27/10/2026
+
+- A [matriz de evidências](generalizacao.md) separa baselines/auditoria de
+  26/10 da nova reprodução. Os **nove treinos em T4 e nove bundles** estão
+  concluídos; sementes escolhidas **pela validação**: satisfação 42, emoção 13,
+  ironia 42. As curvas sustentam sobreajuste **desses candidatos novos**.
+  Pesos antigos/publicados continuam inconclusivos, sem curvas/proveniência.
+- Fonte congelada: `03f91770ec92dec934d794cbad50ea3224f4cb8a`. Upload sem
+  `.git`, commit interno nulo; manifesto externo vincula três manifestos de
+  código comparados integralmente ao `git archive`. Não inventar commit interno.
+- O fusor candidato e ablações de 39/4/7 features foram avaliados com cabeças
+  novas, manifesto/cache vinculados e scalers só no treino. Prova complementar
+  encontra zero colisões normalizadas entre holdouts B2W e treinos das três
+  cabeças; preserva o relatório original conservador. Independência observável
+  não cobre paráfrases nem valida atendimento real: o teste é **sintético**.
+  Não contorne a recusa do fusor antigo em segundos crus.
+- ConsumerBR/XED continuam transferência já consultada; XED tem seis colisões
+  com treino GoEmotions, duas conflitantes. Não chamar de teste virgem.
+- Tela Modelo: explorador didático e uma única resposta do simulador;
+  oito famílias observadas, sete/39 no vetor. Não observa atenção/ativações.
+  Site com percursos banca/usuários/desenvolvimento e Mermaid preservado no PDF.
+- Sessão própria encerrada pela CLI após recuperação, **sem promoção de pesos**.
+  A PR #104 da base documental foi mergeada fora desta execução; os resultados
+  posteriores seguem em PR complementar. Estado e provas na
+  [nota interna](notas/2026-10-26-generalizacao.md).
+  Campanha durável em `/home/joaopedro/.cache/fraus/campanhas/2026-10-26/`;
+  auditoria/baselines antigos em `/tmp/fraus-overfitting-20261026/`.
+  Pesos, corpora, logs e manifestos individuais ficam fora do Git/site.
 
 ## Desempenho da LP e do site — 22/10/2026
 
@@ -202,12 +231,22 @@ Sidebar restaura cookie no servidor, mantém nomes no rail, período `de`/`ate`,
 permissões, sessão e aviso de dublê integral. Ctrl/Meta+B não intercepta edição;
 gaveta móvel fecha na navegação comum e devolve foco ao fechar/Escape.
 
-O segredo dos cinco cliques agora é **Encaixe secreto**: três fragmentos do
-FR, trilhos nativos e conclusão visual, sem áudio ou cronômetro. O código de
-revelação vaporwave, pontuação de cliques e falsificação dos indicadores saiu
-inteiro. Nenhum indicador muda enquanto se joga. O novo diálogo usa Base UI,
-com foco contido/devolvido e suporte a abertura sobre a gaveta móvel. O smoke
-é `node scripts/validar-segredo-playwright.mjs`.
+O segredo dos cinco cliques foi substituído em 27/10/2026 pela **Fraus-chan**:
+ela espia, puxa a fenda, dá um passo e acena; toque ou teclado alternam saudação,
+piscadinha e uma fala cúmplice. A entrada agora usa **quatro sprites novos**,
+gerados pelo gerador nativo do Codex com pedido de `gpt-image-2` e as artes do
+`fraus-video` como referência. Os WebP de entrada têm 480×720 e prompts
+`.webp.json`; as reações `face`/`wink` continuam. A pose `pull` antiga saiu.
+As seis imagens locais em `dashboard/public/fraus-chan/` só baixam ao abrir.
+A sequência avança por `animationend`; replay remonta o palco. Reduce pula
+o movimento mesmo se ativado durante a entrada. Sem imagem gerada em runtime,
+LLM, áudio, leitura de conversas ou persistência; indicadores intactos.
+O diálogo Base UI preserva foco e a gaveta móvel. O smoke
+`node scripts/validar-segredo-playwright.mjs` foi operado em 1440, 1280,
+390, 320 e 844px (paisagem), com temas claro/escuro e reduce, usando API
+local com snapshot sintético e motor dublê explícito — não valida inferência.
+Sem deploy nesta entrega. O antigo quebra-cabeça saiu; os contratos de
+cinco cliques e intervalo de dois segundos continuam.
 
 Leituras gravadas continuam exigindo snapshot validado do motor real; a
 otimização não autoriza gerar resultados com o dublê.
