@@ -23,7 +23,21 @@ function frase(criterio: string, fora: string[] | null): string {
  * nulo nao desenha nada -- a tela ja diz "sem sinal" (invariante 2). Falha da
  * rota nunca afirma confianca.
  */
-export function SeloConfianca({ resultado }: { resultado: Resultado<Confianca> }) {
+export function SeloConfianca({
+  resultado,
+  ehDev = true,
+}: {
+  resultado: Resultado<Confianca>;
+  /** Falha de artefato ou rota e assunto de dev; o cliente le uma frase so. */
+  ehDev?: boolean;
+}) {
+  if (!resultado.ok && !ehDev) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Confiança não disponível para este atendimento.
+      </p>
+    );
+  }
   if (!resultado.ok) {
     if (resultado.status === 503) {
       return (

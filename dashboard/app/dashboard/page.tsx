@@ -15,7 +15,6 @@ import {
   obterConfiguracoes,
   obterDetalhes,
   obterIndicadores,
-  obterLexico,
   obterSerieTemporal,
   type DetalheConversa,
   type ResumoConversa,
@@ -26,7 +25,6 @@ import {
   FAIXAS_NPS,
   indicadoresDoPeriodo,
   limiaresDe,
-  lexicoPorClasse,
   pioresAtendimentos,
   serieDiaria,
   serieDoServidor,
@@ -43,8 +41,6 @@ import { FaixaIndicadores } from "@/components/FaixaIndicadores";
 import { GraficoNpsLatencia } from "@/components/GraficoNpsLatencia";
 import { NotaMetodologica } from "@/components/NotaMetodologica";
 import { Painel } from "@/components/Painel";
-import { PainelDrivers } from "@/components/PainelDrivers";
-import { PainelLexico } from "@/components/PainelLexico";
 import { PioresAtendimentos } from "@/components/PioresAtendimentos";
 import { OrientacaoSemAtendimentos } from "@/components/OrientacaoSemAtendimentos";
 
@@ -56,18 +52,17 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   const parametros = await props.searchParams;
 
   // As leituras sao independentes de proposito: se `/indicadores` cair, a
-  // serie, a distribuicao e o lexico continuam de pe, e vice-versa.
+  // serie e a distribuicao continuam de pe, e vice-versa.
   const periodoPedido = lerPeriodo(parametros);
-  const [recorte, indicadoresDoServidor, configuracoes, serieDaApi, lexicoDaApi] =
+  const [recorte, indicadoresDoServidor, configuracoes, serieDaApi] =
     await Promise.all([
-      // Sem transcricoes: serie, lexico e tempo mediano vem AGREGADOS do
+      // Sem transcricoes: serie e tempo mediano vem AGREGADOS do
       // servidor agora, e baixar toda conversa so para derivar de novo era o
       // ultimo N+1 desta tela.
       carregarRecorte(parametros),
       obterIndicadores(periodoPedido.de, periodoPedido.ate),
       obterConfiguracoes(),
       obterSerieTemporal(periodoPedido.de, periodoPedido.ate),
-      obterLexico(periodoPedido.de, periodoPedido.ate),
     ]);
 
   // PLANO B: as transcricoes so sao baixadas se algum agregado do servidor
@@ -77,7 +72,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   let falhasDeDetalhe = 0;
   let truncadasNoPlanoB = 0;
   if (
-    (!serieDaApi.ok || !indicadoresDoServidor.ok || !lexicoDaApi.ok) &&
+    (!serieDaApi.ok || !indicadoresDoServidor.ok) &&
     !recorte.erro
   ) {
     const baixados = await obterDetalhes(recorte.resumos.map((r) => r.id));
@@ -86,7 +81,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
     // `obterDetalhes` corta em TETO_DETALHES_PLANO_B para o periodo "todos" nao
     // virar uma cadeia de dezenas de lotes sequenciais dentro do render. O
     // corte E sobre o RECORTE, entao os agregados derivados aqui (serie,
-    // lexico, tempo mediano) passam a valer so para uma AMOSTRA do periodo --
+    // tempo mediano) passam a valer so para uma AMOSTRA do periodo --
     // e a tela precisa dizer isso, nao fingir que cobriu tudo.
     truncadasNoPlanoB = baixados.truncadas;
   }
@@ -102,7 +97,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
   // Só trocar os painéis por orientação quando as leituras confirmaram o vazio.
   // Uma falha parcial continua no painel que a produziu, nunca vira onboarding.
   if (!erro && resumos.length === 0 && indicadoresDoServidor.ok &&
-      indicadoresDoServidor.dado.total_conversas === 0 && serieDaApi.ok && lexicoDaApi.ok) {
+      indicadoresDoServidor.dado.total_conversas === 0 && serieDaApi.ok) {
     return (
       <>
         <CabecalhoPagina titulo="Visão geral" periodo={periodo} extensao={extensao} />
@@ -178,9 +173,6 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
     ? configuracoes.dado.vigente.faixas_nps
     : undefined;
   const distribuicao = distribuicaoDeNotas(resumos, faixasVigentes);
-  const classes = lexicoDaApi.ok
-    ? lexicoDaApi.dado.classes
-    : lexicoPorClasse(detalhes);
   const tempoMediano = indicadoresDoServidor.ok
     ? indicadoresDoServidor.dado.tempo_mediano_resposta_s
     : tempoMedianoDeResposta(detalhes);
@@ -316,29 +308,9 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
           </Painel>
         </div>
 
-        <Painel
-          titulo="Vocabulário característico de cada categoria"
-          legenda="Ordenado por distinção, não por frequência: o termo que aparece em toda parte não explica nada; o que só aparece entre detratores é onde mora a oportunidade de melhoria."
-          semPadding
-        >
-          {erro ? (
-            <EstadoVazio
-              className="m-5"
-              titulo="Léxico indisponível"
-              explicacao={`O léxico é contado a partir das transcrições, e a listagem falhou: ${erro}.`}
-            />
-          ) : (
-            <PainelLexico classes={classes} />
-          )}
-        </Painel>
-
-        <PainelDrivers
-          key={`${periodoPedido.de}|${periodoPedido.ate}`}
-          de={periodoPedido.de} ate={periodoPedido.ate} />
-
         {/* A lista de "derivado na interface" agora so existe em FALHA de
             endpoint: no caminho feliz, serie, indicadores, tempo mediano e
-            lexico vem agregados do servidor e nao ha derivacao a declarar. */}
+            tempo vem agregados do servidor e nao ha derivacao a declarar. */}
         <NotaMetodologica
           derivados={[
             ...(!serieDaApi.ok
@@ -349,11 +321,6 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
             ...(!indicadoresDoServidor.ok
               ? [
                   "os indicadores e o tempo mediano de resposta, agregados das categorias e timestamps que o servidor gravou — porque GET /indicadores falhou",
-                ]
-              : []),
-            ...(!lexicoDaApi.ok
-              ? [
-                  "as palavras e emojis característicos de cada categoria, contados das falas do cliente — porque GET /lexico falhou",
                 ]
               : []),
           ]}
@@ -374,7 +341,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
           <p className="text-xs text-muted-foreground">
             {rotulo} tem mais atendimentos do que a agregação de reserva
             consegue processar de uma vez: {truncadasNoPlanoB} ficaram de fora
-            dos indicadores, da série e do léxico derivados aqui. Isto só afeta
+            dos indicadores e da série derivados aqui. Isto só afeta
             o plano B — a tabela de atendimentos continua completa.
           </p>
         ) : null}

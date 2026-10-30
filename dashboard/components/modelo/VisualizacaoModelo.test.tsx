@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { FichaModelo, Simulacao } from "@/lib/api";
-import { sinaisRetornados, VisualizacaoModelo } from "./VisualizacaoModelo";
+import { DiagramaDoModelo, sinaisRetornados, VisualizacaoModelo } from "./VisualizacaoModelo";
 
 vi.mock("@/lib/api", () => ({ simularTexto: vi.fn() }));
 import { simularTexto } from "@/lib/api";
@@ -57,8 +57,15 @@ describe("presença de sinais na resposta de frase", () => {
 });
 
 describe("explorador do modelo", () => {
-  it("separa contrato estático da contagem observada, incluindo peso zero", () => {
+  it("sem frase classificada, a tela mostra só o simulador (KISS, 30/10/2026)", () => {
     const html = renderToStaticMarkup(<VisualizacaoModelo modelo={modelo} />);
+    expect(html).not.toContain('aria-label="Fluxo de processamento do Fraus"');
+    expect(html).toContain("Classifique uma frase");
+    expect(simularTexto).not.toHaveBeenCalled();
+  });
+
+  it("separa contrato estático da contagem observada, incluindo peso zero", () => {
+    const html = renderToStaticMarkup(<DiagramaDoModelo modelo={modelo} resultado={resposta} />);
     expect(html).toContain("7 famílias · 39 features");
     expect(html).toContain("Ficha consultada: 2 features em 2 famílias.");
     expect(html).toContain("Texto: 1");
@@ -66,7 +73,7 @@ describe("explorador do modelo", () => {
   });
 
   it("mapa de pesos vazio nomeia ausência, não afirma que o modelo tem zero features", () => {
-    const html = renderToStaticMarkup(<VisualizacaoModelo modelo={{ ...modelo, importancias: {} }} />);
+    const html = renderToStaticMarkup(<DiagramaDoModelo modelo={{ ...modelo, importancias: {} }} resultado={resposta} />);
     expect(html).toContain("contagem observada não disponível");
     expect(html).not.toContain("Ficha consultada: 0");
     expect(html).toContain("7 famílias · 39 features");
@@ -74,7 +81,7 @@ describe("explorador do modelo", () => {
 
   it.each([true, false])("o ramo neural segue pontua da API: ironia=%s", (pontua) => {
     const ficha = { ...modelo, cabecas: modelo.cabecas.map((cabeca) => cabeca.nome === "ironia" ? { ...cabeca, pontua } : cabeca) };
-    const html = renderToStaticMarkup(<VisualizacaoModelo modelo={ficha} />);
+    const html = renderToStaticMarkup(<DiagramaDoModelo modelo={ficha} resultado={resposta} />);
     const botao = botaoDaFamilia(html, "Ironia");
     expect(botao).toBeDefined();
     expect(botao).toContain(pontua ? "Entra no vetor" : "Ramo por mensagem · fora do vetor");
@@ -82,14 +89,14 @@ describe("explorador do modelo", () => {
   });
 
   it("cabeça ausente não vira caminho confirmado nem probabilidade zero", () => {
-    const html = renderToStaticMarkup(<VisualizacaoModelo modelo={{ ...modelo, cabecas: [] }} />);
+    const html = renderToStaticMarkup(<DiagramaDoModelo modelo={{ ...modelo, cabecas: [] }} resultado={resposta} />);
     expect(botaoDaFamilia(html, "Texto")).toContain("Caminho não confirmado");
     expect(botaoDaFamilia(html, "Ironia")).toContain("Caminho não confirmado");
     expect(html).not.toContain("0%");
   });
 
   it("a advertência e os limites da simulação ficam no conteúdo visível", () => {
-    const html = renderToStaticMarkup(<VisualizacaoModelo modelo={modelo} />);
+    const html = renderToStaticMarkup(<DiagramaDoModelo modelo={modelo} resultado={resposta} />);
     expect(html).toContain("Esquema didático do processamento. Não mostra ativações internas, atenção ou influência causal das palavras.");
     expect(html).toContain("não calculado nesta simulação de frase");
     expect(html).toContain('aria-label="Fluxo de processamento do Fraus"');

@@ -35,15 +35,14 @@ function linksDoMenu(html: string) {
 }
 
 describe("destinos efetivamente renderizados na sidebar", () => {
-  it("usuario só recebe as quatro tarefas do dia a dia, todas com o período", () => {
+  it("usuario recebe as cinco tarefas da lateral, Modelo incluso (30/10/2026), todas com o período", () => {
     const html = renderizar("usuario");
     const internos = linksDoMenu(html).filter((tag) => tag.includes('href="/dashboard'));
-    expect(internos).toHaveLength(4);
-    for (const destino of ["/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo"]) {
+    expect(internos).toHaveLength(5);
+    for (const destino of ["/dashboard", "/dashboard/atendimentos", "/dashboard/analisar", "/dashboard/grafo", "/dashboard/modelo"]) {
       expect(internos.some((tag) => tag.includes(`href="${destino}?de=2026-08-01&amp;ate=2026-08-22"`)), destino).toBe(true);
     }
     expect(html).not.toContain('aria-label="Configurar"');
-    expect(html).not.toContain('href="/dashboard/modelo');
     expect(html).not.toContain('href="/dashboard/integracoes');
     expect(html).not.toContain('href="/dashboard/configuracoes');
     expect(html).not.toContain("nao-carregar");

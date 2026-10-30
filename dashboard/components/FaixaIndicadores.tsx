@@ -2,11 +2,9 @@
 
 import { motion } from "motion/react";
 import { RessalvaDaTela } from "./AparatoDaTela";
+import { Explicacao } from "./Explicacao";
 import { CartaoIndicador, type Trilho } from "./CartaoIndicador";
-import { DiscordanciaContida } from "./DiscordanciaContida";
-import { IntervaloDoNps } from "./IntervaloDoNps";
 import { pilha } from "@/lib/movimento";
-import { cn } from "@/lib/utils";
 import {
   CSAT_SAUDAVEL,
   emMinutos,
@@ -102,22 +100,21 @@ export function FaixaIndicadores({
   erro?: string;
   rotuloDoPeriodo: string;
 }) {
-  const semSinalTexto =
-    indicadores.semSinal > 0
-      ? `${indicadores.semSinal} de ${indicadores.total} sem sinal (${DEFINICAO_SEM_SINAL_AGREGADO}) — fora do cálculo, nunca como zero.`
-      : undefined;
-
   // O intervalo decide se ha amostra para mostrar o ponto. `??` aqui
   // ressuscitaria o NPS bruto quando o servidor se abstem com `null`.
   // Sem intervalo (API antiga ou plano B), preserva a leitura disponivel.
   const npsExibido = indicadores.npsIntervalo
     ? indicadores.npsIntervalo.nps
     : indicadores.nps;
+  const intervalo = indicadores.npsIntervalo;
 
-  // A faixa de leitura do NPS so existe se ha o que dizer sobre ele: o texto de
-  // "com sinal" (so com NPS) ou o intervalo (so quando o SERVIDOR o calculou).
-  const temLeituraDoNps =
-    indicadores.nps !== null || indicadores.npsIntervalo !== null;
+  // KISS (30/10/2026): a contagem com/sem sinal fica colada ao NPS em uma
+  // linha; o intervalo amostral e o "nunca como zero" vao para o ⓘ. Nada de
+  // honestidade sumiu -- so saiu da frente do numero.
+  const contagemNps =
+    indicadores.total > 0
+      ? `${indicadores.comSinal} com sinal · ${indicadores.semSinal} sem sinal`
+      : undefined;
 
   return (
     <>
@@ -125,16 +122,11 @@ export function FaixaIndicadores({
         <motion.section
           aria-label={`Indicadores de ${rotuloDoPeriodo}`}
           // A ARMADURA e o container da pilha: ela escalona os quatro
-          // indicadores em 40ms, e cada `CartaoIndicador` herda a variante
-          // daqui. Escalonar aqui, e nao no `Painel`, e o que da a leitura de
-          // cima para baixo -- que e a ordem em que a armadura de clave se le.
+          // indicadores em 40ms, e cada `CartaoIndicador` herda a variante.
           variants={pilha}
           initial="oculto"
           whileInView="presente"
           viewport={{ once: true, margin: "0px 0px -64px 0px" }}
-          // QUATRO CARDS SEPARADOS: cada um e uma `.superficie` com canto
-          // cortado; a grade so da o espaco entre eles (2 colunas, 4 a partir
-          // de 1200px) e o NPS carrega o fio dourado.
           className="faixa-indicadores min-w-0"
         >
           <CartaoIndicador
@@ -151,11 +143,29 @@ export function FaixaIndicadores({
             }
             trilho={TRILHO_NPS}
             explicacaoVazio={
-              indicadores.npsIntervalo?.nps === null
-                ? `Amostra insuficiente: ${indicadores.npsIntervalo.n} atendimento(s) com sinal. Consulte o intervalo abaixo.`
+              intervalo?.nps === null
+                ? `Amostra insuficiente: ${intervalo.n} atendimento(s) com sinal.`
                 : indicadores.total === 0
                   ? "Nenhum atendimento no período selecionado."
                   : "Nenhum atendimento do período tem sinal de satisfação suficiente para agregar."
+            }
+            rodape={contagemNps}
+            explicacao={
+              <>
+                <strong>Inferido do texto, não perguntado ao cliente.</strong>{" "}
+                Sem sinal = {DEFINICAO_SEM_SINAL_AGREGADO}; fica fora do
+                cálculo e nunca entra como zero.
+                {intervalo ? (
+                  <>
+                    {" "}
+                    Intervalo de 95%:{" "}
+                    <span className="num">{formatarNps(intervalo.ic_inferior)}</span> a{" "}
+                    <span className="num">{formatarNps(intervalo.ic_superior)}</span>{" "}
+                    (n={intervalo.n}). Mede a incerteza amostral, não o erro do
+                    modelo.
+                  </>
+                ) : null}
+              </>
             }
           />
 
@@ -173,6 +183,12 @@ export function FaixaIndicadores({
             }
             trilho={TRILHO_CSAT}
             explicacaoVazio="Nenhum atendimento com nota para estimar a satisfação."
+            explicacao={
+              <>
+                Proporção de atendimentos com nota ≥ 7. Faixa de referência:{" "}
+                {CSAT_SAUDAVEL.de}–{CSAT_SAUDAVEL.ate}%.
+              </>
+            }
           />
 
           <CartaoIndicador
@@ -188,6 +204,13 @@ export function FaixaIndicadores({
             }
             trilho={{ minimo: 0, maximo: 100, faixas: [] }}
             explicacaoVazio="Nenhuma conversa disponível para verificar se houve transferência a uma pessoa."
+            rodape={
+              indicadores.falsoContainment === null ? undefined : <ContencaoQueNaoConvenceu
+                percentual={indicadores.falsoContainment}
+                contidos={indicadores.contidosComSinal}
+              />
+            }
+            explicacao="Atendimentos resolvidos sem transferência para uma pessoa. Não comprova que o cliente saiu satisfeito."
           />
 
           <CartaoIndicador
@@ -207,60 +230,15 @@ export function FaixaIndicadores({
             }
             trilho={trilhoDeLatencia(limiares)}
             explicacaoVazio="Nenhuma resposta registrada para medir a espera."
+            explicacao={
+              <>
+                Tempo típico entre a fala do cliente e a resposta. Faixas: até{" "}
+                {limiares.pico} s imediata, até {limiares.saudavel} s saudável,
+                até {emMinutos(limiares.degradando)} min degradando.
+              </>
+            }
           />
         </motion.section>
-
-        {/* A LEITURA DO NPS. O texto de "com sinal" e a incerteza amostral
-            moravam DENTRO da celula do NPS e esticavam as quatro celulas ate a
-            altura dela: ~60% de vazio nas outras tres, e o grafico dominante
-            empurrado para baixo da dobra. Nada foi removido -- a contagem, o
-            intervalo de 95% e a contencao que nao convenceu continuam visiveis
-            POR PADRAO, so ganharam uma faixa propria, colada a armadura. */}
-        {erro ? null : (
-          <div
-            className={cn(
-              "grid min-w-0 gap-4 border-t border-border pt-3",
-              temLeituraDoNps && "lg:grid-cols-[1.35fr_1fr]",
-            )}
-          >
-            {temLeituraDoNps ? (
-              <div
-                className="flex min-w-0 flex-col gap-2 p-4"
-                data-slot="leitura-do-nps"
-              >
-                <h3 className="rotulo-instrumento">
-                  Leitura do NPS · quantas conversas sustentam o número
-                </h3>
-                {indicadores.nps === null ? null : (
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    Sobre {indicadores.comSinal} atendimento(s) com sinal.{" "}
-                    {semSinalTexto ?? ""}
-                  </p>
-                )}
-                {/* A INCERTEZA AMOSTRAL do NPS, colada nele. Sem isto o mesmo
-                    "-12" aparecia com 8 atendimentos e com 8.000, e o
-                    intervalo e a resposta da tela para "quantas conversas
-                    sustentam esse numero?". So aparece quando o SERVIDOR
-                    calculou: o plano B deixa `npsIntervalo` nulo de
-                    proposito, porque derivar aqui duplicaria N_MINIMO_NPS em
-                    TypeScript -- a divergencia que a invariante 3 existe
-                    para impedir. */}
-                {indicadores.npsIntervalo ? (
-                  <IntervaloDoNps intervalo={indicadores.npsIntervalo} />
-                ) : null}
-              </div>
-            ) : null}
-
-            {/* O FALSO CONTAINMENT e a leitura critica da contencao e da
-                latencia acima, e nao um quinto cartao: e o unico ponto da tela
-                onde dito e medido se contradizem -- ver DiscordanciaContida. */}
-            <DiscordanciaContida
-              percentual={indicadores.falsoContainment}
-              contidos={indicadores.contidosComSinal}
-              className="p-4"
-            />
-          </div>
-        )}
       </div>
 
       {/* O METODO dos quatro indicadores vira UM aparato so, no pe da tela --
@@ -302,5 +280,36 @@ export function FaixaIndicadores({
         </dl>
       </RessalvaDaTela>
     </>
+  );
+}
+
+/**
+ * O falso containment em uma linha, dentro do cartao Contencao: o pedaco que o
+ * cliente DISSE (ambar) contra o que o log MEDIU. `null` quando nenhum
+ * contido tem nota -- zero se leria como "ninguem saiu insatisfeito".
+ */
+function ContencaoQueNaoConvenceu({
+  percentual,
+  contidos,
+}: {
+  percentual: number | null;
+  contidos: number;
+}) {
+  if (percentual === null) return null;
+  const insatisfeitos = Math.round((percentual / 100) * contidos);
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span>
+        <strong className="num font-medium text-dito-texto">
+          {percentual.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
+        </strong>{" "}
+        saíram detratores sem escalar
+      </span>
+      <Explicacao rotulo="Sobre a contenção que não convenceu">
+        {insatisfeitos} de {contidos} atendimento(s) contido(s) com sinal
+        terminaram como detrator e não foram transferidos para uma pessoa.
+        Contenção alta com essa taxa alta é sucesso falso.
+      </Explicacao>
+    </span>
   );
 }

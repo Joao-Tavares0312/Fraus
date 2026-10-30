@@ -8,7 +8,7 @@ export const TELAS = [
   { href: "/dashboard/atendimentos", rotulo: "Atendimentos", grupo: "Acompanhar", somenteDev: false, icone: MessagesSquare },
   { href: "/dashboard/analisar", rotulo: "Analisar", grupo: "Investigar", somenteDev: false, icone: FlaskConical },
   { href: "/dashboard/grafo", rotulo: "Grafo", grupo: "Investigar", somenteDev: false, icone: Network },
-  { href: "/dashboard/modelo", rotulo: "Modelo", grupo: "Investigar", somenteDev: true, icone: Activity },
+  { href: "/dashboard/modelo", rotulo: "Modelo", grupo: "Investigar", somenteDev: false, icone: Activity },
   // Gestão e configuração moram no menu da conta (19/10/2026): a lateral fica
   // com as tarefas do dia a dia do cliente final.
   { href: "/dashboard/operacao", rotulo: "Operação", grupo: "Conta", somenteDev: false, icone: Workflow },

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Explicacao } from "@/components/Explicacao";
 import {
   formatarDia,
   somarDias,
@@ -27,9 +28,15 @@ import {
 export function FiltroPeriodo({
   periodo,
   extensao,
+  rotulo,
+  escopo,
 }: {
   periodo: Periodo;
   extensao: Extensao;
+  /** O recorte aplicado por extenso, com as datas. */
+  rotulo: string;
+  /** O que nesta tela obedece ao periodo. */
+  escopo: string;
 }) {
   const router = useRouter();
   const parametros = useSearchParams();
@@ -157,12 +164,18 @@ export function FiltroPeriodo({
           Todo o período
         </Button>
       </div>
-      </div>
-      <p className="text-sm leading-snug text-muted-foreground">
-        {extensao
-          ? `Atalhos até ${formatarDia(extensao.ultimo)}, último dia com dados — não até hoje.`
-          : "Atalhos indisponíveis sem datas dos atendimentos. Você pode retirar o filtro."}
+
+      {/* O recorte por extenso, numa linha: a explicacao dos atalhos fica no ⓘ. */}
+      <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+        <span className="truncate">{rotulo}</span>
+        <Explicacao rotulo="Sobre o período">
+          Vale para {escopo}.{" "}
+          {extensao
+            ? `Os atalhos contam até ${formatarDia(extensao.ultimo)}, o último dia com dados, não até hoje.`
+            : "Os atalhos ficam indisponíveis sem datas nos atendimentos."}
+        </Explicacao>
       </p>
+      </div>
     </div>
   );
 }

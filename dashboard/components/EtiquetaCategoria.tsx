@@ -2,6 +2,7 @@ import type { Categoria } from "@/lib/api";
 import { ROTULO_CATEGORIA, ROTULO_SEM_SINAL } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { CabecaVazada } from "./CabecaVazada";
+import { Explicacao } from "./Explicacao";
 
 /**
  * Categoria de NPS como etiqueta.
@@ -100,10 +101,13 @@ export function EtiquetaCategoria({
           convencao, e "evidência fraca" solto nao aciona ninguem. Mesma regra
           que faz a `CabecaVazada` exigir rotulo. */}
       {tracejada ? (
-        <span className="text-xs text-muted-foreground">
-          {motivosEvidencia.length > 0
-            ? `· evidência fraca: ${motivosEvidencia[0]}`
-            : "· evidência fraca"}
+        <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+          · evidência fraca
+          {motivosEvidencia.length > 0 ? (
+            <Explicacao rotulo="Por que a evidência é fraca">
+              {motivosEvidencia.join("; ")}.
+            </Explicacao>
+          ) : null}
         </span>
       ) : null}
     </span>

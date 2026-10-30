@@ -122,10 +122,34 @@ export function sinaisRetornados(resultado: Simulacao | null): Familia[] {
   return sinais;
 }
 
+/**
+ * KISS (30/10/2026): a tela abre so com o simulador. O diagrama aparece
+ * DEPOIS da primeira frase classificada, ja marcando o que ela acendeu --
+ * antes disso ele era um mapa de "aguardando classificação" em toda caixa.
+ */
 export function VisualizacaoModelo({ modelo }: { modelo: FichaModelo }) {
+  const [resultado, setResultado] = useState<Simulacao | null>(null);
+  const id = useId();
+  return (
+    <div className="min-w-0">
+      <section className="min-w-0" aria-labelledby={`${id}-simulador`}>
+        <h3 id={`${id}-simulador`} className="sr-only">Classifique uma frase</h3>
+        <p className="max-w-[75ch] text-sm text-muted-foreground">Nada é gravado.</p>
+        <Simulador onResultado={setResultado} />
+      </section>
+      {resultado ? (
+        <section className="mt-7 min-w-0 border-t border-border pt-5" aria-labelledby={`${id}-diagrama`}>
+          <h3 id={`${id}-diagrama`} className="mb-4 text-lg font-medium text-foreground">Como o modelo leu esta frase</h3>
+          <DiagramaDoModelo modelo={modelo} resultado={resultado} />
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+export function DiagramaDoModelo({ modelo, resultado }: { modelo: FichaModelo; resultado: Simulacao | null }) {
   const [selecao, setSelecao] = useState<Etapa>("conversa");
   const [etapaCabeca, setEtapaCabeca] = useState(2);
-  const [resultado, setResultado] = useState<Simulacao | null>(null);
   const id = useId();
   const grupos = agruparPorSinal(modelo.importancias).filter((grupo) => grupo.features.length > 0);
   const quantidade = Object.keys(modelo.importancias).length;
@@ -191,8 +215,7 @@ export function VisualizacaoModelo({ modelo }: { modelo: FichaModelo }) {
       </p>
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0">
-          <p className="mb-4 text-sm text-muted-foreground">Selecione uma etapa para entender o que entra, o que muda e o que ela não permite concluir. Explorar não executa o modelo.</p>
-          <a href={`#${id}-simulador`} className="mb-4 inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">Ir para classificar uma frase</a>
+          <p className="mb-4 text-sm text-muted-foreground">Clique numa etapa para ver o que ela faz.</p>
           <ol aria-label="Fluxo de processamento do Fraus" className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,.85fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,.9fr)] md:items-center">
             <li className="relative min-w-0">
               {controle("conversa", "Conversa", "Falas, autores e timestamps")}
@@ -247,11 +270,6 @@ export function VisualizacaoModelo({ modelo }: { modelo: FichaModelo }) {
         </div>
         <div className="hidden min-w-0 border-t border-border pt-5 md:block xl:border-t-0 xl:border-l xl:pl-5 xl:pt-0" aria-live="polite">{explicacaoSelecionada("lateral")}</div>
       </div>
-      <section className="mt-7 min-w-0 border-t border-border pt-5" aria-labelledby={`${id}-simulador`}>
-        <h3 id={`${id}-simulador`} className="text-lg font-medium text-foreground">Experimente uma frase</h3>
-        <p className="mt-2 max-w-[75ch] text-sm leading-relaxed text-muted-foreground">Uma chamada ao classificador; nada é gravado. As probabilidades abaixo são da frase identificada no resultado. Tempo, vetor da conversa e fusor não são calculados aqui.</p>
-        <Simulador onResultado={setResultado} />
-      </section>
     </div>
   );
 }

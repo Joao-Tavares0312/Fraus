@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "fase": "hardware",
+  "status": "medido",
+  "motivo": null,
+  "comando": "lscpu && free -b && lspci",
+  "condicoes": {"momento": "fase 2, antes da carga de pesos", "baseline": "CPU local; nao replica da vCPU Vercel"},
+  "artefatos": [],
+  "medicoes": {
+    "cpu": "Intel Core i5-1135G7 @ 2.40GHz",
+    "nucleos_fisicos": 4,
+    "threads_logicas": 8,
+    "gpu_pci": "Intel Iris Xe Graphics",
+    "nvidia_na_listagem_pci": false,
+    "ram_total_bytes": 16491712512,
+    "ram_disponivel_bytes": 5045325824,
+    "swap_ocupada_bytes": 10712481792,
+    "cuda_util": null,
+    "motivo_cuda": "nenhuma NVIDIA na listagem PCI; nao foi executado treino"
+  }
+}

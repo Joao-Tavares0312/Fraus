@@ -11,7 +11,7 @@ vi.mock("./CartaoIndicador", () => ({
     <section aria-label={rotulo} data-destaque={String(!!destaque)}>{valor === null ? explicacaoVazio : String(valor)}</section>,
 }));
 vi.mock("./AparatoDaTela", () => ({ RessalvaDaTela: () => null }));
-vi.mock("./DiscordanciaContida", () => ({ DiscordanciaContida: () => null }));
+vi.mock("./Explicacao", () => ({ Explicacao: () => null }));
 
 import { FaixaIndicadores } from "./FaixaIndicadores";
 

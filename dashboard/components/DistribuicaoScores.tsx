@@ -14,6 +14,7 @@ import { legendaDasFaixas, type BarraDistribuicao } from "@/lib/derivacoes";
 import { DEFINICAO_SEM_SINAL_AGREGADO, ROTULO_CATEGORIA } from "@/lib/formato";
 import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
+import { Explicacao } from "./Explicacao";
 
 /**
  * Escala DIVERGENTE do NPS. Os tres tokens sao os do `DESIGN.md`; nenhum deles
@@ -139,7 +140,13 @@ export function DistribuicaoScores({
       </div>
 
       <aside className="flex shrink-0 flex-col justify-center gap-1.5 border-t border-border px-5 py-4 lg:w-56 lg:border-t-0 lg:border-l">
-        <p className="rotulo-instrumento">Fora da escala</p>
+        <p className="rotulo-instrumento flex items-center gap-1">
+          Fora da escala
+          <Explicacao rotulo="Sobre atendimentos sem sinal">
+            Sem sinal = {DEFINICAO_SEM_SINAL_AGREGADO}. Não têm nota e nunca
+            entram como zero: ausência de dado não é insatisfação.
+          </Explicacao>
+        </p>
         {/* A contagem de ausencias e um numero, mas nao e satisfacao medida.
             O anel oco e o rotulo a mantem fora da escala, sem depender da cor. */}
         <p className="flex items-end gap-2.5">
@@ -147,11 +154,7 @@ export function DistribuicaoScores({
           rotulo="atendimentos sem sinal, fora da escala" cor="tinta" />
           <CabecaVazada className="pb-0.5" />
         </p>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Atendimentos sem sinal: {DEFINICAO_SEM_SINAL_AGREGADO}. Não têm nota e não entram como zero:
-          ausência de dado não é insatisfação, e cinza não pertence à escala de
-          satisfação de propósito.
-        </p>
+
       </aside>
     </div>
   );

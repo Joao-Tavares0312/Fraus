@@ -343,7 +343,7 @@ function Legenda() {
           />
         </svg>
         <span className="text-foreground">NPS inferido</span>
-        <span>(estimativa, linha contínua, eixo de −100 a +100)</span>
+        <span>estimativa</span>
       </li>
       <li className="flex items-center gap-2 text-xs text-muted-foreground">
         <svg width="22" height="10" aria-hidden>
@@ -359,7 +359,7 @@ function Legenda() {
           />
         </svg>
         <span className="text-medido-texto">Latência mediana</span>
-        <span>(observada, barras, eixo a partir de 0 s)</span>
+        <span>observada</span>
       </li>
     </ul>
   );
@@ -528,12 +528,10 @@ function FaixaDePresenca({
         })}
       </div>
       <p className="mt-1.5 text-[0.6875rem] leading-tight text-muted-foreground">
-        Cada marca é um dia:{" "}
         <span className="inline-block size-[7px] translate-y-px rounded-full bg-medido" />{" "}
-        pontuado ·{" "}
+        com nota ·{" "}
         <span className="inline-block size-[7px] translate-y-px rounded-full border border-muted-foreground" />{" "}
-        houve atendimento, nenhum pontuado ({DEFINICAO_SEM_SINAL_AGREGADO}) —
-        não entra na escala e nunca como zero.
+        só sem sinal
       </p>
     </div>
   );

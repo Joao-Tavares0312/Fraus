@@ -70,7 +70,6 @@ export function PioresAtendimentos({
             <EtiquetaCategoria
               categoria={conversa.categoria}
               evidenciaFraca={conversa.evidencia_fraca}
-              motivosEvidencia={conversa.motivos_evidencia_fraca}
               className="col-start-2 col-end-4 min-w-0 flex-wrap text-xs whitespace-normal"
             />
           </Link>

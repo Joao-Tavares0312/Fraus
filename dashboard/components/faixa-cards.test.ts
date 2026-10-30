@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 
 // `.faixa-indicadores` e so a grade com espaco; quem a usa entrega cards.
 describe("consumidores da faixa de indicadores usam a mesma linguagem de card", () => {
-  it("as celulas do resumo do atendimento sao superficie, sem fio", () => {
+  it("o resumo do atendimento e uma linha, nao uma faixa de cards (KISS, 30/10/2026)", () => {
     const fonte = readFileSync("components/atendimentos/ResumoDoAtendimento.tsx", "utf8");
-    expect(fonte).toMatch(/className="superficie quebra-evitar[^"]*"/);
+    expect(fonte).not.toContain("faixa-indicadores");
     expect(fonte).not.toMatch(/superficie[^"]*\bfio\b/);
   });
 

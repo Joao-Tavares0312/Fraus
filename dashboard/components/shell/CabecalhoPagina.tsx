@@ -66,15 +66,13 @@ export function CabecalhoPagina({
                 titulo e filtro sao o MESMO bloco de contexto, e a divisoria
                 forte os apresentava como secoes independentes. */}
             <div aria-hidden className="h-px bg-compasso" />
-            <div className="sem-impressao flex min-w-0 flex-col gap-2">
-              <p className="text-sm leading-snug text-muted-foreground">
-                Período ativo:{" "}
-                <strong className="font-medium text-foreground">
-                  {rotuloPeriodo(periodo, extensao ?? null)}
-                </strong>
-                . Aplica-se a {escopo}.
-              </p>
-              <FiltroPeriodo periodo={periodo} extensao={extensao ?? null} />
+            <div className="sem-impressao min-w-0">
+              <FiltroPeriodo
+                periodo={periodo}
+                extensao={extensao ?? null}
+                rotulo={rotuloPeriodo(periodo, extensao ?? null)}
+                escopo={escopo}
+              />
             </div>
           </>
         ) : null}

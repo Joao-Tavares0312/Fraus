@@ -35,18 +35,19 @@ export function EstadoVazio({
   className,
 }: {
   titulo: string;
-  explicacao: string;
+  /** Opcional: um titulo que ja se explica nao paga uma segunda frase. */
+  explicacao?: string;
   /** Rota que passaria a devolver este dado, quando houver. */
   endpoint?: string;
   /** Etapa do projeto que falta rodar, quando o que falta nao e uma rota. */
   etapa?: string;
   className?: string;
 }) {
-  const apiFora = ehFalhaDeConexao(explicacao);
+  const apiFora = explicacao ? ehFalhaDeConexao(explicacao) : false;
 
   // A primeira frase é a marca ("API não respondeu em …"), que a régua do topo
   // já diz melhor. O resto é a prosa metodológica, e ela sobrevive no aparato.
-  const aparato = apiFora
+  const aparato = apiFora && explicacao
     ? explicacao.slice(explicacao.indexOf(". ") + 1).trim()
     : "";
 
@@ -75,9 +76,9 @@ export function EstadoVazio({
             Sem dado enquanto a API não responde — a ação está na faixa no topo
             da tela.
           </EmptyDescription>
-        ) : (
+        ) : explicacao ? (
           <EmptyDescription className="text-sm leading-relaxed">{explicacao}</EmptyDescription>
-        )}
+        ) : null}
 
         {etapa ? (
           <EmptyDescription className="text-sm leading-relaxed">
