@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import {
   obterAtribuicao,
   obterConfianca,
@@ -109,8 +109,7 @@ export default async function PaginaDoAtendimento(
   return (
     <>
       <CabecalhoPagina
-        titulo={`Atendimento ${conversa.id}`}
-        subtitulo="Nota, categoria e a transcrição inteira, com o tempo de espera anotado em cada resposta e os trechos marcados pela probabilidade que o classificador deu a cada fala."
+        titulo={conversa.id}
         acoes={
           <span className="flex flex-wrap items-center gap-2">
             {ehDev ? <RemoverAtendimento id={conversa.id} voltarPara={`/dashboard/atendimentos${sufixo}`} /> : null}
@@ -134,8 +133,6 @@ export default async function PaginaDoAtendimento(
           duracao={duracao}
         />
 
-        <SeloConfianca resultado={resultadoConfianca} />
-
         <Painel
           titulo="Transcrição"
           legenda="Fala do cliente em cartão com filete âmbar — é o que foi dito. Resposta do bot ou do atendente recuada, em contorno tracejado. A espera do cliente é um intervalo tracejado antes de cada resposta, com o comprimento proporcional ao tempo (a régua é o limiar de degradação vigente) e o tempo em display; o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala. O sinal ⚑ marca a mensagem que disparou um sinalizador por regra."
@@ -150,6 +147,15 @@ export default async function PaginaDoAtendimento(
           />
         </Painel>
 
+        {/* KISS (30/10/2026): a leitura tecnica da nota fica recolhida. O
+            cliente abre quando quer saber o porque; a transcricao e o centro. */}
+        <details className="group min-w-0 border-t border-linha pt-3">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+            <ChevronRight aria-hidden className="size-4 transition-transform group-open:rotate-90" />
+            Por que esta nota?
+          </summary>
+          <div className="flex min-w-0 flex-col gap-4 pt-4">
+        <SeloConfianca resultado={resultadoConfianca} ehDev={ehDev} />
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
           <Painel
             titulo="Falas que inclinaram a nota"
@@ -159,27 +165,27 @@ export default async function PaginaDoAtendimento(
             {atribuicao === null ? (
               <EstadoVazio
                 className="m-5"
-                titulo="Atribuição indisponível"
-                explicacao={`A transcrição carregou, mas a atribuição por sentença não: ${resultadoAtribuicao.ok ? "" : resultadoAtribuicao.erro}. Sem ela, marcar uma frase como “a que derrubou a nota” seria invenção — então nada é marcado.`}
-                endpoint="GET /conversas/{id}/atribuicao"
+                titulo="Não disponível para este atendimento"
+                explicacao={ehDev && !resultadoAtribuicao.ok ? resultadoAtribuicao.erro : undefined}
+                endpoint={ehDev ? "GET /conversas/{id}/atribuicao" : undefined}
               />
             ) : conversa.motivo_sem_sinal === "so_cortesia" ? (
               <EstadoVazio
                 className="m-5"
                 titulo="Só cortesia: nenhuma fala explica nota"
-                explicacao={`${EXPLICACAO_SEM_SINAL.so_cortesia} Sem nota, apontar uma delas como “a que puxou a nota” seria inventar a causa de um número que não existe.`}
+                explicacao={EXPLICACAO_SEM_SINAL.so_cortesia}
               />
             ) : marcas.size === 0 ? (
               <EstadoVazio
                 className="m-5"
                 titulo="O cliente não falou neste atendimento"
-                explicacao="Sem fala do cliente não há o que atribuir: o classificador pontua mensagem de cliente, e pontuar a fala do bot seria número inventado."
+                explicacao="Sem fala do cliente, não há o que explicar."
               />
             ) : decisivas.length === 0 ? (
               <EstadoVazio
                 className="m-5"
                 titulo="Nenhuma fala inclinou a nota de forma clara"
-                explicacao="Todas as mensagens do cliente ficaram com P(satisfeito) e P(insatisfeito) próximas demais. A transcrição mostra a probabilidade de cada uma; apontar uma delas como causa seria ler ruído como evidência."
+                explicacao="As falas do cliente ficaram equilibradas entre satisfeito e insatisfeito."
               />
             ) : (
               <ul className="divide-y divide-compasso">
@@ -235,9 +241,9 @@ export default async function PaginaDoAtendimento(
             {atribuicao === null ? (
               <EstadoVazio
                 className="m-5"
-                titulo="Contribuições indisponíveis"
-                explicacao={`A chamada de atribuição falhou: ${resultadoAtribuicao.ok ? "" : resultadoAtribuicao.erro}.`}
-                endpoint="GET /conversas/{id}/atribuicao"
+                titulo="Não disponível para este atendimento"
+                explicacao={ehDev && !resultadoAtribuicao.ok ? resultadoAtribuicao.erro : undefined}
+                endpoint={ehDev ? "GET /conversas/{id}/atribuicao" : undefined}
               />
             ) : (
               <>
@@ -256,6 +262,8 @@ export default async function PaginaDoAtendimento(
             )}
           </Painel>
         </div>
+          </div>
+        </details>
       </div>
     </>
   );

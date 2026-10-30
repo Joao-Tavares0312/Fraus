@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ValorNumerico } from "@/components/ValorNumerico"
 import { TRANSICAO, itemDaPilha } from "@/lib/movimento";
+import { Explicacao } from "@/components/Explicacao";
 
 /**
  * Uma faixa de referencia no trilho do indicador.
@@ -48,6 +49,7 @@ export function CartaoIndicador({
   trilho,
   rodape,
   destaque,
+  explicacao,
 }: {
   rotulo: string;
   valor: number | null;
@@ -65,6 +67,8 @@ export function CartaoIndicador({
   rodape?: ReactNode;
   /** O cartao principal da faixa leva o fio dourado do dominante. */
   destaque?: boolean;
+  /** Metodo e ressalva do indicador, recolhidos no ⓘ ao lado do rotulo. */
+  explicacao?: ReactNode;
 }) {
   return (
     <motion.div
@@ -76,7 +80,12 @@ export function CartaoIndicador({
       data-slot="indicador"
     >
       <div className="flex items-baseline justify-between gap-2 pr-3">
-        <h3 className="text-sm font-medium">{rotulo}</h3>
+        <h3 className="flex items-center gap-1 text-sm font-medium">
+          {rotulo}
+          {explicacao ? (
+            <Explicacao rotulo={`Sobre ${rotulo}`}>{explicacao}</Explicacao>
+          ) : null}
+        </h3>
         {qualificacao ? (
           <Badge variant="ghost" className="shrink-0 px-0 text-muted-foreground hover:bg-transparent">
             {qualificacao}
@@ -142,7 +151,7 @@ export function CartaoIndicador({
       {/* O metodo do indicador e APARATO: fica na tipografia menor, abaixo do
           numero, e nunca entre o rotulo e o valor. */}
       {rodape ? (
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           {rodape}
         </p>
       ) : null}
@@ -208,9 +217,6 @@ function TrilhoDeReferencia({
           transition={TRANSICAO.amplo}
         />
       </div>
-      <p className="text-[0.6875rem] leading-tight text-muted-foreground">
-        {legenda}
-      </p>
     </div>
   );
 }

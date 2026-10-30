@@ -1,5 +1,7 @@
 "use client";
 
+import { Explicacao } from "@/components/Explicacao";
+
 import { useState } from "react";
 import type { Acesso, Equipe, Jornada, Radar, SimulacaoEscala, Tema, Turno } from "@/lib/operacao";
 import { formatarDataHora } from "@/lib/formato";
@@ -19,8 +21,8 @@ export function RadarOperacao({ sufixo, investigar }: ContextoOperacao & { inves
   const r = useRecurso<Radar>(`/radar${sufixo}`);
   return <Painel titulo="Radar de temas" nivel="dominante" legenda={r.dado?.metodo} acessorio={<Button variant="ghost" onClick={r.recarregar}><IconeDeAcao acao="atualizar" />Atualizar</Button>}>
     {!r.dado ? <Carregamento erro={r.erro} recarregar={r.recarregar} /> : <div className={PILHA}>
-      <div className={GRADE}><Medida nome="Conversas examinadas" valor={r.dado.amostra} /><Medida nome="Temas encontrados" valor={r.dado.temas.length} /><Medida nome="Fora do limite de leitura" valor={r.dado.truncadas} /></div>
-      {r.dado.janela ? <p className="text-xs text-muted-foreground">Janela recente: {r.dado.janela.de} a {r.dado.janela.ate}. Taxas calculadas sobre todas as conversas de cada janela, inclusive as sem tema.</p> : null}
+      <div className={GRADE}><Medida nome="Conversas examinadas" valor={r.dado.amostra} /><Medida nome="Temas encontrados" valor={r.dado.temas.length} />{r.dado.truncadas > 0 ? <Medida nome="Fora do limite de leitura" valor={r.dado.truncadas} /> : null}</div>
+      {r.dado.janela ? <p className="flex items-center gap-1 text-xs text-muted-foreground">Janela recente: {r.dado.janela.de} a {r.dado.janela.ate}<Explicacao rotulo="Sobre as taxas">Taxas calculadas sobre todas as conversas de cada janela, inclusive as sem tema.</Explicacao></p> : null}
       {!r.dado.temas.length ? <EstadoVazio titulo="Ainda não há temas recorrentes" explicacao="O radar precisa de pelo menos duas conversas com vocabulário semelhante. Analise e salve mais conversas ou amplie o período." /> : r.dado.temas.map((t) => <article key={t.id} className="border-t border-linha pt-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3"><h3 className="font-medium text-dito-texto">{t.termos.join(" · ")}</h3><span className="rotulo-instrumento">{t.emergente ? "↑ Tema em crescimento" : "Tema recorrente"}</span></div>
         <div className={`${GRADE} my-4`}><Medida nome="Ocorrências recentes" valor={t.recentes} /><Medida nome="Taxa recente" valor={t.taxa_atual === null ? null : t.taxa_atual * 100} casas={1} unidade="%" /><Medida nome="Taxa anterior" valor={t.taxa_anterior === null ? null : t.taxa_anterior * 100} casas={1} unidade="%" /></div>

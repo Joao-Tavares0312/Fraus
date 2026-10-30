@@ -11,7 +11,7 @@ export default async function PaginaOperacao({ searchParams }: { searchParams: P
   const [recorte, sessao, login] = await Promise.all([carregarRecorte(parametros), sessaoAtual(), loginDisponivel()]);
   const administrador = sessao.estado === "logada" ? sessao.usuario.papel === "dev" : sessao.estado === "ausente" && !login;
   return <>
-    <CabecalhoPagina titulo="Operação" subtitulo="Da conversa à ação. Investigue padrões, simule a escala e acompanhe o que mudou com evidências do seu banco." periodo={recorte.periodo} extensao={recorte.extensao} />
+    <CabecalhoPagina titulo="Operação" periodo={recorte.periodo} extensao={recorte.extensao} />
     <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
       {recorte.erro ? <EstadoVazio titulo="Não foi possível carregar a operação" explicacao={recorte.erro} /> :
         <ConsoleOperacao key={recorte.sufixo} conversas={recorte.resumos} sufixo={recorte.sufixo} administrador={administrador} />}

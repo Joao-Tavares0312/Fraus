@@ -47,6 +47,7 @@ import { MarcaContestacao } from "./MarcaContestacao";
 import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
 import { NotaInferida } from "./NotaInferida"
+import { cn } from "@/lib/utils";
 import { ausenciaNoFim } from "@/lib/ordenacao";
 import { limitarPagina } from "@/lib/paginacao";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
@@ -104,6 +105,15 @@ export function escaparCampo(campo: string): string {
  */
 
 /** Uma medida pequena com rotulo, para as celulas de duas linhas. */
+/** No celular a linha fica com atendimento, desfecho e nota; o resto e desktop. */
+const SO_DESKTOP = new Set(["qtd_mensagens", "espera"]);
+const classeDaColuna = (id: string) =>
+  SO_DESKTOP.has(id)
+    ? "hidden md:table-cell"
+    : id === "data"
+      ? "whitespace-normal md:whitespace-nowrap"
+      : undefined;
+
 function Miudo({ children }: { children: React.ReactNode }) {
   return (
     <span className="block text-xs leading-tight text-muted-foreground">
@@ -212,23 +222,13 @@ export function TabelaConversas({
             return (
               <div className="min-w-0">
                 <span className="num text-foreground">{linha.qtd_mensagens}</span>
-                <Miudo>
-                  <span className="num">{linha.qtd_cliente}</span> cliente ·{" "}
-                  <span className="num">{linha.qtd_bot}</span> bot
-                  {linha.qtd_humano > 0 ? (
-                    <>
-                      {" "}
-                      · <span className="num">{linha.qtd_humano}</span> humano
-                    </>
-                  ) : null}
-                </Miudo>
               </div>
             );
           },
         }),
         colunas.accessor("latencia_primeira_resposta_s", {
           id: "espera",
-          header: "Espera",
+          header: "1ª resposta",
           sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) =>
             ausenciaNoFim(
               a.original.latencia_primeira_resposta_s,
@@ -239,23 +239,11 @@ export function TabelaConversas({
             const linha = contexto.row.original;
             return (
               <div className="min-w-0 whitespace-nowrap">
-                {/* O "1ª" e obrigatorio: sem ele o numero grande e so um tempo
-                    solto, e o leitor nao tem como saber que ele mede a
-                    PRIMEIRA resposta enquanto os dois de baixo sao medianas. */}
-                <span className="text-xs text-muted-foreground">1ª </span>
+                {/* KISS: so a primeira resposta. As medianas de bot e humano
+                    ficam no detalhe do atendimento. */}
                 <span className="num text-foreground">
                   {formatarEsperaOuTraco(linha.latencia_primeira_resposta_s)}
                 </span>
-                <Miudo>
-                  bot{" "}
-                  <span className="num">
-                    {formatarEsperaOuTraco(linha.latencia_mediana_bot_s)}
-                  </span>{" "}
-                  · humano{" "}
-                  <span className="num">
-                    {formatarEsperaOuTraco(linha.latencia_mediana_humano_s)}
-                  </span>
-                </Miudo>
               </div>
             );
           },
@@ -276,7 +264,7 @@ export function TabelaConversas({
         }),
         colunas.accessor("nota", {
           // A origem inferida permanece explícita no cabeçalho da coluna.
-          header: "Nota inferida (estimativa)",
+          header: "Nota estimada",
           sortFn: (a: LegacyRow<LinhaConversa>, b: LegacyRow<LinhaConversa>) =>
             ausenciaNoFim(a.original.nota, b.original.nota, descendenteEm("nota")),
           cell: (contexto) => {
@@ -284,10 +272,7 @@ export function TabelaConversas({
             const linha = contexto.row.original;
             return nota === null ? (
               // Ausência nomeada e fora da escala; nunca uma nota zero.
-              <div className="flex min-w-0 flex-col items-start gap-1.5">
-                <NotaInferida nota={null}  />
-                <CabecaVazada rotulo={ROTULO_SEM_SINAL} />
-              </div>
+              <CabecaVazada rotulo={ROTULO_SEM_SINAL} />
             ) : (
               <div className="flex min-w-0 flex-col items-start gap-1.5">
                 <NotaInferida nota={nota}  />
@@ -563,7 +548,7 @@ export function TabelaConversas({
       {erroExportacao ? <p role="alert" className="px-5 py-3 text-sm text-destructive">{erroExportacao}</p> : null}
       {/* Rolagem horizontal própria: a tabela não alarga o documento. */}
       <div className="w-full overflow-x-auto bg-card">
-        <Table className="min-w-[860px] text-sm">
+        <Table className="text-sm md:min-w-[860px]">
           <TableHeader className="sticky top-0 z-10">
             {tabela.getHeaderGroups().map((grupo) => (
               <TableRow key={grupo.id}>
@@ -577,7 +562,7 @@ export function TabelaConversas({
                         ? ArrowDown
                         : ChevronsUpDown;
                   return (
-                    <TableHead key={cabecalho.id} scope="col">
+                    <TableHead key={cabecalho.id} scope="col" className={classeDaColuna(cabecalho.column.id)}>
                       {ordenavel ? (
                         <button
                           type="button"
@@ -630,7 +615,7 @@ export function TabelaConversas({
                   className="cursor-pointer transition-colors duration-150 ease-fluid hover:bg-muted/50"
                 >
                   {linha.getVisibleCells().map((celula) => (
-                    <TableCell key={celula.id} className="align-top">
+                    <TableCell key={celula.id} className={cn("align-top", classeDaColuna(celula.column.id))}>
                       {flexRender(
                         celula.column.columnDef.cell,
                         celula.getContext(),

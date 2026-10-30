@@ -65,7 +65,7 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
 - A API oferece autenticação JWT de usuários e credenciais técnicas. Produção
   usa PostgreSQL/Supabase; SQLite permanece para desenvolvimento e testes.
 - Oito telas. Na lateral, o dia a dia: Visão geral, Atendimentos, Analisar,
-  Grafo e Modelo (dev). No menu da conta: Operação (radar, equipe e escala,
+  Grafo e Modelo (público desde 30/10/2026; a curadoria do léxico segue dev). No menu da conta: Operação (radar, equipe e escala,
   jornadas, investigações, replay, laboratório e acessos), Integrações e
   Configurações.
 
@@ -110,7 +110,10 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
 - Logo: monograma **FR**, F branco e R dourado sobre preto (`#070707`).
 - Vinculante por decisão do usuário nesta sessão:
   - os **textos de honestidade** ("estimativa", "sem sinal", nota metodológica,
-    estados vazios que nomeiam o que falta) permanecem;
+    estados vazios que nomeiam o que falta) permanecem. Desde 30/10/2026
+    (KISS), a tela mostra só a etiqueta curta; a explicação fica no ⓘ ao lado
+    ou em "Método e ressalvas". Parágrafo explicativo sobre o dado não volta;
+    o aviso "não avalia o atendente" continua visível;
   - o encoding **âmbar = dito / azul = medido nas marcas gráficas**; desde
     22/10/2026, textos de medidas usam branco mineral no escuro e grafite no claro;
   - o **gráfico sobreposto de NPS × latência** — pode mudar de forma, mas a

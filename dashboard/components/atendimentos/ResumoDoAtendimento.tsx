@@ -1,26 +1,27 @@
-import type { ReactNode } from "react";
 import type { DetalheConversa } from "@/lib/api";
 import {
   EXPLICACAO_SEM_SINAL,
+  ROTULO_SEM_SINAL,
   formatarDataHora,
   formatarSegundos,
-  formatarDuracaoCompacta,
 } from "@/lib/formato";
-import { Badge } from "@/components/ui/badge";
-import { ValorNumerico } from "@/components/ValorNumerico"
+import { CabecaVazada } from "@/components/CabecaVazada";
+import { Explicacao } from "@/components/Explicacao";
 import { EtiquetaCategoria } from "@/components/EtiquetaCategoria";
 import { MarcaContestacao } from "@/components/MarcaContestacao";
 import { NotaInferida } from "@/components/NotaInferida"
 
 /**
- * O RESUMO DE UM ATENDIMENTO: quatro leituras lidas de uma vez.
+ * O RESUMO DE UM ATENDIMENTO, numa linha (KISS, 30/10/2026): nota e
+ * categoria primeiro, depois canal, data, duracao, espera e desfecho.
  *
  * As regras que ela nao quebra:
- *   - nota nula e "sem sinal", com a palavra e o motivo, nunca zero (invariante 2);
+ *   - nota nula e "sem sinal", com a palavra, nunca zero (invariante 2); o
+ *     motivo mora no ⓘ;
  *   - a nota, a categoria e a evidencia sao do SERVIDOR (invariante 3) -- aqui so
  *     se desenha;
- *   - `estimativa` colada a nota, `observado` colado a latencia: o que e
- *     inferido e o que e medido nunca se misturam (PRODUCT.md, principio 2);
+ *   - `estimativa` colada a nota: o que e inferido e o que e medido nunca se
+ *     misturam (PRODUCT.md, principio 2);
  *   - a latencia e derivada dos timestamps na leitura, nunca lida de um campo
  *     gravado (invariante 5).
  */
@@ -37,117 +38,61 @@ export function ResumoDoAtendimento({
   duracao: number | null;
 }) {
   const semNota = conversa.nota === null;
-  const latenciaCompacta = mediana === null ? null : formatarDuracaoCompacta(mediana);
+
+  const fatos = [
+    conversa.canal,
+    formatarDataHora(conversa.iniciada_em),
+    duracao !== null ? `duração ${formatarSegundos(duracao)}` : null,
+    mediana !== null
+      ? `espera mediana ${formatarSegundos(mediana)} (${respostas} ${respostas === 1 ? "resposta" : "respostas"})`
+      : null,
+    conversa.escalou_para_humano ? "escalou para humano" : "contido no bot",
+  ].filter((fato): fato is string => fato !== null);
 
   return (
     <section
       aria-label="Resumo do atendimento"
-      className="faixa-indicadores"
+      className="flex min-w-0 flex-col gap-1.5"
     >
-      <Celula rotulo="Nota inferida" qualificacao="estimativa">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {semNota ? (
-          <>
-            <NotaInferida nota={null} className="text-2xl" />
-            <p className="text-xs leading-relaxed text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <CabecaVazada rotulo={ROTULO_SEM_SINAL} className="text-base" />
+            <Explicacao rotulo="Por que não há nota">
               {EXPLICACAO_SEM_SINAL[conversa.motivo_sem_sinal ?? "sem_fala_do_cliente"]}{" "}
-              Sem sinal, não há nota — e ausência de dado não é insatisfação.
-            </p>
-          </>
+              Sem sinal, não há nota, e ausência de dado não é insatisfação.
+            </Explicacao>
+          </span>
         ) : (
           <>
-            <div className="flex items-end gap-2">
+            <span className="flex items-end gap-1.5">
               <NotaInferida nota={conversa.nota} className="text-3xl" />
               <span className="pb-1 text-sm text-muted-foreground">/ 10</span>
-            </div>
-            {/* Colada no numero, e nao no aparato da tela: uma ressalva sobre
-                ESTE numero que morasse no rodape perderia a que numero se
-                refere (DESIGN.md §4.1). */}
-            <MarcaContestacao
-              contestacao={conversa.contestacao}
-              detalhado
-              className="leading-relaxed"
+            </span>
+            <EtiquetaCategoria
+              categoria={conversa.categoria}
+              evidenciaFraca={conversa.evidencia_fraca}
+              motivosEvidencia={conversa.motivos_evidencia_fraca}
+              className="text-base whitespace-normal"
             />
+            <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+              estimativa
+              <Explicacao rotulo="Sobre a nota estimada">
+                Nota inferida do texto pelo servidor, não perguntada ao
+                cliente. A categoria sai da nota pelas faixas vigentes.
+              </Explicacao>
+            </span>
           </>
         )}
-      </Celula>
-
-      <Celula rotulo="Categoria">
-        {/* O slot unico da cabeca: cheia, tracejada ou vazada, com o motivo da
-            evidencia fraca impresso quando houver. */}
-        <EtiquetaCategoria
-          categoria={conversa.categoria}
-          evidenciaFraca={conversa.evidencia_fraca}
-          motivosEvidencia={conversa.motivos_evidencia_fraca}
-          className="text-base whitespace-normal"
-        />
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {conversa.categoria === null
-            ? "Sem nota, sem categoria: ela é derivada da nota no servidor."
-            : "Derivada da nota pelo servidor, com as faixas vigentes."}
-        </p>
-      </Celula>
-
-      <Celula rotulo="Latência mediana" qualificacao="observado">
-        <div className="flex items-end gap-1.5">
-          <ValorNumerico
-            valor={latenciaCompacta === null ? null : latenciaCompacta.valor}
-            rotulo="latência mediana do atendimento"
-            className="text-2xl"
-          />
-          {latenciaCompacta ? (
-            <span className="pb-0.5 text-xs leading-none text-muted-foreground">
-              {latenciaCompacta.unidade}
-            </span>
-          ) : null}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {mediana === null
-            ? "Nenhuma resposta a medir: sem duas mensagens seguidas não há espera."
-            : `sobre ${respostas} ${respostas === 1 ? "resposta" : "respostas"} · ${formatarSegundos(mediana)}`}
-        </p>
-      </Celula>
-
-      <Celula rotulo="Atendimento" qualificacao="observado">
-        <span className="num text-base text-foreground">{conversa.canal}</span>
-        <span className="num block text-xs text-muted-foreground">
-          {formatarDataHora(conversa.iniciada_em)}
-        </span>
-        <span className="num block text-xs text-muted-foreground">
-          {duracao !== null
-            ? `duração ${formatarSegundos(duracao)}`
-            : "sem horário de encerramento"}
-        </span>
-        <span className="block text-xs text-muted-foreground">
-          {conversa.escalou_para_humano ? "escalou para humano" : "contido no bot"}
-        </span>
-      </Celula>
-    </section>
-  );
-}
-
-function Celula({
-  rotulo,
-  qualificacao,
-  children,
-}: {
-  rotulo: string;
-  qualificacao?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="superficie quebra-evitar flex min-w-0 flex-col gap-2.5 px-4 py-3.5">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="rotulo-instrumento">{rotulo}</h2>
-        {qualificacao ? (
-          <Badge
-            variant="outline"
-            className="shrink-0 rounded-sm text-[0.6875rem] text-muted-foreground"
-          >
-            {qualificacao}
-          </Badge>
-        ) : null}
       </div>
-      {children}
-    </div>
+      <p className="num text-sm text-muted-foreground">{fatos.join(" · ")}</p>
+      {semNota ? null : (
+        <MarcaContestacao
+          contestacao={conversa.contestacao}
+          detalhado
+          className="leading-relaxed"
+        />
+      )}
+    </section>
   );
 }
