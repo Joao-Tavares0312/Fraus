@@ -240,6 +240,53 @@ def test_pesos_de_classe_favorecem_a_rara():
     assert pesos[2] == pytest.approx(4 / 3)  # ausente: conta como 1
 
 
+def test_amostra_balanceada_iguala_classes_e_e_deterministica():
+    from fraus.corpora import Exemplos
+    from fraus.receita_treino import amostra_balanceada
+
+    rotulos = _corpus(5000)
+    ex = Exemplos(textos=[str(i) for i in range(5000)], rotulos=rotulos, nomes_classes=["a", "b", "c"])
+    a = amostra_balanceada(ex, 300, semente=1)
+    assert [sum(r == c for r in a.rotulos) for c in range(3)] == [300, 300, 300]
+    assert set(a.textos) <= set(ex.textos)
+    assert a.textos == amostra_balanceada(ex, 300, semente=1).textos
+    assert a.textos != amostra_balanceada(ex, 300, semente=2).textos
+    # classe menor que o pedido entra inteira, sem repetir exemplo
+    b = amostra_balanceada(ex, 10_000, semente=1)
+    assert sorted(b.textos) == sorted(ex.textos)
+
+
+def test_alvos_suaves_espalham_so_a_classe_pedida():
+    from fraus.receita_treino import alvos_suaves
+
+    alvos = alvos_suaves([0, 1, 2], 3, [0.0, 0.2, 0.0])
+    np.testing.assert_allclose(alvos, [[1, 0, 0], [0.1, 0.8, 0.1], [0, 0, 1]])
+    assert alvos.sum(axis=1).tolist() == pytest.approx([1, 1, 1])
+    with pytest.raises(ValueError):
+        alvos_suaves([0], 3, [0.1, 0.2])
+    with pytest.raises(ValueError):
+        alvos_suaves([0], 3, [0.0, 1.0, 0.0])
+
+
+def test_perda_sem_suavizacao_e_a_cross_entropy_ponderada_de_hoje():
+    torch = pytest.importorskip("torch")
+    from fraus.receita_treino import perda_ponderada
+
+    torch.manual_seed(0)
+    logits = torch.randn(8, 3)
+    rotulos = torch.tensor([0, 1, 2, 1, 0, 2, 1, 1])
+    pesos = torch.tensor([1.0, 2.5, 0.7])
+    hoje = torch.nn.functional.cross_entropy(logits, rotulos, weight=pesos)
+    assert perda_ponderada(logits, rotulos, pesos, None).item() == pytest.approx(hoje.item())
+    assert perda_ponderada(logits, rotulos, pesos, [0.0, 0.0, 0.0]).item() == pytest.approx(hoje.item())
+    suave = perda_ponderada(logits, rotulos, pesos, [0.0, 0.2, 0.0])
+    alvo = torch.nn.functional.one_hot(rotulos, 3).float()
+    alvo[rotulos == 1] = torch.tensor([0.1, 0.8, 0.1])
+    w = pesos[rotulos]
+    esperado = (w * -(alvo * logits.log_softmax(-1)).sum(-1)).sum() / w.sum()
+    assert suave.item() == pytest.approx(esperado.item())
+
+
 def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path, monkeypatch):
     """Fumaca em CPU: modelo aleatorio de 2 camadas, montado aqui, sem download."""
     torch = pytest.importorskip("torch")
@@ -294,8 +341,9 @@ def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path, monkeypa
     r = treinar_uma_semente(
         modelo_base=str(base), lados=lados, semente=7, dir_checkpoint=str(tmp_path / "ck"),
         dir_saida=str(saida), epocas=2, lote=16, fp16=False, taxa=5e-3,
-        tamanho_maximo=24,
+        tamanho_maximo=24, suavizacao_por_classe=[0.0, 0.2, 0.0],
     )
+    assert r["suavizacao_por_classe"] == [0.0, 0.2, 0.0]
     assert r["tamanhos"]["teste"] == len(lados["teste"].textos)
     assert r["temperatura"] > 0
     assert "f1_macro" not in r and "teste" not in r
@@ -338,6 +386,7 @@ def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path, monkeypa
         modelo_base=str(base), lados={**lados, "teste": teste_alterado}, semente=7,
         dir_checkpoint=str(tmp_path / "ck-repeticao"), dir_saida=str(tmp_path / "repeticao"),
         epocas=2, lote=16, fp16=False, taxa=5e-3, tamanho_maximo=24,
+        suavizacao_por_classe=[0.0, 0.2, 0.0],
     )
     assert curvas(repeticao) == curva
     assert repeticao["melhor_epoca"] == r["melhor_epoca"]
