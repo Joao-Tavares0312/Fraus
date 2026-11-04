@@ -19,12 +19,12 @@ const NUMERICAS: Record<string, { rotulo: string; explicacao: string }> = {
   },
   f1_macro: {
     rotulo: "F1-macro",
-    explicacao: "média não ponderada do F1 das classes — a classe rara pesa igual",
+    explicacao: "média não ponderada do F1 das classes: a classe rara pesa igual",
   },
   f1_macro_xed_pt: {
     rotulo: "F1-macro no XED-pt",
     explicacao:
-      "corpus independente, em português europeu, SEM tradução automática — é o quanto o modelo generaliza fora do corpus que o treinou",
+      "corpus independente, em português europeu, SEM tradução automática: é o quanto o modelo generaliza fora do corpus que o treinou",
   },
   f1_ironico: {
     rotulo: "F1 da classe irônica",
@@ -96,7 +96,7 @@ export function MetricasTreino({
       <EstadoVazio
         className="m-5"
         titulo="Métricas de treino não publicadas neste servidor"
-        explicacao="GET /modelo respondeu metricas: null para todas: este servidor não tem os arquivos de métricas que os notebooks exportam. Isso acontece antes do treino e também quando o pacote publicado leva os pesos mas não os metricas.json — a resposta sozinha não distingue os dois casos, e o servidor não inventa número. Zero não é resposta: seria dizer que o modelo erra tudo."
+        explicacao="Este servidor não tem os arquivos de métricas que os notebooks exportam. Isso acontece antes do treino e também quando o pacote publicado leva os pesos mas não as métricas: a resposta sozinha não distingue os dois casos, e o servidor não inventa número. Zero não é resposta: seria dizer que o modelo erra tudo."
         etapa="notebooks/01 (satisfação), 03 (emoção) e 04 (ironia), descritos em docs/treinamento.md"
       />
     );
@@ -166,8 +166,8 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
             descreve. Ver `fraus/api/rotas/modelo.py` e `docs/treinamento.md`. */}
         <span className="text-xs text-muted-foreground">
           {cabeca.pontua
-            ? "entra no fusor — é esta cabeça que move a nota"
-            : "não entra no fusor — cabeça treinada, mas ainda não pontua"}
+            ? "entra na nota"
+            : "não entra na nota, só é lida por mensagem"}
         </span>
         {cabeca.classes.length > 0 ? (
           <span className="num text-xs text-muted-foreground">
@@ -178,8 +178,8 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
 
       {metricas === null ? (
         <p className="text-xs text-muted-foreground">
-          Ainda não treinada — <code className="num">metricas: null</code>, que é
-          o valor correto antes do treino. Zero seria dizer que ela erra tudo.
+          Ainda não treinada, então não há medida. Zero seria dizer que ela erra
+          tudo.
         </p>
       ) : (
         <>
@@ -214,8 +214,7 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
                     ) : null}
                   </dd>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    {NUMERICAS[chave].explicacao} · campo{" "}
-                    <code className="num">{chave}</code>
+                    {NUMERICAS[chave].explicacao}
                   </p>
                 </div>
               );
@@ -225,7 +224,7 @@ function Cabeca({ cabeca }: { cabeca: CabecaDeModelo }) {
           {temSuspeita ? (
             <p className="text-xs leading-relaxed text-warning-rich-text">
               Métrica perfeita em tarefa de linguagem quase nunca significa
-              modelo bom — significa que o conjunto de teste se parece demais
+              modelo bom: significa que o conjunto de teste se parece demais
               com o de treino.
               {/* "Leia a limitacao abaixo" so aparece quando `limitacao` de
                   fato vem em `metricas` -- ela nao e campo garantido pelo

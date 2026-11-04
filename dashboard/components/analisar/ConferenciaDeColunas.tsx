@@ -31,8 +31,8 @@ const ROTULO_PAPEL: Record<Papel, string> = {
 };
 
 const EXPLICACAO_PAPEL: Record<Papel, string> = {
-  texto: "obrigatório — o que foi dito",
-  autor: "obrigatório — cliente, bot ou atendente",
+  texto: "obrigatório: o que foi dito",
+  autor: "obrigatório: cliente, bot ou atendente",
   enviada_em: "sem ela não há latência, logo não há nota",
   conversa_id: "sem ela o arquivo vira uma conversa só",
   canal: "opcional",
@@ -124,15 +124,15 @@ export function ConferenciaDeColunas({
               {(atual: string | null) =>
                 !atual || atual === NENHUMA
                   ? obrigatorio
-                    ? "— escolha uma coluna —"
-                    : "— o arquivo não tem —"
+                    ? "Escolha uma coluna"
+                    : "O arquivo não tem"
                   : atual
               }
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NENHUMA}>
-              {obrigatorio ? "— escolha uma coluna —" : "— o arquivo não tem —"}
+              {obrigatorio ? "Escolha uma coluna" : "O arquivo não tem"}
             </SelectItem>
             {mapa.colunas.map((coluna) => (
               <SelectItem key={coluna} value={coluna}>
@@ -151,7 +151,7 @@ export function ConferenciaDeColunas({
   return (
     <Painel
       titulo="Conferir colunas"
-      legenda="Não tive certeza de quais colunas usar. Confira a fala e quem falou — uma coluna errada não dá erro, dá uma nota errada. Nada foi gravado ainda."
+      legenda="Não tive certeza de quais colunas usar. Confira a fala e quem falou. Uma coluna errada não dá erro, dá uma nota errada. Nada foi gravado ainda."
     >
       {/* `@container`: a grade responde à largura do painel, não à da janela. */}
       <div className="@container flex flex-col gap-4 px-5 py-4">
@@ -169,7 +169,7 @@ export function ConferenciaDeColunas({
 
         <details className="group/mais" open={!previa.tem_tempo || undefined}>
           <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-            Mais colunas — data, conversa e canal
+            Mais colunas: data, conversa e canal
           </summary>
           <div className="mt-3 grid gap-3 @xl:grid-cols-2">
             {OPCIONAIS.map(campo)}
@@ -182,7 +182,7 @@ export function ConferenciaDeColunas({
               Ordem da data
               {mapa.data_ambigua ? (
                 <span className="ml-1.5 text-xs text-warning-rich-text">
-                  ambígua — nenhum campo passa de 12
+                  ambígua: nenhum campo passa de 12
                 </span>
               ) : null}
             </legend>

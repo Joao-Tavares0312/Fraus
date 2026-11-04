@@ -73,7 +73,7 @@ export function EstadoVazio({
 
         {apiFora ? (
           <EmptyDescription className="text-sm leading-relaxed">
-            Sem dado enquanto a API não responde — a ação está na faixa no topo
+            Sem dado enquanto a API não responde. A ação está na faixa no topo
             da tela.
           </EmptyDescription>
         ) : explicacao ? (

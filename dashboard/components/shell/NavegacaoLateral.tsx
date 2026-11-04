@@ -32,7 +32,7 @@ export function NavegacaoLateral({ papel, usuario }: {
   return <Sidebar collapsible="icon" aria-label="Navegação principal">
     <SidebarHeader className="flex-row items-center gap-2 px-3 py-4 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-2.5">
       <MarcaFraus tamanho={32} />
-      <Link href={`/dashboard${sufixo}`} onClick={aoNavegar} aria-label="Fraus — voltar para a visão geral" className="min-w-0 flex-1 rounded-md py-2 text-2xl font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:hidden">
+      <Link href={`/dashboard${sufixo}`} onClick={aoNavegar} aria-label="Fraus: voltar para a visão geral" className="min-w-0 flex-1 rounded-md py-2 text-2xl font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:hidden">
         Fraus
       </Link>
       <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:ml-0" />
@@ -48,7 +48,7 @@ export function NavegacaoLateral({ papel, usuario }: {
                 <SidebarMenuButton
                   isActive={ativa}
                   aria-label={nome}
-                  tooltip={ativa ? `${nome} — seção atual` : nome}
+                  tooltip={ativa ? `${nome} (seção atual)` : nome}
                   className={ITEM}
                   render={<Link href={`${href}${sufixo}`} onClick={aoNavegar} aria-current={ativa ? (caminho === href ? "page" : "location") : undefined} />}
                 >

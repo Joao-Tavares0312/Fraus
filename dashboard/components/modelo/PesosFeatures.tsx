@@ -56,7 +56,7 @@ export function PesosFeatures({
       <EstadoVazio
         className="m-5"
         titulo="O modelo não devolveu pesos"
-        explicacao="GET /modelo respondeu com o mapa de importâncias vazio. Sem fusor treinado não há coeficiente a exibir, e desenhar 39 barras iguais seria inventar um modelo."
+        explicacao="O servidor respondeu sem os pesos. Sem fusor treinado não há coeficiente a exibir, e desenhar 39 barras iguais seria inventar um modelo."
         etapa="notebook 02 (treino do fusor)"
       />
     );

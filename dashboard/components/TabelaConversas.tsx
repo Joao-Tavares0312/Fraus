@@ -44,7 +44,6 @@ import {
 } from "@/components/ui/table";
 import { EtiquetaCategoria } from "./EtiquetaCategoria";
 import { MarcaContestacao } from "./MarcaContestacao";
-import { EstadoVazio } from "./EstadoVazio";
 import { CabecaVazada } from "./CabecaVazada";
 import { NotaInferida } from "./NotaInferida"
 import { cn } from "@/lib/utils";
@@ -121,6 +120,19 @@ function Miudo({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
+
+const ITENS_CATEGORIA = [
+  { value: "todas", label: "Todas" },
+  { value: "detrator", label: "Detrator" },
+  { value: "neutro", label: "Neutro" },
+  { value: "promotor", label: "Promotor" },
+  { value: "sem-sinal", label: "Sem sinal" },
+];
+
+const ITENS_DESFECHO = [
+  { value: "todos", label: "Todos" },
+  ...Object.entries(ROTULO_DESFECHO).map(([value, label]) => ({ value, label })),
+];
 
 const CLASSE_DESFECHO: Record<Desfecho, string> = {
   // Os dois desfechos que exigem acao ficam legiveis a distancia; o resto
@@ -411,7 +423,7 @@ export function TabelaConversas({
     ]);
 
     const texto = [
-      [`# Fraus — atendimentos de ${rotuloDoPeriodo}`],
+      [`# Fraus: atendimentos de ${rotuloDoPeriodo}`],
       ["# nota_inferida é estimativa a partir do texto, não NPS declarado"],
       ["# tempo em branco = essa espera não existiu; não é zero"],
       [
@@ -435,16 +447,6 @@ export function TabelaConversas({
     ancora.click();
     URL.revokeObjectURL(url);
   };
-
-  if (linhas.length === 0) {
-    return (
-      <EstadoVazio
-        className="m-5"
-        titulo="Nenhum atendimento no período"
-        explicacao="Ou o recorte de período não cobre nenhum atendimento, ou a API respondeu com uma lista vazia. Importe um CSV pela tela de Integrações ou suba o servidor de demonstração para popular o banco."
-      />
-    );
-  }
 
   const visiveis = tabela.getRowModel().rows;
 
@@ -481,6 +483,7 @@ export function TabelaConversas({
           {/* O Select do chassi permite limpar a selecao (valor `null`);
               aqui isso significa "todas", nao "nenhuma categoria". */}
           <Select
+            items={ITENS_CATEGORIA}
             value={categoria}
             onValueChange={(valor) => {
               setCategoria(valor ?? "todas");
@@ -491,11 +494,11 @@ export function TabelaConversas({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todas">Todas</SelectItem>
-              <SelectItem value="detrator">Detrator</SelectItem>
-              <SelectItem value="neutro">Neutro</SelectItem>
-              <SelectItem value="promotor">Promotor</SelectItem>
-              <SelectItem value="sem-sinal">Sem sinal</SelectItem>
+              {ITENS_CATEGORIA.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -508,6 +511,7 @@ export function TabelaConversas({
             Desfecho
           </Label>
           <Select
+            items={ITENS_DESFECHO}
             value={desfecho}
             onValueChange={(valor) => {
               setDesfecho(valor ?? "todos");
@@ -518,10 +522,9 @@ export function TabelaConversas({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              {Object.entries(ROTULO_DESFECHO).map(([chave, rotulo]) => (
-                <SelectItem key={chave} value={chave}>
-                  {rotulo}
+              {ITENS_DESFECHO.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -154,8 +154,8 @@ export function LexiconEmoji({ total }: { total: number }) {
           }
           explicacao={
             busca
-              ? "A busca casa o emoji exato, não o nome dele. Um emoji com modificador de tom de pele ou em sequência ZWJ é outra entrada — cole o caractere como ele aparece na conversa."
-              : "GET /modelo/lexicon respondeu sem itens. O lexicon é gerado por scripts/gerar_lexico_emoji.py a partir do Emoji Sentiment Ranking."
+              ? "A busca casa o emoji exato, não o nome dele. Um emoji com modificador de tom de pele ou em sequência ZWJ é outra entrada: cole o caractere como ele aparece na conversa."
+              : "O servidor respondeu sem itens. O lexicon é gerado a partir do Emoji Sentiment Ranking."
           }
         />
       ) : (

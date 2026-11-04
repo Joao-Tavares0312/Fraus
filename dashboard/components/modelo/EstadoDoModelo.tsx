@@ -47,19 +47,18 @@ export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaM
 
   return (
     <Painel
-      titulo="O veredito, antes do número"
+      titulo="Limites do que foi medido"
       nivel={nivel}
       legenda={
         <>
           A ironia foi a primeira família a entrar no vetor do fusor, em
-          21/08/2026, e a primeira a sair dele, em 04/09/2026 -- a cabeça (IDPT
+          21/08/2026, e a primeira a sair dele, em 04/09/2026. A cabeça (IDPT
           2021, treinada em tweet e notícia) mede sentimento positivo no corpus
           de treino deste projeto, não ironia, porque frase educada com queixa
           real (&ldquo;que atendimento maravilhoso, só esperei 3 horas&rdquo;) é exatamente
           o padrão que ela aprendeu a reconhecer como irônica em outro domínio.
-          Ela continua carregada, obrigatória e lida por mensagem -- aparece em
-          `mensagens[].prob_ironia` e no simulador abaixo -- só não pesa mais em
-          `contribuicoes` nem em `importancias`.{" "}
+          Ela continua carregada, obrigatória e lida por mensagem, e aparece no
+          simulador abaixo. Só não pesa mais na nota.{" "}
           {f1Percentual !== null
             ? `O F1 de ${f1Percentual}% mede acerto no`
             : "O F1 mede acerto no"}{" "}
@@ -91,14 +90,14 @@ export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaM
           {ironia ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
               {ironia.pontua
-                ? "A API reporta esta cabeça como parte do fusor agora — o texto acima já reflete isso, mas as demais ressalvas desta tela sobre a ironia (métrica medida em corpus sintético) continuam valendo."
-                : "Carregada, obrigatória e lida por mensagem, mas fora de `importancias` e `contribuicoes` desde 04/09/2026: medida no corpus de treino, ela funciona como detector de sentimento positivo, não de ironia."}
+                ? "A API reporta esta cabeça como parte do fusor agora: o texto acima já reflete isso, mas as demais ressalvas desta tela sobre a ironia (métrica medida em corpus sintético) continuam valendo."
+                : "Lida por mensagem, mas fora da nota desde 04/09/2026: medida no corpus de treino, ela funciona como detector de sentimento positivo, não de ironia."}
             </p>
           ) : (
             <EstadoVazio
               className="mt-1"
               titulo="A cabeça de ironia não subiu"
-              explicacao="GET /modelo não trouxe uma cabeça chamada `ironia` em `cabecas`. Sem ela não há como confirmar se continua fora do fusor."
+              explicacao="A ficha do modelo não trouxe a cabeça de ironia. Sem ela não há como confirmar se continua fora da nota."
               etapa="notebook 04 (ironia), descrito em docs/treinamento.md"
             />
           )}
@@ -143,7 +142,7 @@ export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaM
             <EstadoVazio
               className="mt-1"
               titulo="O F1 da ironia ainda não foi exportado"
-              explicacao="`metricas.f1_ironico` não veio de GET /modelo — nem para a cabeça de ironia, nem com valor 0, que seria dizer que ela erra tudo."
+              explicacao="Esta medida não veio na ficha do modelo. Sem ela, não mostramos número nenhum: zero diria que a cabeça erra tudo."
               etapa="notebook 04 (ironia), que exporta metricas.json"
             />
           )}
@@ -162,9 +161,8 @@ export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaM
           </span>
           <p className="text-xs leading-relaxed text-muted-foreground">
             Latência, escalação e abandono aprendem de conversas sintéticas
-            calibradas por literatura de live chat — nenhum corpus público de
-            review em português tem timestamps de diálogo. Limitação
-            declarada, não escondida.
+            calibradas por literatura de live chat, porque nenhum corpus público
+            de review em português tem timestamps de diálogo.
           </p>
         </li>
       </ul>

@@ -59,7 +59,7 @@ export function ConectarTars({ fontes, baseDaApi }: {
         <div className="flex min-w-0 flex-col gap-1">
           <p className="text-sm font-medium">
             {fonte?.chave_dica
-              ? `Conectado — chave terminando em ${fonte.chave_dica}`
+              ? `Conectado: chave terminando em ${fonte.chave_dica}`
               : "Ainda não conectado"}
           </p>
           <p className="max-w-[72ch] text-sm text-muted-foreground">
@@ -73,7 +73,7 @@ export function ConectarTars({ fontes, baseDaApi }: {
       {chave ? (
         <ChaveEmClaro chave={chave} titulo="Chave do TARS">
           Cole esta chave no TARS, em Integrações → Fraus. Ela não aparece de
-          novo; se perder, gere outra — a anterior deixa de valer.
+          novo; se perder, gere outra: a anterior deixa de valer.
         </ChaveEmClaro>
       ) : null}
 

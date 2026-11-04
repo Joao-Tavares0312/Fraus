@@ -124,7 +124,7 @@ export function AvisoLexicoAntigo({
       <AlertDescription className="flex flex-col gap-2">
         <span>
           Os números desta tela somam duas réguas. Repontuar recalcula o banco
-          inteiro com o léxico e o modelo vigentes — roda os três classificadores de novo por
+          inteiro com o léxico e o modelo vigentes. Roda os três classificadores de novo por
           atendimento, em segundo plano. Enquanto roda, a mistura continua: a
           tela só fica numa régua quando terminar.
         </span>

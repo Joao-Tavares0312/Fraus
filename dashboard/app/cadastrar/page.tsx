@@ -6,7 +6,7 @@ import { MolduraDeConta } from "@/components/auth/MolduraDeConta";
 import { estadoAutenticacao, usuarioDaSessao } from "@/lib/sessao";
 import { destinoAuth, tokenDeConvite } from "@/lib/destino-auth";
 
-export const metadata: Metadata = { title: "Criar conta — Fraus" };
+export const metadata: Metadata = { title: "Criar conta | Fraus" };
 
 export default async function PaginaCadastrar({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const convite = tokenDeConvite((await searchParams).convite);

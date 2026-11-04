@@ -14,7 +14,7 @@ export const ROTULO_SEM_SINAL = "sem sinal";
 export const EXPLICACAO_SEM_SINAL: Record<"sem_fala_do_cliente" | "so_cortesia", string> = {
   sem_fala_do_cliente: "O cliente não falou neste atendimento.",
   so_cortesia:
-    "O cliente só usou fórmulas de cortesia (“ok, obrigado”, “valeu”), que fecham atendimento bom e ruim — não dizem nada sobre satisfação.",
+    "O cliente só usou fórmulas de cortesia (“ok, obrigado”, “valeu”), que fecham atendimento bom e ruim. Não dizem nada sobre satisfação.",
 };
 
 /** A mesma ausencia, contada no agregado, onde os dois motivos se somam. */

@@ -6,7 +6,7 @@ import { sessaoAtual } from "@/lib/sessao";
 import { tokenDeConvite } from "@/lib/destino-auth";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Convite de equipe — Fraus", robots: { index: false, follow: false }, referrer: "no-referrer" };
+export const metadata: Metadata = { title: "Convite de equipe | Fraus", robots: { index: false, follow: false }, referrer: "no-referrer" };
 
 export default async function PaginaConvite({ params }: { params: Promise<{ token: string }> }) {
   const token = tokenDeConvite((await params).token);

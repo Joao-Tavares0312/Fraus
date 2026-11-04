@@ -55,7 +55,7 @@ export function TextoComPesos({
         <span
           key={indice}
           className="underline decoration-dotted decoration-muted-foreground underline-offset-4"
-          title="Acima do limite de palavras medidas nesta mensagem — sem medição, o que é diferente de peso zero."
+          title="Acima do limite de palavras medidas nesta mensagem: sem medição, o que é diferente de peso zero."
         >
           {trecho}
         </span>,

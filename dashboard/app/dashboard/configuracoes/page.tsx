@@ -16,6 +16,8 @@
  */
 
 import { obterConfiguracoes, obterEstadoDeAcesso } from "@/lib/api";
+import { erroEmFrase } from "@/lib/erro-publico";
+import { sessaoAtual } from "@/lib/sessao";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
@@ -31,6 +33,8 @@ const SUBTITULO =
   "O que esta tela muda vale na LEITURA: as faixas decidem em que categoria cada nota já medida cai, e os limiares decidem onde a espera passa a ser chamada de longa. Nenhum score é recalculado aqui.";
 
 export default async function PaginaConfiguracoes() {
+  const sessao = await sessaoAtual();
+  const ehDev = (sessao.estado === "logada" ? sessao.usuario.papel : "dev") === "dev";
   // As duas em paralelo: uma nao depende da outra, e /acesso/estado responde
   // mesmo quando /configuracoes leva 401 por falta de credencial.
   const [resultado, acesso] = await Promise.all([
@@ -57,8 +61,8 @@ export default async function PaginaConfiguracoes() {
 
           <EstadoVazio
             titulo="A configuração não carregou"
-            explicacao={`${resultado.erro}. Sem ela não há faixa vigente nem padrão de fábrica a exibir — e preencher os campos com 0–6/7–8/9–10 digitados aqui criaria uma segunda fonte da mesma regra, que é exatamente o defeito que esta tela existe para não ter.`}
-            endpoint="GET /configuracoes"
+            explicacao={`${erroEmFrase(resultado.erro, ehDev)} Sem ela não há faixa vigente nem padrão de fábrica a exibir, e preencher os campos com 0–6/7–8/9–10 digitados aqui criaria uma segunda fonte da mesma regra, que é exatamente o defeito que esta tela existe para não ter.`}
+            endpoint={ehDev ? "GET /configuracoes" : undefined}
           />
         </div>
       </>
@@ -82,9 +86,9 @@ export default async function PaginaConfiguracoes() {
         <Painel
           titulo="Faixas de NPS"
           nivel="dominante"
-          legenda="Qual nota é detrator, neutro e promotor. É a mesma faixa que o servidor usa para responder /indicadores e /conversas, no mesmo instante — não existe cópia dela na interface."
+          legenda="Qual nota é detrator, neutro e promotor. É a mesma faixa que o servidor usa para responder /indicadores e /conversas, no mesmo instante. Não existe cópia dela na interface."
           semPadding
-          rodape="A regra que o servidor cobra: as faixas precisam cobrir 0 a 10 inteiro, sem buraco e sem sobreposição. Ela não é reimplementada aqui — quando a configuração não fecha, a mensagem que aparece é a da API, que diz qual nota ficou de fora."
+          rodape="A regra que o servidor cobra: as faixas precisam cobrir 0 a 10 inteiro, sem buraco e sem sobreposição. Ela não é reimplementada aqui: quando a configuração não fecha, a mensagem que aparece é a da API, que diz qual nota ficou de fora."
         >
           <FaixasNps
             vigente={vigente.faixas_nps as Faixas}
@@ -115,7 +119,7 @@ export default async function PaginaConfiguracoes() {
               </strong>{" "}
               Os três estão fundidos nos coeficientes de um modelo já treinado:
               desligar um exigiria retreinar o fusor. Um interruptor que não faz
-              o que diz é pior que a ausência dele — os pesos de cada sinal estão
+              o que diz é pior que a ausência dele. Os pesos de cada sinal estão
               visíveis na tela Modelo.
             </li>
             <li>
@@ -131,7 +135,7 @@ export default async function PaginaConfiguracoes() {
               </strong>{" "}
               Ligar é um clique; desligar não é botão. Um controle que baixa a
               defesa numa tela sem login não tem contrapartida de risco
-              aceitável — desligar é trabalho de ambiente (apagar a variável e a
+              aceitável. Desligar é trabalho de ambiente (apagar a variável e a
               linha do banco).
             </li>
             <li>

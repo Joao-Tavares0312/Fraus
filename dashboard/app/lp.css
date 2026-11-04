@@ -155,7 +155,7 @@
   --placa-afasta: 5px;
   --placa-abre: 12px;
   --placa-duracao: 350ms;
-  --placa-curva: cubic-bezier(.3, 1.3, .5, 1);
+  --placa-curva: cubic-bezier(.2, 0, 0, 1);
 }
 .lp .stat { padding: 14px 16px; display: flex; flex-direction: column-reverse; }
 .lp .stat dd { margin: 0; font: 500 34px/1.1 var(--ui); font-variant-numeric: tabular-nums; color: var(--medido-texto); }

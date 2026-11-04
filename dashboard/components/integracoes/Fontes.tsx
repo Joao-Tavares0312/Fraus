@@ -217,7 +217,7 @@ export function Fontes({
                 id={`${identificador}-nome`}
                 className="mt-1"
                 value={nova.nome}
-                placeholder="Suporte — Zendesk"
+                placeholder="Suporte Zendesk"
                 onChange={(evento) =>
                   setNova({ ...nova, nome: evento.target.value })
                 }
@@ -250,6 +250,7 @@ export function Fontes({
                 Tipo
               </Label>
               <Select
+                items={TIPOS.map(({ valor, rotulo }) => ({ value: valor, label: rotulo }))}
                 value={nova.tipo}
                 onValueChange={(valor) =>
                   setNova({ ...nova, tipo: valor ?? "csv" })
@@ -308,7 +309,7 @@ export function Fontes({
                 <strong className="text-foreground">
                   nome de uma variável de ambiente
                 </strong>{" "}
-                — <span className="num">FRAUS_TOKEN_ZENDESK</span>, não o token.
+                (<span className="num">FRAUS_TOKEN_ZENDESK</span>), não o token.
                 Por isso não existe campo de senha nesta tela: credencial em
                 texto puro dentro do SQLite vazaria junto com o backup. Quem lê
                 a variável é a API, na máquina onde ela roda.
@@ -374,7 +375,7 @@ export function Fontes({
           ) : fontes.length === 0 ? (
             <EstadoVazio
               titulo="Nenhuma fonte cadastrada"
-              explicacao="O cadastro de fontes registra por onde a conversa entra: nome, canal, tipo e o nome da variável de ambiente que carrega a credencial. Enquanto ele estiver vazio, os atendimentos importados continuam existindo — a fonte é o registro da origem, não a origem do dado. Comece pelo formulário acima."
+              explicacao="O cadastro de fontes registra por onde a conversa entra: nome, canal, tipo e o nome da variável de ambiente que carrega a credencial. Enquanto ele estiver vazio, os atendimentos importados continuam existindo: a fonte é o registro da origem, não a origem do dado. Comece pelo formulário acima."
               endpoint="POST /integracoes/fontes"
             />
           ) : (
@@ -384,7 +385,7 @@ export function Fontes({
               // operação, e obrigar um clique para ver qualquer coisa seria
               // cerimônia. Este vazio é o do caminho em que a seleção se
               // desfez — a fonte aberta foi removida, ou sumiu numa recarga.
-              explicacao="Chave de API, segredo de assinatura, contrato do webhook e histórico de entregas são de uma fonte por vez. A fonte que estava aberta aqui não existe mais na lista — escolha outra à esquerda para continuar."
+              explicacao="Chave de API, segredo de assinatura, contrato do webhook e histórico de entregas são de uma fonte por vez. A fonte que estava aberta aqui não existe mais na lista. Escolha outra à esquerda para continuar."
             />
           )}
         </div>

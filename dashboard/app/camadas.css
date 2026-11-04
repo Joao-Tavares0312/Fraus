@@ -133,7 +133,7 @@
     /* sem opacity nem transform: o GSAP da LP le o valor final de .rv no
        computado, e uma transicao ali faz o botao nascer e ficar invisivel */
     transition:
-      filter var(--placa-duracao, 300ms) var(--placa-curva, cubic-bezier(.3, 1.4, .5, 1)),
+      filter var(--placa-duracao, 300ms) var(--placa-curva, cubic-bezier(.2, 0, 0, 1)),
       color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms;
   }
   .placas-so-hover { --placa-desvio: 0px; }
@@ -150,7 +150,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    transition: transform var(--placa-duracao, 300ms) var(--placa-curva, cubic-bezier(.3, 1.4, .5, 1));
+    transition: transform var(--placa-duracao, 300ms) var(--placa-curva, cubic-bezier(.2, 0, 0, 1));
   }
   .placas::before,
   .placas-so-hover::before {

@@ -109,11 +109,11 @@ export function ChaveDaFonte({
       {chave ? (
         <ChaveEmClaro
           chave={chave}
-          titulo="Copie agora — esta chave não pode ser lida de novo"
+          titulo="Copie agora: esta chave não pode ser lida de novo"
         >
           <p>
             O servidor guarda apenas o hash dela. Se você perder, o conserto é
-            gerar outra — e a de agora para de funcionar.
+            gerar outra, e a de agora para de funcionar.
           </p>
         </ChaveEmClaro>
       ) : null}
@@ -160,7 +160,7 @@ export function ChaveDaFonte({
             {exemplo}
           </pre>
           <p className="mt-2">
-            O <strong>canal</strong> é o desta fonte ({fonte.canal}) — quem manda
+            O <strong>canal</strong> é o desta fonte ({fonte.canal}). Quem manda
             o dado não escolhe onde ele é contabilizado. Score, nota e categoria
             são derivados no servidor e ignorados se vierem no corpo. Desativar a
             fonte aqui recusa a ingestão com 403, sem precisar revogar a chave.

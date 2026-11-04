@@ -24,7 +24,7 @@ const ROTULO: Record<Camada, string> = {
 const DESCRICAO: Record<Camada, string> = {
   lexico: "termos e emojis que apareceram na fala",
   dominio: "conversas, categorias, canais e desfechos",
-  proveniencia: "de onde o dado veio — fontes e importações",
+  proveniencia: "de onde o dado veio: fontes e importações",
 };
 
 export function ReguaDeCamadas({

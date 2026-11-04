@@ -261,24 +261,24 @@ export function rotulosLatencia(
     pico: {
       titulo: "Resposta imediata",
       detalhe: padrao
-        ? `até ${limiares.pico} s — pico de satisfação na literatura de live chat (CSAT ~84,7%)`
-        : `até ${limiares.pico} s — corte configurado em Configurações`,
+        ? `até ${limiares.pico} s: pico de satisfação na literatura de live chat (CSAT ~84,7%)`
+        : `até ${limiares.pico} s: corte configurado em Configurações`,
     },
     saudavel: {
       titulo: "Espera saudável",
-      detalhe: `entre ${limiares.pico} s e ${limiares.saudavel} s — fora do pico, ainda dentro do saudável`,
+      detalhe: `entre ${limiares.pico} s e ${limiares.saudavel} s: fora do pico, ainda dentro do saudável`,
     },
     degradando: {
       titulo: "Espera longa",
       detalhe: padrao
-        ? `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — a satisfação degrada de 2 a 3 pontos de CSAT por minuto extra`
-        : `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min — corte configurado em Configurações`,
+        ? `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min: a satisfação degrada de 2 a 3 pontos de CSAT por minuto extra`
+        : `entre ${limiares.saudavel} s e ${emMinutos(limiares.degradando)} min: corte configurado em Configurações`,
     },
     abandono: {
       titulo: "Espera crítica",
       detalhe: padrao
-        ? `acima de ${emMinutos(limiares.degradando)} min — faixa de abandono: 57% dos clientes desistem`
-        : `acima de ${emMinutos(limiares.degradando)} min — corte configurado em Configurações`,
+        ? `acima de ${emMinutos(limiares.degradando)} min: faixa de abandono: 57% dos clientes desistem`
+        : `acima de ${emMinutos(limiares.degradando)} min: corte configurado em Configurações`,
     },
   };
 }

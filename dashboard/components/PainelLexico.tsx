@@ -98,7 +98,7 @@ export function PainelLexico({ classes }: { classes: LexicoDaClasse[] }) {
                       // tabela e de 2015 e simplesmente nao o conhece.
                       title={
                         polaridade === null
-                          ? "este emoji não está no Emoji Sentiment Ranking — sem polaridade publicada"
+                          ? "este emoji não está no Emoji Sentiment Ranking, sem polaridade publicada"
                           : `polaridade ${polaridade > 0 ? "+" : ""}${polaridade.toFixed(2)} no Emoji Sentiment Ranking`
                       }
                       className="inline-flex items-center gap-1.5 rounded-sm border border-border px-2 py-1 text-xs text-muted-foreground"

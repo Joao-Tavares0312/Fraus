@@ -62,7 +62,7 @@ export function Autenticacao({
          contrarias na mesma tela. */
       acessorio={<IndicadorDeEstado ligada={estado.ligada || ligadas !== null} />}
       legenda="A única coisa nesta tela que não é de leitura: ligar passa a exigir chave em toda rota da API, na requisição seguinte, sem reiniciar o servidor."
-      rodape="A chave mestra administra (emite e revoga chaves de acesso, troca a si mesma); a chave de acesso apenas lê. POST /ingestao segue regido pela chave da fonte, que é uma credencial por rota — nenhuma das duas a substitui."
+      rodape="A chave mestra administra (emite e revoga chaves de acesso, troca a si mesma); a chave de acesso apenas lê. POST /ingestao segue regido pela chave da fonte, que é uma credencial por rota: nenhuma das duas a substitui."
     >
       <Corpo
         estado={estado}
@@ -132,11 +132,11 @@ function Corpo({
   if (ligadas) {
     return (
       <div className="flex flex-col gap-3">
-        <ChaveEmClaro chave={ligadas.chave_mestra} titulo="Chave mestra — copie agora">
+        <ChaveEmClaro chave={ligadas.chave_mestra} titulo="Chave mestra: copie agora">
           <p>
             É a credencial de <strong>administração</strong>: emitir e revogar
             chaves de acesso, e trocar a própria mestra. O servidor guarda apenas
-            o hash dela — se você perder, o conserto é definir{" "}
+            o hash dela. Se você perder, o conserto é definir{" "}
             <code className="num">FRAUS_CHAVE_MESTRA</code> no ambiente e
             reiniciar a API.
           </p>
@@ -159,7 +159,7 @@ function Corpo({
             <AlertTitle>Mestra trocada</AlertTitle>
             <AlertDescription>
               A anterior deixou de valer agora. As chaves de acesso continuam as
-              mesmas — trocar a mestra não desconecta a dashboard.
+              mesmas: trocar a mestra não desconecta a dashboard.
             </AlertDescription>
           </Alert>
         )}
@@ -187,7 +187,7 @@ function Corpo({
           A API está <strong className="text-foreground">aberta</strong>: quem
           alcança a porta dela lê os atendimentos, sem chave. Ligar gera a chave
           mestra e uma chave de acesso para esta dashboard, e passa a exigir
-          credencial em toda rota — <strong>sem reiniciar o servidor</strong>. A
+          credencial em toda rota, <strong>sem reiniciar o servidor</strong>. A
           exceção é <code className="num">POST /ingestao</code>, que continua
           regido pela chave da fonte.
         </p>
@@ -215,7 +215,7 @@ function Corpo({
         </p>
         <p className="text-xs leading-relaxed text-muted-foreground">
           Para trocar: edite a variável e reinicie a API. As chaves de acesso
-          continuam valendo — quem perde o posto é só a mestra.
+          continuam valendo: quem perde o posto é só a mestra.
         </p>
       </div>
     );
@@ -236,7 +236,7 @@ function Corpo({
           <AlertDescription>
             A autenticação está ligada e as telas de dados vão responder 401
             daqui. A chave desta dashboard foi guardada num cookie de sessão
-            quando alguém clicou em ligar — outro navegador, ou este depois de
+            quando alguém clicou em ligar. Outro navegador, ou este depois de
             fechado, não a tem. O conserto é subir a dashboard com{" "}
             <code className="num">FRAUS_CHAVE_ACESSO</code>, ou emitir outra com
             a mestra em <code className="num">POST /acesso/chaves</code>.
@@ -246,7 +246,7 @@ function Corpo({
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         Ligada, com a mestra <strong className="text-foreground">gravada</strong>{" "}
-        nesta instalação — ela sobrevive a reiniciar a API. As chaves de acesso
+        nesta instalação: ela sobrevive a reiniciar a API. As chaves de acesso
         emitidas aparecem em{" "}
         <code className="num">GET /acesso/chaves</code> e podem ser revogadas uma
         a uma sem tocar na mestra.
@@ -256,7 +256,7 @@ function Corpo({
         <summary className="cursor-pointer">Trocar a chave mestra</summary>
         <div className="mt-2 flex flex-col gap-2">
           <p>
-            Exige a mestra <strong>atual</strong> — sem ela a troca é recusada
+            Exige a mestra <strong>atual</strong>: sem ela a troca é recusada
             com 409, e é isso que impede alguém de tomar a API de quem já está
             dentro. A antiga deixa de valer no mesmo instante.
           </p>

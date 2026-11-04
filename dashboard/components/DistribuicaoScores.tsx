@@ -67,7 +67,7 @@ export function DistribuicaoScores({
           <EstadoVazio
             className="m-3"
             titulo="Nenhum atendimento pontuado"
-            explicacao={`Todos os atendimentos do período estão sem sinal — ${DEFINICAO_SEM_SINAL_AGREGADO} —, então não há nota inferida para distribuir.`}
+            explicacao={`Todos os atendimentos do período estão sem sinal (${DEFINICAO_SEM_SINAL_AGREGADO}), então não há nota inferida para distribuir.`}
           />
         ) : (
           <div className="h-[228px]">

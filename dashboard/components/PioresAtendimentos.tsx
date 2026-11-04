@@ -38,7 +38,7 @@ export function PioresAtendimentos({
         titulo="Nenhum atendimento pontuado no período"
         explicacao={
           semSinal > 0
-            ? `Os ${semSinal} atendimento(s) do período estão sem sinal — ${DEFINICAO_SEM_SINAL_AGREGADO}. Sem nota, não há "pior" a apontar — e chamar de pior quem não disse nada avaliável seria inventar o veredito.`
+            ? `Os ${semSinal} atendimento(s) do período estão sem sinal (${DEFINICAO_SEM_SINAL_AGREGADO}). Sem nota, não há "pior" a apontar, e chamar de pior quem não disse nada avaliável seria inventar o veredito.`
             : "Nenhum atendimento sobrou no recorte de período atual."
         }
       />

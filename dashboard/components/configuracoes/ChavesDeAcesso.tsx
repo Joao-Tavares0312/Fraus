@@ -166,8 +166,8 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
   return (
     <Painel
       titulo="Chaves de acesso"
-      legenda="A credencial de leitura da API — é ela que a dashboard apresenta. Cada chave aparece em claro uma única vez, na emissão: o servidor guarda apenas o hash, e a lista mostra só os quatro últimos caracteres para você reconhecer qual é qual."
-      rodape="Revogar vale na chamada seguinte, sem reiniciar nada. Se uma chave de acesso vazar, revogue só ela — trocar a mestra não é necessário e desconectaria quem administra. Emitir e revogar são privilégio da mestra: a própria chave de acesso não pode gerar outra."
+      legenda="A credencial de leitura da API. É ela que a dashboard apresenta. Cada chave aparece em claro uma única vez, na emissão: o servidor guarda apenas o hash, e a lista mostra só os quatro últimos caracteres para você reconhecer qual é qual."
+      rodape="Revogar vale na chamada seguinte, sem reiniciar nada. Se uma chave de acesso vazar, revogue só ela: trocar a mestra não é necessário e desconectaria quem administra. Emitir e revogar são privilégio da mestra: a própria chave de acesso não pode gerar outra."
     >
       <div className="flex flex-col gap-3">
         {erro ? (
@@ -178,7 +178,7 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
         ) : null}
 
         {emitida ? (
-          <ChaveEmClaro chave={emitida.chave} titulo={`Chave “${emitida.nome}” — copie agora`}>
+          <ChaveEmClaro chave={emitida.chave} titulo={`Chave “${emitida.nome}”: copie agora`}>
             <p>
               Não pode ser lida de novo. Use em{" "}
               <code className="num">FRAUS_CHAVE_ACESSO</code> para subir outra
@@ -206,12 +206,12 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
             <p className="text-xs leading-relaxed text-muted-foreground">
               A autenticação está ligada, e gerenciar chaves é privilégio da{" "}
               <strong className="text-foreground">mestra</strong>. Ela fica
-              apenas nesta aba, em memória — não é gravada em lugar nenhum.
+              apenas nesta aba, em memória. Não é gravada em lugar nenhum.
             </p>
             <p className="text-xs leading-relaxed text-muted-foreground">
               Se a autenticação ligou sozinha na primeira subida da API, ela
               está em <code className="num">.fraus-chaves.txt</code>, na raiz do
-              projeto. Ler os atendimentos não precisa dela — a dashboard já usa
+              projeto. Ler os atendimentos não precisa dela: a dashboard já usa
               a chave de acesso do mesmo arquivo.
             </p>
             <Label htmlFor="mestra-chaves" className="text-foreground">
@@ -249,7 +249,7 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
               <p className="text-xs text-muted-foreground">
                 {/* Com a leitura falhada, "carregando" ficaria ali para sempre. */}
                 {erro
-                  ? "A lista de chaves não pôde ser lida — o motivo está acima."
+                  ? "A lista de chaves não pôde ser lida. O motivo está acima."
                   : "carregando…"}
               </p>
             ) : chaves.length === 0 ? (
@@ -346,7 +346,7 @@ export function ChavesDeAcesso({ estado }: { estado: EstadoDeAcesso }) {
               </Button>
             </div>
             <p className="text-[11px] leading-tight text-muted-foreground">
-              O nome é para você reconhecer a chave depois — ele não dá nem tira
+              O nome é para você reconhecer a chave depois. Ele não dá nem tira
               permissão nenhuma. Toda chave de acesso lê a API inteira.
             </p>
           </>

@@ -318,7 +318,7 @@ function EmojisDetectados({ resultado }: { resultado: Simulacao }) {
       <h3 className="text-xs font-medium text-foreground">
         Emojis detectados{" "}
         <span className="font-normal text-muted-foreground">
-          — score do lexicon e onde cada um caiu na frase
+          score do lexicon e onde cada um caiu na frase
         </span>
       </h3>
 

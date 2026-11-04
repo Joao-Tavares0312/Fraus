@@ -1,4 +1,5 @@
 import { carregarRecorte } from "@/lib/carregar";
+import { erroParaTela } from "@/lib/erro-publico";
 import { sessaoAtual, loginDisponivel } from "@/lib/sessao";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
@@ -13,7 +14,7 @@ export default async function PaginaOperacao({ searchParams }: { searchParams: P
   return <>
     <CabecalhoPagina titulo="Operação" periodo={recorte.periodo} extensao={recorte.extensao} />
     <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
-      {recorte.erro ? <EstadoVazio titulo="Não foi possível carregar a operação" explicacao={recorte.erro} /> :
+      {recorte.erro ? <EstadoVazio titulo="Não foi possível carregar a operação" explicacao={erroParaTela(recorte.erro, administrador)} /> :
         <ConsoleOperacao key={recorte.sufixo} conversas={recorte.resumos} sufixo={recorte.sufixo} administrador={administrador} />}
     </div>
   </>;

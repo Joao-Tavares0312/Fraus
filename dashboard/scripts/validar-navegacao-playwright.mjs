@@ -102,16 +102,16 @@ try {
   cenarios.push("tema alterna e persiste sem perder recolhimento");
 
   await barra.getByRole("button", { name: "Expandir navegação", exact: true }).click();
-  const marca = barra.getByRole("button", { name: "Fraus — revelar o segredo com cinco cliques", exact: true });
+  const marca = barra.getByRole("button", { name: "Fraus: revelar o segredo com cinco cliques", exact: true });
   const antesDoSegredo = pagina.url();
   for (let clique = 0; clique < 5; clique++) await marca.click({ delay: 70 });
-  await pagina.waitForFunction(() => document.querySelector('button[aria-label="Fraus — revelar o segredo com cinco cliques"]')?.getAttribute("aria-expanded") === "true");
+  await pagina.waitForFunction(() => document.querySelector('button[aria-label="Fraus: revelar o segredo com cinco cliques"]')?.getAttribute("aria-expanded") === "true");
   // A cena e carregada sob demanda; estado expandido nao significa dialogo pronto.
   await pagina.getByRole("dialog", { name: "Fraus-chan", exact: true }).waitFor();
   await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fechar segredo");
   assert.equal(pagina.url(), antesDoSegredo, "segredo da marca não navega");
   await pagina.keyboard.press("Escape");
-  await pagina.waitForFunction(() => document.querySelector('button[aria-label="Fraus — revelar o segredo com cinco cliques"]')?.getAttribute("aria-expanded") === "false");
+  await pagina.waitForFunction(() => document.querySelector('button[aria-label="Fraus: revelar o segredo com cinco cliques"]')?.getAttribute("aria-expanded") === "false");
   assert.equal(await marca.evaluate((elemento) => document.activeElement === elemento), true);
   cenarios.push("cinco cliques na marca sem navegar, Escape e foco devolvido");
   await contexto.close();

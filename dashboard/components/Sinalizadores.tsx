@@ -55,10 +55,10 @@ export function Sinalizadores({ sinalizadores }: { sinalizadores: Sinalizador[] 
           <li key={s.regra} className="text-xs">
             <span className="inline-flex items-baseline gap-1.5 font-medium text-warning-rich-text">
               <span aria-hidden>⚑</span>
-              {ROTULO_SINALIZADOR[s.regra] ?? s.regra}
+              {ROTULO_SINALIZADOR[s.regra] ?? s.regra}:
             </span>{" "}
             <span className="text-muted-foreground">
-              — {s.detalhe} · {listaDeMensagens(s.evidencia)}
+              {s.detalhe} · {listaDeMensagens(s.evidencia)}
             </span>
           </li>
         ))}

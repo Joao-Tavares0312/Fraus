@@ -365,6 +365,11 @@ passo; o endpoint de origem fica em **Método e ressalvas**, não na face do pai
   sintético e avisos sobre o arquivo permanecem visíveis. Endpoints, definições
   técnicas e escala logit entram no aparato existente, sem um segundo sistema
   de notas explicativas.
+- **Modelo:** o classificador fica aberto, com uma frase visível sobre o tempo
+  sintético e a ironia. A avaliação recolhe em “Como o modelo foi avaliado”, e
+  as abas Ironia·Laya e Comparação são só de `dev`.
+- **Erro:** rota e status só para `dev`; o cliente lê uma frase humana
+  (`lib/erro-publico.ts`). A falha de conexão segue igual para todos.
 
 ### Atividade e carregamento — 22/10/2026
 

@@ -117,7 +117,7 @@ export function Entregas({ fonteId }: { fonteId: number }) {
       <div className="flex min-w-0 flex-col items-start gap-3">
         <EstadoVazio
           titulo="Nenhuma entrega registrada nesta fonte"
-          explicacao="Enquanto a plataforma não chamar a rota do webhook, esta lista fica vazia — e é assim que ela deve ficar. Um exemplo aqui pareceria tráfego que nunca existiu."
+          explicacao="Enquanto a plataforma não chamar a rota do webhook, esta lista fica vazia, e é assim que ela deve ficar. Um exemplo aqui pareceria tráfego que nunca existiu."
           endpoint={`POST /integracoes/webhook/${fonteId}`}
         />
         {botao}
@@ -193,7 +193,7 @@ export function Entregas({ fonteId }: { fonteId: number }) {
           por que a lista some e por que ela nao mostra o que o cliente disse. */}
       <p className="border-t border-compasso pt-2 text-xs leading-relaxed text-muted-foreground">
         O Fraus guarda as últimas 200 entregas de cada fonte e nunca o corpo da
-        requisição — ele traz mensagem de cliente real.
+        requisição: ele traz mensagem de cliente real.
       </p>
     </div>
   );

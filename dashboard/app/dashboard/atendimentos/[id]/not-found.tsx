@@ -8,9 +8,8 @@ export default function NaoEncontrado() {
         Atendimento não encontrado
       </h1>
       <EstadoVazio
-        titulo="A API respondeu 404 para este identificador"
-        explicacao="Ele pode ter sido removido do banco ou o CSV que o continha ainda não foi importado."
-        endpoint="GET /conversas/{id}"
+        titulo="Este atendimento não está aqui"
+        explicacao="Ele pode ter sido removido ou ainda não ter sido importado."
       />
       <p>
         <Link

@@ -508,7 +508,7 @@ function FaixaDePresenca({
                   ? `${ponto.rotulo}: nenhum atendimento`
                   : pontuado
                     ? `${ponto.rotulo}: ${ponto.comScore} de ${ponto.atendimentos} atendimento(s) pontuado(s)`
-                    : `${ponto.rotulo}: ${ponto.atendimentos} atendimento(s), nenhum pontuado (${DEFINICAO_SEM_SINAL_AGREGADO}) — sem sinal`
+                    : `${ponto.rotulo}: ${ponto.atendimentos} atendimento(s), nenhum pontuado (${DEFINICAO_SEM_SINAL_AGREGADO}), sem sinal`
               }
             >
               {vazio ? (

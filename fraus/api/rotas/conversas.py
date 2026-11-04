@@ -145,7 +145,7 @@ def importar(
             detail=(
                 f"as colunas de {caminho.name} foram inferidas e ainda não foram "
                 "confirmadas. Confira na prévia da importação e salve o perfil de "
-                "mapeamento — só coluna confirmada entra no banco."
+                "mapeamento: só coluna confirmada entra no banco."
             ),
         )
 

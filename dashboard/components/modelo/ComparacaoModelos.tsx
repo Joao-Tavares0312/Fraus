@@ -140,7 +140,7 @@ function Conjunto({
           Cada classe contra o resto. VP: era a classe e o modelo disse a classe.
           FP: não era e o modelo disse. FN: era e o modelo disse outra. VN: não
           era e o modelo não disse. Travessão em precisão quer dizer que o
-          modelo nunca previu a classe — não há o que medir.
+          modelo nunca previu a classe, então não há o que medir.
         </p>
         <div className="mt-3 flex min-w-0 flex-col gap-5">
           {modelos.map(([chave, medidas]) => (

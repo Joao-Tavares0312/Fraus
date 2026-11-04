@@ -135,7 +135,7 @@ export function FaixasNps({
     if (incompleto.length > 0) {
       setConfirmacao(null);
       setErro(
-        `preencha as duas notas de: ${incompleto.join(", ")} — a faixa precisa de mínima e máxima inteiras`,
+        `preencha as duas notas de: ${incompleto.join(", ")}. A faixa precisa de mínima e máxima inteiras`,
       );
       return;
     }
@@ -159,7 +159,7 @@ export function FaixasNps({
     setGravado(novas);
     setRascunho(paraRascunho(novas));
     setConfirmacao(
-      "Faixas gravadas. Os atendimentos já pontuados passam a ser lidos por elas agora — indicadores, tabela e distribuição respondem pela mesma faixa.",
+      "Faixas gravadas. Os atendimentos já pontuados passam a ser lidos por elas agora: indicadores, tabela e distribuição respondem pela mesma faixa.",
     );
     router.refresh();
   }
@@ -290,7 +290,7 @@ export function FaixasNps({
         <AlertTitle>Salvar reclassifica atendimentos já pontuados</AlertTitle>
         <AlertDescription>
           A categoria é derivada na leitura, a partir do score gravado e da
-          faixa vigente. Mudar o corte muda a fatia de quem já foi medido — o
+          faixa vigente. Mudar o corte muda a fatia de quem já foi medido: o
           NPS da visão geral, a distribuição e a etiqueta de cada atendimento
           mudam junto. O <span className="num">score</span> não é recalculado:
           ele continua sendo o que o modelo disse na importação.

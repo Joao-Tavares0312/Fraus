@@ -16,6 +16,8 @@
  */
 
 import { baseDaApi, listarFontes, listarTiposDeFonte } from "@/lib/api";
+import { erroEmFrase } from "@/lib/erro-publico";
+import { sessaoAtual } from "@/lib/sessao";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
@@ -25,6 +27,8 @@ import { ConectarTars } from "@/components/integracoes/ConectarTars";
 export const dynamic = "force-dynamic";
 
 export default async function PaginaIntegracoes() {
+  const sessao = await sessaoAtual();
+  const ehDev = (sessao.estado === "logada" ? sessao.usuario.papel : "dev") === "dev";
   const [fontes, tipos] = await Promise.all([listarFontes(), listarTiposDeFonte()]);
 
   return (
@@ -43,15 +47,15 @@ export default async function PaginaIntegracoes() {
             <EstadoVazio
               className="m-5"
               titulo="As fontes não carregaram"
-              explicacao={`${fontes.erro}. Sem a listagem não dá para saber se o TARS já está conectado.`}
-              endpoint="GET /integracoes/fontes"
+              explicacao={`${erroEmFrase(fontes.erro, ehDev)} Sem a listagem não dá para saber se o TARS já está conectado.`}
+              endpoint={ehDev ? "GET /integracoes/fontes" : undefined}
             />
           )}
         </Painel>
 
         <details className="group">
           <summary className="cursor-pointer px-1 text-sm text-muted-foreground hover:text-foreground">
-            Outras integrações — webhook assinado para qualquer plataforma
+            Outras integrações: webhook assinado para qualquer plataforma
           </summary>
           <div className="mt-3">
             {/* A regra que esta seção precisa dizer em voz alta: o campo de
@@ -70,8 +74,8 @@ export default async function PaginaIntegracoes() {
               ) : (
                 <EstadoVazio
                   titulo="As fontes não carregaram"
-                  explicacao={`${fontes.erro}. Sem a listagem não há como dizer quais integrações existem nem quais credenciais estão presentes — e desenhar uma lista plausível aqui seria inventar integração.`}
-                  endpoint="GET /integracoes/fontes"
+                  explicacao={`${erroEmFrase(fontes.erro, ehDev)} Sem a listagem não há como dizer quais integrações existem nem quais credenciais estão presentes, e desenhar uma lista plausível aqui seria inventar integração.`}
+                  endpoint={ehDev ? "GET /integracoes/fontes" : undefined}
                 />
               )}
             </Painel>

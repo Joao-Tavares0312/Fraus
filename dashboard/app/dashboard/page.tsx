@@ -19,6 +19,8 @@ import {
   type DetalheConversa,
   type ResumoConversa,
 } from "@/lib/api";
+import { erroParaTela, mostraDetalheDoErro } from "@/lib/erro-publico";
+import { sessaoAtual } from "@/lib/sessao";
 import { carregarRecorte } from "@/lib/carregar";
 import {
   distribuicaoDeNotas,
@@ -49,6 +51,8 @@ export const dynamic = "force-dynamic";
 const PIORES_NA_TELA = 6;
 
 export default async function Pagina(props: PageProps<"/dashboard">) {
+  const sessao = await sessaoAtual();
+  const ehDev = (sessao.estado === "logada" ? sessao.usuario.papel : "dev") === "dev";
   const parametros = await props.searchParams;
 
   // As leituras sao independentes de proposito: se `/indicadores` cair, a
@@ -219,15 +223,15 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
 
           <Painel
             titulo="NPS inferido × latência mediana, por dia"
-            legenda="As duas séries aparecem sobrepostas de propósito: otimizar um indicador isolado costuma quebrar o outro — empurrar a deflexão para cima derruba a satisfação. Cada eixo tem domínio fixo, o NPS é sempre linha e a latência é sempre barra — a forma separa as séries, não só a cor —, e a visão de tabela mostra os números exatos sem geometria entre eles."
+            legenda="As duas séries aparecem sobrepostas de propósito: otimizar um indicador isolado costuma quebrar o outro: empurrar a deflexão para cima derruba a satisfação. Cada eixo tem domínio fixo, o NPS é sempre linha e a latência é sempre barra (a forma separa as séries, não só a cor), e a visão de tabela mostra os números exatos sem geometria entre eles."
             semPadding
             nivel="dominante"
-            rodape="As duas escalas são independentes: a altura de uma curva em relação à outra não significa nada, só o formato de cada uma ao longo do tempo. Dias sem nenhum atendimento pontuado ficam com a linha do NPS interrompida — nunca em zero."
+            rodape="As duas escalas são independentes: a altura de uma curva em relação à outra não significa nada, só o formato de cada uma ao longo do tempo. Dias sem nenhum atendimento pontuado ficam com a linha do NPS interrompida, nunca em zero."
           >
             {erro ? (
               <EstadoVazio
                 titulo="Série indisponível"
-                explicacao={`Não foi possível listar os atendimentos: ${erro}. A série temporal é derivada dessa lista.`}
+                explicacao={mostraDetalheDoErro(erro, ehDev) ? `Não foi possível listar os atendimentos: ${erro}. A série temporal é derivada dessa lista.` : "Não foi possível listar os atendimentos agora. A série temporal é derivada dessa lista."}
               />
             ) : serieIncompleta ? (
               /* Nomeia o que falhou em vez de afirmar ausência de dado. A
@@ -235,7 +239,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
                  "indisponível" pareceria o mesmo "vazio" de sempre. */
               <EstadoVazio
                 titulo="Série indisponível"
-                explicacao={`GET /serie-temporal não respondeu (${erroDaSerie}), e a agregação de reserva não conseguiu ler as transcrições. Não é ausência de atendimento: ${resumos.length} foram listados no período. Os outros painéis desta tela seguem valendo.`}
+                explicacao={`A série diária não carregou${erroDaSerie && mostraDetalheDoErro(erroDaSerie, ehDev) ? ` (${erroDaSerie})` : ""}, e a agregação de reserva não conseguiu ler as transcrições. Não é ausência de atendimento: ${resumos.length} foram listados no período. Os outros painéis desta tela seguem valendo.`}
               />
             ) : (
               <GraficoNpsLatencia serie={serie} />
@@ -253,7 +257,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
                     return faixa
                       ? `${faixa[0]}–${faixa[1]} ${categoria}`
                       : categoria;
-                  }).join(", ")} — lidas de GET /configuracoes, não digitadas aqui.`
+                  }).join(", ")}, lidas de GET /configuracoes, não digitadas aqui.`
                 : "Faixas de fábrica: 0–6 detrator, 7–8 neutro, 9–10 promotor. GET /configuracoes não respondeu, então as faixas vigentes não puderam ser confirmadas."
             }
             semPadding
@@ -268,7 +272,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
               <EstadoVazio
                 className="m-5"
                 titulo="Distribuição indisponível"
-                explicacao={erro}
+                explicacao={erroParaTela(erro, ehDev)}
               />
             ) : (
               <DistribuicaoScores
@@ -296,7 +300,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
               <EstadoVazio
                 className="m-5"
                 titulo="Lista indisponível"
-                explicacao={erro}
+                explicacao={erroParaTela(erro, ehDev)}
               />
             ) : (
               <PioresAtendimentos
@@ -315,12 +319,12 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
           derivados={[
             ...(!serieDaApi.ok
               ? [
-                  `a série diária de NPS e de latência de ${rotulo}, agregada das transcrições — porque GET /serie-temporal falhou`,
+                  `a série diária de NPS e de latência de ${rotulo}, agregada das transcrições, porque a série do servidor falhou`,
                 ]
               : []),
             ...(!indicadoresDoServidor.ok
               ? [
-                  "os indicadores e o tempo mediano de resposta, agregados das categorias e timestamps que o servidor gravou — porque GET /indicadores falhou",
+                  "os indicadores e o tempo mediano de resposta, agregados das categorias e timestamps que o servidor gravou, porque os indicadores do servidor falharam",
                 ]
               : []),
           ]}
@@ -342,7 +346,7 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
             {rotulo} tem mais atendimentos do que a agregação de reserva
             consegue processar de uma vez: {truncadasNoPlanoB} ficaram de fora
             dos indicadores e da série derivados aqui. Isto só afeta
-            o plano B — a tabela de atendimentos continua completa.
+            o plano B. A tabela de atendimentos continua completa.
           </p>
         ) : null}
       </div>

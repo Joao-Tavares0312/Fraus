@@ -337,7 +337,7 @@ export function GrafoDaMemoria({ grafo }: { grafo: Grafo }) {
           */}
           <div className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:inset-0 focus-within:z-10 focus-within:overflow-auto focus-within:rounded-md focus-within:border focus-within:border-linha focus-within:bg-background focus-within:p-3">
             <h3 className="mb-2 text-xs text-muted-foreground">
-              Os nós do grafo em lista — {contagem}. Selecionar um nó aqui abre
+              Os nós do grafo em lista: {contagem}. Selecionar um nó aqui abre
               a mesma ficha que o clique no canvas.
             </h3>
             <ListaDeNos nos={grafo.nos} aoSelecionar={selecionar} />
