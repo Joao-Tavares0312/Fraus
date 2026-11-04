@@ -60,14 +60,14 @@ export function MarcaContestacao({
       <span aria-hidden>⚠</span>
       {detalhado ? (
         <span>
-          Leitura contestada — elogio saturado ({contestacao.score.toFixed(2)})
+          Leitura contestada: elogio saturado ({contestacao.score.toFixed(2)})
           contra espera mediana de {espera}. O modelo leu como satisfação; o
           relógio discorda. A nota ao lado não foi alterada, e este atendimento
           continua contando nos indicadores.
         </span>
       ) : (
         <span>
-          contestada — elogio contra espera de {espera}
+          contestada: elogio contra espera de {espera}
         </span>
       )}
     </span>

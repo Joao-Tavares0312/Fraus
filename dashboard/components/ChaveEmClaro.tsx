@@ -68,7 +68,7 @@ export function ChaveEmClaro({
         </div>
         {falhou ? (
           <p role="status" className="mt-2 max-w-[72ch] text-xs leading-relaxed">
-            O navegador não deixou copiar — a área de transferência só funciona
+            O navegador não deixou copiar: a área de transferência só funciona
             em HTTPS ou em <span className="num">localhost</span>.{" "}
             <strong>Selecione o valor acima e copie à mão antes de sair</strong>:
             ele não aparece de novo.

@@ -6,7 +6,7 @@ import { MolduraDeConta } from "@/components/auth/MolduraDeConta";
 import { estadoAutenticacao, usuarioDaSessao } from "@/lib/sessao";
 import { destinoAuth, tokenDeConvite } from "@/lib/destino-auth";
 
-export const metadata: Metadata = { title: "Entrar — Fraus" };
+export const metadata: Metadata = { title: "Entrar | Fraus" };
 
 export default async function PaginaEntrar({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const convite = tokenDeConvite((await searchParams).convite);

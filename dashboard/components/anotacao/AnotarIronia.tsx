@@ -108,7 +108,7 @@ export function Fila({ estado, responder, voltar }: { estado: EstadoDaFila; resp
   if (f.fim) {
     return (
       <section className="flex flex-col items-start gap-4 border border-linha bg-card p-5">
-        <h1 className="titulo-instrumento text-xl leading-snug">Obrigado — suas {feitas} respostas foram salvas.</h1>
+        <h1 className="titulo-instrumento text-xl leading-snug">Obrigado. Suas {feitas} respostas foram salvas.</h1>
         <Button variant="outline" onClick={voltar}>← Voltar e mudar a última resposta</Button>
       </section>
     );

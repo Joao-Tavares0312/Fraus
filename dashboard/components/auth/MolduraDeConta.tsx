@@ -25,7 +25,7 @@ export function MolduraDeConta({
           <IconeDeAcao acao="anterior" /> Voltar ao site
         </Link>
         <div className="conta-conteudo">
-          <Link className="conta-marca" href="/" aria-label="Fraus — início">
+          <Link className="conta-marca" href="/" aria-label="Fraus: início">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/fraus-logo.svg" alt="" width={32} height={32} />
             <span>Fraus</span>

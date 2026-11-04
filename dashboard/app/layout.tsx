@@ -24,12 +24,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
-  title: "Fraus — satisfação em atendimentos por chatbot",
+  title: "Fraus: satisfação em atendimentos por chatbot",
   description: DESCRICAO,
   // `openGraph` existe para quando o link for compartilhado na apresentacao ou
   // no repositorio: sem ele, o preview sai com o titulo cru e sem imagem.
   openGraph: {
-    title: "Fraus — satisfação em atendimentos por chatbot",
+    title: "Fraus: satisfação em atendimentos por chatbot",
     description: DESCRICAO,
     type: "website",
     locale: "pt_BR",
@@ -42,13 +42,13 @@ export const metadata: Metadata = {
         url: "/og-fraus.png",
         width: 1200,
         height: 630,
-        alt: "Fraus — leia o que ficou nas entrelinhas",
+        alt: "Fraus: leia o que ficou nas entrelinhas",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fraus — satisfação em atendimentos por chatbot",
+    title: "Fraus: satisfação em atendimentos por chatbot",
     description: DESCRICAO,
     images: ["/og-fraus.png"],
   },

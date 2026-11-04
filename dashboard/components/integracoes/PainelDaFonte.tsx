@@ -261,7 +261,7 @@ export function PainelDaFonte({
           {fonte.variavel_segredo ? (
             <p className="mt-1.5 max-w-[72ch] text-[0.6875rem] leading-relaxed text-muted-foreground">
               “Variável definida” responde apenas se a variável existe no
-              ambiente da API, verificado a cada leitura — não se o valor dela
+              ambiente da API, verificado a cada leitura, não se o valor dela
               está correto. O valor nunca sai da API, nem mascarado: máscara
               vaza tamanho e prefixo por um caminho mais lento.
             </p>
@@ -273,7 +273,7 @@ export function PainelDaFonte({
             <p className="max-w-[70ch] text-xs leading-relaxed text-foreground">
               Remover <strong>{fonte.nome}</strong> apaga só o cadastro da
               origem.{" "}
-              <strong>Nenhum atendimento já importado é apagado</strong> —
+              <strong>Nenhum atendimento já importado é apagado</strong>:
               conversa que entrou é dado medido, e apagar a origem não pode
               reescrever o histórico.
             </p>
@@ -336,7 +336,7 @@ export function PainelDaFonte({
 
           <Bloco
             titulo="Entregas"
-            nota="O que de fato chegou nesta URL, e o veredito de cada tentativa — é aqui que se descobre se a integração passou."
+            nota="O que de fato chegou nesta URL, e o veredito de cada tentativa. É aqui que se descobre se a integração passou."
           >
             <Entregas fonteId={fonte.id} />
           </Bloco>
@@ -348,7 +348,7 @@ export function PainelDaFonte({
             <span className="text-foreground">{rotuloTipo}</span> e não recebe
             entrega pela rede: não há URL de webhook, segredo de assinatura nem
             histórico de entregas para ela. Exibir os três aqui prometeria um
-            endereço que a API recusa — a rota do webhook confere o tipo da
+            endereço que a API recusa: a rota do webhook confere o tipo da
             fonte no servidor e responde <span className="num">403</span>, mesmo
             com assinatura válida.
           </p>

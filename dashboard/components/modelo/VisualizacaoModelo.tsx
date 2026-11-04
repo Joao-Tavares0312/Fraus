@@ -21,7 +21,7 @@ const EXPLICACOES: Record<Etapa, Explicacao> = {
     entrada: "Mensagens com autor e timestamps com fuso horário.",
     transformacao: "O adaptador organiza a conversa canônica e separa as falas do cliente das respostas do bot e do humano.",
     saida: "Texto por mensagem e contexto temporal da conversa.",
-    limite: "Sem fala informativa do cliente, a conversa fica sem sinal — não recebe score zero. O simulador abaixo lê uma frase, não um atendimento completo.",
+    limite: "Sem fala informativa do cliente, a conversa fica sem sinal e não recebe score zero. O simulador abaixo lê uma frase, não um atendimento completo.",
   },
   sinais: {
     entrada: "Falas do cliente, emojis, forma da escrita e contexto da conversa.",

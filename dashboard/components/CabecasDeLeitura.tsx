@@ -66,7 +66,7 @@ export function CabecasDeLeitura({
           <span className="tracking-normal">
             leitura por frase
           </span>{" "}
-          — a média da emoção por conversa entra nas features do fusor desde
+          A média da emoção por conversa entra nas features do fusor desde
           21/08/2026, mas o número aqui é desta frase, não a média que pesa na
           nota. A ironia é só leitura: desde 04/09/2026 ela não entra mais no
           fusor.
@@ -93,7 +93,7 @@ export function CabecasDeLeitura({
       {ressalvas && emocao ? (
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           <strong>Isto é leitura automática de emoção.</strong> As classes
-          acima são inferidas do texto por um modelo — nunca declaradas por
+          acima são inferidas do texto por um modelo: nunca declaradas por
           quem escreveu, e nunca conferidas por uma pessoa antes de aparecerem
           aqui. Elas descrevem <strong>o cliente</strong>: o Fraus não pontua
           atendentes, e isso é uma regra do produto, não uma pendência.
@@ -104,7 +104,7 @@ export function CabecasDeLeitura({
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           <strong>desprezo</strong> não é uma classe treinada: nenhum corpus em
           português a anota. Ela é derivada da díade raiva + nojo (Plutchik,
-          1980) pela média geométrica — que exige as <em>duas</em> emoções
+          1980) pela média geométrica, que exige as <em>duas</em> emoções
           juntas, enquanto a média aritmética daria meio ponto para raiva pura
           sem nojo nenhum, o que é raiva, não desprezo.
         </p>
@@ -115,9 +115,9 @@ export function CabecasDeLeitura({
           uma vez por tela. */}
       {ressalvas && ironia !== null ? (
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          <strong>ironia é cabeça pouco confiável</strong> — por isso a nota
-          tracejada. Ela acerta o caso de manual — “que atendimento
-          maravilhoso, só esperei 3 horas” — e erra feio no resto:{" "}
+          <strong>ironia é cabeça pouco confiável</strong>, por isso a nota
+          tracejada. Ela acerta o caso de manual (“que atendimento
+          maravilhoso, só esperei 3 horas”) e erra feio no resto:{" "}
           <strong>6 em 10</strong> falas sinceras de atendimento saem marcadas
           como irônicas, com 0,999 de confiança. Ela foi treinada num corpus
           gerado e aprendeu o registro conversacional em vez da pragmática.

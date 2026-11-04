@@ -152,7 +152,7 @@ export function TabelaDrivers({ drivers }: { drivers: Drivers }) {
         </table>
       </div>
 
-      <RessalvaDaTela titulo="Influência dos sinais — método da amostra">
+      <RessalvaDaTela titulo="Influência dos sinais: método da amostra">
         <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">{drivers.metodo}</p>
       </RessalvaDaTela>
     </div>

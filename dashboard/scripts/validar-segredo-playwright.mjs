@@ -62,7 +62,7 @@ try {
     const antes = await indicadores.allTextContents();
     assert.equal(posesBaixadas.length, 0, "as poses nao carregam antes de descobrir o segredo");
     if (largura < 768) await pagina.getByRole("button", { name: "Abrir navegação", exact: true }).click();
-    const marca = pagina.getByRole("button", { name: "Fraus — revelar o segredo com cinco cliques", exact: true });
+    const marca = pagina.getByRole("button", { name: "Fraus: revelar o segredo com cinco cliques", exact: true });
     const segredo = pagina.getByRole("dialog", { name: "Fraus-chan", exact: true });
     for (let i = 0; i < 4; i++) await marca.click({ delay: 60 });
     assert.equal(await segredo.count(), 0, "quatro cliques nao abrem o segredo");
@@ -116,7 +116,7 @@ try {
     await pagina.waitForFunction(() => document.querySelector('button[aria-label="Interagir com Fraus-chan"]')?.closest('[role="dialog"]')?.contains(document.activeElement));
     await pagina.keyboard.press("Escape");
     await segredo.waitFor({ state: "hidden" });
-    await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fraus — revelar o segredo com cinco cliques");
+    await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fraus: revelar o segredo com cinco cliques");
     if (largura < 768) assert.equal(await pagina.getByRole("dialog", { name: "Navegação do Fraus" }).isVisible(), true, "Escape preserva a gaveta");
 
     await marca.click();
@@ -128,7 +128,7 @@ try {
     if (largura === 320) await pagina.mouse.click(2, 2);
     else await segredo.getByRole("button", { name: "Voltar à dashboard", exact: true }).click();
     await segredo.waitFor({ state: "hidden" });
-    await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fraus — revelar o segredo com cinco cliques");
+    await pagina.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Fraus: revelar o segredo com cinco cliques");
     assert.deepEqual(await indicadores.allTextContents(), antes, "fechar nao altera indicadores");
     if (largura < 768) {
       const gaveta = pagina.getByRole("dialog", { name: "Navegação do Fraus" });

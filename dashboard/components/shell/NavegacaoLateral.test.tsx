@@ -77,7 +77,7 @@ describe("destinos efetivamente renderizados na sidebar", () => {
     for (const fora of ["/dashboard/operacao", "/dashboard/integracoes", "/dashboard/configuracoes", "docs.example.test"]) {
       expect(html, fora).not.toContain(fora);
     }
-    expect(html).toContain('aria-label="Fraus — revelar o segredo com cinco cliques"');
+    expect(html).toContain('aria-label="Fraus: revelar o segredo com cinco cliques"');
     for (const [link] of html.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/g)) {
       expect(link).not.toContain("<button");
     }

@@ -159,7 +159,7 @@ export function LexicoCurado({
   return (
     <Painel
       titulo="Léxico curado"
-      legenda="Palavras e emojis que o treino não pegou, ou que valem outra coisa neste domínio. O peso alimenta o sinal léxico e o fusor decide o quanto isso move a nota — ninguém edita o score aqui."
+      legenda="Palavras e emojis que o treino não pegou, ou que valem outra coisa neste domínio. O peso alimenta o sinal léxico e o fusor decide o quanto isso move a nota. Ninguém edita o score aqui."
       rodape="A curadoria VENCE o SentiLex-PT02 e o Emoji Sentiment Ranking, então ela serve tanto para preencher buraco quanto para corrigir polaridade errada. Peso neutro silencia um termo que o léxico base lê errado. Vale da próxima pontuação em diante: o que já foi pontuado só muda com Repontuar, na Visão geral."
       acessorio={
         palavras + emojis > 0 ? (
@@ -301,7 +301,7 @@ export function LexicoCurado({
           <p className="text-xs text-muted-foreground">
             {/* Com a leitura falhada, "carregando" ficaria ali para sempre. */}
             {erro
-              ? "A lista de termos curados não pôde ser lida — o motivo está acima."
+              ? "A lista de termos curados não pôde ser lida. O motivo está acima."
               : "carregando…"}
           </p>
         ) : curados.length === 0 ? (

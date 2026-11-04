@@ -1,4 +1,6 @@
 import { carregarRecorte } from "@/lib/carregar";
+import { erroParaTela } from "@/lib/erro-publico";
+import { sessaoAtual } from "@/lib/sessao";
 import { formatarDataHora } from "@/lib/formato";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
@@ -55,8 +57,11 @@ export default async function PaginaAtendimentos(
   // So a listagem: esta tela nunca leu transcricao nenhuma -- a ficha
   // operacional de cada linha (contagem por autor, latencias, desfecho) ja
   // vem derivada pelo servidor em `GET /conversas`.
-  const { periodo, extensao, rotulo, sufixo, resumos, erro } =
-    await carregarRecorte(parametros);
+  const [{ periodo, extensao, rotulo, sufixo, resumos, erro }, sessao] = await Promise.all([
+    carregarRecorte(parametros),
+    sessaoAtual(),
+  ]);
+  const ehDev = (sessao.estado === "logada" ? sessao.usuario.papel : "dev") === "dev";
 
   return (
     <>
@@ -76,15 +81,15 @@ export default async function PaginaAtendimentos(
         <Painel
           titulo="Lista de atendimentos"
           nivel="dominante"
-          legenda="Ordenar por nota ou por espera manda a ausência para o fim nos dois sentidos — atendimento sem sinal (o cliente não falou ou só usou cortesia) não é o pior atendimento, e conversa que nunca teve resposta humana não é a mais rápida da operação. Os tempos são medianas, não médias: espera de atendimento tem cauda longa, e um punhado de conversas esquecidas por horas puxaria a média para um valor que não descreve atendimento nenhum. “Encerrada” diz que a conversa fechou, não que o problema foi resolvido — resolução é julgamento, e nada no dado a sustenta. O CSV exporta o que o filtro deixou em tela, com “sem sinal” por extenso e a célula de tempo em branco quando a espera não existiu."
+          legenda="Ordenar por nota ou por espera manda a ausência para o fim nos dois sentidos. Atendimento sem sinal (o cliente não falou ou só usou cortesia) não é o pior atendimento, e conversa que nunca teve resposta humana não é a mais rápida da operação. Os tempos são medianas, não médias: espera de atendimento tem cauda longa, e um punhado de conversas esquecidas por horas puxaria a média para um valor que não descreve atendimento nenhum. “Encerrada” diz que a conversa fechou, não que o problema foi resolvido: resolução é julgamento, e nada no dado a sustenta. O CSV exporta o que o filtro deixou em tela, com “sem sinal” por extenso e a célula de tempo em branco quando a espera não existiu."
           semPadding
         >
           {erro ? (
             <EstadoVazio
               className="m-5"
               titulo="Não foi possível listar os atendimentos"
-              explicacao={erro}
-              endpoint="GET /conversas"
+              explicacao={erroParaTela(erro, ehDev)}
+              endpoint={ehDev ? "GET /conversas" : undefined}
             />
           ) : (
             <TabelaConversas

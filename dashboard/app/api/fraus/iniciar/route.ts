@@ -497,7 +497,7 @@ export async function DELETE(requisicao: Request): Promise<Response> {
     return Response.json(
       {
         detail:
-          "esta API não foi iniciada pela dashboard — quem subiu pelo " +
+          "esta API não foi iniciada pela dashboard: quem subiu pelo " +
           "terminal derruba pelo terminal (Ctrl+C na janela dela).",
       },
       { status: 409 },

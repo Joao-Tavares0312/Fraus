@@ -16,6 +16,7 @@ import {
   type MarcaAtribuicao,
 } from "@/lib/derivacoes";
 import { EXPLICACAO_SEM_SINAL } from "@/lib/formato";
+import { erroParaTela } from "@/lib/erro-publico";
 import { lerPeriodo, paraQuery } from "@/lib/periodo";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
@@ -77,8 +78,8 @@ export default async function PaginaDoAtendimento(
         </h1>
         <EstadoVazio
           titulo={id}
-          explicacao={resultado.erro}
-          endpoint="GET /conversas/{id}"
+          explicacao={erroParaTela(resultado.erro, ehDev)}
+          endpoint={ehDev ? "GET /conversas/{id}" : undefined}
         />
         <p>
           <Link
@@ -135,7 +136,7 @@ export default async function PaginaDoAtendimento(
 
         <Painel
           titulo="Transcrição"
-          legenda="Fala do cliente em cartão com filete âmbar — é o que foi dito. Resposta do bot ou do atendente recuada, em contorno tracejado. A espera do cliente é um intervalo tracejado antes de cada resposta, com o comprimento proporcional ao tempo (a régua é o limiar de degradação vigente) e o tempo em display; o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala. O sinal ⚑ marca a mensagem que disparou um sinalizador por regra."
+          legenda="Fala do cliente em cartão com filete âmbar: é o que foi dito. Resposta do bot ou do atendente recuada, em contorno tracejado. A espera do cliente é um intervalo tracejado antes de cada resposta, com o comprimento proporcional ao tempo (a régua é o limiar de degradação vigente) e o tempo em display; o realce de um trecho é proporcional à probabilidade real que o classificador deu àquela fala. O sinal ⚑ marca a mensagem que disparou um sinalizador por regra."
           semPadding
         >
           <Sinalizadores sinalizadores={conversa.sinalizadores} />
@@ -235,7 +236,7 @@ export default async function PaginaDoAtendimento(
 
           <Painel
             titulo="Contribuições das features neste atendimento"
-            legenda="Com sinal, ordenadas por magnitude. Isto é `contribuicoes` — o que pesou NESTE atendimento —, não `importancias`, que é o peso global do modelo e vive na tela Modelo."
+            legenda="Com sinal, ordenadas por magnitude. Mostra o que pesou NESTE atendimento, não o peso global do modelo, que fica na tela Modelo."
             semPadding
           >
             {atribuicao === null ? (

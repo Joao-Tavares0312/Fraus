@@ -41,7 +41,7 @@ function BotaoCopiar({ texto, rotulo }: { texto: string; rotulo: string }) {
       </Button>
       {falhou ? (
         <span role="status" className="text-[0.6875rem] text-muted-foreground">
-          o navegador não deixou copiar fora de HTTPS — selecione o texto ao lado
+          o navegador não deixou copiar fora de HTTPS: selecione o texto ao lado
         </span>
       ) : null}
     </span>
@@ -125,7 +125,7 @@ export function ContratoDoWebhook({
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex min-w-0 flex-col gap-1.5">
         <p className="text-xs text-muted-foreground">
-          A URL desta fonte — o canal ({fonte.canal}) é o dela, e quem manda o
+          A URL desta fonte. O canal ({fonte.canal}) é o dela, e quem manda o
           dado não escolhe onde ele é contabilizado.
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -160,7 +160,7 @@ export function ContratoDoWebhook({
               </td>
               <td className="py-1.5">
                 Segundos desde a época, em UTC. Fora de 5 min do relógio do
-                servidor, a entrega é recusada — é o que faz uma captura da rede
+                servidor, a entrega é recusada. É o que faz uma captura da rede
                 expirar.
               </td>
             </tr>
@@ -203,14 +203,14 @@ export function ContratoDoWebhook({
 
       <details className="group flex min-w-0 flex-col gap-1.5">
         <summary className="cursor-pointer text-xs text-muted-foreground marker:text-muted-foreground">
-          Calcular a assinatura — exemplo em Python, só biblioteca padrão
+          Calcular a assinatura: exemplo em Python, só biblioteca padrão
         </summary>
         <div className="mt-2 flex min-w-0 flex-col gap-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
               Lê o segredo de{" "}
               <code className="num text-foreground">FRAUS_SEGREDO_WEBHOOK</code>{" "}
-              no ambiente de quem envia — nunca cole o segredo no código.
+              no ambiente de quem envia. Nunca cole o segredo no código.
             </p>
             <BotaoCopiar texto={exemploPython} rotulo="Copiar Python" />
           </div>

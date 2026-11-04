@@ -27,19 +27,19 @@ const CAMPOS: {
     chave: "pico",
     indice: 0,
     rotulo: "Resposta imediata até",
-    ajuda: "Padrão 10 s — pico de CSAT observado na literatura de live chat.",
+    ajuda: "Padrão 10 s: pico de CSAT observado na literatura de live chat.",
   },
   {
     chave: "saudavel",
     indice: 1,
     rotulo: "Espera saudável até",
-    ajuda: "Padrão 60 s — fora do pico, ainda sem perda relevante.",
+    ajuda: "Padrão 60 s: fora do pico, ainda sem perda relevante.",
   },
   {
     chave: "degradando",
     indice: 2,
     rotulo: "Espera longa até",
-    ajuda: "Padrão 180 s — acima disso é a faixa de abandono (57% desistem).",
+    ajuda: "Padrão 180 s: acima disso é a faixa de abandono (57% desistem).",
   },
 ];
 
@@ -221,7 +221,7 @@ export function LimiaresLatencia({
 
       {completo && !crescente ? (
         <p className="text-xs text-muted-foreground">
-          Os três cortes precisam ser crescentes — a régua acima continua
+          Os três cortes precisam ser crescentes: a régua acima continua
           mostrando os valores gravados até que sejam.
         </p>
       ) : null}
@@ -229,11 +229,11 @@ export function LimiaresLatencia({
       <p className="text-xs leading-relaxed text-muted-foreground">
         Estes cortes são de <strong className="text-foreground">exibição</strong>
         : eles movem onde a interface chama a espera de imediata, saudável,
-        longa ou crítica — no trilho do cartão de latência da visão geral e na
+        longa ou crítica, no trilho do cartão de latência da visão geral e na
         anotação embaixo de cada resposta da transcrição. Nenhuma feature do
         modelo depende deles: o sinal de tempo continua lendo os timestamps
         crus, e latência segue sem ser persistida. Fora do padrão de fábrica, a
-        interface para de citar as porcentagens da literatura ao lado do corte —
+        interface para de citar as porcentagens da literatura ao lado do corte:
         elas foram medidas em 10 s e 3 min, não no corte novo.
       </p>
 

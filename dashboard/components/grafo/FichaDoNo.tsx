@@ -45,8 +45,8 @@ export function FichaDoNo({ no }: { no: NoDoGrafo | null }) {
     <div aria-live="polite" className="min-w-0">
       {no === null ? (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Nenhum nó selecionado. Clique num ponto do grafo — ou percorra a lista
-          por teclado — para ver o que o sistema guarda sobre ele.
+          Nenhum nó selecionado. Clique num ponto do grafo (ou percorra a lista
+          por teclado) para ver o que o sistema guarda sobre ele.
         </p>
       ) : (
         <dl className="flex min-w-0 flex-col gap-3">

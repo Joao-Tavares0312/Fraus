@@ -577,7 +577,7 @@ def converter(
         datas = [inicio + timedelta(seconds=i) for i in range(len(linhas))]
         avisos.append(
             "Não achei coluna de data: sem horário não há latência, e latência é "
-            "feature do fusor. Estas conversas NÃO recebem nota — só a leitura por mensagem."
+            "feature do fusor. Estas conversas NÃO recebem nota, só a leitura por mensagem."
         )
     if "conversa_id" not in mapa.papeis:
         avisos.append("Não achei coluna de conversa: o arquivo inteiro virou uma conversa só.")

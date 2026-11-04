@@ -18,7 +18,7 @@ const display = localFont({ src: "../public/identidade/unbounded-variavel.woff2"
 const corpo = localFont({ src: "../public/identidade/space-grotesk-variavel.woff2", weight: "400 500", variable: "--fonte-corpo", display: "swap", fallback: ["system-ui", "sans-serif"] });
 
 export const metadata: Metadata = {
-  title: "Fraus — contexto, não certeza",
+  title: "Fraus: contexto, não certeza",
   description:
     "O Fraus estima satisfação em atendimentos de chatbot, sem pesquisa e sem LLM em runtime. Conheça o método e seus limites.",
 };

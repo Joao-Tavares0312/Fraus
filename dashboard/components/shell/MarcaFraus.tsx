@@ -94,7 +94,7 @@ export function MarcaFraus({ tamanho = 28 }: { tamanho?: number }) {
       <button
         ref={gatilho}
         type="button"
-        aria-label="Fraus — revelar o segredo com cinco cliques"
+        aria-label="Fraus: revelar o segredo com cinco cliques"
         aria-haspopup="dialog"
         aria-expanded={aberta}
         title="Fraus"

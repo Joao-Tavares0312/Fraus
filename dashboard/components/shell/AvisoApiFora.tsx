@@ -121,8 +121,8 @@ export function AvisoApiFora() {
     const doLog = await falhaDoLog();
     setErro(
       doLog
-        ? `a API não respondeu em ${TETO_MS / 1000}s. A última falha no log foi: ${doLog} — log completo em ${modo?.log ?? ".fraus-api.log"}.`
-        : `a API não respondeu em ${TETO_MS / 1000}s e o log não registrou falha — veja ${modo?.log ?? ".fraus-api.log"}.`,
+        ? `a API não respondeu em ${TETO_MS / 1000}s. A última falha no log foi: ${doLog}. Log completo em ${modo?.log ?? ".fraus-api.log"}.`
+        : `a API não respondeu em ${TETO_MS / 1000}s e o log não registrou falha. Veja ${modo?.log ?? ".fraus-api.log"}.`,
     );
   }, [reconsultar, router, modo]);
 
@@ -189,7 +189,7 @@ export function AvisoApiFora() {
           <p role="status" className="min-w-0 flex-1 text-xs text-muted-foreground">
             {subindo ? (
               <>
-                carregando os três BERTimbau do disco —{" "}
+                carregando os três BERTimbau do disco:{" "}
                 <span className="num text-foreground">{segundos}s</span>, costuma
                 levar de 30 a 60
               </>
@@ -247,7 +247,7 @@ export function AvisoApiFora() {
             </div>
             {falhouCopia ? (
               <p role="status" className="mt-2 text-xs text-muted-foreground">
-                O navegador não deixou copiar — a área de transferência só
+                O navegador não deixou copiar: a área de transferência só
                 funciona em HTTPS ou em <span className="num">localhost</span>.
                 Selecione o comando acima e copie à mão.
               </p>

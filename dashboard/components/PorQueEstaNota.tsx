@@ -43,7 +43,7 @@ export function PorQueEstaNota({
       <EstadoVazio
         className="m-5"
         titulo="Explicação indisponível nesta versão da API"
-        explicacao="Esta conversa tem sinal do cliente, mas a resposta da API não trouxe o campo `explicacao` (API mais antiga que a dashboard, ou motor sem decomposição). Nenhum efeito por sinal é mostrado em vez de inventar um."
+        explicacao="Esta conversa tem sinal do cliente, mas a resposta não trouxe a explicação (API mais antiga que a dashboard, ou motor sem decomposição). Nenhum efeito por sinal é mostrado em vez de inventar um."
         endpoint="GET /conversas/{id}/atribuicao"
       />
     );

@@ -495,10 +495,10 @@ function Analise({
   return (
     <div className="flex min-w-0 flex-col gap-4 break-words">
       <Painel
-        titulo={`Resultado — ${analise.conversa.id}`}
+        titulo={`Resultado: ${analise.conversa.id}`}
         nivel={dominante ? "dominante" : "apoio"}
         className="[&_h2]:min-w-0 [&_h2]:break-all"
-        legenda="A nota sai do fusor, que aprendeu com 39 medidas das sete famílias do vetor — texto, emoji, tempo, emoção, léxico, estilo e incongruência. Emoção aparece na transcrição abaixo e também entra nessa conta; a ironia aparece junto, mas é leitura por mensagem — desde 04/09/2026 não pesa mais na nota."
+        legenda="A nota sai do fusor, que aprendeu com 39 medidas das sete famílias do vetor: texto, emoji, tempo, emoção, léxico, estilo e incongruência. Emoção aparece na transcrição abaixo e também entra nessa conta; a ironia aparece junto, mas é leitura por mensagem. Desde 04/09/2026 ela não pesa mais na nota."
       >
         <dl className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-1.5">
@@ -576,7 +576,7 @@ function Analise({
 
       <Painel
         titulo="Conversa"
-        legenda="O grifo é medido por oclusão: apaga-se a palavra e pergunta-se de novo ao modelo. Verde empurrou a leitura para satisfeito, vermelho puxou para insatisfeito, e a força da cor é o tamanho do efeito. Ressalva do método: apagar uma palavra de dentro de uma expressão fixa deixa um fragmento que ninguém escreveria — o peso é verdadeiro sobre o que o modelo faz, e não deve ser lido como “esta palavra significa insatisfação”. Só a fala do cliente recebe peso: o classificador foi treinado em texto de cliente, e pontuar o roteiro do bot seria número sem lastro. Abrindo os sinais de uma fala aparecem as três probabilidades de satisfação e as oito emoções. Duas ressalvas valem para todas elas: o “desprezo” não é classe treinada — nenhum corpus em português a anota, e ele é derivado da díade raiva + nojo (Plutchik, 1980) pela média geométrica, que exige as duas emoções juntas; e a “ironia” acerta o caso de manual mas marca 6 em 10 falas sinceras de atendimento como irônicas, com 0,999 de confiança, então leia como indício e nunca como veredito. A emoção entra na nota — a ironia, não: desde 04/09/2026 ela é só leitura por mensagem, tirada do vetor do fusor porque em resenha vira detector de sentimento positivo."
+        legenda="O grifo é medido por oclusão: apaga-se a palavra e pergunta-se de novo ao modelo. Verde empurrou a leitura para satisfeito, vermelho puxou para insatisfeito, e a força da cor é o tamanho do efeito. Ressalva do método: apagar uma palavra de dentro de uma expressão fixa deixa um fragmento que ninguém escreveria. O peso é verdadeiro sobre o que o modelo faz, e não deve ser lido como “esta palavra significa insatisfação”. Só a fala do cliente recebe peso: o classificador foi treinado em texto de cliente, e pontuar o roteiro do bot seria número sem lastro. Abrindo os sinais de uma fala aparecem as três probabilidades de satisfação e as oito emoções. Duas ressalvas valem para todas elas: o “desprezo” não é classe treinada: nenhum corpus em português a anota, e ele é derivado da díade raiva + nojo (Plutchik, 1980) pela média geométrica, que exige as duas emoções juntas; e a “ironia” acerta o caso de manual mas marca 6 em 10 falas sinceras de atendimento como irônicas, com 0,999 de confiança, então leia como indício e nunca como veredito. A emoção entra na nota, a ironia não: desde 04/09/2026 ela é só leitura por mensagem, tirada do vetor do fusor porque em resenha vira detector de sentimento positivo."
         semPadding
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha px-5 py-3">
@@ -684,8 +684,8 @@ function Analise({
         titulo="Palavras desta conversa"
         legenda={
           referencia === 0
-            ? "Não há conversas no banco para servir de comparação, então o destaque sai vazio — inventar “igual à média” sem ter medido média nenhuma seria pior que não comparar."
-            : `“Destaque” é quantas vezes a palavra aparece mais aqui do que no resto do banco (${referencia} atendimentos). É o que responde o que ESTA conversa tem de diferente: as palavras mais repetidas de qualquer atendimento são as mesmas de todos os outros. Palavras funcionais (“de”, “que”, “não”) ficam de fora da contagem, mas continuam valendo peso na transcrição acima — “não” muda a leitura de uma frase inteira.`
+            ? "Não há conversas no banco para servir de comparação, então o destaque sai vazio. Inventar “igual à média” sem ter medido média nenhuma seria pior que não comparar."
+            : `“Destaque” é quantas vezes a palavra aparece mais aqui do que no resto do banco (${referencia} atendimentos). É o que responde o que ESTA conversa tem de diferente: as palavras mais repetidas de qualquer atendimento são as mesmas de todos os outros. Palavras funcionais (“de”, “que”, “não”) ficam de fora da contagem, mas continuam valendo peso na transcrição acima: “não” muda a leitura de uma frase inteira.`
         }
         semPadding
       >
@@ -778,7 +778,7 @@ function SinaisDeLeitura({
             <span>(pouco confiável)</span>
           </span>
         ) : null}
-        <span className="group-open:hidden">— ver tudo</span>
+        <span className="group-open:hidden">ver tudo</span>
       </summary>
 
       <div className="mt-3 flex flex-col gap-3 border-l border-linha pl-3">

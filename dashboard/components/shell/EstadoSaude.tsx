@@ -16,12 +16,12 @@ const APARENCIA: Record<
   verificando: {
     rotulo: "verificando…",
     cor: "bg-muted-foreground",
-    detalhe: "consultando GET /saude",
+    detalhe: "consultando o servidor",
   },
   "no-ar": {
     rotulo: "API no ar",
     cor: "bg-success",
-    detalhe: "GET /saude respondeu ok, com o motor real",
+    detalhe: "o servidor respondeu, com o motor real",
   },
   frio: {
     rotulo: "motor em espera",
@@ -31,27 +31,27 @@ const APARENCIA: Record<
   aquecendo: {
     rotulo: "motor aquecendo…",
     cor: "bg-warning motion-safe:animate-pulse",
-    detalhe: "GET /saude respondeu, mas o motor real ainda não está pronto",
+    detalhe: "o servidor respondeu, mas o motor real ainda não está pronto",
   },
   "erro-motor": {
     rotulo: "motor indisponível",
     cor: "bg-destructive",
-    detalhe: "GET /saude respondeu, mas a carga do motor falhou",
+    detalhe: "o servidor respondeu, mas a carga do motor falhou",
   },
   // A API respondeu, mas quem pontua é o dublê: TODO número da tela é
   // sintético, inclusive os pesos por feature. Cor de aviso e não de sucesso,
   // porque isto não é um estado saudável — é uma tela que não pode ser lida
   // como medição, e muito menos apresentada como tal.
   duble: {
-    rotulo: "motor dublê — números sintéticos",
+    rotulo: "motor dublê: números sintéticos",
     cor: "bg-warning",
     detalhe:
-      "GET /saude respondeu com motor=duble: a API está de pé, mas não está medindo",
+      "a API está de pé, mas quem responde é o dublê: ela não está medindo",
   },
   "fora-do-ar": {
     rotulo: "API fora do ar",
     cor: "bg-destructive",
-    detalhe: "GET /saude não respondeu",
+    detalhe: "o servidor não respondeu",
   },
 };
 

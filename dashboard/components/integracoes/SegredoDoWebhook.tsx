@@ -70,12 +70,12 @@ export function SegredoDoWebhook({
       {segredo ? (
         <ChaveEmClaro
           chave={segredo}
-          titulo="Copie agora — este segredo não pode ser lido de novo"
+          titulo="Copie agora: este segredo não pode ser lido de novo"
         >
           <p>
             O Fraus não guarda cópia dele, nem o hash: ele precisa do valor em
             claro para recalcular a assinatura, e por isso mora no ambiente da
-            máquina. Se você perder, o conserto é gerar outro — e a plataforma
+            máquina. Se você perder, o conserto é gerar outro, e a plataforma
             para de ser aceita até receber a cópia nova.
           </p>
         </ChaveEmClaro>
@@ -112,7 +112,7 @@ export function SegredoDoWebhook({
           }}
         >
           <Label htmlFor={`${identificador}-variavel`} className="text-xs font-normal text-muted-foreground">
-            Nome da variável de ambiente — o nome, nunca o segredo
+            Nome da variável de ambiente: o nome, nunca o segredo
           </Label>
           <div className="flex flex-wrap items-center gap-2">
             <Input
@@ -150,8 +150,8 @@ export function SegredoDoWebhook({
 
       <ol className="flex flex-col gap-1.5 text-xs leading-relaxed text-muted-foreground">
         <li>
-          <span className="num text-foreground">1.</span> Gere o segredo aqui —
-          ele aparece uma única vez.
+          <span className="num text-foreground">1.</span> Gere o segredo aqui.
+          Ele aparece uma única vez.
         </li>
         <li>
           <span className="num text-foreground">2.</span> Defina{" "}
@@ -180,7 +180,7 @@ export function SegredoDoWebhook({
                 integra -- por um defeito que nao e de quem integra. */}
             <p>
               Enquanto isso, a rota do webhook responde{" "}
-              <strong>503</strong> — não 401. O problema está na máquina que
+              <strong>503</strong>, não 401. O problema está na máquina que
               hospeda a API, não na requisição da plataforma.
             </p>
           </AlertDescription>
