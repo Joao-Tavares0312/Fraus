@@ -5,7 +5,7 @@ API de laboratório para desempenho/qualidade:
 e devolve classificadores reais por ``texto/emocao/ironia`` (e ``fusor`` somente
 com procedência). ``coletar_perfil(config)`` usa a mesma carga e devolve dados
 JSON, bordas e cinco repetições; não grava snapshots nem muda o produto.
-``config``: perfil, workspace, caminhos:{texto,emocao,ironia[,laya]}, corpus,
+``config``: perfil, workspace, caminhos:{texto,emocao,ironia}, corpus,
 checkpoint e, opcionalmente, fusor/manifesto_fusor/fonte_confiavel_fusor/
 sha256_manifesto_fusor. O chamador deve usar ``executar_isolado``: ambiente
 allowlist/offline, threads e guardrail ficam antes dos imports pesados.
@@ -147,8 +147,7 @@ def carregar_fusor_confiavel(config: dict):
 def carregar_perfil(config: dict) -> dict:
     """Carrega apenas adaptadores reais, CPU/offline, sobre cópias externas.
 
-    Não mede a fábrica da API: especialmente, Laya aqui é um perfil direto,
-    não a carga transitória de BERT-ironia da fábrica (fase desempenho).
+    Não mede a fábrica da API, só os adaptadores diretos de cada perfil.
     ``somente_cabecas`` permite smoke de uma cabeça sem fabricar motor completo.
     """
     workspace = Path(config['workspace']).resolve()
@@ -157,7 +156,7 @@ def carregar_perfil(config: dict) -> dict:
     if os.environ.get('HF_HUB_OFFLINE') != '1' or os.environ.get('TRANSFORMERS_OFFLINE') != '1':
         raise ValueError('carga exige subprocesso offline')
     perfil = config['perfil']
-    if perfil not in {'torch', 'onnx-fp32', 'onnx-int8', 'laya-onnx'}:
+    if perfil not in {'torch', 'onnx-fp32', 'onnx-int8'}:
         raise ValueError('perfil desconhecido')
     caminhos = {nome: _caminho_copiado(valor, workspace) for nome, valor in config['caminhos'].items()}
     if perfil == 'torch':
@@ -178,11 +177,7 @@ def carregar_perfil(config: dict) -> dict:
             continue
         inicio = time.perf_counter()
         with prazo_operacao():
-            if nome == 'ironia' and perfil == 'laya-onnx':
-                from fraus.sinais.ironia_laya import ClassificadorIroniaLayaOnnx
-                carregados[nome] = ClassificadorIroniaLayaOnnx(diretorio=caminhos[nome])
-            else:
-                carregados[nome] = classes[nome](caminhos[nome])
+            carregados[nome] = classes[nome](caminhos[nome])
         eventos.append({'cabeca': nome, 'duracao_s': time.perf_counter() - inicio, 'memoria': memoria()})
     fusor_config = dict(config)
     for chave in ('fusor', 'manifesto_fusor'):
@@ -305,7 +300,7 @@ def coletar_perfil(config: dict) -> dict:
              'motivo': None if completo and registros else ('corpus_ausente' if not registros else 'fusor_ou_cabeca_sem_prerequisito'),
              'curadoria': 'vazia_local_nao_representa_producao', 'casos': casos, 'bordas': bordas,
              'eventos_carga': cabecas.get('eventos_carga', []), 'duracao_s': time.perf_counter() - inicio,
-             'versoes': versoes(['torch', 'transformers', 'onnxruntime', 'laya', 'numpy', 'scikit-learn']),
+             'versoes': versoes(['torch', 'transformers', 'onnxruntime', 'numpy', 'scikit-learn']),
              'memoria_final': memoria(), 'hashes': config.get('hashes', {})}
     _finito(dados)
     return dados

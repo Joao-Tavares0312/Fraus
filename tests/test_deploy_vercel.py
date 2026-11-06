@@ -10,7 +10,6 @@ from scripts.preparar_modelos_vercel import (
     conferir_modelos,
     extrair_zip_seguro,
     instalar_extraido,
-    sobrepor_laya_se_declarada,
 )
 from scripts.gerenciar_artefatos import empacotar, main as gerenciar_artefatos, validar
 
@@ -30,7 +29,7 @@ def test_vercel_declara_large_function_e_inclui_modelos():
     for trecho in ("api/index.py", "maxDuration", "300", '"includeFiles": "**"'):
         assert trecho in fonte
     configuracao = json.loads(fonte)
-    assert "--no-deps laya==0.3.21" in configuracao["installCommand"]
+    assert "laya" not in configuracao["installCommand"]
 
 
 def test_dashboard_tem_configuracao_vercel_independente():
@@ -93,58 +92,6 @@ def test_checksum_incorreto_e_recusado(tmp_path):
 def test_modelos_incompletos_falham_alto(tmp_path):
     with pytest.raises(ArtefatoDeModelosInvalido, match="ausente"):
         conferir_modelos(tmp_path)
-
-
-def test_backend_laya_onnx_exige_grafo_e_tokenizador(tmp_path, monkeypatch):
-    _artefatos_minimos(tmp_path)
-    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
-    with pytest.raises(ArtefatoDeModelosInvalido, match="laya.onnx"):
-        conferir_modelos(tmp_path)
-
-    laya = tmp_path / "modelos-onnx" / "laya-ironia"
-    (laya / "tokenizer").mkdir(parents=True)
-    for relativo in (
-        "laya.onnx",
-        "manifesto.json",
-        "rl_agent_config.json",
-        "tokenizer/tokenizer.json",
-        "tokenizer/tokenizer_config.json",
-    ):
-        (laya / relativo).write_text("{}")
-    (laya / "manifesto.json").write_text('{"formato": "int8"}')
-    conferir_modelos(tmp_path)
-
-    (laya / "manifesto.json").write_text('{"formato": "fp32"}')
-    with pytest.raises(ArtefatoDeModelosInvalido, match="laya.onnx.data"):
-        conferir_modelos(tmp_path)
-    (laya / "laya.onnx.data").write_bytes(b"pesos")
-    conferir_modelos(tmp_path)
-
-
-def test_laya_em_fp16_e_autossuficiente_e_formato_desconhecido_e_recusado(tmp_path, monkeypatch):
-    _artefatos_minimos(tmp_path)
-    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
-    laya = tmp_path / "modelos-onnx" / "laya-ironia"
-    (laya / "tokenizer").mkdir(parents=True)
-    for relativo in ("laya.onnx", "rl_agent_config.json", "tokenizer/tokenizer.json",
-                     "tokenizer/tokenizer_config.json"):
-        (laya / relativo).write_text("{}")
-    # Pesos em float16 dentro do proprio grafo: nao ha laya.onnx.data.
-    (laya / "manifesto.json").write_text('{"formato": "fp16"}')
-    conferir_modelos(tmp_path)
-
-    (laya / "manifesto.json").write_text('{"formato": "fp8"}')
-    with pytest.raises(ArtefatoDeModelosInvalido, match="formato"):
-        conferir_modelos(tmp_path)
-
-
-def test_backend_laya_onnx_exige_url_e_checksum_separados(tmp_path, monkeypatch):
-    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
-    monkeypatch.delenv("FRAUS_LAYA_MODELO_URL", raising=False)
-    monkeypatch.delenv("FRAUS_LAYA_MODELO_SHA256", raising=False)
-
-    with pytest.raises(ArtefatoDeModelosInvalido, match="FRAUS_LAYA_MODELO_URL"):
-        sobrepor_laya_se_declarada(tmp_path, tmp_path)
 
 
 def _artefatos_minimos(raiz: Path) -> None:

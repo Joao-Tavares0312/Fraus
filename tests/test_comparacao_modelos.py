@@ -49,15 +49,12 @@ def test_bootstrap_de_modelos_iguais_cruza_o_zero():
     assert resultado.ic_inferior == resultado.ic_superior == 0.0
 
 
-# --- laudo: matriz de confusao, contagens por classe e relatorio --------------
+# --- matriz de confusao, contagens por classe e conjunto avaliado -------------
 
 from fraus.comparacao_modelos import (  # noqa: E402
     avaliar_conjunto,
     contagens_por_classe,
     matriz_de_confusao,
-    montar_laudo,
-    relatorio_markdown,
-    validar_laudo,
 )
 
 
@@ -93,20 +90,21 @@ def _conjunto():
         nome="Ironia — teste interno",
         independente=False,
         rotulos=rotulos,
-        preditos_por_modelo={"bertimbau": [0] * 40, "laya_treinado": list(rotulos)},
+        preditos_por_modelo={"bertimbau": [0] * 40, "candidato": list(rotulos)},
         classes=[0, 1],
         nomes_classes=["nao-ironico", "ironico"],
         reamostras=200,
+        candidato="candidato", referencia="bertimbau",
     )
 
 
 def test_conjunto_avaliado_carrega_matriz_contagens_e_comparacao():
     conjunto = _conjunto()
     assert conjunto["exemplos"] == 40
-    assert conjunto["modelos"]["laya_treinado"]["acuracia"] == 1.0
+    assert conjunto["modelos"]["candidato"]["acuracia"] == 1.0
     assert conjunto["modelos"]["bertimbau"]["matriz"] == [[20, 0], [20, 0]]
     comparacao = conjunto["comparacao"]
-    assert (comparacao["candidato"], comparacao["referencia"]) == ("laya_treinado", "bertimbau")
+    assert (comparacao["candidato"], comparacao["referencia"]) == ("candidato", "bertimbau")
     assert comparacao["mcnemar"]["so_candidato"] == 20
     assert comparacao["diferenca_demonstrada"] is True
 
@@ -115,8 +113,9 @@ def test_modelos_iguais_nao_tem_diferenca_demonstrada():
     rotulos = [0, 1] * 20
     conjunto = avaliar_conjunto(
         identificador="x", tarefa="ironia", nome="x", independente=True, rotulos=rotulos,
-        preditos_por_modelo={"bertimbau": list(rotulos), "laya_treinado": list(rotulos)},
+        preditos_por_modelo={"bertimbau": list(rotulos), "candidato": list(rotulos)},
         classes=[0, 1], nomes_classes=["a", "b"], reamostras=100,
+        candidato="candidato", referencia="bertimbau",
     )
     assert conjunto["comparacao"]["diferenca_demonstrada"] is False
 
@@ -125,70 +124,10 @@ def test_conjunto_recusa_predicoes_de_tamanho_diferente():
     with pytest.raises(ValueError):
         avaliar_conjunto(
             identificador="x", tarefa="ironia", nome="x", independente=True, rotulos=[0, 1],
-            preditos_por_modelo={"bertimbau": [0], "laya_treinado": [0, 1]},
+            preditos_por_modelo={"bertimbau": [0], "candidato": [0, 1]},
             classes=[0, 1], nomes_classes=["a", "b"],
+            candidato="candidato", referencia="bertimbau",
         )
-
-
-def _laudo(**extras):
-    return montar_laudo(
-        conjuntos=[_conjunto()],
-        latencia={
-            "hardware": "CPU do Colab, 2 nucleos",
-            "amostra": 50,
-            "medidas": [
-                {"modelo": "bertimbau", "tarefa": "ironia", "executor": "torch",
-                 "mediana_ms": 41.5, "p95_ms": 60.0},
-            ],
-        },
-        procedencia={"fraus_commit": "abc1234"},
-        rodada_de_fumaca=extras.get("fumaca", False),
-        gerado_em="2026-10-02T13:00:00+00:00",
-    )
-
-
-def test_laudo_montado_passa_na_validacao():
-    laudo = _laudo()
-    assert laudo["schema"] == 1
-    validar_laudo(laudo)
-
-
-def test_validacao_recusa_laudo_de_outro_schema_ou_sem_conjuntos():
-    with pytest.raises(ValueError):
-        validar_laudo({"schema": 2, "conjuntos": []})
-    with pytest.raises(ValueError):
-        validar_laudo({"schema": 1})
-    with pytest.raises(ValueError):
-        validar_laudo([])
-
-
-def test_relatorio_traz_os_numeros_do_laudo_e_a_procedencia():
-    texto = relatorio_markdown(_laudo())
-    assert "# Comparação de modelos" in texto
-    assert "Ironia — teste interno" in texto
-    assert "| ironico | 20 | 0 | 0 | 20 |" in texto  # VP FP FN VN do Laya treinado
-    assert "41,5 ms" in texto
-    assert "CPU do Colab, 2 nucleos" in texto
-    assert "abc1234" in texto
-
-
-def test_relatorio_de_fumaca_avisa_que_nao_e_resultado():
-    assert "rodada de fumaça" in relatorio_markdown(_laudo(fumaca=True)).lower()
-    assert "rodada de fumaça" not in relatorio_markdown(_laudo()).lower()
-
-
-def test_relatorio_escreve_sem_diferenca_quando_o_intervalo_cruza_o_zero():
-    rotulos = [0, 1] * 20
-    conjunto = avaliar_conjunto(
-        identificador="x", tarefa="ironia", nome="Empate", independente=True, rotulos=rotulos,
-        preditos_por_modelo={"bertimbau": list(rotulos), "laya_treinado": list(rotulos)},
-        classes=[0, 1], nomes_classes=["a", "b"], reamostras=100,
-    )
-    laudo = montar_laudo(conjuntos=[conjunto], latencia=None, procedencia={},
-                         rodada_de_fumaca=False, gerado_em="2026-10-02T13:00:00+00:00")
-    texto = relatorio_markdown(laudo)
-    assert "sem diferença demonstrada" in texto
-    assert "não foi medida" in texto  # latencia ausente e nomeada, nao zerada
 
 
 def test_modelo_pode_prever_classe_que_o_conjunto_nao_tem():
@@ -197,35 +136,18 @@ def test_modelo_pode_prever_classe_que_o_conjunto_nao_tem():
     conjunto = avaliar_conjunto(
         identificador="xed", tarefa="emocao", nome="XED", independente=True,
         rotulos=[0, 0, 1, 1],
-        preditos_por_modelo={"bertimbau": [0, 2, 1, 2], "laya_treinado": [0, 0, 1, 1]},
+        preditos_por_modelo={"bertimbau": [0, 2, 1, 2], "candidato": [0, 0, 1, 1]},
         classes=[0, 1, 2], nomes_classes=["a", "b", "neutro"], classes_do_f1=[0, 1],
-        reamostras=50,
+        reamostras=50, candidato="candidato", referencia="bertimbau",
     )
     bertimbau = conjunto["modelos"]["bertimbau"]
     assert bertimbau["matriz"] == [[1, 0, 1], [0, 1, 1], [0, 0, 0]]
     neutro = bertimbau["por_classe"][2]
     assert (neutro["exemplos"], neutro["fp"], neutro["recall"]) == (0, 2, None)
     assert bertimbau["f1_macro"] == pytest.approx(2 / 3)  # so a e b; neutro nao entra
-    assert conjunto["modelos"]["laya_treinado"]["f1_macro"] == 1.0
+    assert conjunto["modelos"]["candidato"]["f1_macro"] == 1.0
 
 
 def test_classe_fora_da_matriz_e_erro_nomeado():
     with pytest.raises(ValueError, match="classe 6"):
         matriz_de_confusao([0, 1], [0, 6], classes=[0, 1])
-
-
-# --- ressalvas: o que se soube sobre a medicao DEPOIS de ela ser feita --------
-
-def test_ressalva_do_laudo_aparece_no_relatorio():
-    laudo = {**_laudo(), "ressalvas": ["A divisão do corpus de ironia estava errada."]}
-    validar_laudo(laudo)
-    texto = relatorio_markdown(laudo)
-    assert "## Ressalvas" in texto
-    assert "A divisão do corpus de ironia estava errada." in texto
-    assert "## Ressalvas" not in relatorio_markdown(_laudo())
-
-
-@pytest.mark.parametrize("ressalvas", ["texto solto", [""], [3], [None]])
-def test_ressalva_malformada_e_recusada(ressalvas):
-    with pytest.raises(ValueError):
-        validar_laudo({**_laudo(), "ressalvas": ressalvas})

@@ -267,14 +267,12 @@ def test_modelo_e_leitura_publica_para_usuario(tmp_path):
     for metodo, caminho in (
         ("GET", "/modelo"),
         ("GET", "/modelo/lexicon"),
-        ("GET", "/modelo/comparacao"),
     ):
         resposta = cliente.request(metodo, caminho, headers=cabecalho)
         assert resposta.status_code != 403, f"{metodo} {caminho}: {resposta.status_code}"
     # As simulacoes precisam de motor real; o portao e por caminho.
     from fraus.api.seguranca import rota_administrativa
     assert not rota_administrativa("POST", "/modelo/simular")
-    assert not rota_administrativa("POST", "/modelo/ironia-laya/simular")
     assert cliente.post("/lexico/curado", headers=cabecalho, json={}).status_code == 403
 
 

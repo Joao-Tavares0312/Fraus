@@ -34,7 +34,7 @@ def test_paridade_preserva_nulls_denominadores_ids_e_flips():
 
 def test_modelos_distintos_nao_sao_equivalencia():
     with pytest.raises(ValueError, match='checkpoint'):
-        paridade.comparar_snapshots(_snapshot(), _snapshot('laya-onnx', 'outro'), 'fp32')
+        paridade.comparar_snapshots(_snapshot(), _snapshot('onnx-int8', 'outro'), 'fp32')
 
 
 def test_ids_ou_formas_desalinhados_sao_recusados():

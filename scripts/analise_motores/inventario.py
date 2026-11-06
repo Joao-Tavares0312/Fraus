@@ -28,7 +28,7 @@ CONFIGURACOES = ("pyproject.toml", "uv.lock", "requirements.txt", "vercel.json",
 LIMITE_CABECALHO = 8 * 1024 * 1024
 LIMITE_TEXTO = 4 * 1024 * 1024
 LIMITE_MEMBROS_ZIP = 100_000
-DEPENDENCIAS = ("torch", "transformers", "tokenizers", "onnx", "onnxruntime", "safetensors", "laya", "scikit-learn", "joblib", "numpy", "fastapi", "uvicorn", "psycopg", "psycopg-pool", "pydantic")
+DEPENDENCIAS = ("torch", "transformers", "tokenizers", "onnx", "onnxruntime", "safetensors", "scikit-learn", "joblib", "numpy", "fastapi", "uvicorn", "psycopg", "psycopg-pool", "pydantic")
 NOME = re.compile(r"[A-Za-z0-9_.+/-]{1,512}\Z")
 VARIAVEL = re.compile(r"[A-Z][A-Z0-9_]{0,127}\Z")
 DEPENDENCIA = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9_.-]*)(?:\[([A-Za-z0-9_,.-]+)\])?\s*((?:(?:===|==|!=|~=|>=|<=|>|<)\s*[A-Za-z0-9.*+!-]+\s*,?\s*)*)")
@@ -190,9 +190,7 @@ def inspecionar_onnx(caminho: Path, habilitado: bool) -> dict:
 
 def _papel(relativo: str, categoria: str) -> dict:
     if "bertimbau-ironia" in relativo:
-        return {"inferencia": "perfil_bertimbau", "transitorio": "perfil_laya_pela_fabrica_atual", "validacao": "obrigatorio_no_bundle_onnx", "nao_usado": "vetor_do_fusor", "fonte": "fraus/api/main.py:299-325; scripts/preparar_modelos_vercel.py:66-102", "estado_producao": None}
-    if "laya-ironia" in relativo:
-        return {"inferencia": "somente_perfil_laya_onnx", "transitorio": False, "validacao": "condicional_ao_perfil", "nao_usado": "vetor_do_fusor", "estado_producao": None}
+        return {"inferencia": "perfil_bertimbau", "transitorio": False, "validacao": "obrigatorio_no_bundle_onnx", "nao_usado": "vetor_do_fusor", "fonte": "fraus/api/main.py:montar_classificadores; scripts/preparar_modelos_vercel.py:conferir_modelos", "estado_producao": None}
     if "multitarefa" in relativo:
         return {"inferencia": "somente_perfil_onnx_multitarefa", "estado_producao": None}
     if categoria in {"modelo", "tokenizador", "fusor"}:
