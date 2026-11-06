@@ -223,9 +223,8 @@ def sessao_do_jwt(ctx: Contexto, chave: str | None) -> dict | None:
     senao qualquer token nomeando um id existente entraria.
 
     O custo e uma leitura por requisicao, a mesma que `faixas_vigentes()` ja
-    paga. (O middleware e `acesso_autorizado` chamam esta funcao em sequencia,
-    entao sao duas -- consulta por chave primaria, e o preco de nao mentir
-    sobre quem tem acesso.)
+    paga. (O middleware chama esta funcao uma vez e reaproveita o resultado --
+    consulta por chave primaria, e o preco de nao mentir sobre quem tem acesso.)
     """
     if chave is None or ctx.jwt_segredo is None:
         return None
@@ -395,7 +394,10 @@ def registrar_middleware_de_acesso(app: FastAPI, ctx: Contexto) -> None:
                 )},
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        if not acesso_autorizado(ctx, chave_recebida):
+        # `sessao` ja e o resultado de `sessao_do_jwt` sobre ESTA chave, e
+        # `acesso_autorizado` devolveria True por esse mesmo caminho: so
+        # perguntar de novo custaria tres consultas ao banco por requisicao.
+        if sessao is None and not acesso_autorizado(ctx, chave_recebida):
             return JSONResponse(
                 status_code=401,
                 content={"detail": "chave invalida"},
