@@ -326,11 +326,28 @@ def construir_motor_padrao() -> Motor:
     return Motor(classificador, fusor, emocao, ironia)
 
 
-def criar_app_padrao() -> FastAPI:
+class MotorForaDaFuncao(RuntimeError):
+    """Uma rota que exige o `Motor` chegou a uma funcao que nao o carrega."""
+
+
+def _recusar_motor() -> Motor:
+    raise MotorForaDaFuncao(
+        "a funcao leve nao carrega modelos: esta rota devia ter sido "
+        "reescrita para /api/motor no vercel.json"
+    )
+
+
+def criar_app_padrao(com_motor: bool = True) -> FastAPI:
     """Monta rotas e banco agora; carrega o motor quando uma rota o exigir.
 
     Saude e autenticacao nao pagam a abertura das sessoes ONNX. A primeira
     operacao de modelo carrega tudo uma vez, e falhas seguem subindo sem duble.
+
+    `com_motor=False` e a funcao LEVE da Vercel (`api/index.py`): ela atende
+    auth, CRUD, leituras e a regua, que saem do banco e do fusor, e recusa em
+    voz alta qualquer rota que precise dos pesos. Nao ha duble (invariante 7):
+    rota de modelo que chegue aqui por erro de rewrite falha com 500 e a
+    mensagem de `MotorForaDaFuncao`.
     """
     chave_mestra = os.environ.get("FRAUS_CHAVE_MESTRA") or None
     jwt_segredo = os.environ.get("FRAUS_JWT_SEGREDO") or None
@@ -356,7 +373,7 @@ def criar_app_padrao() -> FastAPI:
     # leitura do ar, e o mesmo motivo do invariante 7 vale para ela.
 
     motor = ProvedorDeMotor(
-        construir_motor_padrao,
+        construir_motor_padrao if com_motor else _recusar_motor,
         # A regua sai do fusor sozinho: leitura nao espera sessao de modelo.
         regua=lambda: regua_do_fusor(Fusor.carregar(CAMINHO_FUSOR)),
     )
@@ -411,7 +428,7 @@ def criar_app_padrao() -> FastAPI:
     # so carregava os tres grafos ONNX dentro da primeira predicao do usuario.
     # Disparar a carga em segundo plano aqui tira esse custo do caminho da
     # requisicao. `FRAUS_AQUECER=0` desliga (ex.: depurar so as rotas leves).
-    if os.environ.get("FRAUS_AQUECER", "1") != "0":
+    if com_motor and os.environ.get("FRAUS_AQUECER", "1") != "0":
         motor.aquecer()
 
     return criar_app(

@@ -6,7 +6,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from fraus.api.main import criar_app
+from fraus.api.main import MotorForaDaFuncao, criar_app
 from fraus.api.motor_preguicoso import ProvedorDeMotor
 from fraus.db import Banco
 from fraus.motor import Motor
@@ -210,6 +210,31 @@ def test_indicadores_respondem_com_o_motor_ainda_frio(tmp_path):
     assert resposta.status_code == 200, resposta.text
     assert resposta.json()["pontuadas_com_regua_antiga"] == 0
     assert provedor.estado == "frio"
+
+
+def test_funcao_leve_serve_leituras_sem_construir_o_motor(tmp_path):
+    """A funcao leve da Vercel nunca abre um modelo: leitura sai do banco."""
+    construcoes = 0
+
+    def construir():
+        nonlocal construcoes
+        construcoes += 1
+        raise MotorForaDaFuncao("a funcao leve nao carrega modelos")
+
+    banco = Banco(tmp_path / "leve.db")
+    banco.migrar()
+    provedor = ProvedorDeMotor(construir, regua=lambda: "abc-123")
+    cliente = TestClient(criar_app(banco=banco, motor=provedor, raiz_importacao=tmp_path))
+
+    for rota in ("/conversas", "/indicadores", "/serie-temporal", "/configuracoes",
+                 "/modelo/lexicon", "/lexico/curado", "/operacao/equipes"):
+        resposta = cliente.get(rota)
+        assert resposta.status_code == 200, f"{rota}: {resposta.status_code} {resposta.text}"
+    assert construcoes == 0
+
+    # Rota que exige o Motor chegou aqui por erro de rewrite: falha alto.
+    with pytest.raises(MotorForaDaFuncao):
+        cliente.post("/modelo/simular", json={"texto": "oi"})
 
 
 def test_comparar_cenario_e_contribuicao_por_familia_entram_na_medicao(monkeypatch):

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -17,19 +18,48 @@ from scripts.gerenciar_artefatos import empacotar, main as gerenciar_artefatos, 
 RAIZ = Path(__file__).resolve().parents[1]
 
 
-def test_entrypoint_vercel_expoe_fastapi_real():
-    fonte = (RAIZ / "api" / "index.py").read_text(encoding="utf-8")
-    assert "from fraus.api.main import criar_app_padrao" in fonte
-    assert "class AplicacaoPreguicosa" in fonte
-    assert "api_demo" not in fonte
+def test_entrypoints_vercel_expoem_fastapi_real_com_e_sem_motor():
+    leve = (RAIZ / "api" / "index.py").read_text(encoding="utf-8")
+    motor = (RAIZ / "api" / "motor.py").read_text(encoding="utf-8")
+    for fonte in (leve, motor):
+        assert "from fraus.api.main import criar_app_padrao" in fonte
+        assert "api_demo" not in fonte
+    assert "com_motor=False" in leve
+    assert "com_motor=False" not in motor
 
 
-def test_vercel_declara_large_function_e_inclui_modelos():
-    fonte = (RAIZ / "vercel.json").read_text(encoding="utf-8")
-    for trecho in ("api/index.py", "maxDuration", "300", '"includeFiles": "**"'):
-        assert trecho in fonte
-    configuracao = json.loads(fonte)
+def _destino(rewrites, caminho):
+    for regra in rewrites:
+        if re.fullmatch(regra["source"], caminho):
+            return regra["destination"]
+    return None
+
+
+def test_rotas_de_modelo_vao_para_a_funcao_do_motor():
+    configuracao = json.loads((RAIZ / "vercel.json").read_text(encoding="utf-8"))
     assert "laya" not in configuracao["installCommand"]
+    funcoes = configuracao["functions"]
+    assert "modelos-onnx/**" in funcoes["api/index.py"]["excludeFiles"]
+    assert funcoes["api/motor.py"]["includeFiles"] == "**"
+
+    rewrites = configuracao["rewrites"]
+    no_motor = [
+        "/saude", "/saude/prontidao", "/saude/deriva", "/analisar", "/analisar/registrar",
+        "/analisar/previa", "/analisar/arquivo", "/ingestao", "/ingestao/",
+        "/integracoes/webhook/3", "/conversas/importar", "/conversas/repontuar",
+        "/conversas/abc/atribuicao", "/conversas/a/b/contrafactual", "/conversas/abc/confianca",
+        "/indicadores/drivers", "/indicadores/confianca", "/grafo", "/modelo", "/modelo/simular",
+        "/operacao/replay/x", "/operacao/laboratorio/cenario", "/operacao/laboratorio/comparar",
+    ]
+    na_leve = [
+        "/auth/eu", "/auth/estado", "/conversas", "/conversas/abc", "/conversas/importar/previa",
+        "/indicadores", "/serie-temporal", "/configuracoes", "/modelo/lexicon", "/lexico/curado",
+        "/integracoes/fontes", "/operacao/equipes", "/operacao/radar", "/anotacao/tok",
+    ]
+    for caminho in no_motor:
+        assert _destino(rewrites, caminho) == "/api/motor", caminho
+    for caminho in na_leve:
+        assert _destino(rewrites, caminho) == "/api/index", caminho
 
 
 def test_dashboard_tem_configuracao_vercel_independente():
