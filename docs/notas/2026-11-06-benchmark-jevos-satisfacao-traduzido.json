@@ -1,0 +1,386 @@
+{
+  "schema": 1,
+  "tarefa": "satisfacao",
+  "gerado_em": "2026-11-07T00:01:35+00:00",
+  "procedencia": {
+    "commit": "aec7d22",
+    "modelos": {
+      "bertimbau": "/home/joaopedro/GITHUB/Fraus/modelos/bertimbau-satisfacao",
+      "jevos_traduzido": "http://127.0.0.1:8017"
+    },
+    "amostra": 1500,
+    "jevos": {
+      "release": "jevos-v5",
+      "health": {
+        "status": "ready",
+        "model": "jevos-v5",
+        "model_files": {
+          "model.json": "8d1d4d40d23fc0d8fd4dcd8136b3d591c8de3c25a6df16e3668f65301cc42181",
+          "openvino_model.bin": "413b40a85163260e4cd9dfe278e5e068f343920bc9e08741d53659ca39fecb81",
+          "openvino_model.xml": "59b4dfdfa5f8ebfd8c400d8a8b464b34db2ea2038665e78a71361a6b532e1e79",
+          "tokenizer.gguf": "9e15e73e12c6fe6eb9af58d15f6dbc7a8563331947232d0b10158aa8e9832949"
+        },
+        "fingerprint": "d6c9958f24d8c5aa698625ae743cf93fadb22eba84ef7dde7580b7558e8bc94b",
+        "engine": {
+          "runtime": "openvino",
+          "version": "2026.4.0-22959-99c81491cc3-releases/2026/4",
+          "device": "cpu",
+          "model_dir": "/home/joaopedro/.cache/fraus/jevos/jev/./model",
+          "dynamic_quantization": 128,
+          "state_snapshots": {
+            "kept": 0,
+            "max": 0,
+            "tokens": 0,
+            "max_tokens": 0,
+            "hits": 0,
+            "misses": 522,
+            "reused_tokens": 0,
+            "bytes": 0
+          },
+          "batched_requests": 0
+        }
+      },
+      "threads": 8,
+      "traduzido": true
+    },
+    "torch_threads": 4
+  },
+  "conjuntos": [
+    {
+      "id": "satisfacao_b2w",
+      "nome": "B2W-Reviews01, teste interno",
+      "independente": false,
+      "exemplos": 1500,
+      "impressao": "fe2ef28ce7af128a0909aa01a055bba4964fa3716435d769b4ca5d132ab5810b",
+      "classes": [
+        "insatisfeito",
+        "neutro",
+        "satisfeito"
+      ],
+      "classes_presentes": [
+        0,
+        1,
+        2
+      ],
+      "ressalvas": [
+        "O teste interno vem da divisao nova (sem duplicatas, agrupada, 19/10/2026). Os modelos treinados ANTES dessa data usaram outra divisao do mesmo corpus e podem ter visto parte deste teste no treino: para eles, o numero e otimista.",
+        "Amostra estratificada de 1500 de 18895 (semente fixa), por custo de CPU."
+      ],
+      "modelos": {
+        "bertimbau": {
+          "exemplos": 1500,
+          "acuracia": 0.81,
+          "f1_macro": 0.7592960668249756,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 387,
+              "vp": 336,
+              "fp": 31,
+              "fn": 51,
+              "vn": 1082,
+              "precisao": 0.9155313351498637,
+              "recall": 0.8682170542635659,
+              "f1": 0.8912466843501325
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 194,
+              "vp": 143,
+              "fp": 216,
+              "fn": 51,
+              "vn": 1090,
+              "precisao": 0.3983286908077994,
+              "recall": 0.7371134020618557,
+              "f1": 0.5171790235081374
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 919,
+              "vp": 736,
+              "fp": 38,
+              "fn": 183,
+              "vn": 543,
+              "precisao": 0.9509043927648578,
+              "recall": 0.8008705114254625,
+              "f1": 0.8694624926166568
+            }
+          ],
+          "matriz": [
+            [
+              336,
+              47,
+              4
+            ],
+            [
+              17,
+              143,
+              34
+            ],
+            [
+              14,
+              169,
+              736
+            ]
+          ],
+          "ece": 0.040191784600416815
+        },
+        "jevos_traduzido": {
+          "exemplos": 1500,
+          "acuracia": 0.746,
+          "f1_macro": 0.6149572074697852,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 387,
+              "vp": 256,
+              "fp": 61,
+              "fn": 131,
+              "vn": 1052,
+              "precisao": 0.807570977917981,
+              "recall": 0.661498708010336,
+              "f1": 0.7272727272727273
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 194,
+              "vp": 54,
+              "fp": 188,
+              "fn": 140,
+              "vn": 1118,
+              "precisao": 0.2231404958677686,
+              "recall": 0.27835051546391754,
+              "f1": 0.2477064220183486
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 919,
+              "vp": 809,
+              "fp": 132,
+              "fn": 110,
+              "vn": 449,
+              "precisao": 0.8597236981934112,
+              "recall": 0.8803046789989118,
+              "f1": 0.8698924731182796
+            }
+          ],
+          "matriz": [
+            [
+              256,
+              110,
+              21
+            ],
+            [
+              29,
+              54,
+              111
+            ],
+            [
+              32,
+              78,
+              809
+            ]
+          ],
+          "ece": 0.06724202470565598
+        }
+      },
+      "latencia": {
+        "jevos_traduzido": {
+          "n": 1500,
+          "p50_ms": 435.2724005038908,
+          "p95_ms": 589.2073340000934,
+          "media_ms": 450.6950944047373
+        },
+        "bertimbau": {
+          "n": 200,
+          "p50_ms": 119.29275350121316,
+          "p95_ms": 195.8175189938629,
+          "media_ms": 128.65570569505508
+        }
+      },
+      "comparacao": {
+        "candidato": "jevos_traduzido",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": -0.14433885935519042,
+        "ic95": [
+          -0.174844327174127,
+          -0.1143254537708097
+        ],
+        "mcnemar": {
+          "so_candidato": 140,
+          "so_referencia": 236,
+          "p_valor": 8.443662043049072e-07
+        },
+        "diferenca_demonstrada": true
+      }
+    },
+    {
+      "id": "satisfacao_consumerbr",
+      "nome": "ConsumerBR, comentario da avaliacao (atendimento)",
+      "independente": true,
+      "exemplos": 1500,
+      "impressao": "c48247ecfb105b80d2e6d9ee0f2d41361c01f9937c061ddebd5f68788c6a9834",
+      "classes": [
+        "insatisfeito",
+        "neutro",
+        "satisfeito"
+      ],
+      "classes_presentes": [
+        0,
+        1,
+        2
+      ],
+      "ressalvas": [
+        "Rotulo = nota 1-5 que o consumidor deu ao desfecho, com o comentario escrito junto. Independente para modelo treinado so em B2W; deixa de ser para o candidato treinado com o ConsumerBR (a divisao e a mesma, entao o teste continua disjunto do treino).",
+        "Amostra estratificada de 1500 de 143717 (semente fixa), por custo de CPU."
+      ],
+      "modelos": {
+        "bertimbau": {
+          "exemplos": 1500,
+          "acuracia": 0.6813333333333333,
+          "f1_macro": 0.5203305770884578,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 851,
+              "vp": 791,
+              "fp": 196,
+              "fn": 60,
+              "vn": 453,
+              "precisao": 0.8014184397163121,
+              "recall": 0.9294947121034077,
+              "f1": 0.8607181719260066
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 113,
+              "vp": 37,
+              "fp": 274,
+              "fn": 76,
+              "vn": 1113,
+              "precisao": 0.1189710610932476,
+              "recall": 0.3274336283185841,
+              "f1": 0.17452830188679247
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 536,
+              "vp": 194,
+              "fp": 8,
+              "fn": 342,
+              "vn": 956,
+              "precisao": 0.9603960396039604,
+              "recall": 0.3619402985074627,
+              "f1": 0.5257452574525745
+            }
+          ],
+          "matriz": [
+            [
+              791,
+              56,
+              4
+            ],
+            [
+              72,
+              37,
+              4
+            ],
+            [
+              124,
+              218,
+              194
+            ]
+          ],
+          "ece": 0.09860088862975439
+        },
+        "jevos_traduzido": {
+          "exemplos": 1500,
+          "acuracia": 0.6886666666666666,
+          "f1_macro": 0.5952216778564083,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 851,
+              "vp": 578,
+              "fp": 74,
+              "fn": 273,
+              "vn": 575,
+              "precisao": 0.8865030674846626,
+              "recall": 0.6792009400705052,
+              "f1": 0.7691284098469727
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 113,
+              "vp": 53,
+              "fp": 329,
+              "fn": 60,
+              "vn": 1058,
+              "precisao": 0.1387434554973822,
+              "recall": 0.4690265486725664,
+              "f1": 0.21414141414141416
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 536,
+              "vp": 402,
+              "fp": 64,
+              "fn": 134,
+              "vn": 900,
+              "precisao": 0.8626609442060086,
+              "recall": 0.75,
+              "f1": 0.8023952095808384
+            }
+          ],
+          "matriz": [
+            [
+              578,
+              235,
+              38
+            ],
+            [
+              34,
+              53,
+              26
+            ],
+            [
+              40,
+              94,
+              402
+            ]
+          ],
+          "ece": 0.08966625560216732
+        }
+      },
+      "latencia": {
+        "jevos_traduzido": {
+          "n": 1500,
+          "p50_ms": 438.335842503875,
+          "p95_ms": 764.5256989999325,
+          "media_ms": 481.43442318339663
+        },
+        "bertimbau": {
+          "n": 200,
+          "p50_ms": 156.74821650100057,
+          "p95_ms": 321.44600999890827,
+          "media_ms": 172.0420788902993
+        }
+      },
+      "comparacao": {
+        "candidato": "jevos_traduzido",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": 0.07489110076795058,
+        "ic95": [
+          0.04376566633530658,
+          0.1047839591973493
+        ],
+        "mcnemar": {
+          "so_candidato": 262,
+          "so_referencia": 251,
+          "p_valor": 0.6588851941965923
+        },
+        "diferenca_demonstrada": true
+      }
+    }
+  ]
+}

@@ -56,11 +56,9 @@ CAMINHO_CONFORMAL = artefato("FRAUS_CONFORMAL", "fraus/dados/conformal_fusor.jso
 # 19/10/2026 a ironia do MultiPICo vai em fp32: em int8 ela troca de classe em
 # 2 sondas de `scripts/encolher_modelos.py` (ver docs/treinamento.md).
 BACKENDS = ("torch", "onnx", "onnx-multitarefa")
-BACKENDS_IRONIA = ("padrao", "laya", "laya-onnx")
 CAMINHO_ONNX_TEXTO = artefato("FRAUS_CAMINHO_ONNX_TEXTO", "modelos-onnx/bertimbau-satisfacao")
 CAMINHO_ONNX_EMOCAO = artefato("FRAUS_CAMINHO_ONNX_EMOCAO", "modelos-onnx/bertimbau-emocao")
 CAMINHO_ONNX_IRONIA = artefato("FRAUS_CAMINHO_ONNX_IRONIA", "modelos-onnx/bertimbau-ironia")
-CAMINHO_ONNX_LAYA = artefato("FRAUS_CAMINHO_ONNX_LAYA", "modelos-onnx/laya-ironia")
 CAMINHO_ONNX_MULTITAREFA = artefato(
     "FRAUS_CAMINHO_ONNX_MULTITAREFA", "modelos-onnx/bertimbau-multitarefa"
 )
@@ -76,14 +74,6 @@ def backend_declarado() -> str:
     return valor
 
 
-def backend_ironia_declarado() -> str:
-    """Executor da cabeça de ironia, independente das outras duas cabeças."""
-    valor = (os.environ.get("FRAUS_IRONIA_BACKEND") or "padrao").strip().lower()
-    if valor not in BACKENDS_IRONIA:
-        raise ValueError(
-            f"FRAUS_IRONIA_BACKEND={valor!r} não existe. Use um de {BACKENDS_IRONIA}."
-        )
-    return valor
 # O BANCO nao entra na regra acima: ele nao e artefato de treino, e sim estado
 # de quem opera. `fraus.db` relativo ao cwd continua sendo o comportamento de
 # sempre, e `FRAUS_DATABASE_URL` e o caminho de deploy de verdade.
@@ -122,18 +112,6 @@ CAMINHO_METRICAS_EMOCAO = artefato(
 CAMINHO_METRICAS_IRONIA = artefato(
     "FRAUS_CAMINHO_METRICAS_IRONIA", "modelos/metricas_ironia.json"
 )
-# O laudo que o notebook 07 grava: BERTimbau x Laya nos mesmos exemplos de
-# teste. Ausente e o estado normal ate o notebook rodar -- `/modelo/comparacao`
-# devolve `laudo: null` e a tela nomeia o que falta.
-CAMINHO_COMPARACAO = artefato(
-    "FRAUS_CAMINHO_COMPARACAO", "modelos/comparacao_modelos.json"
-)
-# O laudo versionado com o codigo. `modelos/` fica fora do git e, na Vercel, e
-# trocada inteira pelo ZIP dos pesos: um laudo so ali nunca chegaria a
-# producao. Este e medicao, nao peso -- 31 KB de JSON que a banca pode auditar
-# no repositorio. O laudo local, quando existe, vence este.
-CAMINHO_COMPARACAO_PUBLICADA = RAIZ_PROJETO / "fraus" / "dados" / "comparacao_modelos.json"
-
 # Raiz unica de onde a importacao pode ler. O endpoint nao tem autenticacao
 # (uso local, ver README) -- entao ele nao pode aceitar caminho arbitrario do
 # sistema de arquivos: tudo que entra e resolvido DENTRO desta pasta.

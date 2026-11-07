@@ -2,7 +2,7 @@
 import importlib
 import sys
 
-COMANDOS = ('inventario', 'ouro', 'paridade', 'desempenho', 'qualidade', 'laya', 'candidatas', 'relatorio')
+COMANDOS = ('inventario', 'ouro', 'paridade', 'desempenho', 'qualidade', 'candidatas', 'relatorio')
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,32 +1,17 @@
-"""Entrada ASGI da Vercel com carga do motor dentro da primeira chamada.
+"""Funcao LEVE da Vercel: auth, CRUD, leituras e a regua, sem carregar pesos.
 
-A Vercel tem um teto curto para IMPORTAR a aplicacao, separado dos 300 s da
-invocacao. Construir os tres grafos ONNX no import ultrapassa esse teto. Esta
-casca nasce imediatamente e monta a API real na primeira requisicao; erro de
-modelo continua propagando alto, sem duble e sem resposta parcial.
+`vercel.json` encaminha para `api/motor.py` as rotas que exigem o `Motor`; o
+resto cai aqui. Esta funcao nao inclui `modelos-onnx/` e nunca abre uma sessao
+ONNX, entao a instancia fria custa so o import e a migracao do banco. Uma rota
+de modelo que chegue aqui por erro de rewrite falha alto, com
+`MotorForaDaFuncao`.
 """
 
-import threading
+from functools import partial
 
 from fraus.api.main import criar_app_padrao
+from fraus.api.preguicosa import AplicacaoPreguicosa
 
-
-class AplicacaoPreguicosa:
-    def __init__(self) -> None:
-        self._app = None
-        self._trava = threading.Lock()
-
-    def _carregar(self):
-        if self._app is None:
-            with self._trava:
-                if self._app is None:
-                    self._app = criar_app_padrao()
-        return self._app
-
-    async def __call__(self, scope, receive, send):
-        await self._carregar()(scope, receive, send)
-
-
-app = AplicacaoPreguicosa()
+app = AplicacaoPreguicosa(partial(criar_app_padrao, com_motor=False))
 
 __all__ = ["app"]

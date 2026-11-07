@@ -299,15 +299,11 @@ Variáveis de ambiente reconhecidas:
 | `FRAUS_BACKEND` | `torch` | quem executa as cabeças: `torch` (`modelos/`), `onnx` (`modelos-onnx/`) ou `onnx-multitarefa`; valor desconhecido é erro no boot, sem detecção nem fallback |
 | `FRAUS_CAMINHO_ONNX_TEXTO` / `_EMOCAO` / `_IRONIA` | `modelos-onnx/bertimbau-satisfacao` / `-emocao` / `-ironia` | os grafos ONNX de cada cabeça, com `FRAUS_BACKEND=onnx` |
 | `FRAUS_CAMINHO_ONNX_MULTITAREFA` | `modelos-onnx/bertimbau-multitarefa` | o grafo único de `FRAUS_BACKEND=onnx-multitarefa` |
-| `FRAUS_CAMINHO_ONNX_LAYA` | `modelos-onnx/laya-ironia` | o Laya em ONNX, com `FRAUS_IRONIA_BACKEND=laya-onnx` (o caminho de produção) |
 | `FRAUS_CAMINHO_METRICAS` / `_EMOCAO` / `_IRONIA` | `modelos/bertimbau-satisfacao/metricas.json` / `modelos/metricas_emocao.json` / `modelos/metricas_ironia.json` | métricas dos notebooks lidas por `/modelo`; ausentes, viram `null` |
-| `FRAUS_CAMINHO_COMPARACAO` | `modelos/comparacao_modelos.json` | laudo local BERTimbau × Laya do notebook 07; quando existe, vence o versionado em `fraus/dados/` |
 | `FRAUS_FUSOR_CANDIDATO` | (nenhum) | `.joblib` que o Laboratório de Operação compara com o fusor vigente; sem ela, ou incompatível, a comparação responde 503. Nunca é promovido |
 | `FRAUS_INFERENCIAS_SIMULTANEAS` | `1` | quantas passadas de modelo rodam ao mesmo tempo, somando as três cabeças |
 | `FRAUS_ONNX_THREADS` | `0` | threads por passada ONNX; `0` deixa o runtime escolher |
 | `FRAUS_AQUECER` | `1` | `0` desliga o aquecimento do motor em segundo plano no boot |
-| `FRAUS_IRONIA_BACKEND` | `padrao` | `laya` troca somente a cabeça de ironia pelo Laya multilíngue (PyTorch; exige `uv sync --extra laya`); `laya-onnx` usa o Laya exportado para ONNX, que é o valor de produção |
-| `FRAUS_LAYA_REVISAO` | `55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851` | revisão imutável do checkpoint Laya |
 | `FRAUS_CAMINHO_BANCO` | `fraus.db` | SQLite |
 | `FRAUS_DATABASE_URL` | (nenhum) | URL PostgreSQL (Supabase em produção); definida, **vence** `FRAUS_CAMINHO_BANCO` |
 | `FRAUS_POSTGRES_MIN_CONEXOES` | `0` | mínimo do pool por instância; zero evita reservar conexão em função fria |
@@ -877,13 +873,12 @@ do front de herdar o comando da API; [`vercel.json`](vercel.json) prepara a
 função Python. Durante o build, `scripts/preparar_modelos_vercel.py` baixa um
 ZIP privado, confere o SHA-256, recusa *path traversal* e confere a
 **presença** dos três grafos ONNX, das configurações, dos tokenizadores e do
-fusor (e do manifesto do Laya), e só então permite o deploy. Ele não abre os
+fusor, e só então permite o deploy. Ele não abre os
 grafos nem carrega o fusor: um `fusor.joblib` fora do contrato passa no build e
 só é recusado em runtime, por `Fusor.carregar`.
 
-O runtime usa satisfação e emoção em ONNX fp32. A ironia BERTimbau vai
-quantizada em int8 no pacote, mas em produção quem lê ironia é o Laya sem
-treino em ONNX (`FRAUS_IRONIA_BACKEND=laya-onnx`). O
+O runtime usa as três cabeças BERTimbau em ONNX, sem fallback para outro
+executor. O
 pacote publicado em **30/09/2026 tem 1,95 GB** (1,46 GB na entrega de 17/09),
 aceito por Large Functions. Isso é tamanho do pacote, não memória consumida.
 Importar a função é barato; o provedor aquece os modelos em segundo plano no

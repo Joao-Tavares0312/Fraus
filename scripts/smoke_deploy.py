@@ -40,6 +40,14 @@ def executar(url: str, token: str | None = None, tentativas: int = 8) -> dict:
             estado = corpo.get("estado_motor", "pronto")
             if estado not in {"frio", "carregando", "pronto"}:
                 raise RuntimeError(f"estado do motor nao saudavel: {estado}")
+            # A funcao leve (auth, CRUD, leituras) e outra funcao da Vercel:
+            # /saude acordou so a do motor.
+            requisicao = urllib.request.Request(urljoin(base, "auth/estado"), headers=cabecalhos)
+            with urllib.request.urlopen(requisicao, timeout=30) as resposta:
+                try:
+                    json.load(resposta)
+                except ValueError:
+                    raise RuntimeError("funcao leve nao respondeu /auth/estado") from None
             return {"status": "ok", "motor": "real", "estado_motor": estado}
         except (OSError, ValueError, RuntimeError, urllib.error.HTTPError) as erro:
             ultimo = f"{type(erro).__name__}: {erro}"

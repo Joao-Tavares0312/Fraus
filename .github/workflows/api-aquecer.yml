@@ -30,6 +30,8 @@ jobs:
     env:
       URL_DA_API: ${{ secrets.FRAUS_API_PUBLIC_URL || 'https://fraus-api.vercel.app' }}
     steps:
+      - name: Acordar a funcao leve
+        run: curl -fsS --max-time 30 "$URL_DA_API/auth/estado"
       - name: Acordar a instancia e aquecer o motor
         run: |
           for tentativa in 1 2 3; do

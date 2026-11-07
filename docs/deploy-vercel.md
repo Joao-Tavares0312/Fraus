@@ -58,9 +58,8 @@ estado persistente. A solução separou também **código, artefato e estado**.
 
 - satisfação: ONNX fp32;
 - emoção: ONNX fp32;
-- ironia: ONNX int8 no pacote; **em produção quem lê ironia é o Laya sem
-  treino em ONNX** (`FRAUS_IRONIA_BACKEND=laya-onnx`), e o BERTimbau de ironia
-  não é carregado;
+- ironia: BERTimbau em ONNX (a variante que o ZIP trouxer; desde 19/10/2026 a
+  do MultiPICo vai em fp32);
 - fusor: `joblib`.
 
 A quantização ficou restrita à cabeça de ironia porque ela não pontua o score e
@@ -71,9 +70,7 @@ medida de eficiência.
 **Proteção de memória, 16/10/2026:** cada `session.run` BERT ONNX recebe no
 máximo quatro sequências, inclusive no grafo multitarefa. A tokenização,
 padding, truncamento em 192 tokens, ordem e todas as variantes de oclusão são
-preservados; não se corta atendimento nem se inventa peso zero. A fábrica
-também deixa de construir BERT-ironia quando a cabeça selecionada é Laya.
-Em smoke CPU com export **local** de satisfação, 61 textos e oclusão, o pico
+preservados; não se corta atendimento nem se inventa peso zero. Em smoke CPU com export **local** de satisfação, 61 textos e oclusão, o pico
 RSS caiu de 1.794.387.968 para 826.523.648 bytes, sem diferença nas
 probabilidades ou pesos medidos. Isso não é memória total medida da função
 publicada. Os logs do incidente registraram `137/SIGKILL`; a métrica de pico
@@ -90,7 +87,7 @@ Uma URL pré-autenticada concede apenas leitura daquele objeto. No build,
 3. verifica o checksum;
 4. recusa entradas ZIP que escapem do destino;
 5. confere a **presença** de `model.onnx`, configuração, tokenizador e fusor
-   (e do manifesto do Laya) — sem abrir os grafos nem carregar o fusor, que só
+   — sem abrir os grafos nem carregar o fusor, que só
    é validado em runtime por `Fusor.carregar`;
 6. falha o deploy se qualquer artefato estiver incompleto.
 
@@ -136,11 +133,8 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 | `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` | habilita o pacote acima do limite padrão |
 | `FRAUS_MODELOS_URL` | URL privada de leitura do ZIP |
 | `FRAUS_MODELOS_SHA256` | identidade imutável do artefato |
-| `FRAUS_LAYA_MODELO_URL` | URL privada do ZIP Laya validado |
-| `FRAUS_LAYA_MODELO_SHA256` | identidade imutável do ZIP Laya separado |
 | `FRAUS_BACKEND=onnx` | escolhe ONNX Runtime sem fallback silencioso |
 | `FRAUS_AMBIENTE=producao` | ativa a validação de segredos e banco persistente no boot |
-| `FRAUS_IRONIA_BACKEND=laya-onnx` | ativa a Laya exportada para ONNX, quando o ZIP separado estiver configurado |
 | `FRAUS_DATABASE_URL` | transaction pooler do Supabase (`:6543`) |
 | `FRAUS_POSTGRES_MIN_CONEXOES=0` | não reserva conexão por instância fria |
 | `FRAUS_POSTGRES_MAX_CONEXOES=2` | teto por instância serverless (1–20) |
@@ -150,7 +144,7 @@ tentava executar `dashboard/scripts/preparar_modelos_vercel.py`, que não existe
 | `FRAUS_JWT_SEGREDO` | assinatura das sessões |
 | `FRAUS_CODIGO_CONVITE` | controla cadastro |
 | `FRAUS_CODIGO_DEV` | código que o cadastro exige para criar conta com papel `dev` |
-| `FRAUS_MODELOS_TOKEN`, `FRAUS_LAYA_MODELO_TOKEN` | opcionais: `Bearer` para baixar os ZIPs quando o objeto é privado por token e não por URL assinada |
+| `FRAUS_MODELOS_TOKEN` | opcional: `Bearer` para baixar o ZIP quando o objeto é privado por token e não por URL assinada |
 | `FRAUS_ORIGENS` | origens públicas permitidas |
 | `FRAUS_FUSOR_CANDIDATO` | opcional: caminho de `.joblib` compatível para comparar fusores; não promove o candidato |
 

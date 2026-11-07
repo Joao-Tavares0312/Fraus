@@ -1,0 +1,309 @@
+{
+  "schema": 1,
+  "tarefa": "ironia",
+  "gerado_em": "2026-11-06T22:57:03+00:00",
+  "procedencia": {
+    "commit": "aec7d22",
+    "modelos": {
+      "bertimbau": "/home/joaopedro/GITHUB/Fraus/modelos/bertimbau-ironia",
+      "jevos_traduzido": "http://127.0.0.1:8017"
+    },
+    "amostra": null,
+    "jevos": {
+      "release": "jevos-v5",
+      "health": {
+        "status": "ready",
+        "model": "jevos-v5",
+        "model_files": {
+          "model.json": "8d1d4d40d23fc0d8fd4dcd8136b3d591c8de3c25a6df16e3668f65301cc42181",
+          "openvino_model.bin": "413b40a85163260e4cd9dfe278e5e068f343920bc9e08741d53659ca39fecb81",
+          "openvino_model.xml": "59b4dfdfa5f8ebfd8c400d8a8b464b34db2ea2038665e78a71361a6b532e1e79",
+          "tokenizer.gguf": "9e15e73e12c6fe6eb9af58d15f6dbc7a8563331947232d0b10158aa8e9832949"
+        },
+        "fingerprint": "d6c9958f24d8c5aa698625ae743cf93fadb22eba84ef7dde7580b7558e8bc94b",
+        "engine": {
+          "runtime": "openvino",
+          "version": "2026.4.0-22959-99c81491cc3-releases/2026/4",
+          "device": "cpu",
+          "model_dir": "/home/joaopedro/.cache/fraus/jevos/jev/./model",
+          "dynamic_quantization": 128,
+          "state_snapshots": {
+            "kept": 0,
+            "max": 0,
+            "tokens": 0,
+            "max_tokens": 0,
+            "hits": 0,
+            "misses": 0,
+            "reused_tokens": 0,
+            "bytes": 0
+          },
+          "batched_requests": 0
+        }
+      },
+      "threads": 8,
+      "traduzido": true
+    },
+    "torch_threads": 4
+  },
+  "conjuntos": [
+    {
+      "id": "ironia_multipico",
+      "nome": "MultiPICo-PT, respostas de Reddit/Twitter",
+      "independente": true,
+      "exemplos": 462,
+      "impressao": "4eee9c62e8c9a11fb5e39d1609238b7175420ca171e8352a3516e4785693595e",
+      "classes": [
+        "nao_ironico",
+        "ironico"
+      ],
+      "classes_presentes": [
+        0,
+        1
+      ],
+      "ressalvas": [
+        "Rotulo por maioria de ~5 anotadores; empates fora. As duas classes vem das mesmas fontes (sem atalho de procedencia). PT-BR e PT-PT juntos. A ironia foi anotada VENDO o post; o modelo le so a resposta.",
+        "Deixa de ser independente para candidato treinado com o MultiPICo (o teste continua disjunto do treino)."
+      ],
+      "modelos": {
+        "bertimbau": {
+          "exemplos": 462,
+          "acuracia": 0.683982683982684,
+          "f1_macro": 0.6602941176470588,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 297,
+              "vp": 219,
+              "fp": 68,
+              "fn": 78,
+              "vn": 97,
+              "precisao": 0.7630662020905923,
+              "recall": 0.7373737373737373,
+              "f1": 0.75
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 165,
+              "vp": 97,
+              "fp": 78,
+              "fn": 68,
+              "vn": 219,
+              "precisao": 0.5542857142857143,
+              "recall": 0.5878787878787879,
+              "f1": 0.5705882352941176
+            }
+          ],
+          "matriz": [
+            [
+              219,
+              78
+            ],
+            [
+              68,
+              97
+            ]
+          ],
+          "ece": 0.05543865824674631
+        },
+        "jevos_traduzido": {
+          "exemplos": 462,
+          "acuracia": 0.5800865800865801,
+          "f1_macro": 0.5402466298705295,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 297,
+              "vp": 202,
+              "fp": 99,
+              "fn": 95,
+              "vn": 66,
+              "precisao": 0.6710963455149501,
+              "recall": 0.6801346801346801,
+              "f1": 0.6755852842809364
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 165,
+              "vp": 66,
+              "fp": 95,
+              "fn": 99,
+              "vn": 202,
+              "precisao": 0.40993788819875776,
+              "recall": 0.4,
+              "f1": 0.40490797546012275
+            }
+          ],
+          "matriz": [
+            [
+              202,
+              95
+            ],
+            [
+              99,
+              66
+            ]
+          ],
+          "ece": 0.2152035542642235
+        }
+      },
+      "latencia": {
+        "jevos_traduzido": {
+          "n": 462,
+          "p50_ms": 96.68637450158712,
+          "p95_ms": 285.20045099867275,
+          "media_ms": 127.95405523387302
+        },
+        "bertimbau": {
+          "n": 200,
+          "p50_ms": 112.66195500138565,
+          "p95_ms": 207.93745599803515,
+          "media_ms": 115.76128649474413
+        }
+      },
+      "comparacao": {
+        "candidato": "jevos_traduzido",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": -0.1200474877765293,
+        "ic95": [
+          -0.18270618517141038,
+          -0.06433442693359007
+        ],
+        "mcnemar": {
+          "so_candidato": 74,
+          "so_referencia": 122,
+          "p_valor": 0.0007459375982855871
+        },
+        "diferenca_demonstrada": true
+      }
+    },
+    {
+      "id": "ironia_regua_20",
+      "nome": "Regua de 20 frases de atendimento",
+      "independente": true,
+      "exemplos": 20,
+      "impressao": "90f3ab25892bef90b09167120808ae9357919384667fdd74ec4132d4ef27e668",
+      "classes": [
+        "nao_ironico",
+        "ironico"
+      ],
+      "classes_presentes": [
+        0,
+        1
+      ],
+      "ressalvas": [
+        "20 frases: IC de cerca de +-0,22. Serve de alarme, nao de medida fina. A regua de pares minimos substitui esta quando congelar."
+      ],
+      "modelos": {
+        "bertimbau": {
+          "exemplos": 20,
+          "acuracia": 0.55,
+          "f1_macro": 0.52,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 10,
+              "vp": 8,
+              "fp": 7,
+              "fn": 2,
+              "vn": 3,
+              "precisao": 0.5333333333333333,
+              "recall": 0.8,
+              "f1": 0.64
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 10,
+              "vp": 3,
+              "fp": 2,
+              "fn": 7,
+              "vn": 8,
+              "precisao": 0.6,
+              "recall": 0.3,
+              "f1": 0.4
+            }
+          ],
+          "matriz": [
+            [
+              8,
+              2
+            ],
+            [
+              7,
+              3
+            ]
+          ],
+          "ece": 0.2426883786916733
+        },
+        "jevos_traduzido": {
+          "exemplos": 20,
+          "acuracia": 0.65,
+          "f1_macro": 0.6011396011396011,
+          "por_classe": [
+            {
+              "classe": "nao_ironico",
+              "exemplos": 10,
+              "vp": 10,
+              "fp": 7,
+              "fn": 0,
+              "vn": 3,
+              "precisao": 0.5882352941176471,
+              "recall": 1.0,
+              "f1": 0.7407407407407407
+            },
+            {
+              "classe": "ironico",
+              "exemplos": 10,
+              "vp": 3,
+              "fp": 0,
+              "fn": 7,
+              "vn": 10,
+              "precisao": 1.0,
+              "recall": 0.3,
+              "f1": 0.4615384615384615
+            }
+          ],
+          "matriz": [
+            [
+              10,
+              0
+            ],
+            [
+              7,
+              3
+            ]
+          ],
+          "ece": 0.2806200515057874
+        }
+      },
+      "latencia": {
+        "jevos_traduzido": {
+          "n": 20,
+          "p50_ms": 82.44977950380417,
+          "p95_ms": 88.19182500155875,
+          "media_ms": 83.12668385005964
+        },
+        "bertimbau": {
+          "n": 20,
+          "p50_ms": 84.84794899777626,
+          "p95_ms": 98.98219300521305,
+          "media_ms": 84.62142764874443
+        }
+      },
+      "comparacao": {
+        "candidato": "jevos_traduzido",
+        "referencia": "bertimbau",
+        "diferenca_f1_macro": 0.08113960113960106,
+        "ic95": [
+          -0.22678062678062677,
+          0.38953113553113516
+        ],
+        "mcnemar": {
+          "so_candidato": 4,
+          "so_referencia": 2,
+          "p_valor": 0.6875
+        },
+        "diferenca_demonstrada": false
+      }
+    }
+  ]
+}

@@ -11,7 +11,6 @@ Variaveis obrigatorias quando os modelos nao existem no workspace de build:
 """
 
 import hashlib
-import json
 import os
 import shutil
 import tempfile
@@ -63,7 +62,6 @@ def extrair_zip_seguro(pacote: Path, destino: Path) -> None:
 
 
 def conferir_modelos(raiz: Path) -> None:
-    laya_onnx = (os.environ.get("FRAUS_IRONIA_BACKEND") or "").strip().lower() == "laya-onnx"
     esperados = [raiz / "modelos" / "fusor.joblib"]
     esperados += [
         raiz / "modelos-onnx" / f"bertimbau-{nome}" / "model.onnx"
@@ -72,35 +70,9 @@ def conferir_modelos(raiz: Path) -> None:
     for nome in MODELOS:
         pasta = raiz / "modelos-onnx" / f"bertimbau-{nome}"
         esperados.extend((pasta / "config.json", pasta / "tokenizer_config.json"))
-    if laya_onnx:
-        laya = raiz / "modelos-onnx" / "laya-ironia"
-        esperados.extend(
-            (
-                laya / "laya.onnx",
-                laya / "manifesto.json",
-                laya / "rl_agent_config.json",
-                laya / "tokenizer" / "tokenizer.json",
-                laya / "tokenizer" / "tokenizer_config.json",
-            )
-        )
     ausentes = [str(caminho.relative_to(raiz)) for caminho in esperados if not caminho.is_file()]
     if ausentes:
         raise ArtefatoDeModelosInvalido("artefato de modelo ausente: " + ", ".join(ausentes))
-    if laya_onnx:
-        try:
-            manifesto = json.loads((laya / "manifesto.json").read_text(encoding="utf-8"))
-            formato = manifesto["formato"]
-        except (OSError, ValueError, KeyError, TypeError) as erro:
-            raise ArtefatoDeModelosInvalido("manifesto da Laya invalido") from erro
-        if formato not in {"fp32", "fp16", "int8"}:
-            raise ArtefatoDeModelosInvalido(f"formato da Laya desconhecido: {formato!r}")
-        # O export FP32 referencia estes pesos externos; o INT8 aprovado pelo
-        # notebook e o FP16 (pesos em meia precisao dentro do proprio grafo,
-        # ver fraus/pesos_fp16.py) sao autossuficientes.
-        if formato == "fp32" and not (laya / "laya.onnx.data").is_file():
-            raise ArtefatoDeModelosInvalido(
-                "artefato de modelo ausente: modelos-onnx/laya-ironia/laya.onnx.data"
-            )
 
 
 def baixar(url: str, destino: Path, token: str | None = None) -> None:
@@ -112,27 +84,6 @@ def baixar(url: str, destino: Path, token: str | None = None) -> None:
     requisicao = urllib.request.Request(url, headers=cabecalhos)
     with urllib.request.urlopen(requisicao, timeout=60) as resposta, destino.open("wb") as arquivo:
         shutil.copyfileobj(resposta, arquivo, length=1024 * 1024)
-
-
-def sobrepor_laya_se_declarada(raiz: Path, temporario: Path) -> None:
-    """Baixa a Laya separadamente e a sobrepoe no bundle base.
-
-    O FP32 tem mais de 1 GB descompactado. Separar esta cabeca evita republicar
-    os tres BERTimbau e o fusor a cada iteracao e permite rollback independente.
-    """
-    if (os.environ.get("FRAUS_IRONIA_BACKEND") or "").strip().lower() != "laya-onnx":
-        return
-    url = os.environ.get("FRAUS_LAYA_MODELO_URL", "")
-    checksum = os.environ.get("FRAUS_LAYA_MODELO_SHA256", "")
-    if not url or not checksum:
-        raise ArtefatoDeModelosInvalido(
-            "backend laya-onnx exige FRAUS_LAYA_MODELO_URL e "
-            "FRAUS_LAYA_MODELO_SHA256 no projeto da API"
-        )
-    pacote = temporario / "laya.zip"
-    baixar(url, pacote, os.environ.get("FRAUS_LAYA_MODELO_TOKEN"))
-    conferir_checksum(pacote, checksum)
-    extrair_zip_seguro(pacote, raiz)
 
 
 def instalar_extraido(extraido: Path, raiz: Path) -> None:
@@ -189,7 +140,6 @@ def preparar() -> None:
         baixar(url, pacote, os.environ.get("FRAUS_MODELOS_TOKEN"))
         conferir_checksum(pacote, checksum)
         extrair_zip_seguro(pacote, extraido)
-        sobrepor_laya_se_declarada(extraido, temporario)
         conferir_modelos(extraido)
 
         instalar_extraido(extraido, RAIZ)

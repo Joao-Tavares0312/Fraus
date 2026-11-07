@@ -1,8 +1,7 @@
-"""Divisao treino/teste por autor, compartilhada pelos notebooks 04 e 07.
+"""Divisao treino/teste por autor, usada pelo notebook 04 e por quem compara.
 
-A regra e a mesma dos dois lados da comparacao BERTimbau x Laya: quem treina e
-quem compara chamam `dividir_por_autor` e conferem o resultado com
-`conferir_divisao`. A `impressao_dos_textos` do teste vai gravada junto do
+Quem treina e quem compara chamam `dividir_por_autor` e conferem o resultado
+com `conferir_divisao`. A `impressao_dos_textos` do teste vai gravada junto do
 artefato, e a comparacao so vale se as duas impressoes forem iguais.
 
 Em 02/10/2026 a divisao do corpus de ironia saiu com 63% das linhas no teste

@@ -13,23 +13,19 @@
  * =============================================================================
  */
 
-import { ArrowUpRight, ChevronRight, Download } from "lucide-react";
+import { ArrowUpRight, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { URL_RELATORIO_COMPARACAO, obterComparacao, obterModelo } from "@/lib/api";
+import { obterModelo } from "@/lib/api";
 import { CabecalhoPagina } from "@/components/shell/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { Painel } from "@/components/Painel";
 import { PainelDrivers } from "@/components/PainelDrivers";
-import { ComparacaoAoVivo } from "@/components/modelo/ComparacaoAoVivo";
-import { LaudoDaComparacao, TempoDeResposta } from "@/components/modelo/ComparacaoModelos";
 import { EstadoDoModelo } from "@/components/modelo/EstadoDoModelo";
 import { LexiconEmoji } from "@/components/modelo/LexiconEmoji";
 import { LexicoCurado } from "@/components/modelo/LexicoCurado";
 import { MetricasTreino } from "@/components/modelo/MetricasTreino";
 import { PesosFeatures } from "@/components/modelo/PesosFeatures";
 import { VisualizacaoModelo } from "@/components/modelo/VisualizacaoModelo";
-import { SimuladorIroniaLaya } from "@/components/modelo/SimuladorIroniaLaya";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { erroParaTela } from "@/lib/erro-publico";
 import { sessaoAtual } from "@/lib/sessao";
 
@@ -42,9 +38,7 @@ const COR_DA_CATEGORIA: Record<string, string> = {
 };
 
 export default async function PaginaModelo() {
-  // As duas leituras em paralelo: o laudo de comparacao falha SOZINHO, dentro
-  // da aba dele, sem derrubar a ficha do modelo.
-  const [resultado, comparacao, sessao] = await Promise.all([obterModelo(), obterComparacao(), sessaoAtual()]);
+  const [resultado, sessao] = await Promise.all([obterModelo(), sessaoAtual()]);
   // Mesmo criterio do detalhe do atendimento: sem login, a instalacao local e dev.
   const ehDev = (sessao.estado === "logada" ? sessao.usuario.papel : "dev") === "dev";
 
@@ -86,18 +80,6 @@ export default async function PaginaModelo() {
           O ramo de erro/vazio logo acima continua com flex-1 -- o EstadoVazio
           depende dele para se centralizar na coluna. */}
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-6">
-        <Tabs defaultValue="fraus" className="min-w-0 gap-4">
-          {/* KISS: os testes isolados de modelo sao bancada de dev, como o
-              Laboratorio da Operacao. O cliente fica com o classificador. */}
-          {ehDev ? (
-            <TabsList aria-label="Visões do modelo" variant="line" className="max-w-full overflow-x-auto">
-              <TabsTrigger value="fraus">Modelo</TabsTrigger>
-              <TabsTrigger value="laya">Ironia · Laya</TabsTrigger>
-              <TabsTrigger value="comparacao">Comparação</TabsTrigger>
-            </TabsList>
-          ) : null}
-
-          <TabsContent value="fraus" className="flex min-w-0 flex-col gap-4">
         <Painel
           titulo="Classifique uma frase"
           nivel="dominante"
@@ -222,88 +204,6 @@ export default async function PaginaModelo() {
         {ehDev ? <LexicoCurado totalEmojisLexicon={modelo.total_emojis_lexicon} /> : null}
           </div>
         </details>
-          </TabsContent>
-
-          {ehDev ? (
-          <>
-          <TabsContent value="laya" className="flex min-w-0 flex-col gap-4">
-            <Painel
-              titulo="Classificador de ironia · Laya"
-              legenda="Teste isolado do checkpoint multilíngue convaiinnovations/laya. Esta leitura não executa satisfação, emoção, emojis ou fusor e não altera a nota dos atendimentos."
-              semPadding
-              rodape="A decisão binária é experimental. A promoção para uso corrente depende do gate de domínio e de calibração em dados portugueses separados do treino."
-            >
-              <SimuladorIroniaLaya />
-            </Painel>
-          </TabsContent>
-
-          <TabsContent value="comparacao" className="flex min-w-0 flex-col gap-4">
-            {(() => {
-              const laudo = comparacao.ok ? comparacao.dado.laudo : null;
-              return (
-                <>
-                  <Painel
-                    titulo="Laudo · BERTimbau × Laya"
-                    legenda="Os modelos leram exatamente os mesmos exemplos em cada conjunto. A comparação é do Laya treinado contra o BERTimbau: diferença de F1-macro com intervalo de confiança de 95% por bootstrap e McNemar exato. Intervalo que contém o zero não demonstra vantagem de nenhum dos dois. O corpus de emoção é tradução automática e o de ironia foi rotulado por hashtag e procedência; nenhum conjunto é conversa de cliente real."
-                    semPadding
-                    acessorio={
-                      laudo ? (
-                        <a
-                          href={URL_RELATORIO_COMPARACAO}
-                          download="comparacao-modelos.md"
-                          className="inline-flex items-center gap-1.5 text-xs text-foreground underline underline-offset-4"
-                        >
-                          <Download aria-hidden className="size-3.5" />
-                          Baixar relatório (.md)
-                        </a>
-                      ) : null
-                    }
-                    erro={
-                      comparacao.ok ? undefined : (
-                        <EstadoVazio
-                          titulo="O laudo de comparação não carregou"
-                          explicacao={comparacao.erro}
-                          endpoint="GET /modelo/comparacao"
-                        />
-                      )
-                    }
-                    vazio={
-                      comparacao.ok && !laudo ? (
-                        <EstadoVazio
-                          titulo="O laudo de comparação ainda não foi gerado"
-                          explicacao="GET /modelo/comparacao respondeu laudo: null. Acurácia, verdadeiros e falsos por classe e tempo só existem depois que os dois modelos leem o mesmo conjunto de teste, e isso acontece no notebook, não nesta tela. Nenhum número é mostrado enquanto o arquivo não existir."
-                          etapa="notebooks/07_treino_laya.ipynb, célula 12; depois copie comparacao_modelos.json para a pasta modelos/ da API"
-                        />
-                      ) : undefined
-                    }
-                  >
-                    {laudo ? <LaudoDaComparacao laudo={laudo} /> : null}
-                  </Painel>
-
-                  {laudo?.latencia?.medidas.length ? (
-                    <Painel
-                      titulo="Tempo de resposta"
-                      legenda="A latência foi medida em CPU, fora da GPU do treino, com os executores disponíveis no notebook. O número vale para aquela máquina: serve para comparar um modelo com o outro, não para prever o tempo deste servidor."
-                      semPadding
-                    >
-                      <TempoDeResposta laudo={laudo} />
-                    </Painel>
-                  ) : null}
-
-                  <Painel
-                    titulo="Uma fala, os dois modelos"
-                    legenda="Leitura isolada das cabeças carregadas neste servidor. Não executa satisfação nem fusor, não grava e não altera a nota de nenhum atendimento."
-                    semPadding
-                  >
-                    <ComparacaoAoVivo />
-                  </Painel>
-                </>
-              );
-            })()}
-          </TabsContent>
-          </>
-          ) : null}
-        </Tabs>
       </div>
     </>
   );

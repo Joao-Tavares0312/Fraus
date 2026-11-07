@@ -56,15 +56,16 @@ def _conjunto(par_ids=None):
     return avaliar_conjunto(
         identificador="regua_pares", tarefa="ironia", nome="Régua de pares",
         independente=True, rotulos=rotulos,
-        preditos_por_modelo={"laya_treinado": rotulos, "bertimbau": [1, 1] * 20},
+        preditos_por_modelo={"candidato": rotulos, "bertimbau": [1, 1] * 20},
         classes=[0, 1], nomes_classes=["não irônico", "irônico"],
         par_ids=par_ids, reamostras=200,
+        candidato="candidato", referencia="bertimbau",
     )
 
 
 def test_conjunto_com_pares_traz_acuracia_por_par_e_comparacao():
     resultado = _conjunto([f"p{i}" for i in range(20) for _ in range(2)])
-    assert resultado["modelos"]["laya_treinado"]["acuracia_por_par"] == 1.0
+    assert resultado["modelos"]["candidato"]["acuracia_por_par"] == 1.0
     assert resultado["modelos"]["bertimbau"]["acuracia_por_par"] == 0.0
     assert resultado["comparacao"]["diferenca_acuracia_por_par"] == 1.0
     assert resultado["comparacao"]["por_par_demonstrada"] is True
@@ -72,7 +73,7 @@ def test_conjunto_com_pares_traz_acuracia_por_par_e_comparacao():
 
 def test_conjunto_sem_pares_nao_muda():
     resultado = _conjunto()
-    assert "acuracia_por_par" not in resultado["modelos"]["laya_treinado"]
+    assert "acuracia_por_par" not in resultado["modelos"]["candidato"]
     assert "diferenca_acuracia_por_par" not in resultado["comparacao"]
 
 
@@ -85,23 +86,10 @@ def test_candidato_vence_por_par_tem_sinal():
     pior = avaliar_conjunto(
         identificador="regua_pares", tarefa="ironia", nome="Régua de pares",
         independente=True, rotulos=rotulos,
-        preditos_por_modelo={"laya_treinado": [1, 1] * 20, "bertimbau": rotulos},
+        preditos_por_modelo={"candidato": [1, 1] * 20, "bertimbau": rotulos},
         classes=[0, 1], nomes_classes=["não irônico", "irônico"],
         par_ids=pares, reamostras=200,
+        candidato="candidato", referencia="bertimbau",
     )["comparacao"]
     assert pior["por_par_demonstrada"] is True
     assert pior["candidato_vence_por_par"] is False
-
-
-def test_relatorio_traz_acuracia_por_par_com_ic_e_o_criterio_de_promocao():
-    from fraus.comparacao_modelos import montar_laudo, relatorio_markdown
-
-    conjunto = _conjunto([f"p{i}" for i in range(20) for _ in range(2)])
-    conjunto["modelos"]["baseline_estilo"] = dict(conjunto["modelos"]["bertimbau"])
-    texto = relatorio_markdown(montar_laudo(
-        conjuntos=[conjunto], latencia=None, procedencia={}, rodada_de_fumaca=False,
-        gerado_em="2026-10-08T12:00:00+00:00",
-    ))
-    assert "Acurácia por par" in texto
-    assert "Baseline só de estilo" in texto
-    assert "IC 95%" in texto and "candidato vence por par: **sim**" in texto

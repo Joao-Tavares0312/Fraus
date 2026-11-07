@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -10,7 +11,6 @@ from scripts.preparar_modelos_vercel import (
     conferir_modelos,
     extrair_zip_seguro,
     instalar_extraido,
-    sobrepor_laya_se_declarada,
 )
 from scripts.gerenciar_artefatos import empacotar, main as gerenciar_artefatos, validar
 
@@ -18,19 +18,50 @@ from scripts.gerenciar_artefatos import empacotar, main as gerenciar_artefatos, 
 RAIZ = Path(__file__).resolve().parents[1]
 
 
-def test_entrypoint_vercel_expoe_fastapi_real():
-    fonte = (RAIZ / "api" / "index.py").read_text(encoding="utf-8")
-    assert "from fraus.api.main import criar_app_padrao" in fonte
-    assert "class AplicacaoPreguicosa" in fonte
-    assert "api_demo" not in fonte
+def test_entrypoints_vercel_expoem_fastapi_real_com_e_sem_motor():
+    leve = (RAIZ / "api" / "index.py").read_text(encoding="utf-8")
+    motor = (RAIZ / "api" / "motor.py").read_text(encoding="utf-8")
+    for fonte in (leve, motor):
+        assert "from fraus.api.main import criar_app_padrao" in fonte
+        assert "api_demo" not in fonte
+    assert "com_motor=False" in leve
+    assert "com_motor=False" not in motor
 
 
-def test_vercel_declara_large_function_e_inclui_modelos():
-    fonte = (RAIZ / "vercel.json").read_text(encoding="utf-8")
-    for trecho in ("api/index.py", "maxDuration", "300", '"includeFiles": "**"'):
-        assert trecho in fonte
-    configuracao = json.loads(fonte)
-    assert "--no-deps laya==0.3.21" in configuracao["installCommand"]
+def _destino(rewrites, caminho):
+    for regra in rewrites:
+        if re.fullmatch(regra["source"], caminho):
+            return regra["destination"]
+    return None
+
+
+def test_rotas_de_modelo_vao_para_a_funcao_do_motor():
+    configuracao = json.loads((RAIZ / "vercel.json").read_text(encoding="utf-8"))
+    # A Vercel instala requirements.txt sozinha; um `pip install` explicito
+    # falha la (PEP 668, ambiente gerido pelo uv).
+    assert "installCommand" not in configuracao
+    funcoes = configuracao["functions"]
+    assert "modelos-onnx/**" in funcoes["api/index.py"]["excludeFiles"]
+    assert funcoes["api/motor.py"]["includeFiles"] == "**"
+
+    rewrites = configuracao["rewrites"]
+    no_motor = [
+        "/saude", "/saude/prontidao", "/saude/deriva", "/analisar", "/analisar/registrar",
+        "/analisar/previa", "/analisar/arquivo", "/ingestao", "/ingestao/",
+        "/integracoes/webhook/3", "/conversas/importar", "/conversas/repontuar",
+        "/conversas/abc/atribuicao", "/conversas/a/b/contrafactual", "/conversas/abc/confianca",
+        "/indicadores/drivers", "/indicadores/confianca", "/grafo", "/modelo", "/modelo/simular",
+        "/operacao/replay/x", "/operacao/laboratorio/cenario", "/operacao/laboratorio/comparar",
+    ]
+    na_leve = [
+        "/auth/eu", "/auth/estado", "/conversas", "/conversas/abc", "/conversas/importar/previa",
+        "/indicadores", "/serie-temporal", "/configuracoes", "/modelo/lexicon", "/lexico/curado",
+        "/integracoes/fontes", "/operacao/equipes", "/operacao/radar", "/anotacao/tok",
+    ]
+    for caminho in no_motor:
+        assert _destino(rewrites, caminho) == "/api/motor", caminho
+    for caminho in na_leve:
+        assert _destino(rewrites, caminho) == "/api/index", caminho
 
 
 def test_dashboard_tem_configuracao_vercel_independente():
@@ -93,58 +124,6 @@ def test_checksum_incorreto_e_recusado(tmp_path):
 def test_modelos_incompletos_falham_alto(tmp_path):
     with pytest.raises(ArtefatoDeModelosInvalido, match="ausente"):
         conferir_modelos(tmp_path)
-
-
-def test_backend_laya_onnx_exige_grafo_e_tokenizador(tmp_path, monkeypatch):
-    _artefatos_minimos(tmp_path)
-    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
-    with pytest.raises(ArtefatoDeModelosInvalido, match="laya.onnx"):
-        conferir_modelos(tmp_path)
-
-    laya = tmp_path / "modelos-onnx" / "laya-ironia"
-    (laya / "tokenizer").mkdir(parents=True)
-    for relativo in (
-        "laya.onnx",
-        "manifesto.json",
-        "rl_agent_config.json",
-        "tokenizer/tokenizer.json",
-        "tokenizer/tokenizer_config.json",
-    ):
-        (laya / relativo).write_text("{}")
-    (laya / "manifesto.json").write_text('{"formato": "int8"}')
-    conferir_modelos(tmp_path)
-
-    (laya / "manifesto.json").write_text('{"formato": "fp32"}')
-    with pytest.raises(ArtefatoDeModelosInvalido, match="laya.onnx.data"):
-        conferir_modelos(tmp_path)
-    (laya / "laya.onnx.data").write_bytes(b"pesos")
-    conferir_modelos(tmp_path)
-
-
-def test_laya_em_fp16_e_autossuficiente_e_formato_desconhecido_e_recusado(tmp_path, monkeypatch):
-    _artefatos_minimos(tmp_path)
-    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
-    laya = tmp_path / "modelos-onnx" / "laya-ironia"
-    (laya / "tokenizer").mkdir(parents=True)
-    for relativo in ("laya.onnx", "rl_agent_config.json", "tokenizer/tokenizer.json",
-                     "tokenizer/tokenizer_config.json"):
-        (laya / relativo).write_text("{}")
-    # Pesos em float16 dentro do proprio grafo: nao ha laya.onnx.data.
-    (laya / "manifesto.json").write_text('{"formato": "fp16"}')
-    conferir_modelos(tmp_path)
-
-    (laya / "manifesto.json").write_text('{"formato": "fp8"}')
-    with pytest.raises(ArtefatoDeModelosInvalido, match="formato"):
-        conferir_modelos(tmp_path)
-
-
-def test_backend_laya_onnx_exige_url_e_checksum_separados(tmp_path, monkeypatch):
-    monkeypatch.setenv("FRAUS_IRONIA_BACKEND", "laya-onnx")
-    monkeypatch.delenv("FRAUS_LAYA_MODELO_URL", raising=False)
-    monkeypatch.delenv("FRAUS_LAYA_MODELO_SHA256", raising=False)
-
-    with pytest.raises(ArtefatoDeModelosInvalido, match="FRAUS_LAYA_MODELO_URL"):
-        sobrepor_laya_se_declarada(tmp_path, tmp_path)
 
 
 def _artefatos_minimos(raiz: Path) -> None:

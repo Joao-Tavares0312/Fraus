@@ -26,7 +26,7 @@ from scripts.analise_motores.comum import (
 )
 from scripts.gerenciar_artefatos import sha256
 
-PERFIS = ('torch', 'onnx-fp32', 'onnx-int8', 'laya-onnx')
+PERFIS = ('torch', 'onnx-fp32', 'onnx-int8')
 PASTAS = {'texto': 'bertimbau-satisfacao', 'emocao': 'bertimbau-emocao', 'ironia': 'bertimbau-ironia'}
 GATES = {'fp32': {'max_delta_probabilidade': 1e-3, 'max_delta_score': .01, 'max_flips_categoria': 0},
          'int8': {'max_delta_probabilidade': .02, 'max_queda_f1_macro': .005, 'max_flips_categoria': 0}}
@@ -226,8 +226,8 @@ def _preparar_config(args, perfil: str, workspace: Path, rodada: Path, checkpoin
     _sem_links(raiz)
     caminhos, evidencias, faltantes = {}, [], []
     for nome, pasta in PASTAS.items():
-        origem = Path(args.laya).absolute() if perfil == 'laya-onnx' and nome == 'ironia' else raiz / pasta
-        obrigatorio = 'model.safetensors' if perfil == 'torch' else ('laya.onnx' if perfil == 'laya-onnx' and nome == 'ironia' else 'model.onnx')
+        origem = raiz / pasta
+        obrigatorio = 'model.safetensors' if perfil == 'torch' else 'model.onnx'
         if not (origem / obrigatorio).is_file():
             faltantes.append(nome)
             continue
@@ -237,10 +237,6 @@ def _preparar_config(args, perfil: str, workspace: Path, rodada: Path, checkpoin
     if not caminhos:
         return None, evidencias, 'pesos_de_cabecas_ausentes'
     identidade = checkpoint if perfil == 'torch' else _checkpoint_onnx(raiz, checkpoint, perfil.removeprefix('onnx-'))
-    if perfil == 'laya-onnx':
-        identidade = _digest({f'{nome}/{arquivo}': digest for evidencia in evidencias
-                              for nome in [Path(evidencia['copia']).name]
-                              for arquivo, digest in evidencia['copias'].items()})
     config = {'perfil': perfil, 'workspace': str(workspace), 'caminhos': caminhos,
               'corpus': str(Path(args.corpus).absolute()), 'checkpoint': identidade,
               'saida': str(destino / 'coleta.json'), 'cabecas_ausentes': faltantes,
@@ -317,7 +313,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--onnx', default=str(RAIZ / 'modelos-onnx'))
     parser.add_argument('--onnx-fp32')
     parser.add_argument('--onnx-int8')
-    parser.add_argument('--laya', default=str(RAIZ / 'modelos-onnx/laya-ironia'))
     parser.add_argument('--fusor', default=str(RAIZ / 'modelos/fusor.joblib'))
     parser.add_argument('--manifesto-fusor')
     parser.add_argument('--fonte-confiavel-fusor')
@@ -346,12 +341,12 @@ def main(argv: list[str] | None = None) -> int:
         base_path = perfis.get('torch', {}).get('coleta')
         if base_path:
             base = json.loads(Path(base_path).read_text(encoding='utf-8'))
-            for perfil in ('onnx-fp32', 'onnx-int8', 'laya-onnx'):
+            for perfil in ('onnx-fp32', 'onnx-int8'):
                 caminho = perfis.get(perfil, {}).get('coleta')
                 if not caminho:
                     continue
                 candidato = json.loads(Path(caminho).read_text(encoding='utf-8'))
-                if perfil == 'laya-onnx' or not base.get('checkpoint') or candidato.get('checkpoint') != base.get('checkpoint'):
+                if not base.get('checkpoint') or candidato.get('checkpoint') != base.get('checkpoint'):
                     comparacoes[perfil] = {'status': 'nao_verificado', 'motivo': 'modelos_distintos_ou_checkpoint_sem_procedencia', 'metricas': None}
                     incompleto = True
                     continue
@@ -366,7 +361,7 @@ def main(argv: list[str] | None = None) -> int:
                           condicoes={'backend': list(perfis), 'n': {p: m['n_casos'] for p, m in perfis.items()},
                                      'threads': {'OMP_NUM_THREADS': 1, 'MKL_NUM_THREADS': 1, 'FRAUS_ONNX_THREADS': 0},
                                      'operacao': 'cabecas_features_pontuacao_atribuicao_cinco_repeticoes',
-                                     'versoes': versoes(['torch', 'transformers', 'onnxruntime', 'laya'])},
+                                     'versoes': versoes(['torch', 'transformers', 'onnxruntime'])},
                           artefatos=evidencias, medicoes={'perfis': perfis, 'comparacoes': comparacoes, 'gates_congelados': GATES})
         salvar_resultado(workspace, dados)
         return 1 if erro else (2 if incompleto else 0)

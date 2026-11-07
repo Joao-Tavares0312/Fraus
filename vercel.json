@@ -1,11 +1,66 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "pip install -r requirements.txt && pip install --no-deps laya==0.3.21",
-  "buildCommand": "python scripts/preparar_modelos_vercel.py",
+  "framework": null,
+  "buildCommand": "python scripts/preparar_modelos_vercel.py && mkdir -p public && touch public/.vazio",
+  "outputDirectory": "public",
+  "regions": [
+    "cle1"
+  ],
   "functions": {
     "api/index.py": {
+      "maxDuration": 60,
+      "includeFiles": "{fraus/**,modelos/**}",
+      "excludeFiles": "modelos-onnx/**"
+    },
+    "api/motor.py": {
       "maxDuration": 300,
       "includeFiles": "**"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/saude(/.*)?",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/analisar(/.*)?",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/ingestao(/)?",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/integracoes/webhook/(.*)",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/conversas/(importar|repontuar)",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/conversas/(.+)/(atribuicao|contrafactual|confianca)",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/indicadores/(drivers|confianca)",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/grafo",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/modelo(/simular)?",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/operacao/(replay|laboratorio)/(.*)",
+      "destination": "/api/motor"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
 }

@@ -55,8 +55,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `fraus/sinais/estilo.py` | caixa alta, pontuação, alongamento, palavrão, censura |
 | `fraus/sinais/curadoria.py` | o que o analista ensinou ao léxico — vence o SentiLex e o ranking de emoji |
 | `fraus/cortesia.py` | "ok, obrigado" sozinho é **sem sinal**, não promotor — `Conversa.tem_sinal_cliente` |
-| `fraus/divisao.py` | divisão treino/teste por autor dos notebooks 04 e 07, com conferência que falha alto |
-| `fraus/comparacao_modelos.py` | comparação pareada BERTimbau × Laya e o laudo; versionado em `fraus/dados/comparacao_modelos.json` |
+| `fraus/divisao.py` | divisão treino/teste por autor do notebook 04, com conferência que falha alto |
+| `fraus/comparacao_modelos.py` | comparação pareada de dois classificadores no mesmo teste (McNemar, bootstrap, acurácia por par, matriz de confusão); base da régua de ironia e dos benchmarks |
 | `fraus/fatias.py` | avaliação por fatia (parte pura); `scripts/avaliar_por_fatias.py` alimenta `docs/cartao-do-modelo.md` |
 | `fraus/conformal.py` | conjunto conformal Mondrian sobre o score gravado e abstenção; artefato `fraus/dados/conformal_fusor.json` chaveado pela régua |
 | `fraus/calibracao.py` | ECE/MCE/classwise com bootstrap — instrumento de medição, nada recalibra em runtime |
@@ -225,11 +225,10 @@ as libs nativas do GTK e não importa no Windows. Ele mora em `mkdocs-pdf.yml`
 
 - `docs/superpowers/specs/2026-08-13-dolos-design.md` — spec, decisões e ~35 referências
 - `docs/superpowers/plans/2026-08-13-dolos-implementacao.md` — plano de implementação
-- `docs/treinamento.md` — os notebooks de treino, calibração e Laya, e os artefatos
+- `docs/treinamento.md` — os notebooks de treino e calibração, e os artefatos
 - `dashboard/DESIGN.md` — sistema de design da interface
 - `docs/notas/2026-09-30-operacao-producao.md` — análise persistida, Operação, convites e evidências da publicação
-- `docs/notas/2026-10-02-treino-laya.md` — treino do Laya: resultado, decisão de não promover e bibliografia
-- `docs/ironia.md` — por que o IDPT entrega o rótulo, como treinar o Laya só em ironia e a régua de pares mínimos; medições em `docs/notas/2026-10-08-ironia-corpus.md`
+- `docs/ironia.md` — por que o IDPT entrega o rótulo e a régua de pares mínimos; medições em `docs/notas/2026-10-08-ironia-corpus.md`
 - `docs/deploy-vercel.md` — procedimento interno; dashboard e API publicam separadamente
 - `docs/auditoria/2026-10-13-relatorio.md` — auditoria de 13/10/2026: features, bugs e segurança
 - `docs/limpeza/2026-10-14-inventario.md` — inventário de limpeza do repositório, com o que saiu e o que ficou

@@ -44,10 +44,10 @@ def ambiente_isolado(workspace: Path, parametros: dict[str, str] | None = None) 
                     HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1', PYTHONDONTWRITEBYTECODE='1',
                     PYTHONPATH=str(RAIZ), OMP_NUM_THREADS='1', MKL_NUM_THREADS='1', TOKENIZERS_PARALLELISM='false')
     permitidos = {'FRAUS_BACKEND', 'FRAUS_ONNX_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS',
-                  'FRAUS_IRONIA_BACKEND', 'FRAUS_INFERENCIAS_SIMULTANEAS', 'FRAUS_AQUECER',
+                  'FRAUS_INFERENCIAS_SIMULTANEAS', 'FRAUS_AQUECER',
                   'FRAUS_CAMINHO_MODELO_TEXTO', 'FRAUS_CAMINHO_MODELO_EMOCAO', 'FRAUS_CAMINHO_MODELO_IRONIA',
                   'FRAUS_CAMINHO_FUSOR', 'FRAUS_CAMINHO_ONNX_TEXTO', 'FRAUS_CAMINHO_ONNX_EMOCAO',
-                  'FRAUS_CAMINHO_ONNX_IRONIA', 'FRAUS_CAMINHO_ONNX_LAYA', 'FRAUS_CAMINHO_ONNX_MULTITAREFA'}
+                  'FRAUS_CAMINHO_ONNX_IRONIA', 'FRAUS_CAMINHO_ONNX_MULTITAREFA'}
     for chave, valor in (parametros or {}).items():
         if chave not in permitidos:
             raise ValueError('parametro de subprocesso nao declarado')

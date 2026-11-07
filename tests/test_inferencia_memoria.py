@@ -1,6 +1,4 @@
 """Lotes aceitos não podem exigir uma ativação proporcional ao atendimento inteiro."""
-from pathlib import Path
-
 import numpy as np
 import pytest
 
@@ -48,32 +46,3 @@ def test_multitarefa_preserva_alinhamento_das_tres_cabecas_com_cauda(n):
     esperado = {nome: _softmax(np.stack([np.sin(ids + i) for i in range(d)], axis=1)).tolist() if n else []
                 for nome, d in [('satisfacao', 3), ('emocao', 7), ('ironia', 2)]}
     assert saida == esperado
-
-
-@pytest.mark.parametrize('backend', ['torch', 'onnx'])
-def test_falha_da_cabeca_selecionada_nao_e_mascarada_por_artefato_obsoleto(monkeypatch, tmp_path, backend):
-    from fraus.api import main
-    from fraus.sinais import onnx, ironia_laya
-    from fraus.sinais.texto import ModeloAusenteError
-
-    class FalhaLaya(RuntimeError):
-        pass
-
-    def carregar_bert(caminho):
-        if Path(caminho).name == 'ironia-nao-usada':
-            raise ModeloAusenteError('artefato obsoleto ausente')
-        return object()
-
-    def carregar_laya():
-        raise FalhaLaya('cabeca selecionada indisponivel')
-
-    monkeypatch.setenv('FRAUS_IRONIA_BACKEND', 'laya-onnx' if backend == 'onnx' else 'laya')
-    monkeypatch.setattr(main, 'ClassificadorTexto', carregar_bert)
-    monkeypatch.setattr(main, 'ClassificadorEmocao', carregar_bert)
-    monkeypatch.setattr(main, 'ClassificadorIronia', carregar_bert)
-    monkeypatch.setattr(onnx, 'ClassificadorOnnx', carregar_bert)
-    monkeypatch.setattr(main, 'CAMINHO_MODELO_IRONIA', tmp_path / 'ironia-nao-usada')
-    monkeypatch.setattr(main, 'CAMINHO_ONNX_IRONIA', tmp_path / 'ironia-nao-usada')
-    monkeypatch.setattr(ironia_laya, 'obter_classificador_ironia_laya_declarado', carregar_laya)
-    with pytest.raises(FalhaLaya, match='cabeca selecionada indisponivel'):
-        main.montar_classificadores(backend)
