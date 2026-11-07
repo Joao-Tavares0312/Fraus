@@ -37,7 +37,9 @@ def _destino(rewrites, caminho):
 
 def test_rotas_de_modelo_vao_para_a_funcao_do_motor():
     configuracao = json.loads((RAIZ / "vercel.json").read_text(encoding="utf-8"))
-    assert "laya" not in configuracao["installCommand"]
+    # A Vercel instala requirements.txt sozinha; um `pip install` explicito
+    # falha la (PEP 668, ambiente gerido pelo uv).
+    assert "installCommand" not in configuracao
     funcoes = configuracao["functions"]
     assert "modelos-onnx/**" in funcoes["api/index.py"]["excludeFiles"]
     assert funcoes["api/motor.py"]["includeFiles"] == "**"
