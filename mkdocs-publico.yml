@@ -73,6 +73,7 @@ nav:
   - Início: index.md
   - Banca e metodologia:
       - A tese: tese.md
+      - O Fraus explicado para todos: explicado-para-todos.md
       - Arquitetura: arquitetura.md
       - Treinamento: treinamento.md
       - Generalização e evidências: generalizacao.md
