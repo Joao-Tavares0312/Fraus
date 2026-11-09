@@ -43,6 +43,7 @@ traz sinais, não acesso ao estado real de quem escreveu.</p>
 -   **[Banca e metodologia — a tese](tese.md)**
 
     Entenda a pergunta, as unidades de análise e o que sustenta as conclusões.
+    Não programa? Comece por [O Fraus explicado para todos](explicado-para-todos.md).
     Siga por [arquitetura](arquitetura.md), [treinamento](treinamento.md),
     [generalização e evidências](generalizacao.md) e
     [cartão do modelo](cartao-do-modelo.md). Leia os limites antes de
