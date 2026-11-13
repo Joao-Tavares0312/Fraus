@@ -1,4 +1,4 @@
-import { PartituraDaFala } from "@/components/PartituraDaFala";
+import { LeituraDaFala } from "@/components/LeituraDaFala";
 import type { ProbabilidadesDeClasse } from "@/lib/partitura";
 
 /**
@@ -34,13 +34,13 @@ export function CabecasDeLeitura({
   ressalvas = true,
   recolher = true,
 }: {
-  /** Ver `PartituraDaFala`: falso numa tela que examina uma frase só. */
+  /** Ver `LeituraDaFala`: falso numa tela que examina uma frase só. */
   recolher?: boolean;
   /**
-   * As três probabilidades de classe DESTA frase, quando a tela as tem. Entram
-   * na mesma pauta de emoção e ironia (`PartituraDaFala`) — a escala comum é o
-   * ponto do desenho. O Simulador não passa: ele mostra a classificação na
-   * barra grande dele, acima.
+   * As três probabilidades de classe DESTA frase, quando a tela as tem. Viram
+   * o gráfico de satisfação de `LeituraDaFala`, ao lado dos de emoção e de
+   * ironia. O Simulador não passa: ele mostra a classificação na barra grande
+   * dele, acima.
    */
   classes?: ProbabilidadesDeClasse | null;
   emocao: Record<string, number> | null;
@@ -73,7 +73,7 @@ export function CabecasDeLeitura({
         </p>
       ) : null}
 
-      <PartituraDaFala classes={classes} emocao={emocao} ironia={ironia} recolher={recolher} />
+      <LeituraDaFala classes={classes} emocao={emocao} ironia={ironia} recolher={recolher} />
 
       {/* A ETIQUETA DE EXPOSICAO -- Art. 50(3) do EU AI Act, em vigor desde
           02/08/2026. Classificar sete emocoes torna o Fraus, pela letra do
@@ -110,13 +110,13 @@ export function CabecasDeLeitura({
         </p>
       ) : null}
 
-      {/* O numero e a marca de "cabeça pouco confiável" moram na pauta (nota
-          tracejada, com o título no rótulo). Aqui fica só a prosa, que vale
-          uma vez por tela. */}
+      {/* O numero e a marca de "cabeça pouco confiável" moram no medidor
+          tracejado de `LeituraDaFala`. Aqui fica só a prosa, que vale uma vez
+          por tela. */}
       {ressalvas && ironia !== null ? (
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          <strong>ironia é cabeça pouco confiável</strong>, por isso a nota
-          tracejada. Ela acerta o caso de manual (“que atendimento
+          <strong>ironia é cabeça pouco confiável</strong>, por isso o medidor
+          tracejado. Ela acerta o caso de manual (“que atendimento
           maravilhoso, só esperei 3 horas”) e erra feio no resto:{" "}
           <strong>6 em 10</strong> falas sinceras de atendimento saem marcadas
           como irônicas, com 0,999 de confiança. Ela foi treinada num corpus
