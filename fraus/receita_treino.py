@@ -309,6 +309,27 @@ def preparar_divisao(
     }
 
 
+def rerrotular_lados(lados: dict, novos) -> dict:
+    """Os MESMOS lados com os rotulos de `novos`, casados pelo texto normalizado.
+
+    Para comparar dois mapas de rotulo sem mover exemplo entre treino,
+    validacao e teste. Sai do lado o texto que `novos` nao tem ou em que
+    `novos` se contradiz; texto que so existe em `novos` nao entra.
+    """
+    rotulos: dict[str, set[int]] = {}
+    for texto, rotulo in zip(novos.textos, novos.rotulos):
+        rotulos.setdefault(normalizar_texto(texto), set()).add(int(rotulo))
+    saida = {}
+    for nome, lado in lados.items():
+        chaves = [normalizar_texto(t) for t in lado.textos]
+        indices = [i for i, c in enumerate(chaves) if len(rotulos.get(c, ())) == 1]
+        recorte = _recorte(lado, indices)
+        recorte.rotulos = [next(iter(rotulos[chaves[i]])) for i in indices]
+        recorte.nomes_classes = list(novos.nomes_classes)
+        saida[nome] = recorte
+    return saida
+
+
 def amostra_estratificada(exemplos, n: int, *, semente: int = SEMENTE_DIVISAO):
     """`n` exemplos na proporcao das classes; o conjunto inteiro se ja for menor."""
     if n >= len(exemplos.rotulos):

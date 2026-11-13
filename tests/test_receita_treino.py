@@ -494,3 +494,34 @@ def test_juntar_concatena_e_exige_as_mesmas_classes():
     assert j.grupos == ["g1", "", ""]
     with pytest.raises(ValueError):
         juntar(a, Exemplos(["w"], [0], None, ["outra", "ordem"]))
+
+
+def test_rerrotular_lados_preserva_a_divisao_e_tira_o_que_nao_tem_rotulo_novo():
+    from fraus.corpora import Exemplos
+    from fraus.receita_treino import rerrotular_lados
+
+    nomes = ["a", "b"]
+    lados = {
+        "treino": Exemplos(textos=["Um", "dois", "tres"], rotulos=[0, 0, 1], grupos=["g1", "g2", "g3"], nomes_classes=nomes),
+        "validacao": Exemplos(textos=["quatro"], rotulos=[1], grupos=["g4"], nomes_classes=nomes),
+        "teste": Exemplos(textos=["cinco"], rotulos=[0], grupos=["g5"], nomes_classes=nomes),
+    }
+    # "um" muda de classe (caixa diferente: a chave e o texto normalizado);
+    # "dois" some do corpus novo; "seis" nao estava na divisao e NAO entra.
+    novos = Exemplos(textos=["um", "tres", "quatro", "cinco", "seis"], rotulos=[1, 1, 1, 0, 0], nomes_classes=nomes)
+    saida = rerrotular_lados(lados, novos)
+    assert saida["treino"].textos == ["Um", "tres"]
+    assert saida["treino"].rotulos == [1, 1]
+    assert saida["treino"].grupos == ["g1", "g3"]
+    assert saida["validacao"].textos == ["quatro"] and saida["teste"].textos == ["cinco"]
+
+
+def test_rerrotular_lados_tira_texto_com_rotulos_novos_conflitantes():
+    from fraus.corpora import Exemplos
+    from fraus.receita_treino import rerrotular_lados
+
+    nomes = ["a", "b"]
+    lados = {k: Exemplos(textos=["x", "y"] if k == "treino" else [k], rotulos=[0, 1] if k == "treino" else [0],
+                         nomes_classes=nomes) for k in ("treino", "validacao", "teste")}
+    novos = Exemplos(textos=["x", "X", "y", "validacao", "teste"], rotulos=[0, 1, 1, 0, 0], nomes_classes=nomes)
+    assert rerrotular_lados(lados, novos)["treino"].textos == ["y"]

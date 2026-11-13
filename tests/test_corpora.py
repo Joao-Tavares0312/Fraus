@@ -185,3 +185,33 @@ def test_ler_multipico_vota_por_par_descarta_empate_e_agrupa_por_post(tmp_path):
     assert ex.grupos == ["p1", "p1"]
     assert ex.nomes_classes == ["nao_ironico", "ironico"]
     assert ler_multipico(caminho, variedade="br").textos == ["Que otimo, de novo"]
+
+
+def test_ler_goemotions_move_finas_de_cortesia_para_neutro(tmp_path):
+    from fraus.corpora import ler_goemotions_ptbr
+
+    caminho = _goemotions(tmp_path, [
+        ("a", "u1", "False", {"gratitude"}, "Valeu demais"),
+        ("a", "u1", "False", {"gratitude"}, "Valeu demais"),
+        ("b", "u2", "False", {"joy"}, "Que alegria"),
+        ("b", "u2", "False", {"joy"}, "Que alegria"),
+        # cortesia + alegria sentida: duas classes depois do remapeamento, sai
+        ("c", "u3", "False", {"gratitude", "joy"}, "Obrigado, amei"),
+        ("c", "u3", "False", {"gratitude", "joy"}, "Obrigado, amei"),
+        # cortesia + neutro: as duas viram neutro, fica
+        ("d", "u4", "False", {"approval", "neutral"}, "Ok, certo"),
+        ("d", "u4", "False", {"approval", "neutral"}, "Ok, certo"),
+    ])
+    ex = ler_goemotions_ptbr([caminho], _MAPA_EKMAN, finas_para_neutro=("gratitude", "approval"))
+    assert ex.textos == ["Valeu demais", "Que alegria", "Ok, certo"]
+    assert [ex.nomes_classes[r] for r in ex.rotulos] == ["neutro", "alegria", "neutro"]
+
+
+def test_ler_goemotions_recusa_fina_desconhecida_para_neutro(tmp_path):
+    import pytest
+
+    from fraus.corpora import ler_goemotions_ptbr
+
+    caminho = _goemotions(tmp_path, [("a", "u1", "False", {"joy"}, "Oi")])
+    with pytest.raises(ValueError, match="gratidao"):
+        ler_goemotions_ptbr([caminho], _MAPA_EKMAN, finas_para_neutro=("gratidao",))

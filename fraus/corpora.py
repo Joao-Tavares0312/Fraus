@@ -151,18 +151,28 @@ URL_EKMAN = (
 
 
 def ler_goemotions_ptbr(
-    caminhos: list[str | Path], mapa_ekman: dict[str, list[str]], *, limiar_anotadores: int = 2
+    caminhos: list[str | Path], mapa_ekman: dict[str, list[str]], *, limiar_anotadores: int = 2,
+    finas_para_neutro: tuple[str, ...] = (),
 ) -> Exemplos:
     """GoEmotions-PT (traducao automatica), votos somados por id, reduzido a Ekman + neutro.
 
     A mesma regra do notebook 03 ate 19/10/2026: linha `example_very_unclear`
     nao vota; uma classe fina conta com `limiar_anotadores` votos; exemplo que
     termina com mais de uma classe Ekman sai. O grupo e o autor do Reddit.
+
+    `finas_para_neutro` tira classes finas da sua classe Ekman e as conta como
+    `neutro` (experimento de 13/11/2026: gratidao, aprovacao e cuidado sao
+    cortesia e assentimento, nao alegria sentida). Vazio e o mapa original.
     """
     fina_para_ekman = {
         fina: _INGLES_PARA_EKMAN[grossa] for grossa, finas in mapa_ekman.items() for fina in finas
     }
     fina_para_ekman["neutral"] = "neutro"
+    desconhecidas = sorted(set(finas_para_neutro) - set(fina_para_ekman))
+    if desconhecidas:
+        raise ValueError(f"classe fina fora do GoEmotions: {desconhecidas}")
+    for fina in finas_para_neutro:
+        fina_para_ekman[fina] = "neutro"
     if set(fina_para_ekman.values()) != set(NOMES_EMOCOES):
         raise ValueError("o mapa Ekman nao cobre as classes de NOMES_EMOCOES")
     _permitir_campo_longo()
