@@ -138,7 +138,8 @@ class MotorDuble:
 
         score = 55.0 + 14.0 * positivos - 16.0 * negativos
 
-        latencia = float(features_tempo(conversa).get("latencia_mediana_s", 0.0))
+        # Sem resposta nao ha latencia medida (None): o duble nao penaliza.
+        latencia = features_tempo(conversa)["latencia_mediana_s"] or 0.0
         score -= min(25.0, latencia / 12.0)
         if conversa.escalou_para_humano:
             score -= 8.0

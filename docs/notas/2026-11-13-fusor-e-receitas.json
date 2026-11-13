@@ -1,0 +1,289 @@
+{
+ "gerado_em": "2026-11-13",
+ "manifesto_sha256": "673c31320eac3f47fbbdde8e93afc894f23b41d50bf014ab2091024b0245a81d",
+ "teste_sintetico": {
+  "conversas": 300,
+  "semente": 999
+ },
+ "fusor_sobre_cabeca_ajustada_vs_atual": {
+  "lado": "e",
+  "n": 300,
+  "f1_ref": 0.9400932709859718,
+  "f1_cand": 0.9144613485706278,
+  "diferenca": -0.025631922415344066,
+  "ic95": [
+   -0.06002281820171167,
+   0.007707046521814909
+  ],
+  "recall_por_classe_ref": [
+   0.95,
+   0.91,
+   0.96
+  ],
+  "recall_por_classe_cand": [
+   0.98,
+   0.77,
+   1.0
+  ],
+  "so_ref_acerta": 16,
+  "so_cand_acerta": 9
+ },
+ "regularizacao_C": {
+  "selecao": {
+   "variante": "completo",
+   "C": 0.3,
+   "selecionado_em": "validacao 120 oficiais + 1500 diagnostico (semente 20261113)",
+   "congelado_antes_do_teste": "2026-11-13"
+  },
+  "teste": {
+   "n": 300,
+   "C_ref": 1.0,
+   "C_cand": 0.3,
+   "f1_ref": 0.9400932709859718,
+   "f1_cand": 0.9433574819706602,
+   "diferenca": 0.0032642109846883205,
+   "ic95": [
+    -0.010512613598396359,
+    0.017376331873185064
+   ]
+  }
+ },
+ "diagnostico_validacao": {
+  "conversas": 1500,
+  "semente": 20261113,
+  "lado": "validacao do manifesto",
+  "treino": "900 conversas de treino do cache de 13/11",
+  "variantes": {
+   "completo": {
+    "f1": 0.9218151000049785,
+    "recall_neutro": 0.908,
+    "menos_completo": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "so_texto": {
+    "f1": 0.9166814668150339,
+    "recall_neutro": 0.91,
+    "menos_completo": [
+     -0.005133633189944531,
+     -0.01962331058642143,
+     0.009331604674724717
+    ]
+   },
+   "sem_emoji": {
+    "f1": 0.9081093402451309,
+    "recall_neutro": 0.9,
+    "menos_completo": [
+     -0.013705759759847558,
+     -0.024400990243474686,
+     -0.003016495116855311
+    ]
+   },
+   "texto+emoji": {
+    "f1": 0.9421872197080338,
+    "recall_neutro": 0.928,
+    "menos_completo": [
+     0.020372119703055303,
+     0.00784186636117964,
+     0.0327153461548566
+    ]
+   },
+   "sem_tempo": {
+    "f1": 0.9237367628063939,
+    "recall_neutro": 0.914,
+    "menos_completo": [
+     0.0019216628014154802,
+     -0.00786273661657649,
+     0.01183985529690602
+    ]
+   },
+   "texto+tempo": {
+    "f1": 0.9256856337606157,
+    "recall_neutro": 0.912,
+    "menos_completo": [
+     0.0038705337556372843,
+     -0.00819307507912553,
+     0.015904258365416406
+    ]
+   },
+   "sem_emocao": {
+    "f1": 0.9335857407301251,
+    "recall_neutro": 0.92,
+    "menos_completo": [
+     0.011770640725146664,
+     0.0031441259299343966,
+     0.021225059292097077
+    ]
+   },
+   "texto+emocao": {
+    "f1": 0.9080887080163409,
+    "recall_neutro": 0.898,
+    "menos_completo": [
+     -0.013726391988637565,
+     -0.028305418174440114,
+     0.00015173079142458105
+    ]
+   },
+   "sem_lexico": {
+    "f1": 0.930901271691181,
+    "recall_neutro": 0.914,
+    "menos_completo": [
+     0.009086171686202515,
+     0.0032178861951001254,
+     0.01576783721693691
+    ]
+   },
+   "texto+lexico": {
+    "f1": 0.9147342321414799,
+    "recall_neutro": 0.91,
+    "menos_completo": [
+     -0.007080867863498597,
+     -0.020257361906578623,
+     0.006713039648665438
+    ]
+   },
+   "sem_estilo": {
+    "f1": 0.934928748503108,
+    "recall_neutro": 0.92,
+    "menos_completo": [
+     0.013113648498129571,
+     0.005619221752042528,
+     0.02159449113076304
+    ]
+   },
+   "texto+estilo": {
+    "f1": 0.9132925026321086,
+    "recall_neutro": 0.908,
+    "menos_completo": [
+     -0.008522597372869867,
+     -0.021456560177004237,
+     0.00477486975846777
+    ]
+   },
+   "sem_incongruencia": {
+    "f1": 0.9316392705531268,
+    "recall_neutro": 0.918,
+    "menos_completo": [
+     0.009824170548148325,
+     0.0025059047848995123,
+     0.01742121629839944
+    ]
+   },
+   "texto+incongruencia": {
+    "f1": 0.918782454612888,
+    "recall_neutro": 0.924,
+    "menos_completo": [
+     -0.0030326453920904717,
+     -0.016291821540737543,
+     0.010167097576282388
+    ]
+   },
+   "sem_texto": {
+    "f1": 0.8648737047541996,
+    "recall_neutro": 0.784,
+    "menos_completo": [
+     -0.0569413952507789,
+     -0.07356697223398152,
+     -0.04143835800931023
+    ]
+   }
+  }
+ },
+ "receitas": {
+  "satisfacao_ajustado": {
+   "semente": 42,
+   "modelo_base": "candidato 42 (campanha T4 26/10), SHA-256 709951b5...",
+   "temperatura": 1.3514009386176364,
+   "f1_macro_validacao": 0.7586976219188357,
+   "ponderar_classes": false,
+   "suavizacao_por_classe": [
+    0.0,
+    0.2,
+    0.0
+   ],
+   "tamanhos": {
+    "treino": 21000,
+    "validacao": 12058,
+    "teste": 18895
+   },
+   "melhor_epoca": 1.0,
+   "manifesto_divisao": {
+    "treino": {
+     "fingerprint": "310d3538871b1b6bca189328df7d1c26e76b8730be6de7b5cb5ec4798e3ebc54",
+     "impressao_textos": "a92cf13e2767bc5cd4f2b064165595367974201cb605450c40eae10ef85a8fb3",
+     "exemplos": 21000
+    },
+    "validacao": {
+     "fingerprint": "3c779455967f47393aedba87ac219c58df709beceab6904d7145fdd71bf11945",
+     "impressao_textos": "88e85e880824febe8cf27e7f774aedaf70d20656e01e08f458620613aeee7cde",
+     "exemplos": 12058
+    },
+    "teste": {
+     "fingerprint": "5a10dfa28e7dbcf3f3b4767b3d8f87ba62c48e32db2174439c47434d2e373422",
+     "impressao_textos": "2faa727f9128b20c9a6070eea8831ca83707ae711615f5ad49b6d9fbcfe74eda",
+     "exemplos": 18895
+    }
+   }
+  },
+  "emocao_controle": {
+   "semente": 13,
+   "modelo_base": "neuralmind/bert-base-portuguese-cased",
+   "temperatura": 1.3056233274523756,
+   "f1_macro_validacao": 0.578092437395365,
+   "tamanhos": {
+    "treino": 36806,
+    "validacao": 4874,
+    "teste": 7328
+   },
+   "melhor_epoca": 3.0,
+   "manifesto_divisao": {
+    "treino": {
+     "fingerprint": "ea179fd5372266c7be64313f67981b68946e3b2e9e3995f0e2099b48a43c2ee6",
+     "impressao_textos": "68ed4c7eaca3153cc7992b176e311f3bb30f1322949574fe94668134894a4430",
+     "exemplos": 36806
+    },
+    "validacao": {
+     "fingerprint": "8ba0499e8a3b1c84962856de9742148174b840b487582976acd172ab618924f8",
+     "impressao_textos": "65dc77ac405d48e67ed560e75c2a36f6fe4afc73f09262c7e82d5bad7105430d",
+     "exemplos": 4874
+    },
+    "teste": {
+     "fingerprint": "d8064ff27d56ed8cbba08e0f95dd2dd53cd0fdc34a8500ebc6d3d18d5c050546",
+     "impressao_textos": "8b48cefed8df6595e35c6aee7b24fc33fae1237bede03b4436e51c7e51e182ec",
+     "exemplos": 7328
+    }
+   }
+  },
+  "emocao_cortesia": {
+   "semente": 13,
+   "modelo_base": "neuralmind/bert-base-portuguese-cased",
+   "temperatura": 1.3671629829457126,
+   "f1_macro_validacao": 0.5846276629161965,
+   "tamanhos": {
+    "treino": 35726,
+    "validacao": 4721,
+    "teste": 7093
+   },
+   "melhor_epoca": 3.0,
+   "manifesto_divisao": {
+    "treino": {
+     "fingerprint": "3ceae27848daa05936fc3e3d7723d468b1e7f746e7d84681d65ecb2d0428f0ad",
+     "impressao_textos": "d757b5f649343d41dfb21364f1907f58cb16c9215044007ddbc100ab278c24b3",
+     "exemplos": 35726
+    },
+    "validacao": {
+     "fingerprint": "f4e8855177cf6e48cd911246d721e3346717a2e77aaabef72770faec303cbe13",
+     "impressao_textos": "2e663f4e728ffd2cd3aefd078ec3eb232c9fb5de7e7edb7c01b7559bd2f8822d",
+     "exemplos": 4721
+    },
+    "teste": {
+     "fingerprint": "c5de2c094f593b89b688b572a4e46172d3036815c68225808fdd7cdaa8c1fd58",
+     "impressao_textos": "b92eddc0539228d2ec931ce7c821e9191f4c6a0db37581acb22880773a9bd487",
+     "exemplos": 7093
+    }
+   }
+  }
+ }
+}

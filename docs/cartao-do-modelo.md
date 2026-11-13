@@ -43,6 +43,19 @@ treinada no MultiPICo-PT: F1-macro 0,660 e ECE 0,055 no teste desse corpus
 (462 frases), contra 0,490 e 0,361 da anterior. Continua fora da nota. Ver
 [Novidades de 13/11/2026](novidades-2026-11-13.md).
 
+Em 13/11/2026 três candidatos foram medidos contra estes pesos e **nenhum foi
+promovido** (n, impressões e intervalos na nota interna de 13/11):
+
+| peça | candidato | conjunto que decide | atual | candidato | por que não |
+|---|---|---|---:|---:|---|
+| satisfação | ajuste do neutro sobre o candidato 42 | ConsumerBR, 5.000 | 0,539 | 0,574 | vence no F1 (+0,035 [+0,020; +0,050]), mas o recall de neutro cai de 0,37 para 0,20 |
+| emoção | cortesia (gratidão, aprovação, cuidado) como neutro | XED-pt, 4.286 | 0,280 | 0,266 | perde: −0,015 [−0,023; −0,006] |
+| fusor | mesma receita com regularização escolhida na validação | 300 conversas sintéticas | 0,940 | 0,943 | empate (+0,003 [−0,011; +0,017]) e sinal invertido em incongruência |
+
+Conversa que ninguém respondeu deixou de ter latência 0 em 13/11/2026: as
+latências saem ausentes e o fusor as lê como a média do treino, sem retreino.
+Antes, a ausência era lida como resposta instantânea.
+
 Os três BERTimbau rodam em CPU, por torch ou por ONNX Runtime
 (`FRAUS_BACKEND`), com **0 de 180 categorias trocadas** entre os dois
 executores. Ver [Encolher os modelos](encolhimento.md).

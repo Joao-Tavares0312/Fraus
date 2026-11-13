@@ -39,11 +39,9 @@ def fatias_das_features(f: dict[str, float]) -> dict[str, str]:
     """
     n = f["qtd_turnos_cliente"]
     m = f["latencia_mediana_s"]
-    # Heuristica: `features_tempo` grava 0.0 quando nao ha latencia (mediana e
-    # p90 ficam ambos 0), e `fatias_de` chama isso de "sem medida". Uma latencia
-    # real de exatamente 0 s nos dois seria indistinguivel; o teste de paridade
-    # com `fatias_de` fixa o resto.
-    sem_medida = m == 0 and f["latencia_p90_s"] == 0
+    # `features_tempo` grava None quando nao ha latencia (desde 13/11/2026);
+    # cache anterior gravava 0.0 em mediana e p90, e continua lido assim.
+    sem_medida = m is None or (m == 0 and f["latencia_p90_s"] == 0)
     return {
         "falas do cliente": "1" if n == 1 else "2-3" if n <= 3 else "4+",
         "latencia mediana": (

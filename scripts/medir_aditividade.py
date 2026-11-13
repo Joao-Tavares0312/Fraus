@@ -37,7 +37,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
-from fraus.fusor import Fusor, vetorizar  # noqa: E402
+from fraus.fusor import Fusor  # noqa: E402
 
 SEMENTE = 20261014
 QUANTIDADE = 90
@@ -45,14 +45,12 @@ QUANTIDADE = 90
 
 def medir_aditividade(fusor: Fusor, lote_de_features: list[dict[str, float]]) -> dict:
     """Maiores erros de aditividade do `lote_de_features`. Parte pura: sem disco, sem modelo."""
-    pipeline = fusor._pipeline
-    classes = [int(c) for c in pipeline.named_steps["modelo"].classes_]
     erro_score = 0.0
     erro_logit = 0.0
     for features in lote_de_features:
         decomposicao = fusor.decompor(features)
         erro_score = max(erro_score, abs(decomposicao["score"] - fusor.pontuar(features)))
-        probabilidades = dict(zip(classes, pipeline.predict_proba([vetorizar(features)])[0]))
+        probabilidades = fusor.probabilidades(features)
         referencia = decomposicao["referencia"]
         for eixo in decomposicao["eixos"]:
             esperado = math.log(probabilidades[eixo["classe"]] / probabilidades[referencia])

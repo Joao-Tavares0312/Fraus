@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 13/11/2026 (ironia do MultiPICo em produção)
+# Handoff — Fraus, atualizado em 13/11/2026 (motores medidos; nada promovido)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -24,6 +24,31 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 
 ---
 
+## Satisfação, emoção e fusor: nada promovido — 13/11/2026 (tarde)
+
+- Três tentativas medidas contra a régua escrita antes; nenhuma passou.
+  Números, JSONs e o que não foi verificado na
+  [nota](notas/2026-11-13-motores-satisfacao-emocao-fusor.md).
+- **Satisfação:** o ajuste do neutro sobre o candidato 42 mantém o ganho no
+  ConsumerBR (0,574 contra 0,539, IC acima de zero), mas o neutro fica em 0,20
+  contra 0,37 da atual. Ganhar no ConsumerBR e manter o neutro estão em tensão
+  nas duas receitas vistas; não repita a mesma família de ajuste esperando
+  outro resultado.
+- **Emoção:** "cortesia não é alegria" (gratidão/aprovação/cuidado → neutro)
+  conserta a frase-tese, mas joga elogio sincero em neutro e perde no XED-pt
+  (−0,015 [−0,023; −0,006]). O XED-pt não tem neutro: qualquer hipótese que
+  mova coisa para neutro paga ali por construção.
+- **Fusor:** empatar com o texto sozinho é limite do teste sintético (o rótulo
+  mora na frase do B2W). Retreinar o fusor no sintético inverteu sinais de
+  incongruência nos dois candidatos; o de produção tem as seis negativas.
+- **B01 corrigido sem retreino:** conversa sem resposta tem latência ausente
+  (`None`), lida como média do treino. Com o fusor de produção, a sonda vai de
+  75,1 para 71,0. Muda a nota de conversas sem resposta pontuadas daqui em
+  diante; o score gravado não muda; repontuar é decisão do João. Penalizar
+  "ninguém respondeu" exigiria feature nova e retreino.
+- Colab automatizado por Playwright numa janela de Chrome dedicada só com a
+  conta da Unis (o colab-mcp abria na conta errada).
+
 ## Ironia do MultiPICo em produção — 13/11/2026
 
 - A `fraus-api` passou a servir a cabeça de ironia do MultiPICo (ONNX fp32)
@@ -31,7 +56,8 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
   mesmos bytes de antes; nenhuma nota muda. Medição e evidências na
   [nota de 13/11](notas/2026-11-13-ironia-em-producao.md).
 - O candidato 42 de satisfação **não foi promovido**: vence no ConsumerBR e
-  perde no fusor por queda no neutro. Próximo passo é o ajuste do neutro.
+  perde no fusor por queda no neutro. O ajuste do neutro rodou à tarde e
+  também não passou (seção acima).
 - O bucket é acessado pela CLI `oci` configurada na máquina de desenvolvimento
   desde 13/11; a URL de leitura nova vale até 2030. O ZIP de 17/09 fica como
   caminho de volta.

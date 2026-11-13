@@ -309,6 +309,27 @@ def preparar_divisao(
     }
 
 
+def rerrotular_lados(lados: dict, novos) -> dict:
+    """Os MESMOS lados com os rotulos de `novos`, casados pelo texto normalizado.
+
+    Para comparar dois mapas de rotulo sem mover exemplo entre treino,
+    validacao e teste. Sai do lado o texto que `novos` nao tem ou em que
+    `novos` se contradiz; texto que so existe em `novos` nao entra.
+    """
+    rotulos: dict[str, set[int]] = {}
+    for texto, rotulo in zip(novos.textos, novos.rotulos):
+        rotulos.setdefault(normalizar_texto(texto), set()).add(int(rotulo))
+    saida = {}
+    for nome, lado in lados.items():
+        chaves = [normalizar_texto(t) for t in lado.textos]
+        indices = [i for i, c in enumerate(chaves) if len(rotulos.get(c, ())) == 1]
+        recorte = _recorte(lado, indices)
+        recorte.rotulos = [next(iter(rotulos[chaves[i]])) for i in indices]
+        recorte.nomes_classes = list(novos.nomes_classes)
+        saida[nome] = recorte
+    return saida
+
+
 def amostra_estratificada(exemplos, n: int, *, semente: int = SEMENTE_DIVISAO):
     """`n` exemplos na proporcao das classes; o conjunto inteiro se ja for menor."""
     if n >= len(exemplos.rotulos):
@@ -328,6 +349,55 @@ def pesos_de_classe(rotulos: Sequence[int], n_classes: int) -> list[float]:
     return (len(rotulos) / (n_classes * np.maximum(contagem, 1))).tolist()
 
 
+def amostra_balanceada(exemplos, por_classe: int, *, semente: int = SEMENTE_DIVISAO):
+    """Ate `por_classe` exemplos de cada classe, sem repeticao; classe menor entra inteira.
+
+    Para o ajuste curto a partir de um checkpoint: com as classes iguais, a
+    perda nao precisa de peso de classe para enxergar a rara.
+    """
+    gerador = np.random.default_rng(semente)
+    rotulos = np.asarray(exemplos.rotulos, dtype=int)
+    escolhidos = []
+    for classe in range(len(exemplos.nomes_classes)):
+        indices = np.flatnonzero(rotulos == classe)
+        escolhidos.extend(gerador.permutation(indices)[:por_classe].tolist())
+    return _recorte(exemplos, sorted(int(i) for i in escolhidos))
+
+
+def alvos_suaves(rotulos: Sequence[int], n_classes: int, suavizacao_por_classe: Sequence[float]):
+    """Distribuicao-alvo por exemplo: `1 - s` na classe, `s` dividido entre as outras.
+
+    `s` e por classe porque a ambiguidade nao e igual: tres estrelas mistura
+    elogio e queixa, e uma estrela nao.
+    """
+    suavizacao = np.asarray(suavizacao_por_classe, dtype=float)
+    if suavizacao.shape != (n_classes,) or np.any(suavizacao < 0) or np.any(suavizacao >= 1):
+        raise ValueError("suavizacao_por_classe: uma por classe, em [0, 1)")
+    rotulos = np.asarray(rotulos, dtype=int)
+    s = suavizacao[rotulos][:, None]
+    alvos = np.broadcast_to(s / (n_classes - 1), (len(rotulos), n_classes)).copy()
+    alvos[np.arange(len(rotulos)), rotulos] = 1 - s[:, 0]
+    return alvos
+
+
+def perda_ponderada(logits, rotulos, pesos, suavizacao_por_classe=None):
+    """Cross-entropy com peso de classe; sem suavizacao, identica a `F.cross_entropy`.
+
+    A normalizacao e a do PyTorch com `weight`: soma ponderada / soma dos pesos
+    dos rotulos do lote.
+    """
+    import torch
+
+    if suavizacao_por_classe is None or not any(suavizacao_por_classe):
+        return torch.nn.functional.cross_entropy(logits, rotulos, weight=pesos)
+    alvo = torch.as_tensor(
+        alvos_suaves(rotulos.cpu().tolist(), logits.shape[-1], suavizacao_por_classe),
+        dtype=logits.dtype, device=logits.device,
+    )
+    w = pesos[rotulos]
+    return (w * -(alvo * logits.log_softmax(-1)).sum(-1)).sum() / w.sum()
+
+
 ARQUIVO_RECEITA = "fraus_receita.json"
 ARQUIVO_AVALIACAO_FINAL = "avaliacao_final.json"
 
@@ -341,6 +411,7 @@ def treinar_uma_semente(
     dir_saida: str,
     tamanho_maximo: int = 192,
     ponderar_classes: bool = True,
+    suavizacao_por_classe: Sequence[float] | None = None,
     **ajustes,
 ) -> dict:
     """Treina e seleciona somente na validacao; o teste fornece apenas manifesto.
@@ -400,8 +471,8 @@ def treinar_uma_semente(
         def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
             rotulos = inputs.pop("labels")
             saidas = model(**inputs)
-            perda = torch.nn.functional.cross_entropy(
-                saidas.logits, rotulos, weight=pesos.to(saidas.logits.device)
+            perda = perda_ponderada(
+                saidas.logits, rotulos, pesos.to(saidas.logits.device), suavizacao_por_classe
             )
             return (perda, saidas) if return_outputs else perda
 
@@ -490,6 +561,9 @@ def treinar_uma_semente(
         "tamanho_maximo": tamanho_maximo,
         "ponderar_classes": ponderar_classes,
         "pesos_de_classe": pesos.tolist(),
+        "suavizacao_por_classe": (
+            None if suavizacao_por_classe is None else list(suavizacao_por_classe)
+        ),
         "epocas_treinadas": float(treinador.state.epoch or 0),
         "melhor_checkpoint": treinador.state.best_model_checkpoint,
         "tamanhos": {k: len(lados[k].rotulos) for k in ("treino", "validacao", "teste")},

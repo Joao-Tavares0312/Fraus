@@ -16,7 +16,7 @@ if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
 from fraus.conformal import dividir_estratificado  # noqa: E402
-from fraus.fusor import Fusor, vetorizar  # noqa: E402
+from fraus.fusor import Fusor  # noqa: E402
 from fraus.motor import regua_do_fusor  # noqa: E402
 
 CAMINHO_FUSOR_PADRAO = RAIZ / "modelos" / "fusor.joblib"
@@ -54,10 +54,7 @@ def carregar_holdout(caminho: Path) -> tuple[list[dict], list[int]]:
 
 def probabilidades(fusor: Fusor, features: dict[str, float]) -> list[float]:
     """[P(0), P(1), P(2)] -- a ordem das classes e a da invariante 8."""
-    pipeline = fusor._pipeline
-    valores = pipeline.predict_proba([vetorizar(features)])[0]
-    classes = [int(c) for c in pipeline.named_steps["modelo"].classes_]
-    por_classe = dict(zip(classes, (float(v) for v in valores)))
+    por_classe = fusor.probabilidades(features)
     return [por_classe.get(c, 0.0) for c in CLASSES]
 
 

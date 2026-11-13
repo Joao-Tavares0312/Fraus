@@ -44,15 +44,22 @@ def latencias_da_conversa(conversa: Conversa) -> list[float]:
     return latencias
 
 
-def features_tempo(conversa: Conversa) -> dict[str, float]:
+def features_tempo(conversa: Conversa) -> dict[str, float | None]:
+    """As sete features de tempo; as tres latencias sao `None` sem resposta.
+
+    Conversa que ninguem respondeu nao tem latencia MEDIDA. Ate 13/11/2026 ela
+    saia 0,0 -- a mesma codificacao de "respondeu na hora" -- e a conversa
+    ignorada pontuava alto (B01 da auditoria de 13/10/2026). Ausencia nao e
+    zero: o fusor trata `None` como a media do treino (ver `Fusor._z`).
+    """
     latencias = latencias_da_conversa(conversa)
     fim = conversa.encerrada_em or conversa.mensagens[-1].enviada_em
     ultima = conversa.mensagens[-1]
 
     return {
-        "latencia_mediana_s": median(latencias) if latencias else 0.0,
-        "latencia_p90_s": _percentil(latencias, 0.9),
-        "latencia_primeira_resposta_s": latencias[0] if latencias else 0.0,
+        "latencia_mediana_s": median(latencias) if latencias else None,
+        "latencia_p90_s": _percentil(latencias, 0.9) if latencias else None,
+        "latencia_primeira_resposta_s": latencias[0] if latencias else None,
         "duracao_total_s": (fim - conversa.iniciada_em).total_seconds(),
         "qtd_turnos_cliente": float(len(conversa.mensagens_cliente)),
         "escalou": 1.0 if conversa.escalou_para_humano else 0.0,
