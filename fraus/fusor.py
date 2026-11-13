@@ -258,7 +258,27 @@ FEATURES_EM_LOG = (
 )
 
 
-def vetorizar(features: dict[str, float]) -> list[float]:
+# As unicas features que podem chegar `None`: conversa que ninguem respondeu
+# nao tem latencia medida (`features_tempo`). No vetor viram NaN, e o `Fusor`
+# troca NaN pela media do treino (z = 0): a espera nao medida nem ajuda nem
+# pesa. Qualquer outra feature `None` continua sendo erro (invariante 9).
+FEATURES_QUE_PODEM_FALTAR = (
+    "latencia_mediana_s",
+    "latencia_p90_s",
+    "latencia_primeira_resposta_s",
+)
+
+
+def _valor(features: dict, nome: str) -> float:
+    valor = features[nome]
+    if valor is None:
+        if nome not in FEATURES_QUE_PODEM_FALTAR:
+            raise TypeError(f"feature {nome!r} ausente (None); so as latencias podem faltar")
+        return math.nan
+    return math.log1p(max(0.0, float(valor))) if nome in FEATURES_EM_LOG else float(valor)
+
+
+def vetorizar(features: dict[str, float | None]) -> list[float]:
     """Ordem canonica. Feature faltando e KeyError; feature sobrando e ValueError.
 
     Nenhum dos dois casos pode virar zero silencioso (invariante 9): falta
@@ -276,11 +296,7 @@ def vetorizar(features: dict[str, float]) -> list[float]:
             f"{sorted(excedentes)}. Remova do dict antes de vetorizar, ou "
             "adicione a NOMES_FEATURES se a intencao e que ela entre no vetor."
         )
-    return [
-        math.log1p(max(0.0, float(features[nome]))) if nome in FEATURES_EM_LOG
-        else float(features[nome])
-        for nome in NOMES_FEATURES
-    ]
+    return [_valor(features, nome) for nome in NOMES_FEATURES]
 
 
 class Fusor:
@@ -302,6 +318,16 @@ class Fusor:
         """Escala em que as features de espera foram aprendidas ("segundos" = antiga)."""
         return getattr(self._pipeline, "fraus_escala_do_tempo", "segundos")
 
+    def _z(self, features: dict[str, float | None]):
+        """O vetor padronizado que o modelo recebe; feature ausente vira z = 0.
+
+        Caminho unico de pontuacao, classe, contribuicao e deriva: NaN (latencia
+        nao medida) e trocado pela media do treino DEPOIS do scaler, entao vale
+        para qualquer artefato ja treinado, sem retreino.
+        """
+        z = self._pipeline.named_steps["escala"].transform([vetorizar(features)])[0]
+        return np.nan_to_num(z, nan=0.0)
+
     def pontuar(self, features: dict[str, float]) -> float:
         """Score 0-100: P(satisfeito) mais P(neutro) pesado por
         `PESO_NEUTRO_NO_SCORE`.
@@ -316,13 +342,13 @@ class Fusor:
         confunde as classes, o conserto e treino -- as medianas por classe do
         `scripts/medir_faixas.py` sao justamente o que separa os dois casos.
         """
-        probabilidades = self._pipeline.predict_proba([vetorizar(features)])[0]
-        classes = list(self._pipeline.named_steps["modelo"].classes_)
-        return _score_das_probabilidades(dict(zip(classes, probabilidades)))
+        modelo = self._pipeline.named_steps["modelo"]
+        probabilidades = modelo.predict_proba([self._z(features)])[0]
+        return _score_das_probabilidades(dict(zip(list(modelo.classes_), probabilidades)))
 
     def prever(self, features: dict[str, float]) -> int:
         """Classe predita: 0 insatisfeito, 1 neutro ou 2 satisfeito."""
-        return int(self._pipeline.predict([vetorizar(features)])[0])
+        return int(self._pipeline.named_steps["modelo"].predict([self._z(features)])[0])
 
     def _diferenca(self):
         """O eixo satisfeito-menos-insatisfeito dos coeficientes aprendidos.
@@ -360,9 +386,7 @@ class Fusor:
         interpretavel: a contribuicao volta zerada para todas as features,
         em vez de estourar.
         """
-        escala = self._pipeline.named_steps["escala"]
-        vetor_padronizado = escala.transform([vetorizar(features)])[0]
-        contribuicoes = [d * v for d, v in zip(self._diferenca(), vetor_padronizado)]
+        contribuicoes = [d * v for d, v in zip(self._diferenca(), self._z(features))]
         return dict(zip(NOMES_FEATURES, (float(v) for v in contribuicoes)))
 
     def decompor(self, features: dict[str, float]) -> dict:
@@ -377,7 +401,7 @@ class Fusor:
         classes_[0].
         """
         modelo = self._pipeline.named_steps["modelo"]
-        z = self._pipeline.named_steps["escala"].transform([vetorizar(features)])[0]
+        z = self._z(features)
         classes = [int(c) for c in modelo.classes_]
         if len(classes) == 2:
             linhas = [(classes[1], modelo.intercept_[0], modelo.coef_[0])]
@@ -411,7 +435,7 @@ class Fusor:
         if familia not in FAMILIAS:
             raise ValueError(f"familia fora do vetor: {familia!r}; as do vetor sao {FAMILIAS}")
         modelo = self._pipeline.named_steps["modelo"]
-        z = self._pipeline.named_steps["escala"].transform([vetorizar(features)])[0].copy()
+        z = self._z(features).copy()
         for i, nome in enumerate(NOMES_FEATURES):
             if familia_da_feature(nome) == familia:
                 z[i] = 0.0
@@ -489,8 +513,7 @@ class Fusor:
         escala = self._pipeline.named_steps["escala"]
         if not hasattr(escala, "mean_"):
             return {}
-        padronizado = escala.transform([vetorizar(features)])[0]
-        return dict(zip(NOMES_FEATURES, (float(v) for v in padronizado)))
+        return dict(zip(NOMES_FEATURES, (float(v) for v in self._z(features))))
 
     def assinatura(self) -> str | None:
         """Impressao digital dos pesos aprendidos -- muda a cada retreino.

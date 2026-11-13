@@ -41,11 +41,20 @@ def test_mediana_com_varias_respostas():
     assert features["qtd_turnos_cliente"] == 2.0
 
 
-def test_turno_unico_sem_resposta_zera_latencia():
-    features = features_tempo(_conversa([("cliente", 0)]))
+def test_conversa_sem_resposta_nao_tem_latencia_em_vez_de_zero():
+    # B01 da auditoria de 13/10/2026: 0,0 era a mesma codificacao de
+    # "respondeu na hora", e a conversa ignorada pontuava alto.
+    features = features_tempo(_conversa([("cliente", 0), ("cliente", 600)]))
+    assert features["latencia_mediana_s"] is None
+    assert features["latencia_p90_s"] is None
+    assert features["latencia_primeira_resposta_s"] is None
+    assert features["duracao_total_s"] == 600.0
+    assert features["abandonou"] == 0.0
+
+
+def test_resposta_instantanea_continua_sendo_zero_medido():
+    features = features_tempo(_conversa([("cliente", 0), ("bot", 0)]))
     assert features["latencia_mediana_s"] == 0.0
-    assert features["latencia_p90_s"] == 0.0
-    assert features["latencia_primeira_resposta_s"] == 0.0
 
 
 def test_conversa_aberta_usa_ultima_mensagem_como_fim():

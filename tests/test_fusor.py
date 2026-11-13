@@ -438,3 +438,48 @@ def test_carregar_recusa_fusor_com_classes_fora_de_0_1_2(tmp_path, rotulos):
 
     with pytest.raises(FusorIncompativelError, match=r"classes \["):
         Fusor.carregar(caminho)
+
+
+# --- B01: latencia ausente (conversa que ninguem respondeu) -------------------
+
+_LATENCIAS = ("latencia_mediana_s", "latencia_p90_s", "latencia_primeira_resposta_s")
+
+
+def test_vetorizar_leva_latencia_ausente_como_nan_e_nao_como_zero():
+    import math
+
+    vetor = vetorizar(_features(**dict.fromkeys(_LATENCIAS)))
+    for nome in _LATENCIAS:
+        assert math.isnan(vetor[NOMES_FEATURES.index(nome)])
+
+
+def test_vetorizar_recusa_ausencia_fora_das_latencias():
+    with pytest.raises(TypeError, match="emoji_contagem"):
+        vetorizar(_features(emoji_contagem=None))
+
+
+def test_latencia_ausente_pontua_como_latencia_na_media_do_treino():
+    import math
+
+    fusor = _fusor_treinado()
+    base = dict(texto_prob_satisfeito_media=0.6, emoji_score_medio=0.2)
+    media = fusor.distribuicao_de_treino()["latencia_mediana_s"]["media"]
+    na_media = _features(**base, latencia_mediana_s=math.expm1(media))
+    ausente = _features(**base, **dict.fromkeys(_LATENCIAS))
+    # as outras duas latencias sao constantes (0) no treino de teste: media 0
+    assert fusor.pontuar(ausente) == pytest.approx(fusor.pontuar(na_media))
+    assert fusor.prever(ausente) == fusor.prever(na_media)
+    # e NAO como resposta instantanea, que e o defeito
+    assert fusor.pontuar(ausente) != pytest.approx(fusor.pontuar(_features(**base)))
+
+
+def test_latencia_ausente_contribui_zero_e_a_decomposicao_continua_exata():
+    fusor = _fusor_treinado()
+    ausente = _features(texto_prob_satisfeito_media=0.6, **dict.fromkeys(_LATENCIAS))
+    contribuicoes = fusor.contribuicoes(ausente)
+    assert all(contribuicoes[nome] == 0.0 for nome in _LATENCIAS)
+    assert all(fusor.z_das_features(ausente)[nome] == 0.0 for nome in _LATENCIAS)
+    assert fusor.decompor(ausente)["score"] == pytest.approx(fusor.pontuar(ausente))
+    import math
+
+    assert all(math.isfinite(v) for v in fusor.efeitos_por_familia(ausente).values())
