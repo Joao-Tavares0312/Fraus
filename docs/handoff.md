@@ -1,4 +1,4 @@
-# Handoff — Fraus, atualizado em 27/10/2026 (Fraus-chan e campanha de generalização concluída)
+# Handoff — Fraus, atualizado em 13/11/2026 (ironia do MultiPICo em produção)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
@@ -23,6 +23,20 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 + Recharts no front (`dashboard/`).
 
 ---
+
+## Ironia do MultiPICo em produção — 13/11/2026
+
+- A `fraus-api` passou a servir a cabeça de ironia do MultiPICo (ONNX fp32)
+  no lugar da de agosto, treinada no IDPT. Satisfação, emoção e fusor são os
+  mesmos bytes de antes; nenhuma nota muda. Medição e evidências na
+  [nota de 13/11](notas/2026-11-13-ironia-em-producao.md).
+- O candidato 42 de satisfação **não foi promovido**: vence no ConsumerBR e
+  perde no fusor por queda no neutro. Próximo passo é o ajuste do neutro.
+- O bucket é acessado pela CLI `oci` configurada na máquina de desenvolvimento
+  desde 13/11; a URL de leitura nova vale até 2030. O ZIP de 17/09 fica como
+  caminho de volta.
+- O `fusor.joblib` de produção já está em `log1p`. Só a cópia local estava em
+  segundos crus; basta substituí-la pela do ZIP.
 
 ## Generalização, Modelo e documentação — 26–27/10/2026
 
