@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" width="560" height="300" role="img" aria-label="F1-macro e erro de calibração da cabeça de ironia, produção anterior e nova" font-family="system-ui,sans-serif">
+<rect width="560" height="300" fill="#ffffff"/>
+<text x="20" y="28" font-size="15" font-weight="600" fill="#1c1e20">Cabeça de ironia no teste do MultiPICo-PT (462 frases)</text>
+<text x="40" y="56" font-size="12" fill="#585e66">F1-macro (maior é melhor)</text>
+<line x1="40" x2="260" y1="250" y2="250" stroke="#1c1e20"/>
+<rect x="60" y="132.4" width="72" height="117.6" rx="3" fill="#9aa1a9"/>
+<text x="96" y="125.4" font-size="13" font-weight="600" fill="#1c1e20" text-anchor="middle" font-family="ui-monospace,monospace">0,490</text>
+<text x="96" y="267" font-size="11" fill="#585e66" text-anchor="middle">anterior (IDPT)</text>
+<rect x="160" y="91.6" width="72" height="158.4" rx="3" fill="#1f6fa8"/>
+<text x="196" y="84.6" font-size="13" font-weight="600" fill="#1c1e20" text-anchor="middle" font-family="ui-monospace,monospace">0,660</text>
+<text x="196" y="267" font-size="11" fill="#585e66" text-anchor="middle">nova (MultiPICo)</text>
+<text x="310" y="56" font-size="12" fill="#585e66">Erro de calibração, ECE (menor é melhor)</text>
+<line x1="310" x2="530" y1="250" y2="250" stroke="#1c1e20"/>
+<rect x="330" y="163.4" width="72" height="86.6" rx="3" fill="#9aa1a9"/>
+<text x="366" y="156.4" font-size="13" font-weight="600" fill="#1c1e20" text-anchor="middle" font-family="ui-monospace,monospace">0,361</text>
+<text x="366" y="267" font-size="11" fill="#585e66" text-anchor="middle">anterior (IDPT)</text>
+<rect x="430" y="236.8" width="72" height="13.2" rx="3" fill="#1f6fa8"/>
+<text x="466" y="229.8" font-size="13" font-weight="600" fill="#1c1e20" text-anchor="middle" font-family="ui-monospace,monospace">0,055</text>
+<text x="466" y="267" font-size="11" fill="#585e66" text-anchor="middle">nova (MultiPICo)</text>
+</svg>

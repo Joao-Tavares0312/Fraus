@@ -20,6 +20,7 @@ traz sinais, não acesso ao estado real de quem escreveu.</p>
 [Ler as invariantes](invariantes.md){ .md-button .md-button--primary }
 [A tese](tese.md){ .md-button }
 [Arquitetura](arquitetura.md){ .md-button }
+[Novidades de 13/11/2026](novidades-2026-11-13.md){ .md-button }
 </div>
 </div>
 

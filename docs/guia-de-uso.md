@@ -57,6 +57,14 @@ O link da documentação aparece quando configurado pela instalação.
    **Ajustar colunas**, quando disponível, permite revisar a associação;
    **Trocar arquivo** abre outro envio.
 
+Depois da análise, cada fala do cliente mostra três gráficos: **satisfação**
+(faixa dividida em insatisfeito, neutro e satisfeito), **emoção** (linha com
+ponto, da mais forte para a mais fraca) e **ironia** (medidor tracejado, a
+leitura menos confiável). Eles descrevem aquela fala; a nota do atendimento
+vem do conjunto da conversa.
+
+![Os três gráficos embaixo de uma fala do cliente.](assets/novidades-2026-11-13/tres-graficos-fala.png)
+
 !!! warning "Arquivo sem horário: leitura avulsa"
     Sem horário das mensagens não há latência, **nota da conversa nem gravação
     nos indicadores**. A leitura por mensagem continua disponível. Não invente

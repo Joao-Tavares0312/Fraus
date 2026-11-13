@@ -210,6 +210,11 @@ estudou (avaliação de produto) e **piora** em texto diferente (reclamação de
 consumidor). Isso se chama **perda de generalização**, e a gente mostra, em vez
 de esconder.
 
+Em 13/11/2026 o leitor de **ironia** que está no ar foi trocado: no teste do
+MultiPICo o F1 subiu de 0,49 para 0,66. Um candidato a novo leitor de
+satisfação foi medido e não foi adotado, porque errava mais o neutro. Os
+gráficos estão em [Novidades de 13/11/2026](novidades-2026-11-13.md).
+
 Também treinamos cada leitor **três vezes** com sorteios diferentes e olhamos
 a média, para não confiar na sorte de uma tentativa só. O detalhe completo, com
 as tabelas, está em [Generalização e evidências](generalizacao.md).
