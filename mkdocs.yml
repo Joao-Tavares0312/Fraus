@@ -104,6 +104,7 @@ nav:
   # o site publicado e quem tem leitor de verdade.
   - "← Dashboard": !ENV [FRAUS_URL_DASHBOARD, "https://fraus-one.vercel.app/dashboard"]
   - Início: index.md
+  - "Novidades de 13/11/2026": novidades-2026-11-13.md
   - Banca e metodologia:
       - A tese: tese.md
       - O Fraus explicado para todos: explicado-para-todos.md

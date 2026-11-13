@@ -200,7 +200,9 @@ ele **não diagnostica por si só a cabeça local ou publicada hoje**.
 
 Os baselines de 26/10/2026 e a campanha diagnóstica proposta com MultiPICo
 estão em [Generalização](generalizacao.md); campanha proposta não é retreino
-executado. A ironia continua fora do vetor desde 04/09/2026 por outro motivo
+executado. Desde 13/11/2026 a cabeça publicada é a treinada no MultiPICo
+(F1-macro 0,660 no teste desse corpus, contra 0,490 da anterior); a medição
+está em [Novidades de 13/11/2026](novidades-2026-11-13.md). A ironia continua fora do vetor desde 04/09/2026 por outro motivo
 medido historicamente (ver [Arquitetura](arquitetura.md)), e é exibida por
 mensagem, com ressalva. Não há promessa de que detecte ironia corretamente em
 atendimentos reais.

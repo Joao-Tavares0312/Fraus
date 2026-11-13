@@ -38,6 +38,11 @@ problemático. Toda exibição carrega a etiqueta de estimativa: o NPS é
 | ironia | BERTimbau binário | corpus **gerado** (`fraus.ingest.gerador_ironia`) | acurácia 1,0 | otimista por construção — ver abaixo; **não entra na nota** |
 | fusor | `LogisticRegression` sobre 39 features (espera em `log1p`) | conversas sintéticas: texto do B2W + estrutura e tempo do simulador | acurácia 0,947 · F1-macro 0,947 (holdout do notebook 02) | o tempo é sintético; ver [Treinamento](treinamento.md) |
 
+A linha de ironia acima é a histórica. Desde 13/11/2026 a cabeça publicada é a
+treinada no MultiPICo-PT: F1-macro 0,660 e ECE 0,055 no teste desse corpus
+(462 frases), contra 0,490 e 0,361 da anterior. Continua fora da nota. Ver
+[Novidades de 13/11/2026](novidades-2026-11-13.md).
+
 Os três BERTimbau rodam em CPU, por torch ou por ONNX Runtime
 (`FRAUS_BACKEND`), com **0 de 180 categorias trocadas** entre os dois
 executores. Ver [Encolher os modelos](encolhimento.md).
