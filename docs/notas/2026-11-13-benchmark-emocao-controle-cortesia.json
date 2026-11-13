@@ -1,0 +1,711 @@
+{
+  "schema": 1,
+  "tarefa": "emocao",
+  "gerado_em": "2026-11-13T16:31:18+00:00",
+  "procedencia": {
+    "commit": "cce7dac (codigo enviado ao Colab; sem .git no runtime)",
+    "modelos": {
+      "controle": "saida/controle",
+      "cortesia": "saida/cortesia"
+    },
+    "amostra": null,
+    "sha256_pesos": {
+      "controle": "nao exportado (braco de experimento)",
+      "cortesia": "nao exportado (braco de experimento)"
+    },
+    "execucao": "Colab T4, conta institucional, inferencia em GPU (scripts/benchmark_motores.py com prever na GPU), 13/11/2026"
+  },
+  "conjuntos": [
+    {
+      "id": "emocao_goemotions",
+      "nome": "GoEmotions-PT, teste interno",
+      "independente": false,
+      "exemplos": 7328,
+      "impressao": "8b48cefed8df6595e35c6aee7b24fc33fae1237bede03b4436e51c7e51e182ec",
+      "classes": [
+        "alegria",
+        "tristeza",
+        "raiva",
+        "medo",
+        "nojo",
+        "surpresa",
+        "neutro"
+      ],
+      "classes_presentes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "ressalvas": [
+        "O teste interno vem da divisao nova (sem duplicatas, agrupada, 19/10/2026). Os modelos treinados ANTES dessa data usaram outra divisao do mesmo corpus e podem ter visto parte deste teste no treino: para eles, o numero e otimista."
+      ],
+      "modelos": {
+        "controle": {
+          "exemplos": 7328,
+          "acuracia": 0.6577510917030568,
+          "f1_macro": 0.5960732162275341,
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 2820,
+              "vp": 2257,
+              "fp": 453,
+              "fn": 563,
+              "vn": 4055,
+              "precisao": 0.8328413284132842,
+              "recall": 0.800354609929078,
+              "f1": 0.8162748643761302
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 411,
+              "vp": 267,
+              "fp": 209,
+              "fn": 144,
+              "vn": 6708,
+              "precisao": 0.5609243697478992,
+              "recall": 0.6496350364963503,
+              "f1": 0.6020293122886133
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 811,
+              "vp": 545,
+              "fp": 807,
+              "fn": 266,
+              "vn": 5710,
+              "precisao": 0.4031065088757396,
+              "recall": 0.6720098643649816,
+              "f1": 0.5039297272306981
+            },
+            {
+              "classe": "medo",
+              "exemplos": 104,
+              "vp": 71,
+              "fp": 44,
+              "fn": 33,
+              "vn": 7180,
+              "precisao": 0.6173913043478261,
+              "recall": 0.6826923076923077,
+              "f1": 0.6484018264840182
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 103,
+              "vp": 44,
+              "fp": 56,
+              "fn": 59,
+              "vn": 7169,
+              "precisao": 0.44,
+              "recall": 0.42718446601941745,
+              "f1": 0.4334975369458128
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 709,
+              "vp": 503,
+              "fp": 471,
+              "fn": 206,
+              "vn": 6148,
+              "precisao": 0.5164271047227926,
+              "recall": 0.7094499294781382,
+              "f1": 0.5977421271538919
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 2370,
+              "vp": 1133,
+              "fp": 468,
+              "fn": 1237,
+              "vn": 4490,
+              "precisao": 0.707682698313554,
+              "recall": 0.4780590717299578,
+              "f1": 0.5706371191135734
+            }
+          ],
+          "matriz": [
+            [
+              2257,
+              61,
+              134,
+              10,
+              5,
+              94,
+              259
+            ],
+            [
+              13,
+              267,
+              63,
+              6,
+              4,
+              24,
+              34
+            ],
+            [
+              65,
+              32,
+              545,
+              7,
+              19,
+              48,
+              95
+            ],
+            [
+              8,
+              2,
+              9,
+              71,
+              4,
+              1,
+              9
+            ],
+            [
+              3,
+              7,
+              36,
+              2,
+              44,
+              4,
+              7
+            ],
+            [
+              52,
+              23,
+              57,
+              6,
+              4,
+              503,
+              64
+            ],
+            [
+              312,
+              84,
+              508,
+              13,
+              20,
+              300,
+              1133
+            ]
+          ],
+          "ece": 0.03727292177148507
+        },
+        "cortesia": {
+          "exemplos": 7328,
+          "acuracia": 0.5882914847161572,
+          "f1_macro": 0.5504184076919165,
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 2820,
+              "vp": 1766,
+              "fp": 403,
+              "fn": 1054,
+              "vn": 4105,
+              "precisao": 0.814200092208391,
+              "recall": 0.626241134751773,
+              "f1": 0.7079575065143315
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 411,
+              "vp": 297,
+              "fp": 372,
+              "fn": 114,
+              "vn": 6545,
+              "precisao": 0.4439461883408072,
+              "recall": 0.7226277372262774,
+              "f1": 0.55
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 811,
+              "vp": 490,
+              "fp": 660,
+              "fn": 321,
+              "vn": 5857,
+              "precisao": 0.4260869565217391,
+              "recall": 0.6041923551171393,
+              "f1": 0.49974502804691484
+            },
+            {
+              "classe": "medo",
+              "exemplos": 104,
+              "vp": 74,
+              "fp": 78,
+              "fn": 30,
+              "vn": 7146,
+              "precisao": 0.4868421052631579,
+              "recall": 0.7115384615384616,
+              "f1": 0.578125
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 103,
+              "vp": 46,
+              "fp": 76,
+              "fn": 57,
+              "vn": 7149,
+              "precisao": 0.3770491803278688,
+              "recall": 0.44660194174757284,
+              "f1": 0.40888888888888886
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 709,
+              "vp": 478,
+              "fp": 412,
+              "fn": 231,
+              "vn": 6207,
+              "precisao": 0.5370786516853933,
+              "recall": 0.6741889985895627,
+              "f1": 0.5978736710444027
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 2370,
+              "vp": 1160,
+              "fp": 1016,
+              "fn": 1210,
+              "vn": 3942,
+              "precisao": 0.5330882352941176,
+              "recall": 0.48945147679324896,
+              "f1": 0.5103387593488782
+            }
+          ],
+          "matriz": [
+            [
+              1766,
+              77,
+              91,
+              17,
+              6,
+              67,
+              796
+            ],
+            [
+              16,
+              297,
+              39,
+              10,
+              8,
+              17,
+              24
+            ],
+            [
+              65,
+              75,
+              490,
+              11,
+              29,
+              45,
+              96
+            ],
+            [
+              4,
+              5,
+              6,
+              74,
+              7,
+              0,
+              8
+            ],
+            [
+              4,
+              11,
+              29,
+              6,
+              46,
+              3,
+              4
+            ],
+            [
+              43,
+              42,
+              43,
+              11,
+              4,
+              478,
+              88
+            ],
+            [
+              271,
+              162,
+              452,
+              23,
+              22,
+              280,
+              1160
+            ]
+          ],
+          "ece": 0.10101338331356284
+        }
+      },
+      "comparacao": {
+        "candidato": "cortesia",
+        "referencia": "controle",
+        "diferenca_f1_macro": -0.04565480853561754,
+        "ic95": [
+          -0.059548602551999515,
+          -0.032820867193309164
+        ],
+        "mcnemar": {
+          "so_candidato": 384,
+          "so_referencia": 893,
+          "p_valor": 4.2376897084469036e-47
+        },
+        "diferenca_demonstrada": true
+      }
+    },
+    {
+      "id": "emocao_xed_pt",
+      "nome": "XED-pt (legendas, portugues europeu)",
+      "independente": true,
+      "exemplos": 4286,
+      "impressao": "a1d2cd6db52ca19183d9a4cbaa7d1f59aae74e1f1add01d7251ef9e5ecf4c49a",
+      "classes": [
+        "alegria",
+        "tristeza",
+        "raiva",
+        "medo",
+        "nojo",
+        "surpresa",
+        "neutro"
+      ],
+      "classes_presentes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "ressalvas": [
+        "Rotulos projetados de outras linguas, sem a classe neutro: o F1-macro conta so as classes presentes."
+      ],
+      "modelos": {
+        "controle": {
+          "exemplos": 4286,
+          "acuracia": 0.2783481101259916,
+          "f1_macro": 0.23334472782403834,
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 998,
+              "vp": 453,
+              "fp": 225,
+              "fn": 545,
+              "vn": 3063,
+              "precisao": 0.668141592920354,
+              "recall": 0.45390781563126253,
+              "f1": 0.5405727923627686
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 580,
+              "vp": 112,
+              "fp": 89,
+              "fn": 468,
+              "vn": 3617,
+              "precisao": 0.5572139303482587,
+              "recall": 0.19310344827586207,
+              "f1": 0.2868117797695262
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 1094,
+              "vp": 347,
+              "fp": 481,
+              "fn": 747,
+              "vn": 2711,
+              "precisao": 0.4190821256038647,
+              "recall": 0.3171846435100548,
+              "f1": 0.36108220603537977
+            },
+            {
+              "classe": "medo",
+              "exemplos": 636,
+              "vp": 24,
+              "fp": 20,
+              "fn": 612,
+              "vn": 3630,
+              "precisao": 0.5454545454545454,
+              "recall": 0.03773584905660377,
+              "f1": 0.07058823529411765
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 327,
+              "vp": 7,
+              "fp": 11,
+              "fn": 320,
+              "vn": 3948,
+              "precisao": 0.3888888888888889,
+              "recall": 0.021406727828746176,
+              "f1": 0.04057971014492753
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 651,
+              "vp": 250,
+              "fp": 597,
+              "fn": 401,
+              "vn": 3038,
+              "precisao": 0.29515938606847697,
+              "recall": 0.38402457757296465,
+              "f1": 0.33377837116154874
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 0,
+              "vp": 0,
+              "fp": 1670,
+              "fn": 0,
+              "vn": 2616,
+              "precisao": 0.0,
+              "recall": null,
+              "f1": null
+            }
+          ],
+          "matriz": [
+            [
+              453,
+              9,
+              41,
+              6,
+              3,
+              97,
+              389
+            ],
+            [
+              37,
+              112,
+              145,
+              5,
+              3,
+              78,
+              200
+            ],
+            [
+              59,
+              24,
+              347,
+              3,
+              2,
+              228,
+              431
+            ],
+            [
+              54,
+              30,
+              122,
+              24,
+              1,
+              141,
+              264
+            ],
+            [
+              22,
+              12,
+              102,
+              2,
+              7,
+              53,
+              129
+            ],
+            [
+              53,
+              14,
+              71,
+              4,
+              2,
+              250,
+              257
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "ece": 0.3711338435242323,
+          "f1_macro_classes_presentes": 0.2722355157947114
+        },
+        "cortesia": {
+          "exemplos": 4286,
+          "acuracia": 0.2594493700419972,
+          "f1_macro": 0.22783193640363714,
+          "por_classe": [
+            {
+              "classe": "alegria",
+              "exemplos": 998,
+              "vp": 349,
+              "fp": 186,
+              "fn": 649,
+              "vn": 3102,
+              "precisao": 0.6523364485981309,
+              "recall": 0.3496993987975952,
+              "f1": 0.45531637312459233
+            },
+            {
+              "classe": "tristeza",
+              "exemplos": 580,
+              "vp": 138,
+              "fp": 172,
+              "fn": 442,
+              "vn": 3534,
+              "precisao": 0.44516129032258067,
+              "recall": 0.23793103448275862,
+              "f1": 0.3101123595505618
+            },
+            {
+              "classe": "raiva",
+              "exemplos": 1094,
+              "vp": 341,
+              "fp": 434,
+              "fn": 753,
+              "vn": 2758,
+              "precisao": 0.44,
+              "recall": 0.3117001828153565,
+              "f1": 0.3649010165864099
+            },
+            {
+              "classe": "medo",
+              "exemplos": 636,
+              "vp": 29,
+              "fp": 35,
+              "fn": 607,
+              "vn": 3615,
+              "precisao": 0.453125,
+              "recall": 0.04559748427672956,
+              "f1": 0.08285714285714285
+            },
+            {
+              "classe": "nojo",
+              "exemplos": 327,
+              "vp": 9,
+              "fp": 17,
+              "fn": 318,
+              "vn": 3942,
+              "precisao": 0.34615384615384615,
+              "recall": 0.027522935779816515,
+              "f1": 0.0509915014164306
+            },
+            {
+              "classe": "surpresa",
+              "exemplos": 651,
+              "vp": 246,
+              "fp": 591,
+              "fn": 405,
+              "vn": 3044,
+              "precisao": 0.2939068100358423,
+              "recall": 0.3778801843317972,
+              "f1": 0.3306451612903225
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 0,
+              "vp": 0,
+              "fp": 1739,
+              "fn": 0,
+              "vn": 2547,
+              "precisao": 0.0,
+              "recall": null,
+              "f1": null
+            }
+          ],
+          "matriz": [
+            [
+              349,
+              17,
+              40,
+              10,
+              3,
+              93,
+              486
+            ],
+            [
+              26,
+              138,
+              124,
+              11,
+              8,
+              75,
+              198
+            ],
+            [
+              56,
+              51,
+              341,
+              7,
+              1,
+              227,
+              411
+            ],
+            [
+              33,
+              56,
+              111,
+              29,
+              1,
+              146,
+              260
+            ],
+            [
+              19,
+              25,
+              89,
+              3,
+              9,
+              50,
+              132
+            ],
+            [
+              52,
+              23,
+              70,
+              4,
+              4,
+              246,
+              252
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "ece": 0.39484054616907943,
+          "f1_macro_classes_presentes": 0.26580392580424334
+        }
+      },
+      "comparacao": {
+        "candidato": "cortesia",
+        "referencia": "controle",
+        "diferenca_f1_macro": -0.006431589990468056,
+        "ic95": [
+          -0.014411166714926541,
+          0.001904599685634054
+        ],
+        "mcnemar": {
+          "so_candidato": 117,
+          "so_referencia": 198,
+          "p_valor": 5.86830160552961e-06
+        },
+        "diferenca_demonstrada": false
+      }
+    }
+  ]
+}

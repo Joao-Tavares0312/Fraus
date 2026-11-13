@@ -1,0 +1,328 @@
+{
+  "schema": 1,
+  "tarefa": "satisfacao",
+  "gerado_em": "2026-11-13T16:28:38+00:00",
+  "procedencia": {
+    "commit": "cce7dac (codigo enviado ao Colab; sem .git no runtime)",
+    "modelos": {
+      "atual": "/content/modelos/bertimbau-satisfacao",
+      "ajustado": "/content/ajustado-42"
+    },
+    "amostra": 5000,
+    "sha256_pesos": {
+      "atual": "9f9448aed6c655ce0fab2d3e32db485d0b8de986c6d907eb82336f69c62edad2",
+      "ajustado": "e2a9d00cd6a36cde5589678da52aa4fabacd19236f7b609119d340a993659e2f"
+    },
+    "execucao": "Colab T4, conta institucional, inferencia em GPU (scripts/benchmark_motores.py com prever na GPU), 13/11/2026"
+  },
+  "conjuntos": [
+    {
+      "id": "satisfacao_b2w",
+      "nome": "B2W-Reviews01, teste interno",
+      "independente": false,
+      "exemplos": 5000,
+      "impressao": "481da017399ae008fa610886c740b5e7b64dfa1f076b6a85e5a0473f7b38040a",
+      "classes": [
+        "insatisfeito",
+        "neutro",
+        "satisfeito"
+      ],
+      "classes_presentes": [
+        0,
+        1,
+        2
+      ],
+      "ressalvas": [
+        "O teste interno vem da divisao nova (sem duplicatas, agrupada, 19/10/2026). Os modelos treinados ANTES dessa data usaram outra divisao do mesmo corpus e podem ter visto parte deste teste no treino: para eles, o numero e otimista.",
+        "Amostra estratificada de 5000 de 18895 (semente fixa), por custo de CPU."
+      ],
+      "modelos": {
+        "atual": {
+          "exemplos": 5000,
+          "acuracia": 0.82,
+          "f1_macro": 0.7645563855076597,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 1290,
+              "vp": 1129,
+              "fp": 107,
+              "fn": 161,
+              "vn": 3603,
+              "precisao": 0.9134304207119741,
+              "recall": 0.8751937984496124,
+              "f1": 0.8939034045922406
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 645,
+              "vp": 458,
+              "fp": 659,
+              "fn": 187,
+              "vn": 3696,
+              "precisao": 0.41002685765443153,
+              "recall": 0.710077519379845,
+              "f1": 0.5198637911464246
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 3065,
+              "vp": 2513,
+              "fp": 134,
+              "fn": 552,
+              "vn": 1801,
+              "precisao": 0.949376652814507,
+              "recall": 0.8199021207177815,
+              "f1": 0.8799019607843138
+            }
+          ],
+          "matriz": [
+            [
+              1129,
+              149,
+              12
+            ],
+            [
+              65,
+              458,
+              122
+            ],
+            [
+              42,
+              510,
+              2513
+            ]
+          ],
+          "ece": 0.018970937444738198
+        },
+        "ajustado": {
+          "exemplos": 5000,
+          "acuracia": 0.839,
+          "f1_macro": 0.7618372622379024,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 1290,
+              "vp": 1157,
+              "fp": 157,
+              "fn": 133,
+              "vn": 3553,
+              "precisao": 0.880517503805175,
+              "recall": 0.8968992248062015,
+              "f1": 0.8886328725038403
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 645,
+              "vp": 357,
+              "fp": 434,
+              "fn": 288,
+              "vn": 3921,
+              "precisao": 0.45132743362831856,
+              "recall": 0.5534883720930233,
+              "f1": 0.49721448467966567
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 3065,
+              "vp": 2681,
+              "fp": 214,
+              "fn": 384,
+              "vn": 1721,
+              "precisao": 0.9260794473229707,
+              "recall": 0.8747145187601958,
+              "f1": 0.8996644295302013
+            }
+          ],
+          "matriz": [
+            [
+              1157,
+              111,
+              22
+            ],
+            [
+              96,
+              357,
+              192
+            ],
+            [
+              61,
+              323,
+              2681
+            ]
+          ],
+          "ece": 0.016375101572475074
+        }
+      },
+      "comparacao": {
+        "candidato": "ajustado",
+        "referencia": "atual",
+        "diferenca_f1_macro": -0.0027191232697573176,
+        "ic95": [
+          -0.01278389495715502,
+          0.007832886550723972
+        ],
+        "mcnemar": {
+          "so_candidato": 289,
+          "so_referencia": 194,
+          "p_valor": 1.7860221808041987e-05
+        },
+        "diferenca_demonstrada": false
+      }
+    },
+    {
+      "id": "satisfacao_consumerbr",
+      "nome": "ConsumerBR, comentario da avaliacao (atendimento)",
+      "independente": true,
+      "exemplos": 5000,
+      "impressao": "99a53fd45904ac297d5cf62d4936945b413e8fc3b4f7720246d016e15309d237",
+      "classes": [
+        "insatisfeito",
+        "neutro",
+        "satisfeito"
+      ],
+      "classes_presentes": [
+        0,
+        1,
+        2
+      ],
+      "ressalvas": [
+        "Rotulo = nota 1-5 que o consumidor deu ao desfecho, com o comentario escrito junto. Independente para modelo treinado so em B2W; deixa de ser para o candidato treinado com o ConsumerBR (a divisao e a mesma, entao o teste continua disjunto do treino).",
+        "Amostra estratificada de 5000 de 143717 (semente fixa), por custo de CPU."
+      ],
+      "modelos": {
+        "atual": {
+          "exemplos": 5000,
+          "acuracia": 0.6906,
+          "f1_macro": 0.5387597835891357,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 2835,
+              "vp": 2606,
+              "fp": 614,
+              "fn": 229,
+              "vn": 1551,
+              "precisao": 0.8093167701863354,
+              "recall": 0.9192239858906526,
+              "f1": 0.8607762180016516
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 378,
+              "vp": 139,
+              "fp": 890,
+              "fn": 239,
+              "vn": 3732,
+              "precisao": 0.13508260447035958,
+              "recall": 0.36772486772486773,
+              "f1": 0.1975835110163468
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 1787,
+              "vp": 708,
+              "fp": 43,
+              "fn": 1079,
+              "vn": 3170,
+              "precisao": 0.9427430093209055,
+              "recall": 0.3961947397873531,
+              "f1": 0.5579196217494089
+            }
+          ],
+          "matriz": [
+            [
+              2606,
+              196,
+              33
+            ],
+            [
+              229,
+              139,
+              10
+            ],
+            [
+              385,
+              694,
+              708
+            ]
+          ],
+          "ece": 0.09097158407140422
+        },
+        "ajustado": {
+          "exemplos": 5000,
+          "acuracia": 0.7464,
+          "f1_macro": 0.5739423560941318,
+          "por_classe": [
+            {
+              "classe": "insatisfeito",
+              "exemplos": 2835,
+              "vp": 2634,
+              "fp": 730,
+              "fn": 201,
+              "vn": 1435,
+              "precisao": 0.7829964328180737,
+              "recall": 0.9291005291005291,
+              "f1": 0.8498144862074528
+            },
+            {
+              "classe": "neutro",
+              "exemplos": 378,
+              "vp": 76,
+              "fp": 414,
+              "fn": 302,
+              "vn": 4208,
+              "precisao": 0.15510204081632653,
+              "recall": 0.20105820105820105,
+              "f1": 0.1751152073732719
+            },
+            {
+              "classe": "satisfeito",
+              "exemplos": 1787,
+              "vp": 1022,
+              "fp": 124,
+              "fn": 765,
+              "vn": 3089,
+              "precisao": 0.8917975567190227,
+              "recall": 0.5719082260772244,
+              "f1": 0.6968973747016707
+            }
+          ],
+          "matriz": [
+            [
+              2634,
+              122,
+              79
+            ],
+            [
+              257,
+              76,
+              45
+            ],
+            [
+              473,
+              292,
+              1022
+            ]
+          ],
+          "ece": 0.08746424729594887
+        }
+      },
+      "comparacao": {
+        "candidato": "ajustado",
+        "referencia": "atual",
+        "diferenca_f1_macro": 0.035182572504996124,
+        "ic95": [
+          0.019578966827487887,
+          0.04975513532884653
+        ],
+        "mcnemar": {
+          "so_candidato": 477,
+          "so_referencia": 198,
+          "p_valor": 1.7839178212992007e-27
+        },
+        "diferenca_demonstrada": true
+      }
+    }
+  ]
+}

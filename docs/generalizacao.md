@@ -322,6 +322,35 @@ reprodução**; não cobre paráfrases, traduções, proveniência ausente ou gr
 incomparáveis entre fontes. Não altera a insuficiência histórica dos pesos
 antigos, nem converte o teste sintético em generalização comprovada em suporte.
 
+## Candidatos de 13/11/2026 — nenhum promovido
+
+Mesmos conjuntos e impressões de 26/10 (B2W `481da017399a`, ConsumerBR
+`99a53fd45904`, GoEmotions-PT `8b48cefed8df`, XED-pt `a1d2cd6db52c`) e o mesmo
+manifesto do fusor. Uma semente por candidato; seleção na validação; teste
+lido uma vez. Os instrumentos reproduziram antes os números registrados
+(B2W 0,7646, ConsumerBR 0,5388, curva da emoção 13, pareado do fusor 42).
+
+| candidato | conjunto | n | atual | candidato | diferença [IC95] | observação |
+|---|---|---:|---:|---:|---|---|
+| satisfação: ajuste do neutro (42, 1 época a 5e-6, neutro suave) | ConsumerBR | 5.000 | 0,539 | 0,574 | +0,035 [+0,020; +0,050] | recall de neutro 0,368 → 0,201 |
+| idem | B2W, teste interno | 5.000 | 0,765 | 0,762 | −0,003 [−0,013; +0,008] | recall de neutro 0,710 → 0,553 |
+| idem, dentro do fusor | sintético | 300 | 0,940 | 0,914 | −0,026 [−0,060; +0,008] | recall de neutro 0,91 → 0,77 |
+| emoção: cortesia como neutro (semente 13) | XED-pt, seis classes | 4.286 | 0,280 | 0,266 | −0,015 [−0,023; −0,006] | contra o próprio controle: −0,006 [−0,014; +0,002] |
+| fusor: C = 0,3 escolhido na validação | sintético | 300 | 0,940 | 0,943 | +0,003 [−0,011; +0,017] | ECE 0,020 → 0,026 |
+
+O ajuste da satisfação foi treinado numa subamostra balanceada (21.000) do
+treino do manifesto, partindo do candidato 42; validação e teste conferidos
+idênticos ao manifesto, e o treino reproduzido como subconjunto. A guarda de
+proveniência do script recusou a receita (fingerprint de treino diferente do
+lado completo) e a conferência foi refeita explicitamente, não contornada.
+
+Diagnóstico do fusor sem ler o teste (1.500 conversas novas do lado de
+validação): completo 0,922, só texto 0,917, texto + emoji 0,942; tirar emoção,
+léxico, estilo ou incongruência melhora cerca de 0,01 cada. No sintético,
+emoji e tempo vêm do rótulo; as famílias que releem a frase do B2W são
+redundantes com a cabeça de satisfação treinada nesse mesmo corpus. O teste
+sintético não mede o que essas famílias existem para pegar em atendimento.
+
 ## Protocolo da campanha fechada
 
 A [receita vigente](treinamento.md#receita-vigente-de-pesquisa-26102026) fixa
