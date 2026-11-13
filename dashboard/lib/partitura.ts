@@ -1,8 +1,11 @@
 /**
- * A logica da PARTITURA DA FALA -- a leitura por frase desenhada numa pauta.
+ * A logica da LEITURA DA FALA -- a leitura por frase em tres graficos
+ * (`LeituraDaFala`, desde 13/11/2026; antes era uma pauta unica, e o nome do
+ * arquivo vem dela).
  *
- * Fica fora do componente para poder ser testada: duas decisoes daqui mudam o
- * que o analista le. QUANDO a disputa acende, e QUAIS emocoes ficam a vista.
+ * Fica fora do componente para poder ser testada: as decisoes daqui mudam o
+ * que o analista le. QUANDO a disputa acende, e QUAIS emocoes ficam a vista e
+ * em que ordem.
  */
 
 /** Ordem fixa das classes: 0 insatisfeito, 1 neutro, 2 satisfeito (invariante 8). */
@@ -100,6 +103,35 @@ export function separarEmocoes(emocao: Record<string, number>, visiveis = EMOCOE
   return {
     visiveis: ordenadasAVista,
     recolhidas,
+    desprezo: "desprezo" in emocao ? emocao.desprezo : null,
+  };
+}
+
+/**
+ * As emocoes DA MAIOR PARA A MENOR -- a ordem do grafico de emocao desde
+ * 13/11/2026, quando a leitura por fala virou tres graficos (`LeituraDaFala`).
+ *
+ * A primeira linha responde "qual emocao?"; o empate desempata pela ordem
+ * canonica, nunca por sorteio. `desprezo` continua a parte e nunca e a
+ * dominante (derivado, nao treinado); ausente e `null`, nunca 0.
+ *
+ * SOBRE A COR: a paleta `--emo-*` foi validada para daltonismo comparando
+ * vizinhos na ordem de `ORDEM_EMOCOES`. Ordenando por valor os vizinhos mudam
+ * a cada fala, e essa garantia NAO vale aqui. O grafico nao depende dela: cada
+ * linha traz o nome e o numero escritos, e a cor e so um segundo canal.
+ */
+export function emocoesPorValor(emocao: Record<string, number>, visiveis = EMOCOES_VISIVEIS) {
+  const posicao = (nome: string) => {
+    const indice = (ORDEM_EMOCOES as readonly string[]).indexOf(nome);
+    return indice === -1 ? ORDEM_EMOCOES.length : indice;
+  };
+  const ordenadas = Object.entries(emocao)
+    .filter(([nome]) => nome !== "desprezo")
+    .sort((a, b) => b[1] - a[1] || posicao(a[0]) - posicao(b[0]));
+  return {
+    dominante: ordenadas.length > 0 ? ordenadas[0] : null,
+    visiveis: ordenadas.slice(0, visiveis),
+    recolhidas: ordenadas.slice(visiveis),
     desprezo: "desprezo" in emocao ? emocao.desprezo : null,
   };
 }

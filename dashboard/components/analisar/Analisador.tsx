@@ -474,8 +474,8 @@ function Analise({
   // distinguir: "o cliente não falou" é um fato sobre o atendimento; "o
   // arquivo não tem horário" é um limite do que foi enviado. Dizer a mesma
   // frase nos dois casos mandaria procurar problema no lugar errado.
-  const [tudoAberto, setTudoAberto] = useState(false);
-  const [detalhesDaAnalise, setDetalhesDaAnalise] = useState(false);
+  const [tudoAberto, setTudoAberto] = useState(true);
+  const [detalhesDaAnalise, setDetalhesDaAnalise] = useState(true);
   const transcricaoId = useId();
   const semNota = analise.score === null;
   // SEM HORARIO, o servidor fabrica `inicio + 1 s por mensagem` so para a ordem

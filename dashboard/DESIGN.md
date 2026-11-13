@@ -394,6 +394,17 @@ Zero observado continua zero; `null` continua ausência.
 - Categoria medida: cabeça cheia; evidência fraca: tracejada com motivo;
   ausência: cabeça vazada cinza e texto. Cinza fica fora da escala.
 - Erro de uma consulta não apaga indicadores que responderam.
+- A **leitura por fala** são três gráficos, um por pergunta (`LeituraDaFala`,
+  13/11/2026; substitui a pauta única de 15/09): satisfação em faixa dividida
+  na ordem insatisfeito → neutro → satisfeito, emoção em linha com a nota na
+  régua 0–1 da maior para a menor, ironia em medidor tracejado com a marca do
+  meio. Cada um abre com o veredito em texto; o desenho confirma. A forma diz a
+  procedência, nunca a opacidade: cheia é cabeça treinada, vazada é o desprezo
+  derivado, tracejada é a ironia. Disputa é distância entre duas classes, não
+  confiança. Leitura ausente não desenha gráfico. Como a emoção é ordenada por
+  valor, a validação de vizinhos da paleta `--emo-*` para daltonismo não se
+  aplica a essa lista; nome e número vão escritos em cada linha e a cor é
+  segundo canal.
 - O segredo da marca nunca modifica indicadores, gráficos ou transcrições.
 
 ### Fraus-chan atrás da logo

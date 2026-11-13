@@ -4,6 +4,7 @@ import {
   LIMIAR_DISPUTA,
   ORDEM_EMOCOES,
   disputaDasClasses,
+  emocoesPorValor,
   separarEmocoes,
 } from "./partitura";
 
@@ -91,5 +92,48 @@ describe("separarEmocoes com todas a vista", () => {
     expect(visiveis.map(([nome]) => nome)).toEqual([...ORDEM_EMOCOES]);
     expect(recolhidas).toEqual([]);
     expect(desprezo).toBe(0.002);
+  });
+});
+
+/**
+ * Desde 13/11/2026 a leitura por fala sao tres graficos, e o de emocao lista
+ * da MAIOR para a menor (a primeira linha responde "qual emocao?").
+ */
+describe("emocoesPorValor", () => {
+  const emocao = {
+    alegria: 0.05, surpresa: 0.06, neutro: 0.19, tristeza: 0.21,
+    medo: 0.02, raiva: 0.38, nojo: 0.09, desprezo: 0.18,
+  };
+
+  it("ordena da maior para a menor e nomeia a dominante", () => {
+    const { dominante, visiveis, recolhidas } = emocoesPorValor(emocao, Infinity);
+    expect(dominante).toEqual(["raiva", 0.38]);
+    expect(visiveis.map(([nome]) => nome)).toEqual([
+      "raiva", "tristeza", "neutro", "nojo", "surpresa", "alegria", "medo",
+    ]);
+    expect(recolhidas).toEqual([]);
+  });
+
+  it("recolhe o que passa do corte, ainda da maior para a menor", () => {
+    const { visiveis, recolhidas } = emocoesPorValor(emocao, 2);
+    expect(visiveis.map(([nome]) => nome)).toEqual(["raiva", "tristeza"]);
+    expect(recolhidas.map(([nome]) => nome)).toEqual(["neutro", "nojo", "surpresa", "alegria", "medo"]);
+  });
+
+  it("empate desempata pela ordem canonica, sem sortear", () => {
+    const { visiveis } = emocoesPorValor({ alegria: 0.5, medo: 0.5 }, Infinity);
+    expect(visiveis.map(([nome]) => nome)).toEqual(["medo", "alegria"]);
+  });
+
+  it("desprezo nunca e dominante nem entra na lista: e derivado, sai a parte", () => {
+    const { dominante, visiveis, recolhidas, desprezo } = emocoesPorValor({ ...emocao, desprezo: 0.99 }, 2);
+    expect(dominante?.[0]).toBe("raiva");
+    expect([...visiveis, ...recolhidas].map(([nome]) => nome)).not.toContain("desprezo");
+    expect(desprezo).toBe(0.99);
+  });
+
+  it("desprezo ausente e null, nunca zero; sem emocao treinada nao ha dominante", () => {
+    expect(emocoesPorValor({ raiva: 0.4 }).desprezo).toBeNull();
+    expect(emocoesPorValor({ desprezo: 0.3 }).dominante).toBeNull();
   });
 });
