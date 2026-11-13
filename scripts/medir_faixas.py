@@ -43,7 +43,7 @@ if str(RAIZ) not in sys.path:
 from fraus.api.main import (CAMINHO_FUSOR, CAMINHO_MODELO_EMOCAO,  # noqa: E402
                             CAMINHO_MODELO_TEXTO)
 from fraus.fusor import (NEUTRO, PESO_NEUTRO_NO_SCORE, SATISFEITO,  # noqa: E402
-                         Fusor, montar_features, vetorizar)
+                         Fusor, montar_features)
 from fraus.indicadores import (calcular_nps, categoria_nps,  # noqa: E402
                                nota_0_10)
 from fraus.ingest.simulador import FRASES_POR_ROTULO, gerar_lote  # noqa: E402
@@ -70,13 +70,11 @@ def pontuar_com_peso(fusor: Fusor, features: dict[str, float], peso_neutro: floa
     que e exatamente o que torna uma medicao "antes e depois" impossivel de
     confiar.
 
-    Acessa o pipeline por dentro porque nao ha outra porta: `pontuar` ja aplica
+    Le as probabilidades por `Fusor.probabilidades` porque `pontuar` ja aplica
     o peso. E o preco de manter o peso constante em producao, e ele e pago aqui,
     num script de medicao, e nao la.
     """
-    probabilidades = fusor._pipeline.predict_proba([vetorizar(features)])[0]
-    classes = list(fusor._pipeline.named_steps["modelo"].classes_)
-    por_classe = dict(zip(classes, probabilidades))
+    por_classe = fusor.probabilidades(features)
     score = 100.0 * (por_classe.get(SATISFEITO, 0.0) + peso_neutro * por_classe.get(NEUTRO, 0.0))
     return max(0.0, min(100.0, score))
 

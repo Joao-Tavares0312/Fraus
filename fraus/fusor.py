@@ -328,6 +328,11 @@ class Fusor:
         z = self._pipeline.named_steps["escala"].transform([vetorizar(features)])[0]
         return np.nan_to_num(z, nan=0.0)
 
+    def probabilidades(self, features: dict[str, float | None]) -> dict[int, float]:
+        """P de cada classe aprendida, pelo mesmo `_z` da pontuacao (latencia ausente = media)."""
+        modelo = self._pipeline.named_steps["modelo"]
+        return {int(c): float(p) for c, p in zip(modelo.classes_, modelo.predict_proba([self._z(features)])[0])}
+
     def pontuar(self, features: dict[str, float]) -> float:
         """Score 0-100: P(satisfeito) mais P(neutro) pesado por
         `PESO_NEUTRO_NO_SCORE`.
@@ -342,9 +347,7 @@ class Fusor:
         confunde as classes, o conserto e treino -- as medianas por classe do
         `scripts/medir_faixas.py` sao justamente o que separa os dois casos.
         """
-        modelo = self._pipeline.named_steps["modelo"]
-        probabilidades = modelo.predict_proba([self._z(features)])[0]
-        return _score_das_probabilidades(dict(zip(list(modelo.classes_), probabilidades)))
+        return _score_das_probabilidades(self.probabilidades(features))
 
     def prever(self, features: dict[str, float]) -> int:
         """Classe predita: 0 insatisfeito, 1 neutro ou 2 satisfeito."""

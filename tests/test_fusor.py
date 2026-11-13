@@ -483,3 +483,12 @@ def test_latencia_ausente_contribui_zero_e_a_decomposicao_continua_exata():
     import math
 
     assert all(math.isfinite(v) for v in fusor.efeitos_por_familia(ausente).values())
+
+
+def test_probabilidades_por_classe_aceitam_latencia_ausente_e_somam_um():
+    fusor = _fusor_treinado()
+    ausente = _features(texto_prob_satisfeito_media=0.6, **dict.fromkeys(_LATENCIAS))
+    probs = fusor.probabilidades(ausente)
+    assert set(probs) == {0, 2}
+    assert sum(probs.values()) == pytest.approx(1.0)
+    assert probs[2] == pytest.approx(fusor.pontuar(ausente) / 100)

@@ -265,7 +265,8 @@ def coletar_perfil(config: dict) -> dict:
             classes_fusor = None
             if conversa.tem_sinal_cliente and all(nome in adaptadores for nome in ('texto', 'emocao')):
                 features_dict = montar_features(conversa, adaptadores['texto'], adaptadores['emocao'], curadoria=None)
-                features = {nome: float(features_dict[nome]) for nome in NOMES_FEATURES}
+                features = {nome: (None if features_dict[nome] is None else float(features_dict[nome]))
+                            for nome in NOMES_FEATURES}
                 vetor = vetorizar(features)
             if completo:
                 motor = Motor(adaptadores['texto'], fusor, adaptadores['emocao'], adaptadores['ironia'])

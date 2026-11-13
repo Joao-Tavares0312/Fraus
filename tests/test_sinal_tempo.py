@@ -77,3 +77,17 @@ def test_cliente_que_nao_responde_o_bot_conta_como_abandono():
 def test_cliente_que_responde_por_ultimo_nao_e_abandono():
     features = features_tempo(_conversa([("cliente", 0), ("bot", 5), ("cliente", 9)]))
     assert features["abandonou"] == 0.0
+
+
+def test_demo_pontua_conversa_sem_resposta_sem_estourar():
+    import importlib.util
+    from pathlib import Path
+
+    caminho = Path(__file__).resolve().parents[1] / "scripts" / "api_demo.py"
+    spec = importlib.util.spec_from_file_location("api_demo_teste", caminho)
+    demo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(demo)
+    duble = next(v for v in vars(demo).values()
+                 if isinstance(v, type) and hasattr(v, "pontuar_conversa") and v.__module__ == "api_demo_teste")
+    score = duble.__new__(duble).pontuar_conversa(_conversa([("cliente", 0), ("cliente", 600)]))
+    assert score is not None
