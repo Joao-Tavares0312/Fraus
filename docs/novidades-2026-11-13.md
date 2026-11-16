@@ -93,7 +93,9 @@ ou insatisfeito e erra mais o **neutro**.
 
 Neutro é a faixa 7–8 do NPS. Um leitor que joga neutro para "satisfeito" faz o
 indicador principal parecer melhor do que é. Por isso o candidato **não foi
-adotado**; o próximo passo é um ajuste que recupere o neutro.
+adotado**. Em 13/11 o próximo passo era um ajuste que recuperasse o neutro; ele
+rodou à tarde e também não passou, e desde 16/11/2026 os modelos estão
+congelados por decisão do projeto, sem retreino nem promoção na fila.
 
 Uma ressalva a favor do candidato: o teste dentro do fusor usa frases de um
 conjunto que o leitor atual pode ter visto no treino antigo, então o número do

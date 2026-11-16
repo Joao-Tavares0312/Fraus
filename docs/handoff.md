@@ -1,10 +1,43 @@
-# Handoff — Fraus, atualizado em 13/11/2026 (motores medidos; nada promovido)
+# Handoff — Fraus, atualizado em 16/11/2026 (modelos congelados e roadmap revisado)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
 porque várias delas parecem erro até você saber por que existem.
 
 O trabalho é o **TCC do João** (pt-BR). Fale em português com ele.
+
+---
+
+## Prioridades vigentes — 16/11/2026
+
+**Modelos congelados por decisão do João.** Retreino, troca de pesos ou de
+arquitetura, promoção de candidato e calibração estão fora da fila. Os três
+classificadores e o fusor continuam obrigatórios (invariantes 7 e 9); as
+limitações científicas continuam limitações, não tarefas encerradas. Se um
+artefato existente se mostrar incompatível, isso é bloqueio operacional a
+registrar — nunca motivo para retreinar nem para servir dublê como inferência.
+O congelamento vale a partir do estado de 13/11/2026: ironia do MultiPICo em
+produção, satisfação, emoção e fusor sem promoção (seções abaixo).
+
+A fila ativa é uma só e mora em `README.md`, seção “Pendências”
+(`README.md#pendências`): P0 publicação conferida por contrato e
+backup/restauração ensaiados; P1 exports reais autorizados; P1 TARS
+(identificador sem `chat_id` e voto de feedback ponta a ponta); P2 Web Vitals e
+orçamento da LP; P2 empresa fictícia e ensaio da banca. Não duplique a fila
+aqui.
+
+Encerrados no código, conforme o estado revisado do `README.md` (leitura do
+repositório, sem suíte nem deploy nesta revisão): landing independente da API,
+tema claro, pausa de atividade em aba oculta, Server-Timing e log de latência
+no backend, Analisar arrastar-e-pronto, Modelo visível ao papel `usuario` e o
+backend do feedback declarado binário. **Código no repositório não é prova de
+publicação**: presença na árvore não comprova merge nem deploy, e o estado da
+produção não foi revalidado em 16/11/2026. Diferenciais: E1, E2, E5 e E6
+implementados com validação real incompleta; E3 não iniciado; E4 descartado.
+
+Os blocos datados abaixo são **histórico**. Pendências antigas de notebooks,
+artefatos e branches não são ordens atuais nem prova do ambiente de hoje; os
+registros científicos continuam valendo como diagnóstico.
 
 ---
 

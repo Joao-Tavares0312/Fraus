@@ -20,8 +20,8 @@ que dá para medir satisfação com modelos pequenos, fine-tunados e
 interpretáveis — chamar uma API de LLM não deixaria o sistema mais rápido, e
 invalidaria o que ele se propõe a demonstrar.
 
-**O que quebra.** O trabalho inteiro. Nenhum teste pega isso: o código
-funcionaria melhor e a defesa cairia.
+**O que quebra.** A validade do trabalho. Uma integração tecnicamente
+funcional ainda pode violar o requisito científico.
 
 **Onde mora.** Três BERTimbau em `fraus/sinais/` e um `LogisticRegression` em
 `fraus/fusor.py`.
@@ -32,7 +32,9 @@ funcionaria melhor e a defesa cairia.
 
 **A regra.** Conversa sem fala do cliente tem `score: None` e aparece como "sem
 sinal" — nunca `0`, em lugar nenhum: célula, gráfico, ordenação, export,
-agregado.
+agregado. A regra também alcança fala vazia e conversa em que todas as falas
+do cliente são fórmulas de cortesia: `Conversa.tem_sinal_cliente` decide no
+servidor, com `fraus/cortesia.py`; “ok, obrigado” sozinho não vira promotor.
 
 **Por que existe.** `None` e `0` significam coisas diferentes e não podem se
 confundir. Zero numa coluna de tempo de resposta se lê como "respondeu na hora",
@@ -53,7 +55,9 @@ inicialização.
 ## 3. Score, nota e categoria são derivados no servidor
 
 **A regra.** Nunca aceitos do corpo da requisição, nunca recalculados no
-cliente.
+cliente. O modelo de entrada da importação aceita só `caminho`, não um
+veredito; ajustes de leitura pertencem à prévia e ao perfil confirmado.
+Mudar as faixas rederiva a categoria na leitura; não recalcula o score gravado.
 
 **Por que existe.** O `round` do Python é bancário (`round(6.5) == 6`) e o
 `Math.round` do JavaScript arredonda meio para cima (`Math.round(6.5) == 7`).
@@ -89,7 +93,9 @@ a etiqueta da linha com as faixas novas, a cor da barra com as antigas.
 
 ## 5. Latência nunca é persistida
 
-**A regra.** Sempre derivada dos timestamps, na leitura.
+**A regra.** Sempre derivada dos timestamps, na leitura. Sem resposta,
+as três features de latência são `None`, não zero. O fusor as neutraliza
+na padronização (`z = 0`, equivalente à média do treino), sem retreino.
 
 **Por que existe.** Latência gravada é latência que envelhece: qualquer correção
 na definição de "espera" deixaria o banco cheio de números calculados pela
@@ -120,11 +126,14 @@ sai absurda **em silêncio**.
 ## 7. Modelo ausente é falha alta e explícita
 
 **A regra.** Sem fallback, sem motor dublê silencioso. Nenhuma predição sai sem
-os três modelos treinados e o fusor. A API sobe sem carregá-los (o
-`ProvedorDeMotor`, em `fraus/api/motor_preguicoso.py`, carrega na primeira rota
-que exige o motor), mas a falha de carga é memorizada e sobe de novo em toda
-chamada, e `GET /saude/prontidao` responde 503 enquanto o motor não está
-`pronto`. Não existe queda para dublê.
+os três classificadores treinados e o fusor. A API monta banco e rotas antes
+da carga (`ProvedorDeMotor`, em `fraus/api/motor_preguicoso.py`). Na aplicação
+com motor, a montagem e `GET /saude` podem iniciar aquecimento em segundo plano;
+uma operação que exige o motor espera a carga. A falha é memorizada e volta
+a ser levantada em toda chamada. `GET /saude/prontidao` responde 503 enquanto
+o motor não está `pronto`. Não existe queda para dublê. Na Vercel, a função
+leve não carrega as cabeças: os rewrites encaminham inferência e saúde para
+a função do motor; uma operação de modelo recebida pela leve é erro explícito.
 
 **Por que existe.** Servir predição sem modelo carregado é **pior que estar fora
 do ar**: a interface não distingue número real de número sintético.
@@ -135,7 +144,7 @@ ar" durante um dia inteiro enquanto **todo número da tela era sintético** — 
 pesos por feature saíam numa progressão 0,2 / 0,25 / 0,3 e passavam por
 coeficiente de regressão logística.
 
-**Onde mora.** `Fusor.carregar` (valida `n_features_in_`), `ProvedorDeMotor`
+**Onde mora.** `Fusor.carregar` (valida número de entradas e escala do tempo), `ProvedorDeMotor`
 (`fraus/api/motor_preguicoso.py`), `GET /saude` (`"motor": "real" | "duble"` e
 `"estado_motor"`), `GET /saude/prontidao`, e `GET /saude/deriva`, que recusa diagnosticar
 com dublê pela mesma lógica.
@@ -161,7 +170,12 @@ cara de descobrir.
 ## 9. As 39 chaves de feature batem exatamente com `NOMES_FEATURES`
 
 **A regra.** As sete famílias do vetor produzem exatamente 39 chaves.
-`vetorizar` levanta `KeyError` na falta — nunca zero silencioso.
+`vetorizar` levanta `KeyError` na falta e `ValueError` na sobra — nunca zero
+silencioso. `montar_features` exige classificadores de texto e emoção; o
+`Motor` exige também ironia para leitura por mensagem, fora das 39 entradas.
+As três chaves de latência continuam obrigatórias, mas aceitam valor `None`
+quando não há resposta medida (`FEATURES_QUE_PODEM_FALTAR`). Isso não autoriza
+omitir chaves nem preencher outras features ausentes silenciosamente.
 
 **Por que existe.** Zero numa feature ausente não é neutro: o modelo aprendeu
 o que zero significa naquela dimensão, e a conversa entraria como se tivesse
@@ -183,6 +197,9 @@ entrou) = 39.
 
 **A regra.** Distribuição por rótulo se sobrepõe; feature constante no treino
 nasce com peso zero. **Acurácia alta demais é sintoma, não vitória.**
+Desde 15/09/2026, as quatro features de espera de `FEATURES_EM_LOG` passam por
+`log1p` em `vetorizar`, antes do scaler. `Fusor.carregar` recusa pesos em
+segundos crus: ter as mesmas 39 entradas não basta para compatibilidade.
 
 **Por que existe.** Faixa de latência disjunta por classe fez o primeiro fusor
 marcar **99,3% lendo só o relógio**, com o BERTimbau apagado.
@@ -193,6 +210,11 @@ com 3 h de espera, a latência contribuiu −85,4 contra +4,6 do texto inteiro, 
 score saiu em `4,4e-24`. O corpus nunca passou de minutos, então a guarda de
 vazamento, que olha o corpus, não tinha o que dizer.
 
-**Onde mora.** `docs/treinamento.md`, e agora também
-[`GET /saude/deriva`](referencia/diagnostico.md), que transforma a regra de
-disciplina de notebook em alarme de runtime.
+**Onde mora.** [Treinamento](treinamento.md), `fraus/fusor.py`
+(`FEATURES_EM_LOG`, `vetorizar` e a validação do artefato), e
+[`GET /saude/deriva`](referencia/diagnostico.md), que torna visível a saída da
+faixa de treino. Esse diagnóstico não corrige score nem garante generalização.
+
+**Estado da fila em 16/11/2026:** modelos congelados. Retreino, calibração,
+promoção e troca de pesos estão fora da fila; isso não suspende nenhuma
+invariante nem resolve as limitações científicas existentes.

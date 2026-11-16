@@ -1,21 +1,34 @@
 # Treinamento dos modelos do Fraus
 
+!!! warning "Decisão vigente — 16/11/2026: modelos congelados"
+    Retreino, calibração, troca de pesos ou arquitetura e promoção estão fora
+    da fila por decisão do João. Os protocolos e comandos abaixo são registro
+    de pesquisa, não tarefas atuais. Os três classificadores e o fusor
+    compatível continuam obrigatórios; congelar modelos não resolve suas
+    limitações científicas nem autoriza contornar falha de carga.
+
 ## Receita vigente de pesquisa — 26/10/2026
 
-!!! info "Campanha de 26–27/10/2026 concluída, sem promoção"
+!!! info "Campanha de 26–27/10/2026 concluída, sem promoção naquela campanha"
     As nove rodadas (três cabeças × três sementes) foram executadas em T4 pela
     CLI oficial do Google Colab, com nove bundles recuperados. O candidato do
     fusor e as ablações também foram avaliados. A sessão própria foi encerrada;
-    nenhum peso ativo foi substituído. Publicar site/API é uma operação separada.
+    nenhum peso ativo foi substituído nessa campanha.
     [Generalização e evidências](generalizacao.md) centraliza resultados,
     curvas e limites: há sobreajuste nesta reprodução; os pesos antigos
-    continuam sem diagnóstico conclusivo.
+    continuam sem diagnóstico conclusivo. Separadamente, a ironia MultiPICo
+    foi publicada em 13/11; veja [Novidades](novidades-2026-11-13.md).
 
 O contrato de inferência continua sendo **39 features de sete famílias**,
 quatro esperas em `log1p`, `StandardScaler` e `LogisticRegression`.
 Ironia é obrigatória na leitura por mensagem do motor, mas não entra no vetor.
 As três cabeças e um fusor compatível são necessários para predizer; a API
 pode subir antes da carga, sem oferecer fallback silencioso.
+
+Desde a correção de 13/11, conversa sem resposta tem latências ausentes
+(`None`), não zero (`fraus/sinais/tempo.py`). `fraus/fusor.py` as leva à média
+do treino no espaço padronizado (`z = 0`), sem retreino. Isso não altera os
+scores já gravados; as medições históricas abaixo não foram repetidas.
 
 ### Seleção sem abrir o teste
 
@@ -121,8 +134,9 @@ rótulos da cabeça.
 O restante desta página preserva decisões, medições e procedimentos de suas
 respectivas datas. Menções a 16, 35, 38 ou 40 features, IDPT como padrão,
 cópia para diretório ativo, seleção antiga e métricas de holdouts antigos
-**não substituem o protocolo acima**. A acurácia histórica 0,947 não identifica
-o checkpoint publicado hoje. Pesos globais e sanidades isoladas não provam
+**não substituem o contrato do código descrito acima** nem reabrem a fila.
+A acurácia histórica 0,947 não identifica o checkpoint publicado hoje.
+Pesos globais e sanidades isoladas não provam
 ausência de vazamento ou de overfitting. Os números do
 [Cartão do modelo](cartao-do-modelo.md) continuam identificados como históricos.
 
@@ -152,8 +166,8 @@ O notebook monta o Google Drive (`drive.mount('/content/drive')`) e usa dois dir
 
 A receita antiga orientava copiar o resultado para
 `modelos/bertimbau-satisfacao/`, o diretório consumido pela inferência. Isso
-**não é instrução para a campanha atual**: manter os resultados em diretório
-de candidatos e preservar pesos, tokenizador, `fraus_receita.json`, histórico,
+**não é instrução vigente**: o protocolo de pesquisa separa os candidatos dos
+pesos ativos e preserva pesos, tokenizador, `fraus_receita.json`, histórico,
 manifestos e `avaliacao_final.json` como um bundle identificado.
 `modelos/` não é versionado no Git; ter arquivos locais não comprova a cadeia
 de proveniência de um checkpoint antigo nem autoriza substituir o ativo.
@@ -183,9 +197,9 @@ Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).
 
-O destino no Drive descrito nesta seção era o procedimento histórico. Na
-campanha vigente, exportar para um bundle de candidato, sem copiar para o
-diretório ativo e sem promoção.
+O destino no Drive descrito nesta seção era o procedimento histórico.
+O notebook 02 atual delega ao script de experimento com manifesto explícito,
+saída de candidato e sem promoção, conforme o protocolo do início da página.
 
 ### Rotulo do fusor: `recommend_to_a_friend`
 
@@ -229,7 +243,7 @@ Os 99,3% nao mediam fusao. Mediam que o simulador vazava o gabarito.
 **A correcao** (`fraus/ingest/simulador.py`, coberta por `tests/test_simulador.py`):
 
 - a latencia passou a ser **log-normal** com caudas que se cruzam. As medianas continuam ordenadas, como manda a literatura de live chat, mas ~11% das conversas satisfeitas sao mais lentas que a mediana das insatisfeitas, e vice-versa. Existe atendimento rapido que termina mal;
-- as falas do cliente passaram a levar **emoji do lexicon**, com cruzamento deliberado — cliente irritado manda 🙏 (+0,418), cliente satisfeito manda 😩 (-0,368) — para o emoji nao virar o proximo gabarito.
+- as falas do cliente passaram a levar **emoji do léxico**, com cruzamento deliberado — cliente irritado usa mãos juntas (`U+1F64F`, +0,418), cliente satisfeito usa rosto cansado (`U+1F629`, −0,368) — para o emoji não virar o próximo gabarito.
 
 **Como saber se voltou.** Acuracia alta e sintoma que pede investigacao, nao veredito. Depois da correcao o notebook 02 marcou **0,96**, e desta vez o numero se sustentou: os pesos aprendidos mudaram de lugar.
 
@@ -268,7 +282,7 @@ O notebook 02 rodou de novo e o artefato daquele momento passou a ter `n_feature
 
 O topo continua sendo **texto e emoji**, e as features de tempo continuam no rodape, onde devem estar. As de emocao entram no meio da tabela com peso real sem deslocar o conteudo — `desprezo_derivado`, que e a diade calculada e nao uma classe do modelo, puxa 0,48. Nao ha sinal de vazamento novo.
 
-**A divida que este fusor assume.** Ele foi treinado com a cabeca de ironia vazando (ver a pendencia 1 do README: 6 em 10 frases sinceras saem marcadas como ironicas). `ironia_prob_media` e `ironia_prob_max` pesam 0,30 e 0,31 — nao e desprezivel. **Retreinar a ironia obriga a retreinar o fusor de novo**, e essa ordem esta registrada aqui para nao se perder.
+**A dívida que este fusor assumia.** Ele foi treinado com a cabeça de ironia vazando (6 em 10 frases sinceras saíam marcadas como irônicas). `ironia_prob_media` e `ironia_prob_max` pesavam 0,30 e 0,31. A recomendação de retreinar as duas partes pertencia àquele contrato: as duas features saíram do vetor em 04/09/2026. Não é uma instrução para os modelos congelados em 16/11/2026.
 
 **Teste de sanidade ponta a ponta**, com os tres BERTimbau carregados, sobre conversas do simulador: rotulo insatisfeito pontua ~0, neutro ~73–75, satisfeito ~99, e as tres categorias de NPS saem certas em 9 de 9. **Isso nao e evidencia de qualidade** — sao conversas do proprio gerador sintetico, o dominio em que o fusor foi treinado. O numero honesto continua sendo 0,93 no conjunto de teste separado, e a ressalva do topo desta secao continua valendo: as metricas do notebook 02 medem fusao no dominio sintetico, nao acerto em atendimento real.
 
@@ -535,9 +549,10 @@ convivendo com situacao negativa de atendimento na mesma fala. E a unica das
 seis que alcanca a frase canonica do projeto, porque nao depende de um segundo
 termo polar no lexicon.
 
-**O retreino do notebook 02 e OBRIGATORIO antes de a API voltar a subir.** O
-artefato de 38 nao carrega mais: `Fusor.carregar` valida a dimensao e levanta
-`FusorIncompativelError`. Isso e o comportamento desejado, nao um bug.
+**Na mudança de 04/09/2026, o retreino do notebook 02 era obrigatório para
+produzir um artefato de 39 features.** O artefato de 38 não carrega:
+`Fusor.carregar` valida a dimensão e levanta `FusorIncompativelError`.
+Hoje, incompatibilidade é bloqueio operacional, não autorização para retreinar.
 
 Medido ANTES de aceitar, no B2W-Reviews01 (2000 resenhas por rotulo, semente
 20260904) -- que e o corpus que da o TEXTO do treino:
@@ -606,12 +621,12 @@ vetor](#a-ironia-sai-do-vetor-04092026) acima).
 | lexico | `fraus/sinais/lexico.py` | 3 | sim |
 | ironia | `fraus/sinais/ironia.py` | 2 | **nao** (lida por mensagem, nao pontua) |
 | estilo | `fraus/sinais/estilo.py` | 6 | sim |
-| incongruencia | `fraus/sinais/incongruencia.py` | 5 | sim |
+| incongruência | `fraus/sinais/incongruencia.py` | 6 | sim |
 
 **Consequencia:** `montar_features` exige DOIS classificadores (texto e
 emocao); `Motor` continua exigindo os TRES (a ironia entra na atribuicao por
-mensagem, nao no vetor), e a API nao sobe sem os tres artefatos em `modelos/`.
-E o comportamento correto da invariante 7.
+mensagem, não no vetor). A API pode subir antes da carga preguiçosa do motor;
+a primeira rota que exige inferência falha explicitamente se faltar artefato.
 
 ## Notebook 03 — classificador de emocao
 
@@ -668,9 +683,18 @@ Sao **43:1** entre a maior e a menor. Os notebooks 01 e 02 balanceiam por subamo
 
 `nojo` e a classe mais rara do corpus, e o **desprezo e derivado de raiva x nojo**. A qualidade do desprezo fica limitada de cima pela qualidade da pior classe do modelo: se o F1 de `nojo` sair baixo, o desprezo herda isso. O notebook imprime esse teto explicitamente e grava o F1 por classe em `metricas_emocao.json`, para o numero aparecer no relatorio em vez de ser descoberto pela banca.
 
-**Limitacao a declarar:** a traducao foi feita por maquina (Google Tradutor), sem revisao humana. Por isso a avaliacao reporta tambem o **XED-pt** (7.220 linhas, CC-BY, Plutchik 8 + neutro) como conjunto de teste independente, que nao passou por traducao automatica. O mapeamento Plutchik -> Ekman descarta *anticipation* e *trust*; o resto casa 1:1.
+**Limitação a declarar:** a tradução do GoEmotions-PT foi feita por máquina
+(Google Tradutor), sem revisão humana. O **XED-pt** (7.220 linhas na origem,
+CC-BY) é usado para transferência de domínio, não como prova de ausência de
+tradução: seus rótulos são projetados entre línguas. O mapeamento Plutchik →
+Ekman descarta *anticipation* e *trust*. A auditoria posterior encontrou
+seis textos comuns com o treino GoEmotions; veja
+[Generalização](generalizacao.md). O benchmark integral tem 4.286 exemplos,
+sem neutro; distinguir F1 nas sete classes de F1 nas seis presentes.
 
-Duas ressalvas sobre o XED-pt: ele e **portugues europeu** ("pa", "artola"), enquanto o treino e PT-BR — diferenca de variedade, nao so de dominio; e o numero dele vai sair **mais baixo** que o interno, o que e esperado e e justamente o ponto, porque e ele que responde "mas nao e so traducao automatica?".
+O XED-pt também contém português europeu, enquanto o treino é PT-BR:
+variedade, domínio e projeção dos rótulos são limites distintos.
+Uma queda nesse benchmark não isola a causa nem prova sobreajuste.
 
 ### Por que o desprezo NAO e treinado
 
@@ -681,6 +705,11 @@ O desprezo e derivado da **diade primaria raiva + nojo**, que e como Plutchik (1
 ## Notebook 04 — classificador de ironia
 
 Classificacao binaria: 0 nao-ironico, 1 ironico.
+O registro de [13/11/2026](novidades-2026-11-13.md) confirma a publicação
+da cabeça MultiPICo em ONNX fp32. O restante desta seção descreve a evolução
+histórica: IDPT, sintético e divisão por autor não são o padrão do notebook
+04 atual. O notebook 07 citado no histórico foi removido em 06/11.
+
 
 > **Registro de 19/10/2026: candidato MultiPICo-PT.** O notebook 04 passou a
 > treinar no MultiPICo (CC BY 4.0, pares post-resposta com irônico e não irônico
@@ -887,25 +916,25 @@ Agora cada notebook de treino (01, 03, 04) ajusta a temperatura **na
 validação**, via `fraus.receita_treino.ajustar_temperatura`, e grava o valor em
 `fraus_receita.json` dentro da pasta do modelo. O runtime
 (`fraus/sinais/texto.py` e `fraus/sinais/onnx.py`) aplica essa temperatura;
-artefato sem o arquivo continua com `T = 1,0`, então os modelos em produção não
-mudam de score.
+artefato sem o arquivo continua com `T = 1,0`. Isso descreve a leitura do
+artefato, não comprova quais pesos ou temperaturas estão publicados.
 
-**Temperature scaling não muda a decisão do modelo.** Dividir os logits pelo
-mesmo `T > 0` preserva o `argmax`: acurácia e F1 ficam idênticos, só a
-confiança declarada muda (ECE).
+**Temperature scaling não muda o argmax de uma cabeça.** Dividir seus logits
+pelo mesmo `T > 0` preserva acurácia e F1; muda as probabilidades e pode mudar
+o ECE. Como o fusor consome probabilidades, isso **pode alterar o score
+fundido** e não autoriza calibrar uma cabeça isoladamente em produção.
 
-**A ironia é o caso a não confundir.** Calibrar melhora o ECE dela, mas ela
-continua errando falas sinceras de atendimento. Temperatura ajusta *o quanto* o
-modelo se diz confiante, não *sobre o que*.
+**A ironia é o caso a não confundir.** Temperatura ajusta a confiança, não
+corrige por si só erros de domínio; melhora de ECE precisa ser medida.
+Calibração também está fora da fila desde 16/11/2026.
 
 ## Notebook 02 — a seção 10 é uma pendência, não uma etapa
 
-A saturação das features de tempo está descrita lá com a medição, o conserto
-(`winsorizar no p99` + `log1p` antes do scaler) e — o que mais importa — **o
-acoplamento**: a transformação precisa existir no notebook *e* no runtime, ou o
-score sai errado em silêncio. Um `fusor.joblib` treinado sem a compressão contra
-um runtime que comprime continua tendo `n_features_in_ = 39`, então
-`Fusor.carregar` **não pega** essa incompatibilidade.
+A seção histórica discutia `winsorizar no p99` + `log1p` antes do scaler.
+A decisão medida em 15/09/2026, abaixo, adotou **somente `log1p`**, hoje em
+`fraus.fusor.vetorizar`. A dimensão 39 sozinha não detecta mudança de escala;
+por isso `Fusor.carregar` também confere `fraus_escala_do_tempo` e recusa
+artefato em segundos crus. Essa pendência histórica não continua aberta.
 
 ### As três saídas, medidas em 15/09/2026 — decidido: só `log1p`
 
@@ -951,7 +980,7 @@ As três partes indivisíveis, feitas juntas:
    pontuação, contribuição e deriva passam pela mesma função.
 2. **Artefato regerado e promovido naquela data**, pela versão histórica do
    script: acurácia 0,9467, F1-macro 0,9469. O anterior foi preservado como
-   backup. A campanha atual não repete essa promoção. O artefato passou a carregar
+   backup. O protocolo atual não repete essa promoção. O artefato passou a carregar
    `fraus_escala_do_tempo = "log1p"`, e `Fusor.carregar` **recusa** artefato sem
    essa marca: é o caso que `n_features_in_` não pega.
 3. **Medição de categoria.** No teste do B2W, 27 notas e 6 de 300 categorias

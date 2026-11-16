@@ -17,10 +17,11 @@ uv sync --extra dev --extra torch --extra docs
 
 Os extras são explícitos: um `uv sync` sem eles pode remover ferramentas que
 você já estava usando. Preserve os extras necessários em cada sincronização.
-O grupo `dev` instala pytest/httpx; `torch` instala o executor Torch; `docs`
-instala MkDocs Material, mkdocstrings e a ferramenta de PDF.
+O extra `dev` instala pytest/httpx; `torch` instala o executor Torch; `docs`
+instala MkDocs Material, mkdocstrings e a ferramenta de PDF. `onnxruntime`
+também está nas dependências principais; o extra `onnx` continua declarado.
 
-Para trabalhar no treinamento instrumentado, acrescente `treino`:
+O repositório mantém o extra `treino` para reproduzir receitas históricas:
 
 ```bash
 uv sync --extra dev --extra torch --extra treino --extra docs
@@ -31,6 +32,9 @@ de treino/exportação. Não é dependência necessária à imagem de inferênci
 As receitas, os notebooks e o protocolo de seleção/avaliação estão em
 [Treinamento](treinamento.md) e [Generalização e evidências](generalizacao.md).
 Ter os notebooks prontos não significa que uma campanha foi executada.
+**Em 16/11/2026, os modelos estão congelados por decisão do João:** retreino,
+calibração, promoção e troca de pesos não pertencem à fila vigente. Os comandos
+de ambiente não são autorização para iniciar uma campanha.
 
 A alternativa de inferência sem Torch é ONNX:
 
@@ -41,8 +45,8 @@ uv sync --extra dev --extra onnx --extra docs
 Declare `FRAUS_BACKEND=onnx` ao iniciar a API. Os grafos exportados são outros
 artefatos, em `modelos-onnx/`; o backend não é escolhido pela presença de
 arquivos e não recua silenciosamente para Torch. Conversão é uma tarefa
-separada, com extra `conversao`: consulte [Encolher os modelos](encolhimento.md)
-antes de exportar ou quantizar.
+separada, com extra `conversao`: [Encolher os modelos](encolhimento.md)
+registra o procedimento e seus critérios; não é uma etapa automática deste guia.
 
 ## Artefatos obrigatórios
 
@@ -69,14 +73,26 @@ segundos crus é recusado, mesmo que tenha 39 entradas. **Não contorne a recusa
 para fazer a UI funcionar. A ironia continua obrigatória na leitura por
 mensagem, embora não pontue no vetor do fusor.
 
+Sem resposta do bot ou humano, as três latências chegam como `None`. O fusor
+as neutraliza depois do scaler (`z = 0`, equivalente à média do treino);
+isso não elimina as chaves do contrato nem cria uma penalidade por ausência.
+
 A aplicação cria banco e rotas antes de carregar o motor, que é preguiçoso.
 Portanto, **a API subir ou responder à saúde não prova que consegue inferir**:
-a primeira operação que exige modelos carrega os artefatos e falha
-explicitamente se faltarem ou forem incompatíveis. Não há score parcial,
-modelo dublê automático na API real nem valores zerados para preencher falta
-de dados. Consulte [Cartão do modelo](cartao-do-modelo.md) para a procedência e
+na aplicação com motor, a montagem e `GET /saude` podem iniciar aquecimento em
+segundo plano; uma operação que exige modelos espera a carga e falha
+explicitamente se faltarem ou forem incompatíveis. `GET /saude/prontidao` só
+responde 200 com o motor pronto. Não há score parcial, modelo dublê automático
+na API real nem valores zerados para preencher falta de dados.
+Consulte [Cartão do modelo](cartao-do-modelo.md) para a procedência e
 os limites das métricas; uma métrica histórica não identifica o checkpoint
 que uma implantação serve hoje.
+
+Na Vercel, a função leve (`api/index.py`) não abre as sessões dos modelos;
+a função `api/motor.py` recebe inferência e saúde por rewrites. A casca
+`AplicacaoPreguicosa` adia a montagem de cada aplicação até a primeira
+requisição. Uma operação que exige modelos na função leve falha explicitamente,
+sem dublê. O comando Uvicorn abaixo usa a aplicação completa, não a função leve.
 
 ## Executar API e dashboard
 
@@ -158,6 +174,20 @@ mudanças visuais, confira teclado, celular, temas e movimento reduzido seguindo
 o [design da interface](design.md). Um teste com fixture precisa ser identificado
 como tal e não substitui a verificação de inferência real.
 
+Para alterações de documentação, há uma guarda focada na fronteira pública:
+
+```bash
+uv run --no-sync pytest -q tests/test_documentacao.py
+```
+
+Os scripts `npm run test:lp` e `npm run test:atividade`, em `dashboard/`,
+exercitam respectivamente a landing e a atividade da interface com Playwright.
+Leia os requisitos dos scripts antes de usá-los: fixture e benchmark local não
+comprovam desempenho de campo. No backend, `Server-Timing` e o log JSON de
+`fraus/api/observabilidade.py` instrumentam tempos operacionais;
+`scripts/medir_latencia_deploy.py` é uma ferramenta de medição, não evidência de
+que o ambiente atual já foi medido.
+
 ## Trabalhar na documentação existente
 
 O projeto usa **um site MkDocs Material**, com três percursos de leitura. Não
@@ -217,5 +247,6 @@ não promovem pesos nem provam qual checkpoint está em produção.
   contratos visíveis a quem opera arquivos, períodos e fontes.
 - [Treinamento](treinamento.md), [generalização](generalizacao.md) e
   [limitações](limitacoes.md): separar receita, medição, hipótese e evidência
-  indisponível. Nenhum experimento candidato deve substituir o artefato ativo
-  sem uma decisão de promoção separada.
+  indisponível. Os modelos estão congelados; candidato histórico não substitui
+  o artefato ativo. Incompatibilidade deve ser registrada como bloqueio
+  operacional, nunca contornada com dublê ou troca silenciosa de pesos.

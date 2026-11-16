@@ -13,7 +13,7 @@ hide:
 
 <p class="fx-hero__sub">Ferramenta que lê atendimento por chatbot e estima satisfação
 <strong>sem perguntar nada ao cliente</strong>. Um encerramento como
-<em>"ok, obrigado 🙂"</em> não prova satisfação nem insatisfação: o contexto
+<em>"ok, obrigado"</em> não prova satisfação nem insatisfação: o contexto
 traz sinais, não acesso ao estado real de quem escreveu.</p>
 
 <div class="fx-hero__acoes" markdown>
@@ -30,6 +30,9 @@ traz sinais, não acesso ao estado real de quem escreveu.</p>
 <div class="fx-fato"><small>BERTimbau fine-tunados</small><svg viewBox="0 0 146 108" role="img" aria-label="3 BERTimbau"><polygon transform="translate(0 0)" points="14,4 54,4 60,10 54,16 14,16 8,10" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="62,12 68,18 68,44 62,50 56,44 56,18" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="62,58 68,64 68,90 62,96 56,90 56,64" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="14,92 54,92 60,98 54,104 14,104 8,98" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="6,58 12,64 12,90 6,96 0,90 0,64" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="6,12 12,18 12,44 6,50 0,44 0,18" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="14,48 54,48 60,54 54,60 14,60 8,54" fill="currentColor" opacity="0.1"/><polygon transform="translate(78 0)" points="14,4 54,4 60,10 54,16 14,16 8,10" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="62,12 68,18 68,44 62,50 56,44 56,18" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="62,58 68,64 68,90 62,96 56,90 56,64" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="14,92 54,92 60,98 54,104 14,104 8,98" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="6,58 12,64 12,90 6,96 0,90 0,64" fill="currentColor" opacity="0.1"/><polygon transform="translate(78 0)" points="6,12 12,18 12,44 6,50 0,44 0,18" fill="currentColor" opacity="0.1"/><polygon transform="translate(78 0)" points="14,48 54,48 60,54 54,60 14,60 8,54" fill="currentColor" opacity="1"/></svg></div>
 <div class="fx-fato"><small>LLMs na inferência</small><svg viewBox="0 0 146 108" role="img" aria-label="0 LLMs na inferência"><polygon transform="translate(0 0)" points="14,4 54,4 60,10 54,16 14,16 8,10" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="62,12 68,18 68,44 62,50 56,44 56,18" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="62,58 68,64 68,90 62,96 56,90 56,64" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="14,92 54,92 60,98 54,104 14,104 8,98" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="6,58 12,64 12,90 6,96 0,90 0,64" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="6,12 12,18 12,44 6,50 0,44 0,18" fill="currentColor" opacity="1"/><polygon transform="translate(0 0)" points="14,48 54,48 60,54 54,60 14,60 8,54" fill="currentColor" opacity="0.1"/><polygon transform="translate(78 0)" points="14,4 54,4 60,10 54,16 14,16 8,10" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="62,12 68,18 68,44 62,50 56,44 56,18" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="62,58 68,64 68,90 62,96 56,90 56,64" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="14,92 54,92 60,98 54,104 14,104 8,98" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="6,58 12,64 12,90 6,96 0,90 0,64" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="6,12 12,18 12,44 6,50 0,44 0,18" fill="currentColor" opacity="1"/><polygon transform="translate(78 0)" points="14,48 54,48 60,54 54,60 14,60 8,54" fill="currentColor" opacity="0.1"/></svg></div>
 </div>
+
+São **sete famílias no vetor do fusor, oito observadas no sistema**: a ironia
+continua carregada e visível por mensagem, mas não pontua nas 39 features.
 
 !!! warning "NPS inferido, não declarado"
     O NPS do Fraus **não é perguntado**: ele é derivado do texto do
@@ -65,6 +68,33 @@ traz sinais, não acesso ao estado real de quem escreveu.</p>
     [referência de código](referencia/modelos.md) antes de alterar contratos.
 
 </div>
+
+## Estado do produto — 16/11/2026
+
+O código oferece análise de arquivo com prévia e gravação, lista e detalhe de
+atendimentos, indicadores, grafo, inspeção do modelo e ferramentas de operação.
+Na lateral ficam **Visão geral**, **Atendimentos**, **Analisar**, **Grafo** e
+**Modelo**; gestão e configuração ficam no menu da conta, conforme as permissões.
+Modelo também está disponível ao papel `usuario`; curadoria continua restrita
+a `dev`. A landing usa um snapshot local e não depende da API para renderizar.
+
+Explicações por template, conjunto conformal, cinco sinalizadores por regra e
+análises retrospectivas por tema e replay existem no código. Isso **não prova
+validação em atendimento real nem disponibilidade de artefato conformal**.
+Consulte o [relatório dos diferenciais](diferenciais/relatorio.md) e o
+[roteiro de demonstração](diferenciais/roteiro-demo.md) para separar capacidade,
+evidência e limite.
+
+**Modelos congelados:** retreino, calibração, promoção e troca de pesos estão
+fora da fila vigente. Permanecem as limitações científicas; congelar não é
+resolvê-las. As prioridades são prova operacional de publicação e recuperação,
+exports reais autorizados, integração Tars/feedback, desempenho do navegador e
+ensaio da banca. Esta revisão é documental, sem consulta à produção.
+
+Para aprofundar: [sinais e execução ONNX](encolhimento.md),
+[ironia e seus limites](ironia.md), [comparação com concorrentes](diferenciais/concorrentes.md),
+[indicadores](referencia/indicadores.md), [fusor](referencia/fusor.md),
+[sinais](referencia/sinais.md) e [diagnósticos](referencia/diagnostico.md).
 
 ## Sem LLM em runtime
 

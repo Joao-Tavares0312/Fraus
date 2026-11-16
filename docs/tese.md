@@ -49,7 +49,7 @@ A [Arquitetura](arquitetura.md) detalha o processamento; o
 ## Origem dos dados e avaliação
 
 O texto de satisfação vem de resenhas B2W; emoção usa GoEmotions traduzido para
-português; a campanha diagnóstica de ironia usa MultiPICo em português.
+português; a cabeça de ironia publicada em 13/11/2026 usa MultiPICo em português.
 ConsumerBR e XED são referências de transferência **já consultadas**, não testes
 virgens. As fontes, divisões, artefatos e resultados efetivamente obtidos estão
 centralizados em [Generalização e evidências](generalizacao.md), sem repetir
@@ -59,6 +59,12 @@ O fusor é avaliado em conversas sintéticas: texto real é combinado com tempo,
 emoji e estrutura gerados. Isso mede comportamento nesse domínio, não acurácia
 em atendimentos reais rotulados. A recomendação e as estrelas de uma resenha
 também não são o mesmo alvo, nem equivalem automaticamente a NPS declarado.
+
+O backend também aceita feedback declarado binário (`-1`/`1`), separado da
+inferência e sem alterar o score. “Resolveu” não é nota NPS nem prova de
+satisfação. O envio desse voto pelo TARS e a apresentação da concordância na
+dashboard ainda não completam um ciclo ponta a ponta; não constituem validação
+da hipótese.
 
 ## Interpretação e ameaças à validade
 
@@ -71,8 +77,17 @@ As principais ameaças são mudança de domínio (resenha e rede social não sã
 suporte), tradução e ruído dos rótulos, dependência entre produtos/autores,
 atalhos do simulador, seleção histórica com consulta ao teste e proveniência
 incompleta dos pesos antigos. Sem curvas comparáveis e manifestos históricos
-não se conclui presença nem ausência de overfitting atual. A campanha de três
-sementes por cabeça está **pendente de autenticação do Colab**, não concluída.
+não se conclui presença nem ausência de overfitting dos pesos antigos. A campanha
+de três sementes por cabeça foi concluída em 26–27/10 e trouxe evidência de
+sobreajuste dos candidatos novos, sem promoção. Em 13/11, outros candidatos de
+satisfação, emoção e fusor foram medidos e não promovidos; isso não desfaz a
+publicação da ironia MultiPICo daquele dia. Por decisão de 16/11/2026, os modelos
+estão congelados: retreino, calibração, promoção e troca de pesos ou arquitetura
+ficam fora da fila ativa. Isso não resolve as limitações científicas.
+
+A identificação de “régua” também não prova proveniência completa:
+`regua_do_fusor`, em `fraus/motor.py`, combina a assinatura do fusor e a lista
+de cortesias, sem identificar troca de checkpoint das cabeças ou de backend.
 
 ## O que a tese não promete
 

@@ -9,6 +9,9 @@
 > [Generalização e evidências](generalizacao.md); não sobrescrevem estas
 > medições nem identificam os pesos publicados. As curvas sustentam sobreajuste
 > **dos candidatos novos**, não um diagnóstico dos modelos antigos.
+> Revisão documental de **16/11/2026**: modelos congelados por decisão do
+> projeto; retreino, calibração, promoção e troca de pesos/arquitetura estão
+> fora da fila ativa. Os resultados antigos não validam o ambiente atual.
 
 ## Uso pretendido e uso proibido
 
@@ -43,8 +46,10 @@ treinada no MultiPICo-PT: F1-macro 0,660 e ECE 0,055 no teste desse corpus
 (462 frases), contra 0,490 e 0,361 da anterior. Continua fora da nota. Ver
 [Novidades de 13/11/2026](novidades-2026-11-13.md).
 
-Em 13/11/2026 três candidatos foram medidos contra estes pesos e **nenhum foi
-promovido** (n, impressões e intervalos na nota interna de 13/11):
+Em 13/11/2026 três candidatos de satisfação, emoção e fusor foram medidos e
+**nenhum deles foi promovido**. Isso não contradiz a troca da ironia acima.
+Os números e intervalos abaixo foram registrados na revisão versionada de
+13/11; o [relatório de generalização](generalizacao.md) contextualiza a campanha:
 
 | peça | candidato | conjunto que decide | atual | candidato | por que não |
 |---|---|---|---:|---:|---|
@@ -52,13 +57,16 @@ promovido** (n, impressões e intervalos na nota interna de 13/11):
 | emoção | cortesia (gratidão, aprovação, cuidado) como neutro | XED-pt, 4.286 | 0,280 | 0,266 | perde: −0,015 [−0,023; −0,006] |
 | fusor | mesma receita com regularização escolhida na validação | 300 conversas sintéticas | 0,940 | 0,943 | empate (+0,003 [−0,011; +0,017]) e sinal invertido em incongruência |
 
-Conversa que ninguém respondeu deixou de ter latência 0 em 13/11/2026: as
-latências saem ausentes e o fusor as lê como a média do treino, sem retreino.
-Antes, a ausência era lida como resposta instantânea.
+O código de 13/11/2026 corrigiu a conversa sem resposta: as três latências
+saem ausentes e o fusor as lê como a média do treino, sem retreino. Antes,
+a ausência era lida como resposta instantânea. O registro daquela correção
+não comprova execução na produção nem na dashboard; scores já gravados
+permanecem inalterados.
 
-Os três BERTimbau rodam em CPU, por torch ou por ONNX Runtime
-(`FRAUS_BACKEND`), com **0 de 180 categorias trocadas** entre os dois
-executores. Ver [Encolher os modelos](encolhimento.md).
+A comparação histórica de 15/09 entre torch e ONNX registrou **0 de 180
+categorias trocadas**. Não é uma nova prova de paridade do pacote MultiPICo de
+13/11. Os executores continuam selecionados por `FRAUS_BACKEND`; ver
+[Encolher os modelos](encolhimento.md).
 
 ## Onde o fusor erra — avaliação histórica por fatia
 
@@ -84,9 +92,9 @@ Acurácia geral: **0,940** (598 conversas com sinal; 2 eram só cortesia).
 
 O que a tabela diz, e o que ela **não** pode dizer:
 
-1. **Conversa de uma fala só é a fatia mais fraca** (0,733). É esperado — há
-   menos texto para agregar —, e é o caso comum de "cliente respondeu uma vez e
-   sumiu". A nota dessas conversas merece menos confiança do que a das longas.
+1. **Conversa de uma fala só foi a fatia mais fraca** (0,733) nesta medição.
+   Havia menos texto para agregar, mas a tabela não demonstra que toda conversa
+   longa mereça mais confiança, nem mede a confiança por conversa real.
 2. **Sem emoji, o acerto cai 10 pontos.** Suspeita declarada: o simulador sorteia
    o emoji **por rótulo** (`EMOJIS_POR_ROTULO`), então parte do acerto "com
    emoji" pode ser o modelo lendo uma pista que o gerador plantou — a mesma
@@ -118,8 +126,9 @@ gratidão era lido como satisfação, e a emoção lia "ok, obrigado" como alegr
 `joy`. **Decisão:** conversa em que *toda* fala do cliente é fórmula de
 cortesia é **sem sinal** (`score: None`, invariante 2), e não sinal fraco. A
 lista é fechada e conservadora (`fraus/cortesia.py`): só casa a fala inteira, e
-"valeu, resolveu na hora" continua pontuada. O conserto de verdade é retreinar a
-emoção separando gratidão de alegria.
+"valeu, resolveu na hora" continua pontuada. Separar gratidão de alegria seria
+uma hipótese de pesquisa futura, não correção autorizada: os modelos estão
+congelados por decisão de 16/11/2026.
 
 ## A cabeça de ironia — taxa de erro histórica publicada
 
@@ -132,58 +141,55 @@ Contra-exemplos escritos para quebrar o atalho que o gerador ensinou: falas
 | sincera com marcador marcada como irônica | **70%** (7 de 10) |
 | irônica sem marcador que passou como sincera | **40%** (4 de 10) |
 
-Os erros vêm saturados: "realmente, agora funcionou" → 0,999 de ironia;
-"perfeito, cancelaram sem avisar" → 0,001. A cabeça aprendeu **registro e
-marcador**, não pragmática. É por isso que ela **não entra na nota** desde
-04/09/2026 e que a interface a mostra com ressalva, nunca como veredito. A lista
-completa, fala a fala, sai do script.
+Nesse teste histórico, os erros vinham saturados: "realmente, agora funcionou"
+→ 0,999 de ironia; "perfeito, cancelaram sem avisar" → 0,001. O diagnóstico de
+marcadores vale para aquele checkpoint. A saída do vetor em 04/09/2026 teve
+outro motivo medido: as features de ironia funcionavam como detector de
+sentimento positivo no corpus do fusor. Não se deve atribuir a exclusão a
+esta pequena régua, nem extrapolar sua taxa de erro a pesos atuais.
 
 ## Calibração e conformal do fusor
 
-O fusor dispõe de conjunto conformal (Mondrian por classe, sobre o score
-gravado) e instrumentos de calibração. O protocolo histórico dividia um
-holdout B2W de 300 conversas em calibração (150) e avaliação (150),
-estratificado, com semente fixa. **Nenhum número da tabela abaixo foi
-medido**: o fusor compatível com `log1p` não estava disponível na máquina
-de desenvolvimento em 14/10/2026. O cache posicional antigo não comprova
-isolamento por produto ou independência das cabeças e não deve ser reutilizado
-no novo experimento.
+O código implementa conjunto conformal (Mondrian por classe, sobre o score
+gravado) e instrumentos de calibração. **Não há
+`fraus/dados/conformal_fusor.json` na árvore consultada em 16/11/2026**.
+Implementação não significa cobertura validada ou confiança disponível no
+ambiente publicado. Sem artefato compatível, as rotas falham explicitamente.
+
+O protocolo histórico dividia um holdout B2W de 300 conversas em calibração
+(150) e avaliação (150), estratificado, com semente fixa. **Nenhum número da
+tabela abaixo foi medido**: a indisponibilidade do fusor `log1p` foi registrada
+em 14/10/2026. O cache posicional antigo não comprova isolamento por produto
+ou independência das cabeças e não deve ser reutilizado como prova atual.
+
+A compatibilidade por régua é uma guarda parcial: `regua_do_fusor`
+(`fraus/motor.py`) usa a assinatura do fusor e a lista de cortesias, não
+identifica mudanças de checkpoint das cabeças ou de backend. Sozinha, ela não
+demonstra proveniência ou estabilidade de todo o pipeline.
 
 A campanha de 26–27/10/2026 produziu um **candidato novo**, com avaliação
 sintética e ECE top-1, descritos em [Generalização](generalizacao.md).
-Essa medição não preenche retroativamente a tabela histórica abaixo:
-MCE, calibração por classe/fatia e cobertura/abstenção conformal não foram
-medidos nessa campanha. O relatório original conservador de independência
-foi preservado e complementado por cruzamentos textuais dos treinos reais;
-isso não transforma conversas sintéticas em atendimento real rotulado.
+Em 13/11, o pareado sintético registrou ECE 0,020 na receita atual e 0,026
+no candidato de regularização. Essas medições não preenchem a tabela
+histórica abaixo: não medem MCE, calibração por classe/fatia nem cobertura
+ou abstenção conformal em atendimento real.
+
+As tabelas históricas desta página são registros documentais das execuções
+datadas, não resultados recalculados nesta revisão. O cálculo de fatias está
+em `fraus/fatias.py` e `scripts/avaliar_por_fatias.py`; não há resultado JSON
+da execução de 15/09 em `fraus/dados/` para reprodução independente. O
+F1-macro por fatia considera apenas as classes presentes no rótulo real da
+fatia, não necessariamente as três classes.
 
 ### Comandos atuais para preparar um candidato
 
-Defina `B2W` como o CSV exato, `EXPERIMENTO` como diretório de pesquisa
-**externo ao repositório e aos checkpoints** e `CABECAS` como a raiz dos
-checkpoints candidatos. Reserve o manifesto **antes** do treino de satisfação
-e passe-o ao notebook 01 por `FRAUS_MANIFESTO_FUSOR`; só execute a extração
-depois de congelar os candidatos. Não há opção de promoção nesta sequência.
-
-```bash
-# 1. Reserva a divisão agrupada; não faz inferência.
-uv run python scripts/retreinar_fusor_local.py \
-  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" --gerar-manifesto
-# 2. Extrai features e avalia candidatos/ablações, sem ler ou substituir fusor ativo.
-uv run python scripts/retreinar_fusor_local.py \
-  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" \
-  --modelos "$CABECAS" --backend torch \
-  --cache "$EXPERIMENTO/features-fusor.json" --saida "$EXPERIMENTO/candidato"
-# 3. Instrumentos sobre o candidato explícito, sem ler fusor ativo ou gravar conformal ativo.
-# É outra medição; não sobrescreve a tabela histórica abaixo.
-uv run python scripts/calibrar_conformal.py \
-  --fusor "$EXPERIMENTO/candidato/fusor.joblib" --cache "$EXPERIMENTO/features-fusor.json"
-uv run --with matplotlib python scripts/medir_calibracao.py \
-  --fusor "$EXPERIMENTO/candidato/fusor.joblib" \
-  --cache "$EXPERIMENTO/features-fusor.json" --png "$EXPERIMENTO/calibracao.png"
-uv run python scripts/medir_abstencao.py \
-  --fusor "$EXPERIMENTO/candidato/fusor.joblib" --cache "$EXPERIMENTO/features-fusor.json"
-```
+**Fora da fila ativa desde 16/11/2026.** A preparação de candidato e a
+calibração eram um protocolo de pesquisa, não uma próxima etapa vigente.
+Os instrumentos permanecem no repositório (`scripts/retreinar_fusor_local.py`,
+`scripts/calibrar_conformal.py`, `scripts/medir_calibracao.py` e
+`scripts/medir_abstencao.py`), mas sua existência não comprova execução,
+artefato conformal gerado ou promoção. A metodologia e os limites históricos
+estão em [Generalização](generalizacao.md).
 
 | Medida | Valor |
 |---|---|
@@ -197,11 +203,11 @@ uv run python scripts/medir_abstencao.py \
 
 Garantia: cobertura ≥ alvo **por classe**, sob permutabilidade com o conjunto de
 calibração; **não vale** sob mudança de distribuição (atendimento real ≠ holdout
-sintético); o sinal de tempo do fusor é sintético. Com 150 exemplos de
-avaliação a cobertura tem granularidade de cerca de 2 a 3 pontos percentuais.
-Os scripts exigem no mínimo 5 exemplos por classe em cada metade (escolha de
-projeto, sem procedência na literatura), e a mediana do bootstrap é impressa
-com uma nota de viés.
+sintético); o sinal de tempo do fusor é sintético. No protocolo histórico,
+150 exemplos de avaliação não sustentam uma medida fina de cobertura por
+classe. Os scripts exigem no mínimo 5 exemplos por classe em cada metade
+(escolha de projeto, sem procedência na literatura), e a mediana do bootstrap
+é impressa com uma nota de viés.
 
 ## Limitações que valem para tudo acima
 

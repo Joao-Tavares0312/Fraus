@@ -1,15 +1,33 @@
 # Ironia: corpus e régua
 
+!!! warning "Revisão de 16/11/2026: registro histórico, modelos congelados"
+    Retreino, calibração, troca de encoder e promoção estão fora da fila por
+    decisão do João. As propostas de corpus, treinos e critérios de promoção
+    abaixo pertencem à investigação de outubro, não são tarefas atuais.
+    As medições foram preservadas; não demonstram qualidade em atendimento real.
+
+No código atual, `notebooks/04_treino_ironia.ipynb` usa **MultiPICo PT**
+como padrão, divisão agrupada por post e seleção pela validação via
+`fraus/receita_treino.py`. A campanha fechada não usa IDPT auxiliar.
+A cabeça MultiPICo em ONNX fp32 foi publicada em **13/11/2026**, conforme o
+registro de [Novidades](novidades-2026-11-13.md). Ironia continua obrigatória
+por mensagem, fora das 39 features do fusor. Essa publicação não foi repetida
+nesta revisão. Laya, os notebooks 06/07 e o laudo versionado de comparação
+foram removidos do código em 06/11; as comparações abaixo são históricas.
+
 > **Estado em 08/10/2026.** O BERTimbau de ironia foi retreinado no notebook 04
 > com a divisão por autor corrigida (treino 28.365 linhas, 58,8% irônicas; teste
 > 4.778, 59,2%). Deu F1-macro de **0,994** no teste interno (0,991 só nos tweets)
 > e P(irônico) = **1,000** em frases neutras de atendimento, como "qual o prazo
 > de entrega do meu pedido" e "ok, obrigado". O modelo **não foi exportado**.
-> Esta página explica por quê e o que fazer antes do próximo treino. Medições e
-> passos da sessão: nota interna `docs/notas/2026-10-08-ironia-corpus.md`.
->
-> **Produção não muda:** a ironia em produção é lida pelo BERTimbau e não entra
-> no vetor do Fusor.
+> Esta página preserva o diagnóstico e as propostas de outubro, anteriores
+> à publicação do MultiPICo e ao congelamento de 16/11; não é ordem de treino.
+
+As seções de diagnóstico e propostas abaixo preservam a investigação de
+outubro: expressões como “cabeça atual”, recomendações de treino e desenho
+de comparação referem-se àquele estado, não à cabeça publicada em 13/11.
+O fluxo de anotação descrito continua implementado, mas não reabre a fila
+de modelos congelados.
 
 ## Resumo: consertar o corpus antes de treinar de novo
 
@@ -23,7 +41,14 @@ O histórico público do IDPT já mostrava isso antes do Fraus. O treino oficial
 
 O fine-tuning completo, com encoder e cabeça juntos, não escapa do atalho: o que separa a classe positiva da negativa é só o texto. Se registro, língua ou gênero textual predizem o rótulo, qualquer encoder aprende isso, o BERTimbau inclusive.
 
-O "100% de exatidão" é inalcançável por um motivo independente do corpus: ironia é ambígua até para humanos. No Tweets8JanSPI, anotado à mão, o Fleiss κ da ironia foi **0,38**, contra 0,59 do sentimento ([BraSNAM 2026](https://sol.sbc.org.br/index.php/brasnam/article/download/43258/43024/)). O MultiPICo usa em média cinco anotadores por item justamente porque o julgamento varia ([ACL 2024](https://aclanthology.org/2024.acl-long.849.pdf)). Um modelo não pode concordar com um rótulo mais do que os humanos concordam entre si, a menos que esteja lendo outra coisa. A invariante 10 diz isso com outras palavras: "acurácia alta demais é sintoma, não vitória".
+O "100% de exatidão" não é uma meta sustentada por esses dados: ironia é
+ambígua até para humanos. No Tweets8JanSPI, anotado à mão, o Fleiss κ da
+ironia foi **0,38**, contra 0,59 do sentimento
+([BraSNAM 2026](https://sol.sbc.org.br/index.php/brasnam/article/download/43258/43024/)).
+O MultiPICo usa em média cinco anotadores por item justamente porque o
+julgamento varia ([ACL 2024](https://aclanthology.org/2024.acl-long.849.pdf)).
+Concordância humana não é um teto matemático para acurácia contra um rótulo
+agregado, mas exige cautela ao interpretar um teste quase perfeito.
 
 ## Consertar o negativo vale mais que trocar o encoder
 
@@ -45,8 +70,9 @@ Três baselines entram como modelos extras em `preditos_por_modelo`, no espírit
 
 ## Régua de pares mínimos
 
-Estado: **rascunho pronto, anotação em andamento.** Spec em
-`docs/superpowers/specs/2026-10-08-regua-pares-ironia-design.md` (interno).
+Estado registrado em outubro: **rascunho pronto, anotação em andamento**.
+A continuidade da régua saiu da fila ativa em 16/11/2026; não foi conferida
+nova contagem de anotações nesta revisão.
 
 - 150 pares (elogio, reclamação, neutra), registro equilibrado conferido por
   `conferir_registro_equilibrado` e, par a par, mesma vírgula e mesmo número
@@ -75,14 +101,14 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
   do navegador, como o link de convite. Link vazado se revoga com
   `scripts/criar_link_anotacao.py --revogar <id>`; as respostas desse anotador
   saem do export.
-- **Critério de promoção de qualquer cabeça de ironia:** vencer o baseline só
+- **Critério de promoção proposto em outubro, fora da fila atual:** vencer o baseline só
   de estilo (`fraus/baseline_estilo.py`) em acurácia por par na régua, com IC
   95% da diferença excluindo zero. O teste interno do IDPT não entra. No
   laudo isso é o campo `candidato_vence_por_par` (limite inferior do IC da
   diferença acima de zero). `por_par_demonstrada` só diz que o IC exclui zero
   e também acende quando o candidato é significativamente pior; para promover,
   vale `candidato_vence_por_par`.
-- Depois da anotação: `uv run python scripts/exportar_anotacao.py respostas-fraus.json`
+- O roteiro posterior à anotação previa: `uv run python scripts/exportar_anotacao.py respostas-fraus.json`
   baixa `GET /anotacao/respostas` (só dev) e
   `uv run python scripts/consolidar_regua_ironia.py fraus/dados/anotacao_regua/anotador-claude-ai.json respostas-fraus.json`
   concatena os arquivos e consolida. Menos de 100 pares confirmados para o
@@ -97,6 +123,14 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
 
 ## Conclusão
 
-A pergunta "qual encoder lê ironia" foi formulada sobre um corpus que não sustenta nenhuma resposta, porque nele o rótulo é a fonte. A decisão que de fato move o resultado vem antes do encoder. São três passos: trocar o `nao-ironico.csv` de #economia e as notícias por fala coloquial sincera, construir a régua de pares mínimos e comparar cada modelo com um baseline de estilo que não sabe nada de ironia.
+A investigação de outubro concluiu que escolher encoder não resolvia um
+corpus cujo rótulo revelava a fonte. As propostas eram corrigir os negativos,
+construir a régua e comparar contra o baseline de estilo.
+O notebook 04 passou a usar MultiPICo; sua cabeça foi publicada em 13/11,
+como registra [Novidades](novidades-2026-11-13.md), sem mudar score ou NPS.
 
-Para a banca, a meta de 100% se transforma num argumento a favor do projeto. Mostrar que o BERTimbau marca 0,99 no teste interno, que um classificador de pontuação e caixa alta chega perto disso, e que ambos caem para perto do acaso numa régua de pares mínimos é uma demonstração empírica da invariante 10 em ironia. Essa demonstração convence mais do que qualquer número alto. Promover o modelo depende de ele vencer o baseline de estilo na régua independente, com IC que exclua zero. O teste interno não serve para essa decisão.
+Para a banca, o contraste entre teste interno alto e fracasso de transferência
+continua ilustrando a invariante 10, sem prometer 100% de acerto. Vencer o
+baseline por par era um critério de pesquisa, não uma promoção autorizada.
+Desde 16/11/2026, nenhum dos treinos ou trocas de modelo propostos nesta
+página está na fila ativa; as limitações científicas permanecem.
