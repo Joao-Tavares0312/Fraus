@@ -10,6 +10,10 @@ O que não está aqui **não pode ser afirmado** na banca.
 
 **Como foi coletado.** Busca web e depois a leitura da página, em 14/10/2026. A leitura passa por um resumo automático, então uma citação marcada "parcial" precisa ser relida na fonte antes de virar slide. Algumas páginas recusaram o acesso (403); elas estão marcadas.
 
+Revisão do lado Fraus em **16/11/2026**, sem nova consulta aos fornecedores.
+“Confirmado” abaixo descreve a leitura histórica da fonte comercial, não
+validação independente da implementação do fornecedor.
+
 ## Leitura honesta do resultado
 
 **O produto mais próximo do Fraus é o Intercom CX Score.** Ele também:
@@ -23,11 +27,26 @@ O que não está aqui **não pode ser afirmado** na banca.
 **Isso tira do Fraus o direito de chamar de exclusivos os pontos acima.** O que sobra de diferente, com base no que foi verificado:
 
 1. **Sem LLM.** O Intercom declara que combina tecnologia própria com "*third-party large language models*". O Fraus usa modelos pequenos e locais e roda sem rede no caminho de predição.
-2. **Explicação que é o modelo.** No Fraus, as contribuições somam exatamente o logit do fusor (E1), e a frase sai por template sobre essa soma. Nas fontes lidas, os *reasons* do Intercom são categorias atribuídas à conversa; não encontramos descrição de decomposição numérica.
-3. **Incerteza com garantia estatística declarada.** O Fraus tem um conjunto conformal por classe, com cobertura-alvo e abstenção quando o conjunto não tem exatamente uma classe (E2). A abstenção do Intercom, nas fontes lidas, é por elegibilidade: falta de informação na conversa. **Não encontramos, em nenhum concorrente, incerteza por previsão.**
-4. **Método aberto e reproduzível.** O código, as sementes, as limitações e o que não foi verificado estão publicados.
+2. **Explicação da regressão, não da mente do cliente.** No Fraus, intercepto e contribuições somam exatamente a log-razão de probabilidade contra a classe de referência (`Fusor.decompor`); as frases saem por template sobre efeitos por família, sem LLM. Os efeitos em pontos de score não são aditivos. Nas fontes lidas, os *reasons* do Intercom são categorias atribuídas à conversa; não encontramos descrição de decomposição numérica.
+3. **Instrumentação de incerteza, não garantia operacional demonstrada.** O
+   código do Fraus implementa conjunto conformal por classe e abstenção (E2),
+   mas o artefato esperado não está na árvore de 16/11/2026 e a cobertura real
+   não foi medida. A garantia teórica exige permutabilidade e não vale
+   automaticamente sob mudança de domínio. A abstenção do Intercom, nas
+   fontes lidas, é por elegibilidade. Nessas fontes não encontramos descrição
+   de incerteza por previsão; isso **não prova ausência no mercado**.
+4. **Documentação pública do método.** A documentação expõe método,
+   limitações e medições históricas. O repositório de código é **privado**:
+   não se deve chamar o Fraus de código aberto nem afirmar reprodução pública
+   integral dos resultados. Conforme o [relatório de entrega](relatorio.md),
+   E1/E2/E5/E6 têm implementação, mas validação real incompleta; E3 não foi
+   iniciado e E4 foi descartado.
 
-**Diferença de política.** Zendesk QA, Observe.AI e Medallia **pontuam agentes** (QA por rubrica, coaching). O Fraus não pontua atendente, por desenho. O Intercom também declara não servir para isso.
+**Diferença de política.** As fontes de Zendesk QA e Medallia descrevem
+pontuação ligada a agentes; para Observe.AI, a evidência consultada é parcial.
+O Fraus não pontua atendente, por desenho. O Intercom também declara não
+servir para desempenho individual. Isso distingue finalidade, não demonstra
+superioridade numérica.
 
 ## Intercom — Fin CX Score
 

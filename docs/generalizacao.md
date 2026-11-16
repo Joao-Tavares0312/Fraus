@@ -1,8 +1,21 @@
 # Generalização e evidências
 
+!!! warning "Decisão vigente — 16/11/2026: modelos congelados"
+    Retreino, calibração, troca de pesos ou arquitetura e promoção estão fora
+    da fila por decisão do João. Campanhas e ablações abaixo são registros de
+    pesquisa, não próximos passos autorizados. As limitações e a insuficiência
+    de evidência não foram resolvidas por essa decisão.
+
+O estado de cada campanha abaixo vale para sua data. **Separadamente, em
+13/11/2026, a cabeça de ironia MultiPICo em ONNX fp32 foi publicada**;
+[Novidades](novidades-2026-11-13.md) registra a troca, que não alterou score,
+categoria ou NPS. Isso não promoveu os candidatos de satisfação, emoção ou
+fusor descritos nesta página. Laya foi removido do código em 06/11.
+Esta revisão documental não repetiu medições nem verificou produção.
+
 ## Estado da investigação — 27/10/2026
 
-!!! warning "Campanha concluída; candidatos novos, não modelos publicados"
+!!! warning "Campanha de 26–27/10 concluída; candidatos não promovidos naquela campanha"
     A reprodução de 26–27/10 concluiu **nove treinos em T4**, exportou os nove
     bundles e avaliou o candidato do fusor e suas ablações. As curvas comparáveis
     sustentam **sobreajuste nesta reprodução**, com padrões detalhados abaixo.
@@ -353,7 +366,7 @@ sintético não mede o que essas famílias existem para pegar em atendimento.
 
 ## Protocolo da campanha fechada
 
-A [receita vigente](treinamento.md#receita-vigente-de-pesquisa-26102026) fixa
+A [receita documentada](treinamento.md#receita-vigente-de-pesquisa-26102026) fixa
 sementes **13, 42 e 77**, no máximo cinco épocas e os mesmos hiperparâmetros
 nas três rodadas de cada cabeça. Não há busca oportunista de encoders,
 regularizadores ou novos corpora. É uma **nova reprodução datada**, não

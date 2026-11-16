@@ -8,17 +8,25 @@ seus limites, consulte o [cartão do modelo](cartao-do-modelo.md) e as
 
 ## Acesso e permissões
 
-Acesse a dashboard da sua instalação. Quando o login estiver habilitado,
-entre com sua conta; o cadastro pode exigir um código ou convite fornecido
-pela organização. Um convite de equipe precisa ser aceito com uma sessão de
-usuário válida. Não envie senhas ou chaves junto com arquivos de atendimento.
+A página inicial (`/`) apresenta o método, exemplos e limites. **Conhecer a
+análise** percorre a apresentação; **Entrar** ou **Entrar no Fraus** abre
+`/entrar`, e **Criar conta** abre `/cadastrar`. Os exemplos vêm de um snapshot
+local: não são uma consulta aos atendimentos da sua conta.
+
+Quando o login estiver habilitado, entre com e-mail e senha. No cadastro,
+informe nome, e-mail e senha de pelo menos oito caracteres; o **Código de
+acesso** pode ser exigido pela instalação. Use somente o código que recebeu
+da administração. Um link de equipe (`/convite/[token]`) mostra equipe, papel,
+canais e validade; entre ou crie a conta e aceite o convite com uma sessão de
+usuário válida. Login não configurado não permite aceitar convite por uma
+credencial técnica. Não envie senhas ou chaves junto com arquivos de atendimento.
 
 Existem duas permissões diferentes:
 
 - **Papel global:** `usuario` (analista) ou `dev` (desenvolvedor). Ambos têm as
-  tarefas de acompanhamento e análise. **Modelo**, **Integrações** e
-  **Configurações** são destinos de `dev`; gerar a chave do Tars e remover um
-  atendimento também exigem esse papel.
+  tarefas de acompanhamento, análise e a tela **Modelo**. **Integrações** e
+  **Configurações**, gerar a chave do Tars e remover um atendimento exigem
+  `dev`. Algumas abas de Operação também são exclusivas de `dev`.
 - **Papel na equipe:** proprietário, gestor ou membro. Essa hierarquia governa
   ações sobre a equipe; **ser proprietário não transforma a conta em `dev`**.
   Controles de gestão dependem do papel informado pelo servidor, não apenas de
@@ -31,10 +39,15 @@ explícitas. Equipe sem canais não libera todo o histórico. Se faltar acesso,
 peça a quem administra a instalação que confira a equipe e os canais — não é
 motivo para reenviar os mesmos dados.
 
-Na lateral ficam **Visão geral**, **Atendimentos**, **Analisar**, **Grafo** e,
-para `dev`, **Modelo**. Abra o **menu da conta**, no rodapé, para **Operação**,
-Integrações e Configurações conforme sua permissão, tema claro/escuro e saída.
-O link da documentação aparece quando configurado pela instalação.
+Na lateral ficam **Visão geral**, **Atendimentos**, **Analisar**, **Grafo** e
+**Modelo**, também para `usuario`. Abra o **menu da conta**, no rodapé, para
+**Operação**, Integrações e Configurações conforme sua permissão. **Documentação**
+aparece quando há endereço configurado; **Sair**, quando há usuário conectado.
+
+**Usar tema claro** e **Usar tema escuro** alternam a aparência da dashboard.
+A preferência fica neste navegador; a apresentação e as páginas de acesso
+continuam escuras. Isso não comprova legibilidade no projetor da banca:
+o ensaio físico continua necessário.
 
 ## Analisar um arquivo
 
@@ -49,19 +62,28 @@ O link da documentação aparece quando configurado pela instalação.
    automaticamente. **Com horários válidos, a tela solicita também a gravação**.
    Não existe uma segunda confirmação manual antes dessa tentativa de salvar.
 4. Se houver dúvida, aparece **Conferir colunas**. Nada foi gravado nessa
-   etapa. Confira **Fala** e **Quem falou**; em **Mais colunas — data, conversa e
+   etapa. Confira **Fala** e **Quem falou**; em **Mais colunas: data, conversa e
    canal**, ajuste os campos disponíveis. Sem identificador de conversa, o
    arquivo é tratado como uma conversa só. Confira também a ordem dia/mês ou
    mês/dia quando perguntada, a amostra e os avisos de linhas rejeitadas.
-5. Use **Analisar** para confirmar a conferência. Depois do resultado, a opção
-   **Ajustar colunas**, quando disponível, permite revisar a associação;
-   **Trocar arquivo** abre outro envio.
+5. Use **Analisar** para confirmar a conferência. Depois do resultado,
+   **Estão erradas? Ajustar**, quando disponível, reabre a associação;
+   **Trocar arquivo** abre outro envio. **Ajustar colunas** também pode aparecer
+   na recuperação de erro.
 
-Depois da análise, cada fala do cliente mostra três gráficos: **satisfação**
-(faixa dividida em insatisfeito, neutro e satisfeito), **emoção** (linha com
-ponto, da mais forte para a mais fraca) e **ironia** (medidor tracejado, a
-leitura menos confiável). Eles descrevem aquela fala; a nota do atendimento
-vem do conjunto da conversa.
+Confira **Análise parcial do arquivo**, quando aparecer: cada análise aceita
+até **10 atendimentos e 40 mensagens do cliente**, preservando atendimentos
+inteiros. A tela informa quantos foram analisados; divida o restante para não
+confundir um resultado parcial com a leitura do arquivo inteiro.
+
+Em **Conversa**, os detalhes da análise e os sinais por mensagem começam
+abertos. **Ocultar detalhes da análise** simplifica a leitura;
+**Recolher os sinais** fecha os painéis, e **Abrir todos os sinais** os reabre.
+Cada fala do cliente oferece a **leitura por mensagem**, com três gráficos:
+**Satisfação** (faixa dividida em insatisfeito, neutro e satisfeito),
+**Emoção** (linha com ponto, da mais forte para a mais fraca) e **Ironia**
+(medidor tracejado, leitura pouco confiável). Eles descrevem aquela fala;
+a nota do atendimento vem do conjunto da conversa.
 
 ![Os três gráficos embaixo de uma fala do cliente.](assets/novidades-2026-11-13/tres-graficos-fala.png)
 
@@ -88,10 +110,11 @@ indicadores. **“Análise concluída sem salvar nos indicadores”**, acompanha
 aviso de ausência de horários, é o resultado avulso esperado, não um zero de
 satisfação.
 
-O resumo e a conversa vêm primeiro. A inspeção de sinais, probabilidades e
-contribuições pode ser expandida: probabilidades por mensagem e contribuições
-do fusor são objetos diferentes. O destaque de uma fala não demonstra a causa
-da nota nem a influência causal de palavras isoladas.
+Expanda **Dados do atendimento** para horários e esperas e **Como o resultado
+foi calculado** para contribuições e vocabulário. Probabilidades por mensagem
+e contribuições do fusor são objetos diferentes. O destaque por oclusão mostra
+o efeito de retirar uma palavra na leitura do modelo, não a causa da satisfação
+do cliente nem a influência causal de palavras isoladas.
 
 ## Encontrar o período e os atendimentos
 
@@ -107,10 +130,64 @@ oferece analisar o primeiro arquivo e, para quem pode configurar, conectar uma
 fonte. **Falha da API não é banco vazio**: a tela deve mostrar a falha, não
 concluir que não existe histórico.
 
-Na lista **Atendimentos**, abra um caso para ler a conversa e seus sinais.
-Use o **Grafo** como outra forma de explorar os registros, não como validação
-independente da classificação. A remoção de atendimento é ação administrativa
-de `dev`, exige confirmação e fica auditada.
+### Visão geral
+
+Em `/dashboard`, os cartões mostram **NPS inferido**, **CSAT estimado**,
+**Contenção** e **Latência mediana**. A contagem com/sem sinal acompanha o NPS;
+os controles de informação explicam método e denominadores. Contenção observa
+a ausência de transferência, não prova resolução ou satisfação.
+
+Use **NPS inferido × latência mediana, por dia**, **Distribuição das notas
+inferidas** e **Piores atendimentos do período** para escolher casos para
+leitura. A influência agregada dos sinais fica em **Modelo**, não nesta tela.
+
+### Atendimentos e detalhe
+
+Em `/dashboard/atendimentos`, busque por ID, canal, desfecho ou categoria,
+filtre categoria e desfecho, ordene pelos cabeçalhos e avance pela paginação.
+**Exportar CSV** exporta as linhas filtradas, não só a página visível.
+Para `usuario`, a API exige autorização temporária de exportação por `dev`.
+
+Abra o ID para ver o resumo e a **Transcrição**. A espera aparece junto à
+resposta. Os sinalizadores mostram as regras disparadas e as mensagens
+envolvidas. “Não avaliados” por falta de fala do cliente é diferente de
+“nenhum disparou”. As regras não julgam atendentes nem alteram a nota.
+
+**Evidência fraca** aponta pouca fala observável para sustentar a leitura, não
+uma probabilidade calibrada. **Leitura contestada** avisa de elogio saturado
+contra espera longa, não confirma ironia. As duas marcas preservam a nota;
+não as confunda com ausência de sinal ou com a abstenção conformal.
+
+Expanda **Por que esta nota?** para consultar:
+
+- a confiança da leitura, quando o artefato compatível estiver disponível;
+- **Falas que inclinaram a nota**, pelo saldo das probabilidades do
+  classificador de texto;
+- **Contribuições das features neste atendimento**, específicas desse caso,
+  e as frases de explicação por template;
+- o campo **E se a primeira resposta tivesse chegado em**, em segundos:
+  **Calcular** compara o cenário com o original sem gravar. A API recusa
+  conversa ou hipótese fora da faixa admitida, ou caso sem resposta ajustável.
+
+A decomposição do modelo não demonstra causa no cliente. Os efeitos por família
+não somam a nota. **Leitura sem confiança suficiente** informa abstenção,
+mas o atendimento continua contando no NPS. Sem artefato ou rota disponível,
+a tela informa que não há confiança disponível; isso não é garantia de acerto.
+
+**Todos os atendimentos** retorna à lista. **Remover atendimento** é ação de
+`dev`: exige **Confirmar remoção**, sai dos indicadores, não tem desfazer e fica
+auditada. Não use remoção como etapa automática de migração de uma integração.
+
+### Grafo
+
+Em `/dashboard/grafo`, **Grafo da memória** explora os registros e suas relações.
+**Todas**, **Léxico**, **Domínio** e **Proveniência**, quando presentes, mudam o
+foco, não removem os demais nós. Confira a legenda de tipos e a contagem de
+termos: **grafo truncado** indica que nem todos foram desenhados.
+
+Selecione um nó para abrir a ficha; nós de atendimento oferecem **Abrir o
+atendimento**. A lista acessível por teclado seleciona os mesmos nós do desenho.
+O grafo não é uma validação independente da classificação.
 
 ## Interpretar os números sem inventar certeza
 
@@ -130,6 +207,97 @@ de `dev`, exige confirmação e fica auditada.
   Associação entre tema, espera e satisfação não demonstra causalidade.
   O sinal de tempo foi treinado em conversas sintéticas, não em atendimentos
   reais rotulados com satisfação.
+- **Sem resposta não há latência medida.** Uma conversa pode ter horários e
+  nota sem ter recebido resposta; a espera ausente não equivale a resposta
+  instantânea. Não substitua o campo vazio por zero na exportação.
+
+## Consultar o Modelo
+
+**Modelo** (`/dashboard/modelo`) está disponível a `usuario` e `dev`, dentro da
+dashboard; não é uma rota anônima. **Classifique uma frase** permite explorar os
+sinais com uma única consulta de classificação, sem salvar. A visualização é
+didática: não observa atenção ou ativações internas e não transforma a frase
+em nota de atendimento.
+
+Expanda **Como o modelo foi avaliado** para consultar estado dos artefatos,
+pesos globais, **Métricas do treino**, **Faixas de NPS e classes**,
+**O que influenciou as notas** (botão **Ver influência dos sinais**, sobre todo
+o histórico acessível) e lexicon de emoji. Peso global não explica um
+atendimento: use o detalhe para isso. Há oito famílias observadas, mas sete
+famílias e 39 features no vetor; ironia permanece leitura por mensagem.
+Curadoria do léxico continua exclusiva de `dev`.
+
+Desde 16/11/2026, retreino, calibração, promoção e troca de modelos estão fora
+da fila por decisão do projeto. As limitações científicas não foram resolvidas
+por esse congelamento.
+
+## Trabalhar na Operação
+
+Abra menu da conta → **Operação** (`/dashboard/operacao`). As abas comuns são:
+
+| Aba | O que fazer |
+|---|---|
+| **Radar** | Ler temas recorrentes, expandir **Evidências e NPS estimado** e **Abrir investigação com evidências**. O impacto compara o tema ao restante do recorte; é associação, não causa, e exige amostra suficiente nos dois lados. |
+| **Investigações** | Abrir uma investigação, selecionar evidências, responsável e prazo, registrar ações e acompanhar estados e antes/depois. A diferença é descritiva, não prova efeito da ação. |
+| **Equipe e escala** | Simular turnos, pessoas, duração e custo sobre a demanda histórica; consultar equipes e competências. Em **Hierarquia e convites**, os controles respeitam seu papel na equipe. |
+
+Criar/editar o cadastro administrativo de equipes e seus canais depende de
+`dev`. Proprietário e gestor podem usar a gestão permitida na hierarquia sem
+ganhar esse papel global. Links de convite têm validade e limite de pessoas;
+compartilhe-os somente com os destinatários e revogue-os quando necessário.
+
+Somente `dev` vê também:
+
+| Aba | Limite da ferramenta |
+|---|---|
+| **Jornadas** | Vincula contatos por referência pseudônima explícita; não identifica pessoas pelo texto. Não informe nome, telefone, e-mail ou CPF. |
+| **Replay** | Recalcula prefixos da conversa e permite avançar pelas mensagens. A marca de deterioração é retrospectiva, nunca alerta ao vivo; há limite de 80 mensagens, até 40 do cliente. |
+| **Laboratório** | Compara cenários de espera ou ocultação de fala sem alterar o banco. **Comparar fusores** exige candidato compatível no servidor; a presença do controle não implica candidato disponível nem autoriza reabrir a fila de modelos. |
+| **Acessos** | Consulta alcance, políticas e auditoria; permite administrar acesso por canal, janela de exportação e revogação de sessões. |
+
+## Integrações e Configurações
+
+Ambas ficam no menu da conta e são de `dev`.
+
+Em **Integrações** (`/dashboard/integracoes`), o cartão **TARS** vem primeiro.
+Expanda **Outras integrações: webhook assinado para qualquer plataforma** para
+cadastrar fontes por nome, canal e tipo. O campo de segredo recebe o **nome da
+variável de ambiente**, nunca seu valor. “Variável definida” confirma presença,
+não a validade da credencial.
+
+Selecione uma fonte para renomear, ativar/desativar, remover o cadastro e
+gerenciar a **Chave de API** do envio direto. Para fonte de webhook, há também
+**Segredo de assinatura**, **Contrato do webhook** e **Entregas**. As chaves
+em claro aparecem uma única vez; gerar outra invalida a anterior. Remover a fonte
+não apaga atendimentos que já entraram. **Entregas** é o histórico do webhook,
+não uma confirmação de envio direto do Tars.
+
+Não há formulário de importação por caminho de pasta nesta tela.
+Arquivos do computador entram por **Analisar**.
+
+Em **Configurações** (`/dashboard/configuracoes`), consulte **Autenticação** e
+**Chaves de acesso**, respeitando as credenciais administrativas exigidas para
+cada operação. Ajuste **Faixas de NPS** e **Limiares de latência** e confirme
+em **Salvar faixas** ou **Salvar limiares**. **Voltar ao padrão de fábrica**
+preenche o rascunho: ainda é preciso salvar. Faixas devem cobrir 0 a 10 sem
+buraco ou sobreposição; limiares devem crescer em segundos. A API valida e
+informa o motivo da recusa.
+
+Essas mudanças afetam a leitura e a exibição, não recalculam o score gravado.
+Não há controle para corrigir uma nota, desligar sinais ou trocar pesos.
+Configuração de autenticação não é permissão para compartilhar chaves.
+
+## Participar da anotação de ironia
+
+Um link pessoal `/anotar/[token]` abre uma tarefa separada, sem conta da
+dashboard. O link de grupo `/anotar/grupo/[token]` prepara um link pessoal.
+Guarde seu endereço pessoal para continuar em outro aparelho e não o publique.
+
+Responda **Irônico**, **Não irônico** ou **Depende do contexto**, também pelas
+teclas **1**, **2** e **3**. **Voltar** permite rever a resposta anterior; a tela
+confirma quando as respostas foram salvas. Essa coleta não muda a nota dos
+atendimentos nem treina ou promove automaticamente um modelo. A ferramenta
+continua no código, mas trabalho de modelos está fora da fila vigente.
 
 ## Quando algo não responde
 
@@ -155,10 +323,8 @@ sozinho não concede essa permissão.
 
 ## Escopo deste guia
 
-Este guia descreve os controles e contratos do código local de 26/10/2026.
-A dashboard e a API publicam separadamente: uma mudança documentada ou presente
-na interface local **não prova publicação em produção**. A inspeção local com
-dados sintéticos e motor dublê não comprova inferência nem gravação reais; nesta
-sessão, uma tentativa de upload TXT nessa demonstração retornou erro, não uma
-prova de análise bem-sucedida. Resultados científicos e pendências da campanha
-ficam em [Generalização e evidências](generalizacao.md).
+Este guia descreve os controles e contratos conferidos no código em
+**16/11/2026**. A dashboard e a API publicam separadamente: presença no
+repositório **não prova publicação em produção**. Esta revisão foi documental,
+sem executar análise, gravação, testes ou deploy. Resultados científicos e seus
+limites ficam em [Generalização e evidências](generalizacao.md).
