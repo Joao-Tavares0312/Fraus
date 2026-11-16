@@ -14,14 +14,15 @@ Este nao carrega modelo nenhum: e lexico e regex, reusando `lexico.py` e
 `emoji.py`. Juntar os dois faria a heuristica deterministica ficar refem do
 artefato treinado, e um dos dois nao poderia rodar sem o outro sem motivo.
 
-POR QUE COMPLEMENTA em vez de substituir: o classificador de ironia foi
-treinado no IDPT 2021 (tweet e noticia), e a transferencia para atendimento
-nao e verificada -- a propria dashboard ja avisa que ele erra 6 em 10 falas
-sinceras. Estas cinco features tem procedencia independente dele: quando as
-duas leituras concordam, a evidencia soma; quando discordam, a discordancia e
-informacao, e quem pondera as duas e o fusor, com peso aprendido.
+POR QUE COMPLEMENTA em vez de substituir: o classificador de ironia nunca teve
+a transferencia para atendimento verificada -- nem o de agosto, treinado no
+IDPT 2021 (tweet e noticia), nem o do MultiPICo-PT publicado em 13/11/2026,
+que da 0,16 de ironia a frase canonica. Estas seis features tem procedencia
+independente dele e entram no fusor com peso aprendido. A probabilidade do
+classificador de ironia e apenas exibida por mensagem, fora do vetor desde
+04/09/2026; o fusor nao pondera as duas leituras.
 
-TODAS as cinco leem SO a fala do cliente, coerente com os demais sinais.
+TODAS as seis leem SO a fala do cliente, coerente com os demais sinais.
 """
 
 import re
@@ -452,9 +453,9 @@ def _situacao_negativa(texto: str, achados: list[tuple[str, int, bool]]) -> floa
 def features_incongruencia(
     conversa: Conversa, curadoria: Curadoria | None = None
 ) -> dict[str, float]:
-    """As cinco features de incongruencia, media sobre as falas do cliente.
+    """As seis features de incongruencia, media sobre as falas do cliente.
 
-    Conversa sem fala do cliente devolve as cinco zeradas -- e ausencia de
+    Conversa sem fala do cliente devolve as seis zeradas -- e ausencia de
     medida, e quem distingue "nao mediu" de "mediu e deu zero" e o
     `score: None` la em cima, nunca esta funcao (invariante 2).
     """

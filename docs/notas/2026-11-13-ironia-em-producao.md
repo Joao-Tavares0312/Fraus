@@ -70,3 +70,20 @@ do ConsumerBR (recall 0,37 → 0,16) e pesa no produto, porque neutro é a faixa
 Os pesos do candidato 42 estão em `~/.cache/fraus/candidatos/satisfacao-42`
 (SHA-256 `709951b5…`); os dois fusores e os caches de features, em
 `~/.cache/fraus/promocao-2026-11-13/`. Fora do git.
+
+## Correção das ressalvas da interface — 16/11/2026
+
+Os textos em Analisar, Modelo e nas leituras por fala ainda descreviam a
+cabeça de agosto: corpus gerado, seis falsos positivos em dez frases e acerto
+na frase canônica. Foram alinhados à medição de 13/11 acima, sem alterar pesos,
+score ou participação no vetor. O painel Modelo passa a ler o F1 da classe
+irônica de `f1_por_classe.ironico`, em vez do campo antigo `f1_ironico`.
+
+`tests/test_ironia_dominio.py` era uma fotografia dos pesos de agosto e
+chegava a exigir falsos positivos saturados para passar. Foi retirado, sem
+fixar os erros da cabeça atual como requisito. A avaliação explícita de
+artefatos continua em `scripts/validar_candidato_ironia.py`, com a régua e os
+limites existentes, e seus cálculos continuam cobertos por
+`tests/test_avaliacao_ironia.py`. As medições antigas permanecem históricas,
+não critérios de regressão para qualquer peso instalado em `modelos/`.
+

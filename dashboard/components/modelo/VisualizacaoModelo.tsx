@@ -63,7 +63,7 @@ const EXPLICACOES: Record<Etapa, Explicacao> = {
     entrada: "Texto de cada mensagem do cliente.",
     transformacao: "BERTimbau com cabeça binária treinada para ironia.",
     saida: "Probabilidade por mensagem; o caminho para o fusor segue o campo pontua da ficha consultada.",
-    limite: "Cabeça pouco confiável em atendimento: o corpus histórico permite atalhos de sentimento. Leia como indício, nunca como veredito.",
+    limite: "Cabeça pouco confiável em atendimento: treinada em posts de Reddit e Twitter (MultiPICo-PT), sem transferência verificada para suporte. Leia como indício, nunca como veredito.",
   },
   estilo: {
     entrada: "Forma da escrita do cliente.",
