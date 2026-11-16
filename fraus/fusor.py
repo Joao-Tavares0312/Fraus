@@ -70,6 +70,10 @@ from fraus.sinais.texto import features_texto
 # PONTUAR. Se voce esta se perguntando por que existe `fraus/sinais/ironia.py`
 # mas nenhuma `ironia_*` aqui: e por isto. Ver `docs/treinamento.md` para a
 # medicao completa antes de reconsiderar.
+#
+# As medicoes acima sao da cabeca IDPT. Desde 13/11/2026 a cabeca servida e a
+# do MultiPICo-PT (`docs/notas/2026-11-13-ironia-em-producao.md`); ela tambem
+# nao entra no vetor -- voltar exige vencer a regua de pares minimos.
 NOMES_FEATURES = [
     # texto (4)
     "texto_prob_insatisfeito_media",

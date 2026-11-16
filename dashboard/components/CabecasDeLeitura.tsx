@@ -116,12 +116,12 @@ export function CabecasDeLeitura({
       {ressalvas && ironia !== null ? (
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           <strong>ironia é cabeça pouco confiável</strong>, por isso o medidor
-          tracejado. Ela acerta o caso de manual (“que atendimento
-          maravilhoso, só esperei 3 horas”) e erra feio no resto:{" "}
-          <strong>6 em 10</strong> falas sinceras de atendimento saem marcadas
-          como irônicas, com 0,999 de confiança. Ela foi treinada num corpus
-          gerado e aprendeu o registro conversacional em vez da pragmática.
-          Leia como indício, nunca como veredito.
+          tracejado. A cabeça publicada em 13/11/2026 foi treinada no
+          MultiPICo-PT, posts e respostas de Reddit e Twitter, e faz 0,66 de
+          F1-macro no teste do próprio corpus. Em atendimento a transferência
+          não foi verificada, e o caso de manual escapa: “nossa, que
+          atendimento maravilhoso, só esperei três horas” sai com 0,16. Leia
+          como indício, nunca como veredito.
         </p>
       ) : null}
     </div>

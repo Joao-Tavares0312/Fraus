@@ -1,7 +1,9 @@
 """Sinal de ironia: terceiro BERTimbau fine-tunado, classificacao binaria.
 
-Corpus: IDPT 2021 -- tarefa de Irony Detection in Portuguese do IberLEF, com
-15,2k tweets e 18,4k noticias anotados como ironico ou nao-ironico.
+Corpus: MultiPICo-PT (Casola et al., ACL 2024, CC BY 4.0), ~1,9 mil pares
+post-resposta de Reddit e Twitter, com as duas classes vindas das mesmas
+fontes; publicado em 13/11/2026. A cabeca anterior, de agosto, era treinada no
+IDPT 2021 (tweets e noticias), que entrega o rotulo pela procedencia.
 
 POR QUE uma cabeca separada e nao mais uma classe do sinal de texto: ironia
 nao e um sentimento, e uma relacao entre o que o texto DIZ e o que ele
@@ -10,10 +12,10 @@ positivo e pragmaticamente negativo -- as duas coisas ao mesmo tempo. Enfiar
 isso como quarta classe de satisfacao obrigaria o modelo a escolher uma, e a
 informacao de que ha conflito e justamente o que se perde.
 
-LIMITACAO METODOLOGICA, a declarar no relatorio: o IDPT e anotado em tweets e
-comentarios de noticia, nao em atendimento de chatbot. A transferencia de
-dominio nao e verificada -- ironia em reclamacao de suporte pode ter forma
-diferente da ironia em comentario de politica.
+LIMITACAO METODOLOGICA, a declarar no relatorio: o MultiPICo e anotado em posts
+de redes sociais, nao em atendimento de chatbot. A transferencia de dominio
+nao e verificada -- a frase canonica de atendimento sai com 0,16 de ironia, e
+o F1-macro de 0,66 e medido no teste do proprio corpus.
 """
 
 from pathlib import Path

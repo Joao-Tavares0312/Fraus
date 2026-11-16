@@ -28,7 +28,7 @@ const NUMERICAS: Record<string, { rotulo: string; explicacao: string }> = {
   },
   f1_ironico: {
     rotulo: "F1 da classe irônica",
-    explicacao: "no mesmo corpus sintético que gerou o treino",
+    explicacao: "no conjunto de teste do corpus usado no treino; não mede transferência para atendimento",
   },
   exemplos_treino: {
     rotulo: "Exemplos de treino",
@@ -57,10 +57,10 @@ const ROTULO_CABECA: Record<string, string> = {
  * Acima disto, uma metrica deixa de ser boa noticia e vira suspeita.
  *
  * Acuracia perfeita em tarefa de linguagem quase nunca significa modelo bom:
- * significa que o conjunto de teste parece demais com o de treino. E o caso da
- * cabeca de ironia, treinada em corpus GERADO -- ela reporta 1.0 e erra 6 em
- * 10 falas sinceras de atendimento. Exibir "100%" sem a ressalva colada seria
- * a mentira mais eficaz desta tela inteira.
+ * significa que o conjunto de teste parece demais com o de treino. Foi o
+ * caso da cabeca de ironia de agosto, nao da publicada em 13/11/2026
+ * (MultiPICo-PT). O corte continua sendo alerta de metrica suspeita,
+ * nao uma afirmacao sobre o desempenho da cabeca atual.
  */
 // Exportado: o veredito no topo da tela (`EstadoDoModelo.tsx`) precisa do
 // mesmo corte para decidir se cola o rotulo "suspeito" no F1 da ironia --

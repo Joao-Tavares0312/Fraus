@@ -319,10 +319,11 @@ export type MensagemAtribuida = {
    *
    * `null` quando o servidor subiu sem a cabeca correspondente.
    *
-   * RESSALVA MEDIDA sobre `prob_ironia`: o modelo acerta o caso de manual
-   * ("que atendimento maravilhoso, so esperei 3 horas") e marca 6 em 10 falas
-   * sinceras de atendimento como ironicas. Exibir como indicio, nunca como
-   * veredito. Ver tests/test_ironia_dominio.py.
+   * RESSALVA MEDIDA sobre `prob_ironia`: a cabeca publicada em 13/11/2026
+   * (MultiPICo-PT) faz 0,66 de F1-macro no teste do proprio corpus e da 0,16
+   * ao caso de manual ("nossa, que atendimento maravilhoso, so esperei tres
+   * horas"). Exibir como indicio, nunca como veredito. Ver
+   * docs/notas/2026-11-13-ironia-em-producao.md.
    */
   emocao: Record<string, number> | null;
   prob_ironia: number | null;

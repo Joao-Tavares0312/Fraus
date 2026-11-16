@@ -32,10 +32,11 @@ import { LIMIAR_SUSPEITO } from "./MetricasTreino";
 export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaModelo; nivel?: "dominante" | "apoio" }) {
   const ironia = modelo.cabecas.find((cabeca) => cabeca.nome === "ironia") ?? null;
   const metricasIronia = ironia?.metricas ?? null;
-
+  const f1PorClasse = metricasIronia?.f1_por_classe;
   const f1Bruto =
-    metricasIronia && typeof metricasIronia.f1_ironico === "number"
-      ? metricasIronia.f1_ironico
+    f1PorClasse && typeof f1PorClasse === "object" &&
+    "ironico" in f1PorClasse && typeof f1PorClasse.ironico === "number"
+      ? f1PorClasse.ironico
       : null;
   // Normaliza ANTES de comparar com LIMIAR_SUSPEITO: o campo pode vir em
   // fracao [0,1] ou ja em pontos percentuais. Comparar o valor cru contra um
@@ -52,23 +53,22 @@ export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaM
       legenda={
         <>
           A ironia foi a primeira família a entrar no vetor do fusor, em
-          21/08/2026, e a primeira a sair dele, em 04/09/2026. A cabeça (IDPT
-          2021, treinada em tweet e notícia) mede sentimento positivo no corpus
-          de treino deste projeto, não ironia, porque frase educada com queixa
-          real (&ldquo;que atendimento maravilhoso, só esperei 3 horas&rdquo;) é exatamente
-          o padrão que ela aprendeu a reconhecer como irônica em outro domínio.
-          Ela continua carregada, obrigatória e lida por mensagem, e aparece no
-          simulador abaixo. Só não pesa mais na nota.{" "}
+          21/08/2026, e a primeira a sair dele, em 04/09/2026: a cabeça daquela
+          época (IDPT 2021, tweet e notícia) media sentimento positivo no corpus
+          de treino deste projeto, não ironia. Desde 13/11/2026 a cabeça
+          publicada é treinada no MultiPICo-PT, posts de Reddit e Twitter em que
+          as duas classes vêm das mesmas fontes. Ela continua carregada,
+          obrigatória e lida por mensagem, e aparece no simulador abaixo. Só não
+          pesa na nota.{" "}
           {f1Percentual !== null
             ? `O F1 de ${f1Percentual}% mede acerto no`
             : "O F1 mede acerto no"}{" "}
-          MESMO corpus sintético que gerou o treino: métrica perfeita em tarefa
-          de linguagem quase nunca significa modelo bom, significa que o teste
-          se parece demais com o treino. O sinal de tempo tem a mesma limitação
-          por um motivo diferente: nenhum corpus público de review em
-          português tem timestamps de diálogo, então ele é treinado em
-          conversas sintéticas calibradas por literatura de live chat, não em
-          atendimento real.
+          teste do próprio corpus de treino, separado por post: é teste
+          interno, e a transferência para atendimento não foi verificada. O
+          sinal de tempo tem limitação parecida por outro motivo: nenhum corpus
+          público de review em português tem timestamps de diálogo, então ele é
+          treinado em conversas sintéticas calibradas por literatura de live
+          chat, não em atendimento real.
         </>
       }
     >
@@ -90,8 +90,8 @@ export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaM
           {ironia ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
               {ironia.pontua
-                ? "A API reporta esta cabeça como parte do fusor agora: o texto acima já reflete isso, mas as demais ressalvas desta tela sobre a ironia (métrica medida em corpus sintético) continuam valendo."
-                : "Lida por mensagem, mas fora da nota desde 04/09/2026: medida no corpus de treino, ela funciona como detector de sentimento positivo, não de ironia."}
+                ? "A API reporta esta cabeça como parte do fusor agora: o texto acima já reflete isso, mas as demais ressalvas desta tela sobre a ironia (métrica de teste interno, transferência para atendimento não verificada) continuam valendo."
+                : "Lida por mensagem, mas fora da nota desde 04/09/2026, quando a cabeça daquela época se mostrou detector de sentimento positivo no corpus do fusor. A cabeça atual, do MultiPICo-PT, não voltou ao vetor."}
             </p>
           ) : (
             <EstadoVazio
@@ -126,7 +126,7 @@ export function EstadoDoModelo({ modelo, nivel = "dominante" }: { modelo: FichaM
                   : "abaixo do limiar"}
             </span>
             <span className="text-sm font-medium text-foreground">
-              O F1 da ironia é medido em corpus sintético
+              O F1 da ironia é medido no teste interno do corpus
             </span>
           </span>
           {f1Percentual !== null ? (
