@@ -126,13 +126,13 @@ calibração (`fraus/calibracao.py`, `scripts/medir_calibracao.py`,
 classe**, sob permutabilidade com o conjunto de calibração. Ela **não vale**
 sob mudança de distribuição — e atendimento real é mudança de distribuição em
 relação ao holdout sintético do B2W —, e o sinal de tempo do fusor é sintético.
-A abstenção só marca: a conversa **continua no NPS e no CSAT**. Na árvore
-consultada em 16/11/2026, `fraus/dados/conformal_fusor.json` **não existe**.
-Sem artefato compatível com a régua vigente, as rotas respondem 503; um detalhe
-pontuado com régua antiga pode responder 409. Não há conjunto vazio fingindo
-confiança. Cobertura e acurácia por abstenção continuam **não verificadas**;
-a ausência de fusor `log1p` foi o bloqueio registrado em 14/10/2026, não uma
-inspeção do ambiente atual. No detalhe, a deriva pode adicionar um critério de
+A abstenção só marca: a conversa **continua no NPS e no CSAT**. Desde
+19/11/2026, `fraus/dados/conformal_fusor.json` está versionado com a régua do
+fusor de produção. Sem artefato compatível com a régua vigente, as rotas
+respondem 503; um detalhe pontuado com régua antiga pode responder 409. Não
+há conjunto vazio fingindo confiança. A cobertura (0,940) e a abstenção
+(0,073) foram medidas só no holdout B2W com tempo sintético; em atendimento
+real continuam **não verificadas**. No detalhe, a deriva pode adicionar um critério de
 abstenção, mas acima de 40 mensagens do cliente ela não é avaliada: a resposta
 declara esse limite. O agregado considera só conjunto vazio ou múltiplo, sem
 passagem pelo modelo. O limiar `|z| > 4` pode disparar por uma única feature

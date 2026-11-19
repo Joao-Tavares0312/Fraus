@@ -1,0 +1,26 @@
+{
+  "versao": 1,
+  "metodo": "conformal Mondrian por classe sobre o score 0-100",
+  "alvo": 0.9,
+  "regua": "6177f9faef21ec82-1d1e56c8",
+  "semente": 20261014,
+  "origem": "holdout B2W semente 999, metade de calibracao semente 20261014",
+  "limites": {
+    "0": {
+      "inferior": 0.0016588875267659143,
+      "superior": 30.21208501833194,
+      "n": 50
+    },
+    "1": {
+      "inferior": 39.74418822192655,
+      "superior": 94.29044301420575,
+      "n": 50
+    },
+    "2": {
+      "inferior": 89.03248780571097,
+      "superior": 99.99788335360401,
+      "n": 50
+    }
+  },
+  "garantia": "cobertura de pelo menos {alvo} por classe, sob permutabilidade com o conjunto de calibração; não vale sob mudança de distribuição, e atendimento real é mudança de distribuição em relação ao holdout B2W (texto de resenha real, tempo sintético); o sinal de tempo do fusor foi treinado em dados sintéticos"
+}
