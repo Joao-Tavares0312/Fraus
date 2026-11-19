@@ -1,8 +1,10 @@
 # Diferenciais — roteiro da demonstração
 
-Roteiro para apresentar os diferenciais na banca, em cerca de 10 minutos.
-Conferido contra o código em **16/11/2026**, sem executar o ensaio nem consultar
-produção. Cada passo diz:
+Roteiro para apresentar os diferenciais na banca de **09/12/2026**, em cerca de
+10 minutos. Conferido contra o código em 16/11/2026 e **ensaiado localmente com
+o motor real em 19/11/2026** (ids e propriedades abaixo, banco SQLite
+temporário, sem rede). Produção e projetor ainda precisam do ensaio físico.
+Cada passo diz:
 
 - o que mostrar;
 - o que falar;
@@ -12,40 +14,65 @@ A comparação com produtos do mercado está em [concorrentes](concorrentes.md),
 
 ## Antes de começar
 
-- Prepare uma instalação de demonstração isolada, com dados autorizados ou
-  sintéticos **identificados como tais**. Confira o ambiente antes da banca:
-  página publicada e serviço de saúde disponíveis não provam inferência real.
+- **Dados.** Empresa fictícia **Lumen Telecom** (provedor de internet):
+  156 atendimentos fabricados em `dados_demo/lumen-telecom.csv`
+  (`scripts/gerar_empresa_ficticia.py`), de 08/11 a 07/12/2026, ids
+  `sintetica-lumen-*`, canais webchat, WhatsApp e Instagram. O canal Telegram
+  traz atendimentos **reais** pelo Tars, com o voto Resolveu / Não resolveu.
+  Use o período **08/11/2026 – 07/12/2026** em toda a demo.
+- **Carga.** Uma conta `dev` cria em Integrações três fontes (canal `webchat`,
+  `whatsapp`, `instagram`) e gera a chave de cada uma; depois
+  `FRAUS_CHAVE_FONTE_WEBCHAT=… FRAUS_CHAVE_FONTE_WHATSAPP=… FRAUS_CHAVE_FONTE_INSTAGRAM=… uv run python scripts/carregar_empresa_ficticia.py --url <API>`.
+  Os ids gravados ficam `fonte:<n>:sintetica-lumen-*`; reenviar substitui.
+  Não use a tela Analisar para isso: ela troca o id por hash e para em 10
+  atendimentos por arquivo.
 - **Com os modelos reais:** a API precisa dos classificadores obrigatórios e
   do fusor compatível com a escala `log1p`; a régua dos registros também precisa
   ser compatível. Só execute explicação, contrafactual, drivers e Replay como
   prova do modelo se esses requisitos estiverem atendidos.
-- **Sem os modelos:** `uv run python scripts/api_demo.py` prepara um banco
-  temporário com conversas sintéticas. O script tenta o motor real e pode
-  usar um dublê explícito; confira o anúncio de inicialização e diga qual foi
-  carregado. Com dublê, apresente apenas a navegação e os estados disponíveis,
-  não explicação exata, contrafactual, confiança ou Replay como inferência real.
-  Nunca use esse servidor em produção.
-- **Confiança (E2)** depende de artefato conformal existente e compatível com a
-  régua. Não há comprovação de disponibilidade nesta revisão. Se faltar, mostre
-  o estado indisponível, não invente selo ou cobertura medida. Desde
-  **16/11/2026**, modelos estão congelados: não execute calibração, retreino,
-  promoção ou troca de pesos para preparar a demo.
+- **Plano B (produção fora do ar).** Na raiz, com `modelos-onnx/` e
+  `modelos/fusor.joblib` do pacote `42cd90c2…` extraídos:
+  `FRAUS_BACKEND=onnx uv run python -m uvicorn fraus.api.main:app --port 8001`
+  e, em `dashboard/`, `FRAUS_API_URL=http://127.0.0.1:8001 npm run dev`.
+  Carregue o CSV com `scripts/carregar_empresa_ficticia.py` (fontes criadas na
+  API local). Ensaiado em 19/11 **sem rede**: prontidão 200 com motor real,
+  156/156 aceitos, NPS inferido −26, confiança 200, dashboard renderizando.
+  Diga em voz alta que é ambiente local, mesmo motor, dados fabricados. As
+  conversas reais do Tars não existem no plano B: use as capturas de produção.
+  `scripts/api_demo.py` não é o plano B: pode subir com dublê.
+- **Confiança (E2).** O artefato conformal está versionado desde 19/11/2026,
+  com a régua do fusor de produção. Confira `/indicadores/confianca` em 200
+  pelo proxy antes da banca; se responder 503, mostre o estado indisponível e
+  não rode calibração para contornar. Modelos continuam congelados.
 - Use conta `dev` se for mostrar **Replay**: essa aba não aparece para
   `usuario`. Os dois papéis podem abrir **Modelo** e a explicação do detalhe.
-- Escolha antes três atendimentos acessíveis no período:
-  1. um com sinal e par cliente → resposta para o contrafactual, dentro da faixa
-     aceita pelo modelo;
-  2. um com sinalizador e, **se disponível**, abstenção;
-  3. um compatível com o Replay e, **se existente**, uma marca de deterioração.
-  Não prometa encontrar essas propriedades só porque o caso é detrator.
-- Na preparação, faça o percurso **Analisar** → arrastar arquivo →
-  **Conferir colunas**, se solicitado → **Analisar**. Com horários reais, a
-  gravação é solicitada automaticamente; espere a confirmação
-  **atendimento(s) salvo(s) nos indicadores** e use **Ver atendimentos**.
-  Sem horários, demonstre leitura avulsa, sem nota nem incorporação ao NPS.
+- **Atendimentos escolhidos** (propriedades conferidas no ensaio de 19/11; o
+  prefixo `fonte:<n>:` depende da ordem em que as fontes foram criadas):
+  0. `sintetica-lumen-tese` — abertura: o cliente reclama da espera, o bot
+     resolve tarde, ele fecha com “ok, obrigado 🙂” e a estimativa sai
+     **detrator, nota 2**. Sem sinalizador e sem abstenção.
+  1. `sintetica-lumen-espera` — primeira resposta em 420 s, nota 0. O
+     contrafactual de **60 s** foi aceito: +18,8 pontos no score, continua
+     detrator.
+  2. `sintetica-lumen-0145` — nota 9, promotor; conjunto conformal
+     {neutro, satisfeito} → **abstenção por conjunto múltiplo**; sinalizador
+     `abandono`, que aqui é o falso positivo declarado (despedida do bot).
+  3. `sintetica-lumen-replay` — 14 falas do cliente, de cordial a irritado; o
+     Replay marca a deterioração na mensagem 23 (4 falas antes do fim).
+  Se no dia algum não exibir a propriedade, troque por outro que exiba e anote
+  o id aqui. Não altere modelo nem dado para forçar.
 - Confira **Usar tema claro** ou **Usar tema escuro** no menu da conta no
   equipamento da apresentação. O tema já existe; legibilidade no projetor
   precisa de ensaio físico, não de um novo “modo apresentação”.
+
+### O que é sintético, real e inferido
+
+| | o que é | como dizer |
+|---|---|---|
+| Sintético | os 156 atendimentos da Lumen Telecom, escritos por gerador determinístico | “atendimentos fabricados para a demonstração” |
+| Real | os atendimentos do canal Telegram, feitos por colegas no bot do Tars, com voto | “atendimentos reais, poucos; não validam o modelo” |
+| Inferido | nota, categoria e NPS, pelo motor real | “estimativa do texto, não pesquisa” |
+| Limitação | tempo de treino sintético, ironia fora do vetor, generalização inconclusiva | ver [Limitações](../limitacoes.md) |
 
 ## 1. A tese (1 min)
 
@@ -65,7 +92,7 @@ A comparação com produtos do mercado está em [concorrentes](concorrentes.md),
 
 ## 2. Um atendimento, de ponta a ponta (4 min)
 
-Abra o atendimento 1 em **Atendimentos** e comece pela **Transcrição**.
+Abra o atendimento 1 (`sintetica-lumen-espera`) em **Atendimentos** e comece pela **Transcrição**.
 Para mostrar os três gráficos por fala, use também o resultado de **Analisar**:
 **Satisfação**, **Emoção** e **Ironia** descrevem a mensagem, não a nota da
 conversa. Os detalhes da análise começam abertos; **Ocultar detalhes da análise**
@@ -87,7 +114,7 @@ no vetor do fusor; uma probabilidade alta não confirma ironia real.
      Nada é gravado. Isso não prevê como o cliente teria reagido.”
    - Se houver recusa, leia o motivo. A rota pode recusar a própria conversa
      original ou a hipótese por sair da faixa de treino; não force um número.
-4. **Confiança (E2), se disponível.** Leia a classe ou o conjunto compatível com
+4. **Confiança (E2).** No atendimento 2 (`sintetica-lumen-0145`), leia a classe ou o conjunto compatível com
    a nota e o alvo de calibração **retornado pelo servidor**. Não fixe 90% como
    promessa do ambiente. A classe de satisfação não é a categoria NPS.
    - Se existir um caso com **Leitura sem confiança suficiente**, mostre os
@@ -113,18 +140,26 @@ no vetor do fusor; uma probabilidade alta não confirma ironia real.
      na escala interna do modelo, não em pontos de nota. Intervalos só aparecem
      quando há dados para calculá-los. É associação, não causa.”
 2. Menu da conta → **Operação → Radar**: abra **Evidências e NPS estimado** de
-   um tema para mostrar **Impacto por tema (E6)**.
+   um tema para mostrar **Impacto por tema (E6)**. No ensaio, quatro temas
+   tiveram impacto numérico (cobrança indevida −52 [−81; −20]; segunda via do
+   boleto +74 [35; 107]; troca de plano e visita do técnico com intervalo
+   cruzando zero). “Internet caindo” se dividiu por vocabulário em grupos
+   abaixo de 30, que mostram “n abaixo do mínimo” — bom exemplo do estado.
    - **Falar:** “Compara o NPS inferido do tema ao restante do recorte, não
      somente o NPS do tema isolado. O intervalo cobre incerteza amostral, não
      erro do modelo. Com menos de 30 conversas com sinal em qualquer lado, o
      sistema informa a falta em vez de mostrar impacto numérico.”
    - Se não houver tema recorrente ou amostra suficiente, mostre o estado vazio
      ou a insuficiência. Não produza conversas extras como se fossem dados reais.
+3. Abaixo dos quatro indicadores, a linha **Voto do cliente** compara o voto
+   dos atendimentos reais do Tars com a estimativa e mostra o denominador.
+   - **Falar:** “Resolveu é resposta de resolução, não nota de NPS. Com este
+     punhado de votos, isto é ilustração do ciclo, não validação.”
 
 ## 4. Retrospectiva de uma conversa (1 min)
 
 Com conta `dev`, abra menu da conta → **Operação → Replay** e selecione o
-atendimento 3 em **Conversa do recorte**. Use **Anterior**, **Próxima** ou a
+atendimento 3 (`sintetica-lumen-replay`) em **Conversa do recorte**. Use **Anterior**, **Próxima** ou a
 lista de mensagens. O limite é de 80 mensagens, até 40 do cliente; caso
 incompatível não deve ser substituído silenciosamente por outro resultado.
 
