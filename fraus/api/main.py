@@ -456,7 +456,15 @@ def __getattr__(nome: str):
     `criar_app`) e ainda assim expoe `app` para `uvicorn fraus.api.main:app`,
     que acessa o atributo de verdade -- disparando a construcao real e
     deixando ModeloAusenteError/erro do fusor propagarem.
+
+    Montado UMA vez por processo: o app vai para o namespace do modulo, e a
+    proxima leitura nem passa por aqui. `python -m uvicorn` le o atributo mais
+    de uma vez no boot; cada leitura montava um app com o proprio provedor
+    aquecendo as tres cabecas em paralelo, as cargas disputavam o import do
+    `transformers` e a perdedora memorizava o erro (19/11/2026).
     """
     if nome == "app":
-        return criar_app_padrao()
+        aplicacao = criar_app_padrao()
+        globals()["app"] = aplicacao
+        return aplicacao
     raise AttributeError(f"modulo {__name__!r} nao tem atributo {nome!r}")
