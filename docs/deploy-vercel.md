@@ -199,17 +199,24 @@ precisa de um processo sempre ligado (ver `Dockerfile` e `docs/hospedagem.md`).
 
 O workflow manual `.github/workflows/api-deploy.yml` usa o ambiente
 `production-api`, trava concorrência de promoções e fixa a versão do CLI da
-Vercel. Em 30/09/2026, esse ambiente ainda não tinha secrets nem regras de
-proteção configuradas. O código do workflow está entregue; sua operação
-depende dessa configuração. Configure os secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+Vercel. Em 19/11/2026 esse ambiente **continuava sem secrets**: a execução
+falhou em `vercel pull` com `--token` vazio, e a API foi publicada pelo CLI
+(abaixo). O código do workflow está entregue; sua operação depende dessa
+configuração. Configure os secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
 `VERCEL_PROJECT_ID`, `FRAUS_API_PUBLIC_URL` e `FRAUS_CHAVE_ACESSO`. O job:
 
 1. instala pelo `uv.lock` com `--frozen` e testa os contratos operacionais;
 2. produz o build de produção antes de publicar;
 3. publica o mesmo diretório prebuilt;
-4. executa uma vez `scripts/smoke_deploy.py` contra `/saude`.
+4. executa uma vez `scripts/smoke_deploy.py`.
 
-O smoke tem repetição limitada para propagação do deploy e termina. Ele não é
+O smoke confere `/saude` e `/auth/estado` com repetição limitada para a
+propagação do deploy. Com `FRAUS_SMOKE_TOKEN`, confere **uma vez** o contrato
+que a dashboard lê: `GET /indicadores` em 200 com `nps`, `sem_sinal`,
+`total_conversas`, `feedback_declarado_total` e `concordancia_com_feedback`, e
+`GET /indicadores/confianca` em 200 (503 ali é artefato conformal ausente ou de
+outra régua). Falha sai com código 1 e a mensagem nomeia rota, status ou chave.
+Sem token, imprime `contrato nao conferido` e vale só a liveness. Ele não é
 agendado e não deve virar ping contínuo para esconder cold start. URL e token
 entram apenas por secrets e nunca são incluídos na saída do script.
 

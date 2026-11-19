@@ -24,11 +24,52 @@ def _url_segura(valor: str) -> str:
     return valor.rstrip("/") + "/"
 
 
+# O que a dashboard publicada le e que uma API velha nao tem: em 30/09/2026 a
+# dashboard nova recebeu 404 da API antiga, e a liveness passava assim mesmo.
+CHAVES_DE_INDICADORES = (
+    "nps", "sem_sinal", "total_conversas", "feedback_declarado_total", "concordancia_com_feedback",
+)
+
+
+def _ler(base: str, rota: str, cabecalhos: dict):
+    requisicao = urllib.request.Request(urljoin(base, rota), headers=cabecalhos)
+    try:
+        with urllib.request.urlopen(requisicao, timeout=30) as resposta:
+            return json.load(resposta)
+    except urllib.error.HTTPError as erro:
+        raise RuntimeError(f"contrato: {rota} respondeu {erro.code}") from None
+
+
+def conferir_contrato(base: str, cabecalhos: dict) -> dict:
+    """Uma vez, depois da liveness: as rotas que a dashboard le respondem.
+
+    Sem repeticao: propagacao ja foi esperada pela liveness, e 401/404/503
+    aqui e contrato quebrado, nao lentidao. A mensagem nomeia rota, status ou
+    chave -- nunca URL nem token.
+    """
+    indicadores = _ler(base, "indicadores", cabecalhos)
+    for chave in CHAVES_DE_INDICADORES:
+        if not isinstance(indicadores, dict) or chave not in indicadores:
+            raise RuntimeError(f"contrato: indicadores sem a chave {chave}")
+    # 503 aqui e o artefato conformal ausente ou de outra regua.
+    _ler(base, "indicadores/confianca", cabecalhos)
+    return {"contrato": "conferido"}
+
+
 def executar(url: str, token: str | None = None, tentativas: int = 8) -> dict:
     base = _url_segura(url)
     cabecalhos = {"User-Agent": "fraus-smoke/1"}
     if token:
         cabecalhos["Authorization"] = f"Bearer {token}"
+    resultado = _liveness(base, cabecalhos, tentativas)
+    if token:
+        resultado.update(conferir_contrato(base, cabecalhos))
+    else:
+        print("contrato nao conferido: FRAUS_SMOKE_TOKEN ausente", file=sys.stderr)
+    return resultado
+
+
+def _liveness(base: str, cabecalhos: dict, tentativas: int) -> dict:
     ultimo = "sem resposta"
     for tentativa in range(tentativas):
         try:
