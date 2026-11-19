@@ -151,16 +151,17 @@ esta pequena régua, nem extrapolar sua taxa de erro a pesos atuais.
 ## Calibração e conformal do fusor
 
 O código implementa conjunto conformal (Mondrian por classe, sobre o score
-gravado) e instrumentos de calibração. **Não há
-`fraus/dados/conformal_fusor.json` na árvore consultada em 16/11/2026**.
-Implementação não significa cobertura validada ou confiança disponível no
-ambiente publicado. Sem artefato compatível, as rotas falham explicitamente.
+gravado) e instrumentos de calibração. Desde 19/11/2026 o artefato
+`fraus/dados/conformal_fusor.json` está versionado, calibrado sobre o fusor
+de produção (régua `6177f9faef21ec82-1d1e56c8`) com alvo 0,9. Cobertura
+medida no holdout B2W não é cobertura no atendimento: ver as ressalvas em
+[Relatório dos diferenciais](diferenciais/relatorio.md#e2-calibracao-abstencao-e-conjunto-conformal).
 
-O protocolo histórico dividia um holdout B2W de 300 conversas em calibração
-(150) e avaliação (150), estratificado, com semente fixa. **Nenhum número da
-tabela abaixo foi medido**: a indisponibilidade do fusor `log1p` foi registrada
-em 14/10/2026. O cache posicional antigo não comprova isolamento por produto
-ou independência das cabeças e não deve ser reutilizado como prova atual.
+O protocolo divide um holdout B2W de 300 conversas em calibração (150) e
+avaliação (150), estratificado, com semente fixa. Em 19/11/2026 ele rodou
+sobre o cache `features-atual.json` de 13/11 (cabeças de produção) e o fusor
+de produção; os números de cobertura e abstenção da tabela abaixo saem daí.
+ECE, MCE e as fatias da mesma tabela **não** foram medidos nessa execução.
 
 A compatibilidade por régua é uma guarda parcial: `regua_do_fusor`
 (`fraus/motor.py`) usa a assinatura do fusor e a lista de cortesias, não
@@ -197,9 +198,9 @@ estão em [Generalização](generalizacao.md).
 | MCE | não verificado — idem |
 | ECE por classe | não verificado — idem |
 | ECE por fatia (falas, latência, emoji, escalou; "n/d" abaixo de 5 exemplos) | não verificado — idem |
-| Cobertura empírica no alvo de 90% (total e por classe) | não verificado — idem |
-| Acurácia das conversas que não abstêm (só o critério do conjunto; a rota de detalhe também abstém por deriva) | não verificado — idem |
-| Taxa de abstenção no alvo de 90% | não verificado — idem |
+| Cobertura empírica no alvo de 90% (total e por classe) | 0,940 total; 0,860 / 0,980 / 0,980 por classe (holdout B2W, 150 de avaliação, 19/11/2026) |
+| Acurácia das conversas que não abstêm (só o critério do conjunto; a rota de detalhe também abstém por deriva) | 0,978 — idem; alta demais para ser lida como desempenho (tempo sintético do holdout) |
+| Taxa de abstenção no alvo de 90% | 0,073 — idem |
 
 Garantia: cobertura ≥ alvo **por classe**, sob permutabilidade com o conjunto de
 calibração; **não vale** sob mudança de distribuição (atendimento real ≠ holdout

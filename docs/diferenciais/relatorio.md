@@ -14,7 +14,7 @@ Onde não houve medição, não há alegação de qualidade validada.
 | entrega | estado | medição real |
 |---|---|---|
 | E1 — por que esta nota, contrafactual e drivers | implementado; validação real incompleta | aditividade registrada no fusor sintético; **no fusor real: não verificado** |
-| E2 — calibração, abstenção e conjunto conformal | implementado; validação real incompleta | **não verificado**; `fraus/dados/conformal_fusor.json` ausente na árvore de 16/11 |
+| E2 — calibração, abstenção e conjunto conformal | implementado; validação real incompleta | cobertura conformal **medida em 19/11 só no holdout B2W** (0,940 geral, alvo 0,9, n=150 de avaliação); em atendimento real: não verificada |
 | E3 — nota declarada × inferida | **não iniciado**, adiado; não há aprovação de schema `nota_declarada` | o feedback binário existente não entrega E3 |
 | E4 — benchmark contra LLM | **descartado** em 14/10/2026 | — |
 | E5 — sinalizadores por regra | implementado; validação real incompleta | casos construídos; **precisão e recall reais: não verificados** |
@@ -87,7 +87,11 @@ envia o voto. “Resolveu” não é nota NPS, nem validação causal da satisfa
   - `scripts/calibrar_conformal.py` (só grava artefato com `--gravar`).
 - **Selo de confiança no atendimento.** Ele fala em "classe de satisfação", não em categoria NPS.
 
-**Não verificado nesta entrega.** Cobertura empírica, ECE e curva de abstenção. Há medições sintéticas posteriores de ECE top-1 na campanha de outubro e em 13/11, descritas em [Generalização](../generalizacao.md); elas não validam a cobertura conformal. O arquivo conformal esperado não está na árvore consultada em 16/11/2026; sem um artefato válido no ambiente de execução, as rotas respondem 503. A consulta ao repositório não prova o estado da produção. Calibração permanece fora da fila ativa.
+**Medido em 19/11/2026.** Artefato `fraus/dados/conformal_fusor.json` gravado por `scripts/calibrar_conformal.py --alvo 0.9 --gravar` sobre o fusor de produção (`5c468660…`, régua `6177f9faef21ec82-1d1e56c8`, pacote `42cd90c2…`) e o cache `features-atual.json` de 13/11. Holdout B2W com n=300 (semente 999): 150 para calibração e 150 para avaliação (semente 20261014). Na metade de avaliação: cobertura geral **0,940**; por classe 0,860 (insatisfeito), 0,980 (neutro) e 0,980 (satisfeito), n=50 cada; tamanho médio do conjunto 0,97. `scripts/medir_abstencao.py` no mesmo ponto: abstenção 0,073, acurácia das não abstidas 0,978.
+
+Três ressalvas. (1) A classe insatisfeito ficou **abaixo** do alvo nessa metade de 50 exemplos: a garantia vale em média sobre a permutação, não em cada amostra. (2) A acurácia do fusor nesse holdout é 0,973 sem abstenção, muito acima do F1-macro 0,7646 da cabeça de texto no B2W. Pelo invariante 10, isso é sintoma: o tempo sintético do holdout provavelmente carrega parte do rótulo. O número **não** deve ser apresentado como desempenho. (3) A permutabilidade com atendimento real não foi demonstrada; cobertura e abstenção no atendimento continuam não verificadas.
+
+**Não verificado nesta entrega.** ECE no fusor real. Calibração permanece fora da fila ativa.
 
 O agregado conta apenas abstenção por conjunto vazio ou múltiplo, excluindo
 scores defasados. No detalhe, deriva também pode provocar abstenção, mas
