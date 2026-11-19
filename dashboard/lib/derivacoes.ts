@@ -822,6 +822,14 @@ export type IndicadoresDoPeriodo = {
   semSinal: number;
   /** Quantas conversas entraram nos calculos de NPS/CSAT (as com categoria). */
   comSinal: number;
+  /**
+   * Atendimentos com voto do cliente e nota, contados pelo SERVIDOR. `null`
+   * quando nao se sabe (plano B ou API antiga): o cliente nao agrega voto, e
+   * "nao sei" nao pode virar "nenhum voto".
+   */
+  votosComNota: number | null;
+  /** Fracao 0-1 de concordancia entre voto e categoria, do servidor; null sem votos. */
+  concordanciaComVoto: number | null;
 };
 
 export function indicadoresDoPeriodo(
@@ -873,6 +881,8 @@ export function indicadoresDoPeriodo(
     total,
     semSinal,
     comSinal: categorias.length,
+    votosComNota: null,
+    concordanciaComVoto: null,
   };
 }
 

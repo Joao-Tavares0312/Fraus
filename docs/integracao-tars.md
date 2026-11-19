@@ -41,15 +41,21 @@ Um chat do Telegram dura semanas; um atendimento, não. Uma pausa de **30 minuto
 ou mais entre falas** separa os atendimentos; a próxima mensagem abre outro, com
 a data dela (`dividirEmSessoes`, em `lib/integracoes/fraus-pedido.mjs` do Tars).
 
-O id que chega ao Fraus é `tars:<instância>:<canal>:<chat>:<início>`, e o Fraus
-ainda o prefixa com a fonte (`fonte:<id>:…`). **A mesma fonte e o mesmo id**
-atualizam o registro anterior; um id diferente cria outro atendimento. Esse
-contrato de reenvio é coberto por `tests/test_ingestao_tars.py`, com motor falso:
-o teste verifica persistência e deduplicação, não a qualidade da inferência.
+O id que chega ao Fraus é `tars:v2:<instância>:<canal>:<chat>:<início>`, e o
+Fraus ainda o prefixa com a fonte (`fonte:<id>:…`). Desde o Tars #33
+(19/11/2026), `<chat>` é um HMAC-SHA256 de 32 caracteres hexadecimais do
+`chat_id`, com segredo derivado da chave do cofre do Tars (`chatAnonimo`); o
+número do Telegram não sai do Tars. Girar essa chave muda os ids e cria
+atendimentos novos. **A mesma fonte e o mesmo id** atualizam o registro
+anterior; um id diferente cria outro atendimento. Esse contrato de reenvio é
+coberto por `tests/test_ingestao_tars.py`, com motor falso: o teste verifica
+persistência e deduplicação, não a qualidade da inferência.
 
 O produtor conserva o id do atendimento em curso em `fraus_envios.sessao_id`
 e o herda enquanto a conversa não pausa 30 minutos. Isso evita criar outro id
-quando o histórico disponível perde o começo. A integração envia o histórico
+quando o histórico disponível perde o começo, e foi o que segurou a troca de
+formato: o atendimento em curso no deploy do #33 manteve o id antigo; só o
+próximo, depois de uma pausa, nasceu `v2`. A integração envia o histórico
 disponível, não garante que todo o chat original atravesse a fronteira.
 
 ## Quando o envio acontece
@@ -74,16 +80,19 @@ procure o canal `tars` em **Atendimentos**, no período das conversas. O bloco
 
 ```json
 {
-  "id": "tars:inst_exemplo:telegram:chat_exemplo:1792441687",
+  "id": "tars:v2:inst_exemplo:telegram:0f1e2d3c4b5a69788796a5b4c3d2e1f0:1792441687",
   "mensagens": [
     {"autor": "cliente", "texto": "...", "enviada_em": "2026-10-19T20:28:07.000Z"},
     {"autor": "bot", "texto": "...", "enviada_em": "2026-10-19T20:28:09.000Z"}
   ],
-  "escalou_para_humano": false
+  "escalou_para_humano": false,
+  "feedback_declarado": -1,
+  "comentario_feedback": "..."
 }
 ```
 
-O id acima é ilustrativo; `chat_exemplo` não representa uma conta real. No envio
+O id acima é ilustrativo. `feedback_declarado` e `comentario_feedback` só
+existem quando o cliente votou numa resposta daquele atendimento. No envio
 direto, a chave da fonte vai em `Authorization: Bearer <chave-da-fonte>`.
 
 - `user` vira `cliente`; resposta com identificador de agente vira `humano` e
@@ -106,20 +115,25 @@ direto, a chave da fonte vai em `Authorization: Bearer <chave-da-fonte>`.
 - O Fraus censura padrões de PII no texto das mensagens antes de inferir e
   persistir. Isso reduz exposição; não é garantia de anonimização completa nem
   autorização para transmitir dados.
-- **O id do produtor ainda inclui o `chat_id` em claro.** A censura do texto
-  não anonimiza esse campo. A correção depende do Tars e de planejamento de
-  migração e deduplicação: mudar o id sem esse cuidado cria novos registros.
-  **Não apague os atendimentos como simples passo de migração.**
-- Os botões **Resolveu / Não resolveu** do Tars ainda **não** são enviados como
-  `feedback_declarado`. Portanto, a integração atual não fecha o ciclo de
-  comparação com a resposta do cliente.
+- **Ids anteriores a 19/11/2026 contêm o `chat_id` em claro** e continuam
+  gravados assim: não foram renomeados nem apagados, porque trocar o id de um
+  registro existente cria outro atendimento. É limitação declarada. Quem
+  decidir removê-los usa **Remover atendimento** (abaixo), um a um, auditado.
 
-### Feedback: backend pronto, ciclo incompleto
+### Voto do cliente: ciclo fechado no código
 
-O contrato de `POST /ingestao` já aceita `feedback_declarado: 1` ou `-1`, ou
+O contrato de `POST /ingestao` aceita `feedback_declarado: 1` ou `-1`, ou
 ausência (`null`), e `comentario_feedback` opcional de até 1.000 caracteres.
 O modelo canônico e o registro guardam esse dado separado: ele **não muda o
 score**. Não transforme ausência de voto em zero nem em resposta negativa.
+
+Desde o Tars #33, os botões **Resolveu / Não resolveu** (Telegram e webchat)
+entram no pedido. O Tars escolhe o voto mais recente dado numa resposta do
+atendimento enviado (`votoDaSessao`); voto numa resposta de atendimento
+anterior não é reenviado. Votar ou comentar agenda um envio, sem esperar a
+próxima fala. Como o Fraus **substitui o payload inteiro** a cada envio, o Tars
+relê o voto do próprio banco em todo envio: um reenvio sem o campo apagaria o
+voto aqui, e `tests/test_ingestao_tars.py` fixa esse contrato.
 
 `GET /indicadores` retorna `feedback_declarado_total` e
 `concordancia_com_feedback`. O denominador é o número de conversas do recorte
@@ -127,11 +141,13 @@ que têm **feedback e score**; não é todo voto recebido. A concordância conta
 `1` junto de promotor ou `-1` junto de detrator pelas faixas vigentes; sem pares,
 a taxa é `null`. Um neutro não é contado como concordante.
 
-A **dashboard ainda não mostra essa concordância**, e o produtor ainda não
-manda o voto. O backend disponível não comprova validação com clientes reais.
+A dashboard mostra a concordância numa linha **Voto do cliente** abaixo dos
+quatro indicadores, com o denominador, e o voto e o comentário no resumo do
+atendimento. Sem votos no período, a linha nomeia a ausência; nunca exibe 0%.
 “Resolveu” é uma resposta de resolução, não uma nota NPS declarada nem prova
-causal de satisfação. Completar esse fluxo não exige alterar os pesos; modelos
-permanecem congelados por decisão de 16/11/2026.
+causal de satisfação, e poucos votos não validam o modelo com clientes reais.
+Completar esse fluxo não alterou os pesos; modelos permanecem congelados por
+decisão de 16/11/2026.
 
 ## Limpeza
 
@@ -148,7 +164,8 @@ No Fraus: `dashboard/components/integracoes/ConectarTars.tsx`,
 `fraus/api/esquemas.py`, `fraus/modelos.py`, `fraus/api/registro.py`,
 `fraus/api/rotas/indicadores.py` e `tests/test_ingestao_tars.py`.
 No produtor Tars: `lib/integracoes/fraus-pedido.mjs`,
-`lib/integracoes/fraus.ts`, `lib/db/integracoes-fraus.ts`,
+`lib/integracoes/fraus.ts`, `lib/db/integracoes-fraus.ts`, `lib/cripto.ts`,
+`app/api/telegram/[instanciaId]/route.ts`, `app/api/webchat/[instanciaId]/route.ts`,
 `components/telas/IntegracaoFraus.tsx`, `app/api/integracoes/fraus/route.ts` e
 `app/api/cron/sondas/route.ts`. A leitura do código não executou envios nem
 conferiu configuração ou publicação dos dois serviços.
