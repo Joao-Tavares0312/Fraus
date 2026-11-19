@@ -92,6 +92,8 @@ ironia (ver `fraus/fusor.py`, comentário de `NOMES_FEATURES`, e
 | `dashboard/` | Next.js — ver `dashboard/DESIGN.md` |
 | `notebooks/` | treino no Colab (BERTimbau, depois fusor) |
 | `scripts/api_demo.py` | snapshot sintético temporário; motor real se houver artefatos, dublê explícito caso contrário — **nunca em produção** |
+| `scripts/gerar_empresa_ficticia.py` | Lumen Telecom fictícia da banca: 156 atendimentos `sintetica-lumen-*` determinísticos, esperas sobrepostas entre tons; **não** reutiliza o simulador de treino |
+| `scripts/carregar_empresa_ficticia.py` | leva o CSV a um Fraus por `POST /ingestao`, uma chave de fonte por canal (a tela Analisar troca o id e para em 10 atendimentos) |
 | `scripts/validar_operacao_real.py` | QA com ONNX real e banco temporário ou PostgreSQL local de validação |
 
 ## Estado operacional — 30/09/2026

@@ -174,6 +174,11 @@ insatisfeito, não pontos da nota; a transformação em score é não linear.
 - A publicação da API é separada da dashboard. O workflow está implementado;
   seus secrets no ambiente `production-api` ainda precisam ser configurados.
 
-- A **empresa fictícia** do trabalho não está definida (ramo, porte, canais,
-  volume plausível de atendimentos). Ela atravessa a apresentação inteira e
-  ainda não pode ser assumida.
+## Empresa fictícia da banca
+
+**Lumen Telecom**, provedor de internet fictício (19/11/2026). 156 atendimentos
+fabricados em `dados_demo/lumen-telecom.csv` (`scripts/gerar_empresa_ficticia.py`),
+de 08/11 a 07/12/2026, nos canais webchat, WhatsApp e Instagram, com ids
+`sintetica-lumen-*`; o canal Telegram traz atendimentos reais pelo Tars. Os
+dados fabricados são identificados como tal em toda apresentação e não são
+resultado de cliente real.
