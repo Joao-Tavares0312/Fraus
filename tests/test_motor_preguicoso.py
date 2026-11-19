@@ -257,3 +257,27 @@ def test_comparar_cenario_e_contribuicao_por_familia_entram_na_medicao(monkeypat
     assert provedor.comparar_cenario(1, 2, None) == "cmp"
     assert provedor.contribuicao_por_familia(1, None) == "fam"
     assert medidos.count("inferencia") == 2
+
+
+def test_app_do_modulo_e_montado_uma_vez(monkeypatch):
+    """`python -m uvicorn fraus.api.main:app` le o atributo mais de uma vez.
+
+    Cada leitura montava um app novo, com o proprio provedor aquecendo as tres
+    cabecas em paralelo: as duas cargas disputavam o import do `transformers`, e
+    a perdedora memorizava o erro para sempre (19/11/2026). Um processo, um app.
+    """
+    import fraus.api.main as main
+
+    montados = []
+
+    def montar():
+        montados.append(object())
+        return montados[-1]
+
+    monkeypatch.setattr(main, "criar_app_padrao", montar)
+    monkeypatch.delitem(vars(main), "app", raising=False)
+    try:
+        assert main.app is main.app
+        assert len(montados) == 1
+    finally:
+        vars(main).pop("app", None)
