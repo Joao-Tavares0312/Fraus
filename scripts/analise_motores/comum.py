@@ -73,9 +73,15 @@ def memoria() -> dict:
 
 
 def condicoes() -> dict:
+    cpu = None
+    try:
+        cpu = next((linha.split(':', 1)[1].strip() for linha in Path('/proc/cpuinfo').read_text().splitlines()
+                    if linha.startswith('model name')), None)
+    except OSError:
+        pass
     return {'semente': SEMENTE, 'n': None, 'backend': None, 'versoes': {'python': platform.python_version()},
             'hashes': {}, 'threads': None, 'afinidade': sorted(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else None,
-            'cpu': platform.processor() or platform.machine(), 'memoria': memoria(), 'warm_cold': None,
+            'cpu': cpu or platform.processor() or platform.machine(), 'memoria': memoria(), 'warm_cold': None,
             'duracao_s': None, 'operacao': None}
 
 

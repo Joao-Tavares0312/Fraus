@@ -162,6 +162,17 @@ def test_resumir_sementes_da_media_desvio_e_semente_mediana():
     assert r["semente_mediana"] == 3
 
 
+def test_resumir_sementes_seleciona_por_validacao_por_padrao():
+    rodadas = [
+        {"semente": 13, "f1_macro_validacao": 0.7, "f1_macro": 0.99},
+        {"semente": 42, "f1_macro_validacao": 0.9, "f1_macro": 0.50},
+        {"semente": 77, "f1_macro_validacao": 0.8, "f1_macro": 0.40},
+    ]
+    r = resumir_sementes(rodadas)
+    assert r["chave"] == "f1_macro_validacao"
+    assert r["semente_mediana"] == 77
+
+
 def test_resumir_sementes_exige_pelo_menos_duas():
     with pytest.raises(ValueError):
         resumir_sementes([{"semente": 1, "f1_macro": 0.7}], chave="f1_macro")
@@ -229,16 +240,27 @@ def test_pesos_de_classe_favorecem_a_rara():
     assert pesos[2] == pytest.approx(4 / 3)  # ausente: conta como 1
 
 
-def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path):
+def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path, monkeypatch):
     """Fumaca em CPU: modelo aleatorio de 2 camadas, montado aqui, sem download."""
     torch = pytest.importorskip("torch")
     pytest.importorskip("accelerate")
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(torch.cuda, "device_count", lambda: 0)
     import json
 
     from transformers import BertConfig, BertForSequenceClassification, BertTokenizerFast
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
     from fraus.corpora import Exemplos
-    from fraus.receita_treino import ARQUIVO_RECEITA, preparar_divisao, treinar_uma_semente
+    import fraus.receita_treino as receita
+    from fraus.generalizacao import fingerprint_exemplos
+    from fraus.receita_treino import (
+        ARQUIVO_AVALIACAO_FINAL,
+        ARQUIVO_RECEITA,
+        avaliar_teste_final,
+        preparar_divisao,
+        treinar_uma_semente,
+    )
 
     palavras = ["bom", "otimo", "ruim", "pessimo", "ok", "normal", "atendimento", "foi"]
     vocab = tmp_path / "vocab.txt"
@@ -260,16 +282,108 @@ def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path):
         rotulos.append(classe)
     lados = preparar_divisao(Exemplos(textos=textos, rotulos=rotulos, grupos=None,
                                       nomes_classes=["insatisfeito", "neutro", "satisfeito"]))
+    tokenizados = []
+    chamar_original = PreTrainedTokenizerBase.__call__
+
+    def registrar_tokenizacao(self, texto, *args, **kwargs):
+        tokenizados.extend([texto] if isinstance(texto, str) else list(texto))
+        return chamar_original(self, texto, *args, **kwargs)
+
+    monkeypatch.setattr(PreTrainedTokenizerBase, "__call__", registrar_tokenizacao)
     saida = tmp_path / "saida"
     r = treinar_uma_semente(
         modelo_base=str(base), lados=lados, semente=7, dir_checkpoint=str(tmp_path / "ck"),
         dir_saida=str(saida), epocas=2, lote=16, fp16=False, taxa=5e-3,
+        tamanho_maximo=24,
     )
     assert r["tamanhos"]["teste"] == len(lados["teste"].textos)
     assert r["temperatura"] > 0
-    assert 0 <= r["f1_macro"] <= 1
+    assert "f1_macro" not in r and "teste" not in r
+    assert 0 <= r["f1_macro_validacao"] <= 1
+    assert not set(tokenizados).intersection(lados["teste"].textos)
+    assert r["manifesto_divisao"]["teste"]["fingerprint"] == fingerprint_exemplos(lados["teste"])
+    assert r["argumentos_efetivos"]["seed"] == 7
+    assert r["argumentos_efetivos"]["num_train_epochs"] == 2
+    assert r["diagnostico_treino"]["exemplos"] == len(lados["treino"].textos)
+    assert r["diagnostico_treino"]["exemplos"] <= 2000
+    assert r["diagnostico_treino"]["semente"] == 42
+
+    def curvas(resultado):
+        return [
+            {k: v for k, v in registro.items() if k.startswith("diagnostico_") or k == "epoch"}
+            for registro in resultado["historico"] if "diagnostico_treino_loss" in registro
+        ]
+
+    curva = curvas(r)
+    assert len(curva) == 2
+    assert [linha["epoch"] for linha in curva] == [1.0, 2.0]
+    for linha in curva:
+        assert all(math.isfinite(valor) for valor in linha.values())
+        for lado in ("treino", "validacao"):
+            assert linha[f"diagnostico_{lado}_loss"] > 0
+            assert 0 <= linha[f"diagnostico_{lado}_f1_macro"] <= 1
+    avaliacoes = [linha for linha in r["historico"] if "eval_f1_macro" in linha]
+    assert r["melhor_epoca"] == max(avaliacoes, key=lambda linha: linha["eval_f1_macro"])["epoch"]
+    assert not (saida / ARQUIVO_AVALIACAO_FINAL).exists()
+
+    # So os rotulos de teste mudam. Trajetoria, checkpoint escolhido e
+    # calibracao permanecem identicos, mas a identidade do teste muda.
+    teste_alterado = Exemplos(
+        textos=list(lados["teste"].textos),
+        rotulos=[(rotulo + 1) % 3 for rotulo in lados["teste"].rotulos],
+        grupos=lados["teste"].grupos,
+        nomes_classes=list(lados["teste"].nomes_classes),
+    )
+    repeticao = treinar_uma_semente(
+        modelo_base=str(base), lados={**lados, "teste": teste_alterado}, semente=7,
+        dir_checkpoint=str(tmp_path / "ck-repeticao"), dir_saida=str(tmp_path / "repeticao"),
+        epocas=2, lote=16, fp16=False, taxa=5e-3, tamanho_maximo=24,
+    )
+    assert curvas(repeticao) == curva
+    assert repeticao["melhor_epoca"] == r["melhor_epoca"]
+    assert repeticao["temperatura"] == r["temperatura"]
+    assert repeticao["f1_macro_validacao"] == r["f1_macro_validacao"]
+    assert repeticao["manifesto_divisao"]["teste"] != r["manifesto_divisao"]["teste"]
+    assert not set(tokenizados).intersection(lados["teste"].textos)
+
+    from transformers import AutoModelForSequenceClassification
+
+    pesos_a = AutoModelForSequenceClassification.from_pretrained(saida).state_dict()
+    pesos_b = AutoModelForSequenceClassification.from_pretrained(tmp_path / "repeticao").state_dict()
+    assert all(torch.equal(pesos_a[nome], pesos_b[nome]) for nome in pesos_a)
     gravado = json.loads((saida / ARQUIVO_RECEITA).read_text())
     assert gravado["semente"] == 7 and gravado["impressao_teste"] == r["impressao_teste"]
+    assert gravado["historico"] == r["historico"]
+    assert gravado["manifesto_divisao"] == r["manifesto_divisao"]
+    assert gravado["argumentos_efetivos"] == r["argumentos_efetivos"]
+    assert "teste" not in gravado and "f1_macro" not in gravado
+    receita_antes = (saida / ARQUIVO_RECEITA).read_bytes()
+    chamadas = []
+    inferir_original = receita._prever_logits
+
+    def registrar_inferencia(dir_modelo, textos, **kwargs):
+        chamadas.append((list(textos), kwargs))
+        return inferir_original(dir_modelo, textos, **kwargs)
+
+    monkeypatch.setattr(receita, "_prever_logits", registrar_inferencia)
+    final = avaliar_teste_final(
+        dir_modelo=str(saida), exemplos=lados["teste"],
+        manifesto_esperado=r["manifesto_divisao"]["teste"]["fingerprint"],
+    )
+    assert chamadas == [(lados["teste"].textos, {"tamanho_maximo": 24})]
+    assert 0 <= final["f1_macro"] <= 1
+    assert 0 <= final["ece"] <= 1 and 0 <= final["ece_sem_temperatura"] <= 1
+    assert final["fingerprint_teste"] == fingerprint_exemplos(lados["teste"])
+    assert len(final["hash_modelo"]) == 64
+    assert "model.safetensors" in final["hashes_modelo"]
+    assert json.loads((saida / ARQUIVO_AVALIACAO_FINAL).read_text()) == final
+    assert (saida / ARQUIVO_RECEITA).read_bytes() == receita_antes
+    with pytest.raises(ValueError, match="^manifesto de teste divergente$"):
+        avaliar_teste_final(
+            dir_modelo=str(saida), exemplos=teste_alterado,
+            manifesto_esperado=fingerprint_exemplos(teste_alterado),
+        )
+    assert len(chamadas) == 1
     from transformers import AutoConfig
 
     from fraus.receita_treino import prever_probabilidades
@@ -279,6 +393,45 @@ def test_treinar_uma_semente_ponta_a_ponta_com_bert_minusculo(tmp_path):
     assert len(probs) == 2 and all(abs(sum(p) - 1) < 1e-6 for p in probs)
     assert AutoConfig.from_pretrained(saida).id2label == {0: "insatisfeito", 1: "neutro",
                                                           2: "satisfeito"}
+
+
+@pytest.mark.parametrize("alteracao", ["texto", "rotulo", "grupo", "classes", "esperado", "salvo"])
+def test_avaliacao_final_recusa_manifesto_antes_de_carregar_modelo(tmp_path, monkeypatch, alteracao):
+    import json
+
+    import fraus.receita_treino as receita
+    from fraus.corpora import Exemplos
+    from fraus.generalizacao import fingerprint_exemplos
+
+    exemplos = Exemplos(["frase"], [0], ["grupo"], ["nao", "sim"])
+    esperado = fingerprint_exemplos(exemplos)
+    (tmp_path / receita.ARQUIVO_RECEITA).write_text(json.dumps({
+        "manifesto_divisao": {"teste": {"fingerprint": esperado}},
+    }))
+    if alteracao == "texto":
+        exemplos.textos[0] = "outra frase"
+    elif alteracao == "rotulo":
+        exemplos.rotulos[0] = 1
+    elif alteracao == "grupo":
+        exemplos.grupos[0] = "outro grupo"
+    elif alteracao == "classes":
+        exemplos.nomes_classes.reverse()
+    elif alteracao == "esperado":
+        esperado = "nao corresponde"
+    else:
+        (tmp_path / receita.ARQUIVO_RECEITA).write_text(json.dumps({
+            "manifesto_divisao": {"teste": {"fingerprint": "nao corresponde"}},
+        }))
+
+    def nao_inferir(*args, **kwargs):
+        pytest.fail("manifesto divergente chegou ao carregamento/inferencia")
+
+    monkeypatch.setattr(receita, "_prever_logits", nao_inferir)
+    with pytest.raises(ValueError, match="^manifesto de teste divergente$"):
+        receita.avaliar_teste_final(
+            dir_modelo=str(tmp_path), exemplos=exemplos, manifesto_esperado=esperado
+        )
+    assert not (tmp_path / receita.ARQUIVO_AVALIACAO_FINAL).exists()
 
 
 def test_juntar_concatena_e_exige_as_mesmas_classes():

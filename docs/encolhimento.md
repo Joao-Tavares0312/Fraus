@@ -4,6 +4,26 @@
 > reais. Nada aqui exigiu retreino: quantização dinâmica é transformação
 > **pós-treino** sobre os pesos já aprendidos.
 
+!!! warning "Revisão de 16/11/2026: modelos congelados"
+    Retreino, destilação, troca de arquitetura, calibração e promoção estão
+    fora da fila por decisão do João. Esta página preserva medições de setembro
+    e propostas experimentais, não uma campanha atual. Nenhum benchmark ou
+    deploy foi executado nesta revisão; a presença do backend no código não
+    identifica os pesos publicados.
+
+O código atual mantém `torch` como padrão declarado e permite `onnx` e
+`onnx-multitarefa` (`fraus/api/caminhos.py`). O executor ONNX
+(`fraus/sinais/onnx.py`) usa CPU, otimização `ORT_ENABLE_ALL`, arena desativada
+e aplica a temperatura do `fraus_receita.json`. `torch` é extra opcional no
+`pyproject.toml`, não dependência principal. A API carrega o motor
+preguiçosamente: pode subir sem os grafos e falhar explicitamente na primeira
+rota que exige inferência; não há fallback para outro executor.
+
+A variante com ironia int8 aceita em setembro só foi medida com aqueles
+checkpoints. O código de caminhos registra, desde 19/10/2026, a opção por
+**fp32 na ironia MultiPICo**, por mudança de classe em duas sondas int8.
+Isso não altera os resultados históricos abaixo nem comprova o artefato de produção.
+
 ## O problema
 
 | | |
@@ -12,9 +32,9 @@
 | `torch` que os executa | **497 MB** |
 | **imagem de inferência** | **~1,75 GB** |
 
-Isso limita hospedagem, encarece o container e — desde que o teto de função
-Python da Vercel subiu para 500 MB (24/02/2026) — é a única coisa entre o Fraus
-e um deploy serverless.
+Na avaliação de setembro, esse porte limitava hospedagem e motivava estudar
+o teto de função Python da Vercel então considerado (500 MB desde
+24/02/2026). O limite do provedor não foi revalidado nesta revisão.
 
 ## O que foi testado
 
@@ -83,9 +103,10 @@ sim-0-635276501    59,95  ->  85,61    detrator  ->  promotor
 Uma conversa atravessa **duas faixas** e troca de veredito. Categoria é o que a
 tela mostra e o que o NPS agrega: trocar o backend não pode trocar o veredito.
 
-> **Decisão: os artefatos int8 NÃO são promovidos.** Eles ficam em
-> `modelos-onnx/` (fora do git) para quem quiser reproduzir a medição, e o
-> portão de `scripts/comparar_backends.py` continua vermelho de propósito.
+> **Decisão registrada em setembro: os artefatos int8 não foram promovidos.**
+> A sessão os mantinha em `modelos-onnx/` (fora do git) para reprodução;
+> `scripts/comparar_backends.py` reprovou aquela variante. Não se afirma
+> que os mesmos arquivos ou o mesmo resultado estejam no ambiente atual.
 
 ## A variante mista, medida em 11/09/2026
 
@@ -142,7 +163,7 @@ A ordem é cruelmente monótona: **tudo que cabe troca veredito, e tudo que
 preserva o veredito não cabe.** Não há ajuste no meio — a emoção precisa ficar em
 fp32, e aí são dois codificadores de 416 MB, que já estouram o orçamento sozinhos.
 
-!!! warning "Medição de RAM pendente, e por que o número preliminar não serve"
+!!! warning "Medição preliminar de 11/09 — substituída pela medição de 15/09 abaixo"
     Medindo o processo com o motor montado, o ONNX consumiu **mais** residente
     que o torch (pico 1.366 MB contra 1.075 MB): o `onnxruntime` carrega o grafo
     inteiro de imediato, enquanto o torch mapeia os `safetensors` e só paga as
@@ -150,38 +171,33 @@ fp32, e aí são dois codificadores de 416 MB, que já estouram o orçamento soz
 
     Esse número **não está limpo**: a sonda importava `fraus.motor` e
     `fraus.fusor` antes de escolher o backend, e são eles que arrastam torch e
-    sklearn — 354 MB de base nos dois casos. Medir o caminho ONNX de verdade
-    exige uma venv **sem** torch, e hoje `torch>=2.3` é dependência
-    **principal** no `pyproject.toml`: a imagem sem torch que o extra `onnx`
-    promete não existe sem mover essa dependência para um extra.
+    sklearn — 354 MB de base nos dois casos. Naquela data, faltava medir em
+    uma venv sem torch e mover a dependência principal para um extra.
+    Essa mudança já existe no `pyproject.toml`; o bloqueio era histórico.
 
     A conclusão acima não depende disso — 939 MB de peso já passam de 800 —, mas
-    a promessa de "ONNX corta a imagem em 2,6×" continua **não verificada em
-    RAM**, só em disco.
+    a promessa de redução de RAM ainda não estava verificada naquela medição.
+    A seção de 15/09 registra o ensaio posterior sem torch.
 
 ### O que sobra de ganho real
 
-Independente da máquina pequena, a variante aceita **é um ganho para o deploy na
-A1**: desvio `0,000`, e a imagem perde os 497 MB do `torch` em disco (depois de
-mover a dependência). Na sessão de 11/09/2026 o envio do código e dos pesos para
-a VM era de 1,3 GB — cortar isso quase pela metade é menos tempo de deploy e
-menos coisa para dar errado no meio.
+Independentemente da máquina pequena, a variante aceita oferecia ganho em
+disco para o deploy na A1: desvio `0,000` no ensaio e retirada dos 497 MB do
+`torch`. Na sessão de 11/09/2026, o envio de código e pesos para a VM era
+de 1,3 GB. Esses números não são medição de um deploy atual.
 
-E se 1 GB algum dia virar requisito de verdade, o caminho não é quantização: é
-**um codificador com três cabeças**. Os três checkpoints são ajustes finos do
-mesmo BERTimbau, então os 110M de parâmetros estão duplicados três vezes. Um
-encoder compartilhado com três cabeças de classificação daria ~416 MB em precisão
-cheia — cabe em 1 GB sem quantizar nada e sem risco de veredito. O preço é
-retreino, e portanto a invariante 10 de novo; não é ajuste de deploy.
+Se 1 GB virasse requisito, a hipótese de pesquisa era **um codificador com
+três cabeças**, evitando três cópias de cerca de 110M de parâmetros.
+O peso fp32 estimado seria próximo de 416 MB, mas isso não prova RAM total,
+fidelidade ou qualidade. Exige retreino; ficou fora da fila em 16/11/2026.
 
 ## O backend ONNX em produção, medido em 15/09/2026
 
-A variante aceita acima (satisfação e emoção fp32, ironia int8) virou um
-executor de verdade: `FRAUS_BACKEND=onnx`. O padrão continua `torch`, e não há
-detecção nem fallback — backend desconhecido ou grafo ausente derruba o boot
-(invariante 7). O `torch` saiu das dependências principais para o extra
-`torch`, e o import dele ficou preguiçoso: `fraus.motor` não o arrasta mais
-(há teste para isso).
+A variante aceita acima (satisfação e emoção fp32, ironia int8) ganhou um
+executor explícito: `FRAUS_BACKEND=onnx`. O padrão continua `torch`, sem
+detecção ou fallback. Backend desconhecido falha na configuração; grafo
+ausente falha quando o motor é carregado. `torch` saiu das dependências
+principais para o extra `torch`, com import preguiçoso no caminho do motor.
 
 Isso destravou a **medição de RAM que estava pendente**, agora numa venv sem
 torch instalado (`uv sync --extra dev --extra onnx`), com o app montado por
@@ -232,14 +248,17 @@ maior que as 180. Por isso ela fica disponível e documentada, **não** como o
 padrão de `modelos-onnx/`. E 1.056 MB **ainda não cabe** numa máquina de 1 GB,
 então ela não resolve o caso que justificaria o risco.
 
-A conclusão sobre o encoder compartilhado abaixo não mudou.
+A hipótese de encoder compartilhado continua sem comprovação de RAM ou qualidade.
 
 ## O que sobra como caminho
+
+As estimativas abaixo pertencem ao levantamento de setembro. Não são medições
+de fp16 nem alternativas aprovadas para substituir os pesos congelados.
 
 | caminho | tamanho estimado | fidelidade | cabe em 500 MB? |
 |---|---|---|---|
 | **ONNX fp16** | 3 × 208 = 624 MB + ~50 MB de runtime | quase idêntica | ❌ — mas corta a imagem de 1,75 GB para ~0,67 GB |
-| **fp32 na satisfação, int8 no resto** | 416 + 106 + 106 = 628 MB | boa no que pontua | ❌ |
+| **fp32 na satisfação, int8 no resto** | 416 + 106 + 106 = 628 MB | reprovada: 2 de 180 categorias diferentes | ❌ |
 | **int8 nos três** | 318 MB + ~50 MB | **1,7% troca de veredito** | ✅ |
 
 Ou seja: **o orçamento de 500 MB só é alcançável pagando o preço que foi
@@ -247,11 +266,15 @@ recusado acima.** Isso não é um impasse técnico a resolver com mais tuning �
 a Vercel serverless não sendo o alvo certo para este sistema, e vale mais dizer
 isso do que espremer o número até ele caber.
 
-**O ganho continua real fora da Vercel:** ONNX fp16 num container corta a
-imagem em ~2,6× e remove o `torch`, sem custo de fidelidade digno de nota. Esse
-é o próximo experimento, e ele não precisa de retreino nenhum também.
+ONNX fp16 era um experimento proposto, com redução de disco estimada e
+fidelidade ainda a medir. Não há nesta página benchmark que sustente ganho
+de 2,6× com paridade fp16, nem próximo experimento ativo em 16/11/2026.
 
 ## Reproduzir
+
+Comandos históricos de conversão e comparação; o conversor usa int8 por
+padrão, **não** a combinação aceita de setembro. Eles não publicam artefatos
+nem constituem instrução para trocar os modelos atuais.
 
 ```bash
 uv sync --extra conversao
@@ -261,10 +284,11 @@ uv run python scripts/comparar_backends.py --n 180   # o portão que recusou
 
 ## Variante experimental: um encoder, três cabeças
 
-O runtime agora aceita `FRAUS_BACKEND=onnx-multitarefa`, mas ele **não é o
-padrão** e nenhum artefato foi promovido. Diferente da quantização, compartilhar
-o encoder exige treino: os três checkpoints atuais aprenderam representações
-diferentes durante o fine-tuning.
+O código aceita `FRAUS_BACKEND=onnx-multitarefa`, mas ele **não é o padrão**.
+Esta página não apresenta artefato promovido desse experimento. Diferente
+da quantização, compartilhar o encoder exige treino: os três checkpoints
+aprenderam representações diferentes durante o fine-tuning.
+**O roteiro abaixo é histórico e está fora da fila desde 16/11/2026.**
 
 O caminho implementado usa destilação. Os modelos atuais são os professores e
 um BERTimbau único aprende simultaneamente as distribuições de satisfação,
@@ -277,10 +301,10 @@ uv run python scripts/treinar_multitarefa.py corpus.csv --epocas 3
 uv run python scripts/comparar_backends.py --multitarefa --n 180
 ```
 
-O corpus aceita CSV/JSONL com campo `texto` ou TXT com uma frase por linha. Use
-um corpus público representativo; não exporte conversas de clientes sem base
-legal e anonimização. O candidato é gravado separadamente e só deve virar
-`modelos-onnx/bertimbau-multitarefa` depois de cumprir, em conjunto:
+O corpus aceita CSV/JSONL com campo `texto` ou TXT com uma frase por linha.
+O protocolo de pesquisa previa corpus público representativo, nunca exportar
+conversas de clientes sem base legal e anonimização. O candidato é gravado
+separadamente; os critérios históricos de eventual promoção eram:
 
 - zero troca de categoria nas 180 conversas de regressão;
 - métricas por cabeça não inferiores às publicadas nos cartões dos modelos;

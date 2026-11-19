@@ -93,6 +93,7 @@ jobs:
       - name: Construir o PDF
         env:
           FRAUS_URL_DASHBOARD: ${{ vars.FRAUS_URL_DASHBOARD }}
+          FRAUS_CHROME_PDF: google-chrome
         run: |
           uv run mkdocs build --config-file mkdocs-pdf.yml -d site-pdf
           mkdir -p site/pdf

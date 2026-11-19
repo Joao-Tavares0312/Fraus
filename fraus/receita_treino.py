@@ -10,14 +10,16 @@ A regra daqui em diante:
 
 - duplicata por texto normalizado sai ANTES de dividir (o GoEmotions-PT tem a
   mesma frase curta com ids diferentes, que caiam dos dois lados);
-- tres lados: treino, validacao (escolhe epoca e temperatura) e teste (tocado
-  uma vez, no fim);
-- tres sementes, media e desvio reportados, e a semente MEDIANA promovida --
-  promover a melhor de tres e escolher pelo acaso;
-- a temperatura e ajustada na validacao e gravada no artefato.
+- tres lados: treino e validacao escolhem epoca, semente e temperatura; o
+  teste so e aberto por `avaliar_teste_final`, depois da selecao congelada;
+- tres sementes, media e desvio reportados, com a semente mediana pela
+  VALIDACAO -- nunca pela metrica do teste;
+- a temperatura e ajustada na validacao e gravada no artefato;
+- curvas comparam treino diagnostico fixo em eval e validacao, nao a perda
+  dos minibatches com dropout.
 
-Parte pura: numpy e, dentro de `dividir_treino_val_teste`, sklearn. Nada de
-torch aqui -- o notebook monta o `Trainer` com o que estas funcoes devolvem.
+As funcoes puras nao importam torch. Treino e inferencia carregam dependencias
+pesadas apenas quando chamados; nao alteram o motor de runtime.
 """
 
 from __future__ import annotations
@@ -207,8 +209,8 @@ def metricas_completas(
     }
 
 
-def resumir_sementes(rodadas: Sequence[dict], *, chave: str = "f1_macro") -> dict:
-    """Media, desvio amostral e a semente MEDIANA (a promovida)."""
+def resumir_sementes(rodadas: Sequence[dict], *, chave: str = "f1_macro_validacao") -> dict:
+    """Media, desvio amostral e semente mediana; selecao padrao na validacao."""
     if len(rodadas) < 2:
         raise ValueError("uma semente so nao mede variancia: rode pelo menos duas")
     valores = np.asarray([float(r[chave]) for r in rodadas])
@@ -327,6 +329,7 @@ def pesos_de_classe(rotulos: Sequence[int], n_classes: int) -> list[float]:
 
 
 ARQUIVO_RECEITA = "fraus_receita.json"
+ARQUIVO_AVALIACAO_FINAL = "avaliacao_final.json"
 
 
 def treinar_uma_semente(
@@ -340,15 +343,17 @@ def treinar_uma_semente(
     ponderar_classes: bool = True,
     **ajustes,
 ) -> dict:
-    """Treina uma semente, escolhe epoca e temperatura na validacao, mede o teste UMA vez.
+    """Treina e seleciona somente na validacao; o teste fornece apenas manifesto.
 
-    `lados` e o que `preparar_divisao` devolve. Grava modelo, tokenizador e
-    `fraus_receita.json` (semente, temperatura, metricas) em `dir_saida`.
+    `lados` vem de `preparar_divisao`. Grava modelo, tokenizador e receita com
+    curvas, argumentos efetivos e manifestos, sem tokenizar ou inferir teste.
     `ajustes` sobrescreve `argumentos_padrao` (epocas, taxa, lote, fp16).
-    torch/transformers so sao importados aqui dentro.
+    A avaliacao final e uma operacao separada, depois de congelar a selecao.
     """
+    import copy
     import json
     import os
+    import random
 
     import torch
     from transformers import (
@@ -378,7 +383,9 @@ def treinar_uma_semente(
             item["labels"] = int(self.rotulos[i])
             return item
 
-    treino, validacao, teste = (_Conjunto(lados[k]) for k in ("treino", "validacao", "teste"))
+    treino, validacao = (_Conjunto(lados[k]) for k in ("treino", "validacao"))
+    exemplos_diagnostico = amostra_estratificada(lados["treino"], 2000, semente=42)
+    diagnostico = _Conjunto(exemplos_diagnostico)
     modelo = AutoModelForSequenceClassification.from_pretrained(
         modelo_base, num_labels=len(nomes),
         id2label=dict(enumerate(nomes)), label2id={n: i for i, n in enumerate(nomes)},
@@ -397,6 +404,49 @@ def treinar_uma_semente(
                 saidas.logits, rotulos, weight=pesos.to(saidas.logits.device)
             )
             return (perda, saidas) if return_outputs else perda
+
+        def evaluate(self, *args, **kwargs):
+            # So a avaliacao normal pode acionar callbacks/early stopping.
+            metricas = super().evaluate(*args, **kwargs)
+            modelo_avaliado = self.model_wrapped
+            modos = [(modulo, modulo.training) for modulo in modelo_avaliado.modules()]
+            estado_python, estado_numpy = random.getstate(), np.random.get_state()
+            perdas, reais, preditos = [], [], []
+            try:
+                # Criar/iterar DataLoader consome RNG mesmo sem embaralhamento.
+                # Diagnostico nao pode mudar a trajetoria dos passos seguintes.
+                with torch.random.fork_rng(
+                    devices=list(range(torch.cuda.device_count()))
+                ), torch.inference_mode():
+                    modelo_avaliado.eval()
+                    for entradas in self.get_eval_dataloader(diagnostico):
+                        perda, logits, rotulos = self.prediction_step(
+                            modelo_avaliado, entradas, prediction_loss_only=False
+                        )
+                        perda, logits, rotulos = self.accelerator.gather_for_metrics((
+                            perda.repeat(rotulos.shape[0]), logits, rotulos,
+                        ))
+                        # Mesmo peso por exemplo/batch usado no eval_loss do Trainer.
+                        perdas.extend(perda.float().cpu().tolist())
+                        reais.extend(rotulos.cpu().tolist())
+                        preditos.extend(logits.argmax(dim=-1).cpu().tolist())
+            finally:
+                random.setstate(estado_python)
+                np.random.set_state(estado_numpy)
+                for modulo, modo in modos:
+                    modulo.training = modo
+            # Registrar nao dispara callbacks nem modifica TrainerControl.
+            self.state.log_history.append({
+                "diagnostico_treino_loss": float(np.mean(perdas)),
+                "diagnostico_treino_f1_macro": f1_macro(
+                    reais, preditos, classes=range(len(nomes))
+                ),
+                "diagnostico_validacao_loss": float(metricas["eval_loss"]),
+                "diagnostico_validacao_f1_macro": float(metricas["eval_f1_macro"]),
+                "epoch": self.state.epoch,
+                "step": self.state.global_step,
+            })
+            return metricas
 
     def _metricas(predicao):
         preditos = np.argmax(predicao.predictions, axis=1)
@@ -419,32 +469,49 @@ def treinar_uma_semente(
     )
     treinador.train()
 
-    logits_val = treinador.predict(validacao).predictions
+    logits_val = treinador.predict(validacao, metric_key_prefix="validacao_final").predictions
     temperatura = ajustar_temperatura(logits_val, lados["validacao"].rotulos)
     f1_val = f1_macro(lados["validacao"].rotulos, np.argmax(logits_val, axis=1),
                       classes=range(len(nomes)))
-    logits_teste = treinador.predict(teste).predictions  # a unica leitura do teste
-    metricas_teste = metricas_completas(
-        aplicar_temperatura(logits_teste, temperatura), lados["teste"].rotulos,
-        nomes_classes=nomes,
-    )
-    metricas_teste["ece_sem_temperatura"] = metricas_completas(
-        aplicar_temperatura(logits_teste, 1.0), lados["teste"].rotulos, nomes_classes=nomes
-    )["ece"]
+    # Copia antes que os notebooks removam os checkpoints. Inclui o log original
+    # do Trainer e um registro comparavel treino/validacao por epoca.
+    historico = copy.deepcopy(treinador.state.log_history)
+    avaliacoes = [r for r in historico if "eval_f1_macro" in r]
+    melhor_epoca = max(avaliacoes, key=lambda r: r["eval_f1_macro"])["epoch"]
 
     from fraus.divisao import impressao_dos_textos
+    from fraus.generalizacao import fingerprint_exemplos
 
     resultado = {
         "semente": semente,
         "modelo_base": modelo_base,
         "temperatura": temperatura,
         "f1_macro_validacao": f1_val,
-        "f1_macro": metricas_teste["f1_macro"],
+        "tamanho_maximo": tamanho_maximo,
+        "ponderar_classes": ponderar_classes,
+        "pesos_de_classe": pesos.tolist(),
         "epocas_treinadas": float(treinador.state.epoch or 0),
         "melhor_checkpoint": treinador.state.best_model_checkpoint,
         "tamanhos": {k: len(lados[k].rotulos) for k in ("treino", "validacao", "teste")},
         "impressao_teste": impressao_dos_textos(lados["teste"].textos),
-        "teste": metricas_teste,
+        "historico": historico,
+        "argumentos_efetivos": {
+            **treinador.args.to_dict(), "paciencia": paciencia,
+        },
+        "melhor_epoca": float(melhor_epoca),
+        "diagnostico_treino": {
+            "semente": 42,
+            "exemplos": len(exemplos_diagnostico.textos),
+            "fingerprint": fingerprint_exemplos(exemplos_diagnostico),
+        },
+        "manifesto_divisao": {
+            lado: {
+                "fingerprint": fingerprint_exemplos(exemplos),
+                "impressao_textos": impressao_dos_textos(exemplos.textos),
+                "exemplos": len(exemplos.textos),
+            }
+            for lado, exemplos in lados.items()
+        },
     }
     os.makedirs(dir_saida, exist_ok=True)
     treinador.save_model(dir_saida)
@@ -459,6 +526,15 @@ def prever_probabilidades(
     tamanho_maximo: int = 192,
 ) -> list[list[float]]:
     """Probabilidades com a temperatura do artefato; GPU se houver. Para conjunto independente."""
+    return aplicar_temperatura(
+        _prever_logits(dir_modelo, textos, lote=lote, tamanho_maximo=tamanho_maximo), temperatura
+    ) if len(textos) else []
+
+
+def _prever_logits(
+    dir_modelo: str, textos: Sequence[str], *, lote: int = 64, tamanho_maximo: int = 192,
+) -> list[list[float]]:
+    """Uma inferencia compartilhada: permite calibrar sem inverter um softmax."""
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -473,7 +549,78 @@ def prever_probabilidades(
                 padding=True, return_tensors="pt",
             ).to(dispositivo)
             logits.extend(modelo(**entradas).logits.float().cpu().tolist())
-    return aplicar_temperatura(logits, temperatura) if logits else []
+    return logits
+
+
+def avaliar_teste_final(*, dir_modelo: str, exemplos, manifesto_esperado: str) -> dict:
+    """Abre o teste congelado, sem selecionar ou modificar a receita do candidato.
+
+    O chamador congela configuracao e selecao na validacao antes desta chamada.
+    Fingerprint recebido, conjunto e manifesto salvo precisam ser identicos,
+    inclusive rotulos, grupos efetivos e ordem das classes, antes da inferencia.
+    """
+    import hashlib
+    import json
+    from pathlib import Path
+
+    from fraus.divisao import impressao_dos_textos
+    from fraus.generalizacao import fingerprint_exemplos
+
+    pasta = Path(dir_modelo)
+    receita = json.loads((pasta / ARQUIVO_RECEITA).read_text(encoding="utf-8"))
+    fingerprint = fingerprint_exemplos(exemplos)
+    salvo = receita.get("manifesto_divisao", {}).get("teste", {}).get("fingerprint")
+    if not manifesto_esperado or fingerprint != manifesto_esperado or salvo != fingerprint:
+        raise ValueError("manifesto de teste divergente")
+
+    # Os mesmos logits alimentam ambas as metricas: desfazer softmax pode perder
+    # informacao quando uma probabilidade underflowa para zero.
+    logits = _prever_logits(
+        dir_modelo, exemplos.textos, tamanho_maximo=receita["tamanho_maximo"]
+    )
+    temperatura = receita["temperatura"]
+    resultado = metricas_completas(
+        aplicar_temperatura(logits, temperatura), exemplos.rotulos,
+        nomes_classes=exemplos.nomes_classes,
+    )
+    resultado["ece_sem_temperatura"] = metricas_completas(
+        aplicar_temperatura(logits, 1.0), exemplos.rotulos,
+        nomes_classes=exemplos.nomes_classes,
+    )["ece"]
+    # Hash apenas de pesos/configuracao/tokenizador. Manifestos de retomada ou
+    # exportacao podem ser criados depois, sem mudar a identidade do modelo.
+    arquivos_de_inferencia = {
+        "config.json", "tokenizer.json", "tokenizer_config.json",
+        "special_tokens_map.json", "added_tokens.json", "vocab.txt", "vocab.json",
+        "merges.txt", "spiece.model", "sentencepiece.bpe.model", "chat_template.jinja",
+        "model.safetensors.index.json", "pytorch_model.bin.index.json",
+    }
+    hashes = {}
+    for caminho in sorted(pasta.iterdir()):
+        peso = (
+            caminho.name.startswith("model") and caminho.suffix == ".safetensors"
+        ) or (
+            caminho.name.startswith("pytorch_model") and caminho.suffix == ".bin"
+        )
+        if not caminho.is_file() or not (peso or caminho.name in arquivos_de_inferencia):
+            continue
+        with caminho.open("rb") as arquivo:
+            hashes[caminho.name] = hashlib.file_digest(arquivo, "sha256").hexdigest()
+    resultado.update({
+        "semente": receita["semente"],
+        "temperatura": temperatura,
+        "tamanho_maximo": receita["tamanho_maximo"],
+        "fingerprint_teste": fingerprint,
+        "impressao_teste": impressao_dos_textos(exemplos.textos),
+        "hashes_modelo": hashes,
+        "hash_modelo": hashlib.sha256(json.dumps(
+            hashes, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")).hexdigest(),
+    })
+    (pasta / ARQUIVO_AVALIACAO_FINAL).write_text(
+        json.dumps(resultado, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8"
+    )
+    return resultado
 
 
 def juntar(*partes):

@@ -2,9 +2,15 @@
 
 > Formato de *model card* (Mitchell et al., 2019): o que cada peça é, com o que
 > foi treinada, o que mediu, **onde erra** e para que **não** pode ser usada.
-> Números de 15/09/2026. Os da seção de fatias são reproduzíveis com
-> `FRAUS_BACKEND=onnx uv run python scripts/avaliar_por_fatias.py --n 600`
-> (semente `20260915`).
+> **Métricas históricas de 15/09/2026**, não uma reavaliação do checkpoint
+> publicado hoje. As fatias foram medidas com `scripts/avaliar_por_fatias.py`
+> (`--n 600`, semente `20260915`). A investigação de 26/10/2026, os baselines
+> locais e seus limites de independência estão em
+> [Generalização e evidências](generalizacao.md); eles não sobrescrevem estas
+> medições. A campanha Colab de três sementes por cabeça não foi concluída.
+> Revisão documental de **16/11/2026**: modelos congelados por decisão do
+> projeto; retreino, calibração, promoção e troca de pesos/arquitetura estão
+> fora da fila ativa. Os resultados antigos não validam o ambiente atual.
 
 ## Uso pretendido e uso proibido
 
@@ -25,7 +31,7 @@ problemático. Toda exibição carrega a etiqueta de estimativa: o NPS é
   A nota de uma conversa é evidência para um humano olhar, não veredito.
 - **Apresentar a nota como NPS declarado.**
 
-## As peças
+## As peças — métricas históricas de 15/09/2026
 
 | peça | o que é | treino | métrica declarada | onde a métrica engana |
 |---|---|---|---|---|
@@ -38,12 +44,12 @@ Os três BERTimbau rodam em CPU, por torch ou por ONNX Runtime
 (`FRAUS_BACKEND`), com **0 de 180 categorias trocadas** entre os dois
 executores. Ver [Encolher os modelos](encolhimento.md).
 
-## Onde o fusor erra — avaliação por fatia
+## Onde o fusor erra — avaliação histórica por fatia
 
 600 conversas do simulador, fora das sementes usadas em outras medições.
 **Isto mede onde o modelo erra dentro do domínio sintético, não desempenho em
-atendimento real**: o projeto não tem corpus PT-BR de atendimento rotulado com
-timestamps, e nenhum corpus público tem.
+atendimento real**: o projeto não dispõe de corpus PT-BR de atendimento
+rotulado com timestamps para essa validação.
 
 Acurácia geral: **0,940** (598 conversas com sinal; 2 eram só cortesia).
 
@@ -62,14 +68,14 @@ Acurácia geral: **0,940** (598 conversas com sinal; 2 eram só cortesia).
 
 O que a tabela diz, e o que ela **não** pode dizer:
 
-1. **Conversa de uma fala só é a fatia mais fraca** (0,733). É esperado — há
-   menos texto para agregar —, e é o caso comum de "cliente respondeu uma vez e
-   sumiu". A nota dessas conversas merece menos confiança do que a das longas.
+1. **Conversa de uma fala só foi a fatia mais fraca** (0,733) nesta medição.
+   Havia menos texto para agregar, mas a tabela não demonstra que toda conversa
+   longa mereça mais confiança, nem mede a confiança por conversa real.
 2. **Sem emoji, o acerto cai 10 pontos.** Suspeita declarada: o simulador sorteia
    o emoji **por rótulo** (`EMOJIS_POR_ROTULO`), então parte do acerto "com
    emoji" pode ser o modelo lendo uma pista que o gerador plantou — a mesma
-   família de defeito da invariante 10. Em atendimento real, onde emoji é mais
-   raro, **espere o número da linha "sem"**, não o da "com".
+   família de defeito da invariante 10. Isso não permite prever a acurácia
+   em atendimento real; a linha “sem emoji” ainda pertence ao simulador.
 3. **A fatia de latência é parcialmente circular** pelo mesmo motivo: o
    simulador sorteia a latência por rótulo. O F1 menor acima de 180 s é a
    fatia a acompanhar: mesmo com a espera em `log1p` desde 15/09/2026, o relógio
@@ -96,10 +102,11 @@ gratidão era lido como satisfação, e a emoção lia "ok, obrigado" como alegr
 `joy`. **Decisão:** conversa em que *toda* fala do cliente é fórmula de
 cortesia é **sem sinal** (`score: None`, invariante 2), e não sinal fraco. A
 lista é fechada e conservadora (`fraus/cortesia.py`): só casa a fala inteira, e
-"valeu, resolveu na hora" continua pontuada. O conserto de verdade é retreinar a
-emoção separando gratidão de alegria.
+"valeu, resolveu na hora" continua pontuada. Separar gratidão de alegria seria
+uma hipótese de pesquisa futura, não correção autorizada: os modelos estão
+congelados por decisão de 16/11/2026.
 
-## A cabeça de ironia — taxa de erro publicada
+## A cabeça de ironia — taxa de erro histórica publicada
 
 Contra-exemplos escritos para quebrar o atalho que o gerador ensinou: falas
 **sinceras com marcador de discurso** ("nossa", "realmente", "né", "que ...") e
@@ -110,36 +117,48 @@ Contra-exemplos escritos para quebrar o atalho que o gerador ensinou: falas
 | sincera com marcador marcada como irônica | **70%** (7 de 10) |
 | irônica sem marcador que passou como sincera | **40%** (4 de 10) |
 
-Os erros vêm saturados: "realmente, agora funcionou" → 0,999 de ironia;
-"perfeito, cancelaram sem avisar" → 0,001. A cabeça aprendeu **registro e
-marcador**, não pragmática. É por isso que ela **não entra na nota** desde
-04/09/2026 e que a interface a mostra com ressalva, nunca como veredito. A lista
-completa, fala a fala, sai do script.
+Nesse teste histórico, os erros vinham saturados: "realmente, agora funcionou"
+→ 0,999 de ironia; "perfeito, cancelaram sem avisar" → 0,001. O diagnóstico de
+marcadores vale para aquele checkpoint. A saída do vetor em 04/09/2026 teve
+outro motivo medido: as features de ironia funcionavam como detector de
+sentimento positivo no corpus do fusor. Não se deve atribuir a exclusão a
+esta pequena régua, nem extrapolar sua taxa de erro a pesos atuais.
 
 ## Calibração e conformal do fusor
 
-O fusor tem agora conjunto conformal (Mondrian por classe, sobre o score
-gravado) e instrumentos de calibração. O holdout B2W de 300 conversas é
-dividido em calibração (150) e avaliação (150), estratificado, com semente
-fixa. **Nenhum número abaixo foi medido**: o fusor log1p vigente não está na
-máquina de desenvolvimento em 14/10/2026. O cache de features do holdout
-(900 de treino, 300 de teste; só as cabeças do BERTimbau, sem treinar nada) já
-foi extraído localmente e fica fora do repositório; a medição está pronta para
-rodar quando o fusor estiver presente.
+O código implementa conjunto conformal (Mondrian por classe, sobre o score
+gravado) e instrumentos de calibração. **Não há
+`fraus/dados/conformal_fusor.json` na árvore consultada em 16/11/2026**.
+Implementação não significa cobertura validada ou confiança disponível no
+ambiente publicado. Sem artefato compatível, as rotas falham explicitamente.
 
-Comandos, nesta ordem (nenhum usa `--promover`):
+O protocolo histórico dividia um holdout B2W de 300 conversas em calibração
+(150) e avaliação (150), estratificado, com semente fixa. **Nenhum número da
+tabela abaixo foi medido**: a indisponibilidade do fusor `log1p` foi registrada
+em 14/10/2026. O cache posicional antigo não comprova isolamento por produto
+ou independência das cabeças e não deve ser reutilizado como prova atual.
 
-```bash
-# 1. gera o cache. O script extrai as features, grava o cache e treina um fusor
-#    SÓ EM MEMÓRIA; sem --promover não escreve nada em modelos/.
-uv run --with pandas python scripts/retreinar_fusor_local.py --cache features-fusor.json
-# 2. artefato conformal (só --gravar escreve fraus/dados/conformal_fusor.json)
-uv run python scripts/calibrar_conformal.py --cache features-fusor.json [--alvo 0.9] [--gravar]
-# 3. ECE/MCE/classwise com bootstrap, reliability diagram e ECE por fatia
-uv run --with matplotlib python scripts/medir_calibracao.py --cache features-fusor.json --png docs/diferenciais/img/calibracao.png
-# 4. curva cobertura x acurácia por abstenção
-uv run python scripts/medir_abstencao.py --cache features-fusor.json
-```
+A compatibilidade por régua é uma guarda parcial: `regua_do_fusor`
+(`fraus/motor.py`) usa a assinatura do fusor e a lista de cortesias, não
+identifica mudanças de checkpoint das cabeças ou de backend. Sozinha, ela não
+demonstra proveniência ou estabilidade de todo o pipeline.
+
+As tabelas históricas desta página são registros documentais das execuções
+datadas, não resultados recalculados nesta revisão. O cálculo de fatias está
+em `fraus/fatias.py` e `scripts/avaliar_por_fatias.py`; não há resultado JSON
+da execução de 15/09 em `fraus/dados/` para reprodução independente. O
+F1-macro por fatia considera apenas as classes presentes no rótulo real da
+fatia, não necessariamente as três classes.
+
+### Comandos atuais para preparar um candidato
+
+**Fora da fila ativa desde 16/11/2026.** A preparação de candidato e a
+calibração eram um protocolo de pesquisa, não uma próxima etapa vigente.
+Os instrumentos permanecem no repositório (`scripts/retreinar_fusor_local.py`,
+`scripts/calibrar_conformal.py`, `scripts/medir_calibracao.py` e
+`scripts/medir_abstencao.py`), mas sua existência não comprova execução,
+artefato conformal gerado ou promoção. A metodologia e os limites históricos
+estão em [Generalização](generalizacao.md).
 
 | Medida | Valor |
 |---|---|
@@ -153,11 +172,11 @@ uv run python scripts/medir_abstencao.py --cache features-fusor.json
 
 Garantia: cobertura ≥ alvo **por classe**, sob permutabilidade com o conjunto de
 calibração; **não vale** sob mudança de distribuição (atendimento real ≠ holdout
-sintético); o sinal de tempo do fusor é sintético. Com 150 exemplos de
-avaliação a cobertura tem granularidade de cerca de 2 a 3 pontos percentuais.
-Os scripts exigem no mínimo 5 exemplos por classe em cada metade (escolha de
-projeto, sem procedência na literatura), e a mediana do bootstrap é impressa
-com uma nota de viés.
+sintético); o sinal de tempo do fusor é sintético. No protocolo histórico,
+150 exemplos de avaliação não sustentam uma medida fina de cobertura por
+classe. Os scripts exigem no mínimo 5 exemplos por classe em cada metade
+(escolha de projeto, sem procedência na literatura), e a mediana do bootstrap
+é impressa com uma nota de viés.
 
 ## Limitações que valem para tudo acima
 
@@ -165,7 +184,8 @@ com uma nota de viés.
   distribuições da literatura, não de atendimento observado.
 - **Texto fora de domínio.** Satisfação aprendeu com resenha de produto; emoção,
   com Reddit traduzido por máquina.
-- **Acurácia alta é sintoma, não vitória** (invariante 10). Os 0,947 e 0,940 acima
-  são de domínio sintético e devem ser lidos como teto, nunca como expectativa.
+- **Acurácia alta pede investigação**, não celebração automática (invariante 10).
+  Os 0,947 e 0,940 acima são medidas sintéticas históricas, não uma estimativa
+  ou um teto demonstrado de desempenho em atendimentos reais.
 
 Ver também [Limitações conhecidas](limitacoes.md).

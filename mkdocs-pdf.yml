@@ -61,6 +61,9 @@ plugins:
   # separada do site.
   - to-pdf:
       output_path: pdf/fraus.pdf
+      # Mermaid precisa executar antes do WeasyPrint; sem isso imprime o codigo.
+      render_js: true
+      headless_chrome_path: !ENV [FRAUS_CHROME_PDF, chromium]
       cover_title: Fraus
       cover_subtitle: Medição de satisfação sem LLM em runtime
       author: João Pedro Tavares Vicente

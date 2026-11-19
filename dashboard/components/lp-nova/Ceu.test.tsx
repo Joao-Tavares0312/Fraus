@@ -14,4 +14,12 @@ describe("Ceu", () => {
     expect(html.match(/class="lp-ponto/g)).toHaveLength(140);
     expect(html.match(/class="lp-risco/g)).toHaveLength(26);
   });
+
+  it("separa os pontos em tres planos de profundidade", () => {
+    expect(html.match(/class="lp-plano"/g)).toHaveLength(3);
+  });
+
+  it("traz nevoa, grade e feixe da fenda como camadas de fundo", () => {
+    for (const camada of ["lp-nevoa", "lp-grade", "lp-feixe"]) expect(html).toContain(`class="${camada}"`);
+  });
 });

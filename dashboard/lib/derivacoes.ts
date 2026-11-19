@@ -724,7 +724,7 @@ export type PesoDoSinal = {
 };
 
 /**
- * Agrega as 35 importancias do fusor nas SETE familias do trabalho.
+ * Agrega as 39 importancias do fusor nas SETE familias do trabalho.
  *
  * O peso e o coeficiente absoluto medio da regressao logistica -- e por isso
  * que o fusor e linear: a pergunta "qual sinal pesou mais" tem resposta.

@@ -1,10 +1,41 @@
-# Handoff — Fraus, atualizado em 22/10/2026 (UI e desempenho da LP/site)
+# Handoff — Fraus, atualizado em 16/11/2026 (modelos congelados e roadmap revisado)
 
 Escrito para uma sessão que não viveu nada do que está aqui. O objetivo é que
 você consiga **decidir**, não só executar: cada regra abaixo vem com o motivo,
 porque várias delas parecem erro até você saber por que existem.
 
 O trabalho é o **TCC do João** (pt-BR). Fale em português com ele.
+
+---
+
+## Prioridades vigentes — 16/11/2026
+
+**Modelos congelados por decisão do João.** Retreino, troca de pesos ou de
+arquitetura, promoção de candidato e calibração estão fora da fila. Os três
+classificadores e o fusor continuam obrigatórios (invariantes 7 e 9); as
+limitações científicas continuam limitações, não tarefas encerradas. Se um
+artefato existente se mostrar incompatível, isso é bloqueio operacional a
+registrar — nunca motivo para retreinar nem para servir dublê como inferência.
+
+A fila ativa é uma só e mora em `README.md`, seção “Pendências”
+(`README.md#pendências`): P0 publicação conferida por contrato e
+backup/restauração ensaiados; P1 exports reais autorizados; P1 TARS
+(identificador sem `chat_id` e voto de feedback ponta a ponta); P2 Web Vitals e
+orçamento da LP; P2 empresa fictícia e ensaio da banca. Não duplique a fila
+aqui.
+
+Encerrados no código, conforme o estado revisado do `README.md` (leitura do
+repositório, sem suíte nem deploy nesta revisão): landing independente da API,
+tema claro, pausa de atividade em aba oculta, Server-Timing e log de latência
+no backend, Analisar arrastar-e-pronto, Modelo visível ao papel `usuario` e o
+backend do feedback declarado binário. **Código no repositório não é prova de
+publicação**: presença na árvore não comprova merge nem deploy, e o estado da
+produção não foi revalidado em 16/11/2026. Diferenciais: E1, E2, E5 e E6
+implementados com validação real incompleta; E3 não iniciado; E4 descartado.
+
+Os blocos datados abaixo são **histórico**. Pendências antigas de notebooks,
+artefatos e branches não são ordens atuais nem prova do ambiente de hoje; os
+registros científicos continuam valendo como diagnóstico.
 
 ---
 
@@ -23,6 +54,30 @@ Stack: FastAPI + PostgreSQL/Supabase em produção (SQLite local) + Pydantic no 
 + Recharts no front (`dashboard/`).
 
 ---
+
+## Generalização, Modelo e documentação — 26/10/2026
+
+- A [matriz de evidências](generalizacao.md) mantém o diagnóstico de
+  overfitting **inconclusivo**. A receita posicional histórica compartilha
+  41 produtos entre pools; isso não recupera o treino dos pesos antigos.
+  Auditoria integral, reconstrução e baselines ficam separados.
+- `receita_treino` e notebooks 01/03/04 selecionam pela validação e gravam a
+  decisão antes do teste final. Curvas têm diagnóstico de treino fixo.
+  Retomada e bundles foram exercitados com BERT minúsculo, não com novos
+  candidatos Fraus. A campanha de nove rodadas T4 está bloqueada por ADC.
+- O notebook 02 e a CLI do fusor agora exigem manifesto explícito,
+  `--b2w` e saída externa. `--promover` foi removido. Cache depende dos bytes
+  das cabeças, fontes e escala; ablações científicas aguardam candidatos
+  independentes. Não contorne a recusa do fusor antigo em segundos crus.
+- A tela Modelo ganhou explorador didático; preserva o simulador e reutiliza
+  uma única resposta HTTP. Não observa atenção/ativações nem pontua uma
+  conversa a partir da frase. Oito famílias observadas, sete/39 no vetor.
+- O site tem percursos para banca, usuários e desenvolvimento. O PDF usa
+  Chromium e `pdf_event_hook.py` para preservar Mermaid em SVG; biblioteca
+  fixada por hash, baixada no build, nunca no caminho de predição.
+- Não houve promoção nem deploy. Evidências e limites completos na
+  [nota interna](notas/2026-10-26-generalizacao.md); resultados brutos e
+  manifestos privados em `/tmp/fraus-overfitting-20261026/`, fora do site.
 
 ## Desempenho da LP e do site — 22/10/2026
 
@@ -202,12 +257,22 @@ Sidebar restaura cookie no servidor, mantém nomes no rail, período `de`/`ate`,
 permissões, sessão e aviso de dublê integral. Ctrl/Meta+B não intercepta edição;
 gaveta móvel fecha na navegação comum e devolve foco ao fechar/Escape.
 
-O segredo dos cinco cliques agora é **Encaixe secreto**: três fragmentos do
-FR, trilhos nativos e conclusão visual, sem áudio ou cronômetro. O código de
-revelação vaporwave, pontuação de cliques e falsificação dos indicadores saiu
-inteiro. Nenhum indicador muda enquanto se joga. O novo diálogo usa Base UI,
-com foco contido/devolvido e suporte a abertura sobre a gaveta móvel. O smoke
-é `node scripts/validar-segredo-playwright.mjs`.
+O segredo dos cinco cliques foi substituído em 27/10/2026 pela **Fraus-chan**:
+ela espia, puxa a fenda, dá um passo e acena; toque ou teclado alternam saudação,
+piscadinha e uma fala cúmplice. A entrada agora usa **quatro sprites novos**,
+gerados pelo gerador nativo do Codex com pedido de `gpt-image-2` e as artes do
+`fraus-video` como referência. Os WebP de entrada têm 480×720 e prompts
+`.webp.json`; as reações `face`/`wink` continuam. A pose `pull` antiga saiu.
+As seis imagens locais em `dashboard/public/fraus-chan/` só baixam ao abrir.
+A sequência avança por `animationend`; replay remonta o palco. Reduce pula
+o movimento mesmo se ativado durante a entrada. Sem imagem gerada em runtime,
+LLM, áudio, leitura de conversas ou persistência; indicadores intactos.
+O diálogo Base UI preserva foco e a gaveta móvel. O smoke
+`node scripts/validar-segredo-playwright.mjs` foi operado em 1440, 1280,
+390, 320 e 844px (paisagem), com temas claro/escuro e reduce, usando API
+local com snapshot sintético e motor dublê explícito — não valida inferência.
+Sem deploy nesta entrega. O antigo quebra-cabeça saiu; os contratos de
+cinco cliques e intervalo de dois segundos continuam.
 
 Leituras gravadas continuam exigindo snapshot validado do motor real; a
 otimização não autoriza gerar resultados com o dublê.

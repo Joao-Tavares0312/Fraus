@@ -1,36 +1,46 @@
 # Diferenciais — relatório de entrega (14/10/2026)
 
-Este relatório fecha a missão "diferenciais do Fraus, ancorados em concorrentes reais e medidos". Para cada entrega, diz:
+Este relatório preserva o registro de 14/10/2026 e separa implementação de
+validação. A revisão documental de **16/11/2026** conferiu o código e a árvore
+de artefatos, sem repetir testes, inferência ou consulta à produção.
 
-- o que entrou;
-- o que foi medido;
-- o que **não foi verificado**, e por quê;
-- como reproduzir.
-
-Nenhum número aqui foi estimado à mão. Onde não houve medição, está escrito "não verificado" e o script já está pronto para rodar.
+**Modelos congelados por decisão do projeto em 16/11/2026:** sem retreino,
+calibração, promoção ou troca de pesos/arquitetura na fila ativa. Comandos e
+medições de outubro são histórico, não autorização para reabrir essa frente.
+Onde não houve medição, não há alegação de qualidade validada.
 
 ## Resumo
 
 | entrega | estado | medição real |
 |---|---|---|
-| E1 — por que esta nota, contrafactual e drivers | entregue | aditividade exata provada no fusor sintético; **no fusor real: não verificado** |
-| E2 — calibração, abstenção e conjunto conformal | entregue | **não verificado** (artefato conformal não gerado) |
-| E3 — declarado × inferido | **não iniciado**: exige schema novo (`nota_declarada`), ainda não aprovado | — |
+| E1 — por que esta nota, contrafactual e drivers | implementado; validação real incompleta | aditividade registrada no fusor sintético; **no fusor real: não verificado** |
+| E2 — calibração, abstenção e conjunto conformal | implementado; validação real incompleta | **não verificado**; `fraus/dados/conformal_fusor.json` ausente na árvore de 16/11 |
+| E3 — nota declarada × inferida | **não iniciado**, adiado; não há aprovação de schema `nota_declarada` | o feedback binário existente não entrega E3 |
 | E4 — benchmark contra LLM | **descartado** em 14/10/2026 | — |
-| E5 — sinalizadores por regra | entregue | casos construídos e taxa de disparo no simulador; **precisão e recall em dado real: não verificado** |
-| E6 — impacto por tema e início da deterioração | entregue | **não verificado** no fusor real; o lead time do simulador é artefato do gerador |
+| E5 — sinalizadores por regra | implementado; validação real incompleta | casos construídos; **precisão e recall reais: não verificados** |
+| E6 — impacto por tema e início da deterioração | implementado; validação real incompleta | **não verificado** no fusor real; lead time do simulador é artefato do gerador |
 
-**Por que tanta coisa "não verificado".** A máquina de desenvolvimento não tem o `fusor.joblib` treinado em `log1p`. O artefato que estava disponível foi treinado em segundos crus, e `Fusor.carregar` o recusa de propósito (invariante 10). Sem esse fusor:
+**Bloqueio histórico de 14/10/2026.** O registro da entrega aponta ausência de
+`fusor.joblib` compatível com `log1p` na máquina de desenvolvimento.
+`Fusor.carregar` recusa segundos crus de propósito; não se contorna essa
+recusa com dublê. Isso explica as medições faltantes daquela data, mas não
+identifica quais pesos estão publicados agora.
 
-- nenhuma métrica que dependa da nota real pôde ser medida;
-- cada instrumento falha alto, sem motor dublê (invariante 7).
+A régua é uma identidade parcial (`regua_do_fusor`, em `fraus/motor.py`):
+assinatura do fusor mais lista de cortesias, sem identidade dos checkpoints
+das cabeças ou do backend. Um artefato conformal “da mesma régua” não prova
+que todo o pipeline permaneceu igual.
 
-Assim que o fusor estiver em `modelos/`, os comandos da seção [Reproduzir](#reproduzir) produzem os números.
+O backend aceita `feedback_declarado` (`-1`/`1`) e comentário, sem alterar
+score (`fraus/modelos.py`, `fraus/api/registro.py`). `GET /indicadores` já
+retorna total com voto e score e concordância (positivo/promotor,
+negativo/detrator). A dashboard não apresenta esse agregado e o TARS não
+envia o voto. “Resolveu” não é nota NPS, nem validação causal da satisfação.
 
 ## O que vale para todas as entregas
 
 - **Sem LLM em runtime.** Toda explicação é feita dos coeficientes ou por template, e nenhuma chamada de rede entra no caminho de predição.
-- **Nada novo é gravado.** O `score`, a nota e a categoria gravados não mudam. Nenhuma coluna, tabela ou chave de payload foi criada. Tudo é derivado na leitura.
+- **As leituras E1/E2/E5/E6 não alteram score.** Nota e categoria são derivadas na leitura; não há nova predição persistida por essas leituras. Isso não descreve todo o sistema: o feedback binário e os registros operacionais têm contratos próprios.
 - **Nenhuma régua nova.** Nada retreina o modelo, e ficaram intocados:
   - `modelos/`;
   - `NOMES_FEATURES` (39);
@@ -40,7 +50,7 @@ Assim que o fusor estiver em `modelos/`, os comandos da seção [Reproduzir](#re
 - **Ausência não vira zero.** Conversa sem sinal, n abaixo do mínimo ou campo ausente numa API antiga aparecem nomeados, nunca como 0.
 - **Conformidade.**
   - Nada pontua atendente.
-  - Tudo roda em lote, sobre conversa encerrada; nada alerta ao vivo.
+  - As leituras são retrospectivas, sem alerta ao vivo; o schema aceita conversa sem `encerrada_em`, portanto não impõe encerramento na entrada.
   - Nada decide sozinho: as marcas (abstenção, sinalizadores, deterioração) informam e não mudam a nota. O atendimento continua no NPS.
 - **O sinal de tempo do fusor é sintético**, e toda métrica nova declara isso.
 
@@ -51,7 +61,7 @@ Assim que o fusor estiver em `modelos/`, os comandos da seção [Reproduzir](#re
 - **Decomposição exata do fusor** (`Fusor.decompor`). O intercepto mais as contribuições é igual ao log da razão contra a classe de referência, e o score é refeito a partir dos logits.
 - **Efeito por família em pontos de score.** É um recálculo exato, mas **não é aditivo**, e a tela diz isso.
 - **Frases por template** em `fraus/explicacao.py`, sem LLM. A explicação vem dentro de `GET /conversas/{id}/atribuicao`.
-- **`POST /conversas/{id}/contrafactual`**, que testa a primeira resposta ou um teto de espera. Ele recusa com 422 quando a conversa sai da faixa de treino (`|z| > 4`).
+- **`POST /conversas/{id}/contrafactual`**, que testa a primeira resposta ou um teto de espera. Recusa com 422 se a conversa original ou a hipótese sai da faixa (`|z| > 4`); exige motor real, régua vigente e orçamento de mensagens.
 - **`GET /indicadores/drivers`**, sobre uma amostra por semente (50, com teto de 200). Mostra a média por família em detratores e em promotores, com IC por bootstrap, e o rótulo "associação no modelo, não causa".
 - **Duas telas:** um bloco na transcrição e um painel sob demanda na Visão geral.
 
@@ -63,21 +73,26 @@ Assim que o fusor estiver em `modelos/`, os comandos da seção [Reproduzir](#re
 
 **O que entrou.**
 
-- **Conjunto conformal Mondrian (por classe) sobre o score gravado** (`fraus/conformal.py`). Para cada nota, diz quais classes de satisfação são compatíveis com ela, com cobertura-alvo de 90% por classe. O artefato `fraus/dados/conformal_fusor.json` é chaveado pela régua.
-- **Falha explícita sem artefato.** Se o artefato estiver ausente, inválido ou for de outra régua, as rotas respondem 503 ou 409 com o motivo. Nunca devolvem um conjunto vazio fingindo confiança.
+- **Conjunto conformal Mondrian (por classe) sobre o score gravado** (`fraus/conformal.py`). O alvo padrão dos instrumentos é 90%, mas é um parâmetro; a rota usa o alvo do artefato, não uma garantia empiricamente validada no atendimento.
+- **Falha explícita sem artefato.** Ausência, conteúdo inválido ou régua incompatível do artefato geram 503; uma conversa com score de régua antiga pode gerar 409 no detalhe. Nunca devolvem conjunto vazio fingindo confiança. O formato previsto para `fraus/dados/conformal_fusor.json` é chaveado pela régua.
 - **Abstenção** ("leitura sem confiança suficiente"):
   - dispara quando o conjunto não tem exatamente uma classe ou, no detalhe, quando há deriva;
   - informa e não corrige.
 - **Rotas:**
   - `GET /conversas/{id}/confianca`;
   - `GET /indicadores/confianca`, que dá a fração de abstenção com IC de Wilson.
-- **Instrumentos** que não gravam nada:
+- **Instrumentos de medição:**
   - `scripts/medir_calibracao.py` (ECE, MCE e por classe, com bootstrap);
   - `scripts/medir_abstencao.py`;
-  - `scripts/calibrar_conformal.py`.
+  - `scripts/calibrar_conformal.py` (só grava artefato com `--gravar`).
 - **Selo de confiança no atendimento.** Ele fala em "classe de satisfação", não em categoria NPS.
 
-**Não verificado.** A cobertura empírica, o ECE e a curva de abstenção. O artefato conformal não foi gerado, então as rotas de confiança respondem 503 até alguém rodar `scripts/calibrar_conformal.py --gravar`.
+**Não verificado.** Cobertura empírica, ECE e curva de abstenção. O arquivo conformal esperado não está na árvore consultada em 16/11/2026; sem um artefato válido no ambiente de execução, as rotas respondem 503. A consulta ao repositório não prova o estado da produção. Calibração permanece fora da fila ativa.
+
+O agregado conta apenas abstenção por conjunto vazio ou múltiplo, excluindo
+scores defasados. No detalhe, deriva também pode provocar abstenção, mas
+acima de 40 mensagens do cliente a resposta declara deriva não avaliada
+(`fraus/api/rotas/confianca.py`).
 
 ## E5 — Sinalizadores por regra
 
@@ -98,11 +113,16 @@ Assim que o fusor estiver em `modelos/`, os comandos da seção [Reproduzir](#re
 - **Lista de achados e marca ⚑** na transcrição.
 - **Instrumento:** `scripts/medir_sinalizadores.py`.
 
-**Medido.**
+**Registro de medição de 14/10/2026, não repetido nesta revisão.**
 
 - Os 15 casos construídos se comportam como declarado. Isso **verifica a implementação, não mede qualidade**.
 - No simulador (60 conversas, sem rótulo de regra, só a taxa de disparo): `abandono` 15, `cliente_repete` 2, as outras 0.
 - `loop_do_bot` deixou de ser cúbico: 1.000 respostas do bot levavam 27,98 s e agora levam 0,083 s.
+
+Fonte dos números acima: registro documental desta entrega. O conjunto
+construído está em `fraus/dados/casos_sinalizadores.py`; ele não é uma amostra
+real. Não há resultado bruto versionado do benchmark de tempo em
+`fraus/dados/`, portanto esses tempos não são um orçamento atual.
 
 **Não verificado.** Precisão e recall em dado real. Falta a amostra anotada à mão, e a fonte dela é decisão do João. O script aceita `--anotada arquivo.jsonl`. O falso positivo de despedida do bot e o léxico fechado estão declarados em [Limitações](../limitacoes.md).
 
@@ -121,7 +141,7 @@ Assim que o fusor estiver em `modelos/`, os comandos da seção [Reproduzir](#re
 - **Teste de não vazamento.** Alterar a mensagem `j` não muda nenhum prefixo `k < j`, e o teste não passa no vazio.
 - **Instrumento:** `scripts/medir_deterioracao.py`.
 
-**Medido.**
+**Registro de medição de 14/10/2026, não repetido nesta revisão.**
 
 - No teto do radar, o custo do bootstrap independe de n: com 15.000 conversas por lado, caiu de 1,58 s para 0,069 s.
 - Conferência estrutural do simulador: ele sorteia todas as falas do cliente de um único rótulo, então **não gera trajetória**. O lead time medido nele é artefato do gerador, e o script diz isso antes de imprimir qualquer número.
@@ -129,9 +149,12 @@ Assim que o fusor estiver em `modelos/`, os comandos da seção [Reproduzir](#re
 
 **Não verificado.** Recall, falso alarme e lead time com o fusor real: o script sai com código 2. A conferência visual mostrou que a regra não tem margem em torno do limiar (na demonstração, a deterioração começou com uma queda de cerca de 67 para 61 pontos). Isso está declarado.
 
+Os tempos e a demonstração acima são registros desta entrega, não resultados
+JSON versionados em `fraus/dados/` nem prova de desempenho atual.
+
 ## Contrato da API
 
-O OpenAPI foi de **76** caminhos (referência da Fase 0) para **80**. Os quatro novos:
+O registro de 14/10/2026 apontava passagem de **76** para **80** caminhos no OpenAPI. É contagem histórica, não o total atual. Os quatro caminhos acrescentados naquela entrega:
 
 | caminho | entrega |
 |---|---|
@@ -146,9 +169,12 @@ E5 e E6 acrescentaram só campos e parâmetros a rotas que já existiam:
 - `impacto` no radar;
 - `deterioracao` no replay.
 
-Nenhum caminho sumiu.
+O registro daquela entrega não apontou remoção de caminhos; a revisão atual não executou o OpenAPI.
 
 ## Verificação final
+
+Resultados registrados em **14/10/2026**, sem nova execução nesta revisão.
+Os totais abaixo não representam a suíte ou a árvore de trabalho de hoje.
 
 | comando | resultado |
 |---|---|
@@ -161,21 +187,30 @@ Nenhum caminho sumiu.
 
 ## Reproduzir
 
-Os comandos abaixo pressupõem o fusor `log1p` em `modelos/`. Sem ele, cada um falha alto, com o motivo.
+Os instrumentos abaixo existem para medir o comportamento dos artefatos;
+não comprovam que as medições tenham ocorrido. Exigem fusor compatível com
+`log1p` e, quando aplicável, cache com manifesto e proveniência verificáveis.
+Cache posicional antigo não é reutilizável por nome; ver
+[Generalização](../generalizacao.md). Preparação de candidato e calibração
+foram retiradas desta sequência porque estão fora da fila ativa desde
+16/11/2026. Medir artefato existente não autoriza retreinar nem promover.
 
 ```bash
 uv run python scripts/medir_aditividade.py
-uv run python scripts/retreinar_fusor_local.py --cache features.json   # só extrai; não promove
-uv run python scripts/calibrar_conformal.py --cache features.json --gravar
-uv run --with matplotlib python scripts/medir_calibracao.py --cache features.json --png docs/diferenciais/img/calibracao.png
-uv run python scripts/medir_abstencao.py --cache features.json
-uv run python scripts/medir_sinalizadores.py --simulador 600 [--anotada amostra.jsonl]
+uv run python scripts/medir_calibracao.py --fusor "$FUSOR" --cache "$CACHE"
+uv run python scripts/medir_abstencao.py --fusor "$FUSOR" --cache "$CACHE"
+uv run python scripts/medir_sinalizadores.py --simulador 600
+# Com amostra autorizada e anotada: acrescente --anotada amostra.jsonl.
 uv run python scripts/medir_deterioracao.py --n 300
 ```
 
 ## Pendências que dependem do João
 
-1. **Fusor `log1p` nesta máquina.** Destrava todas as medições marcadas "não verificado".
-2. **Schema `nota_declarada` (E3).** Precisa de aprovação, por causa da paridade SQLite × Postgres.
-3. **Amostra anotada dos sinalizadores (E5).** Falta definir a fonte, quem anota e com qual material.
-4. **Concorrentes.** As afirmações estão em [concorrentes](concorrentes.md), com URL e data. Elas não substituem uma leitura própria antes da banca.
+1. **Medição dos artefatos existentes.** Depende de disponibilidade e compatibilidade verificadas, sem contornar a recusa de segundos crus. Não inclui treinamento ou promoção.
+2. **E3 adiado.** A comparação de nota declarada 0–10 com inferida não foi iniciada e não tem schema aprovado. Completar o feedback binário existente é outra frente.
+3. **Amostra real anotada dos sinalizadores (E5).** Definir fonte autorizada e anotação antes de medir precisão e recall; não fabricar corpus.
+4. **Concorrentes.** As afirmações estão em [concorrentes](concorrentes.md), com URL e data; as fontes precisam de releitura antes da banca.
+
+Esta lista registra dependências dos diferenciais, não substitui a fila
+priorizada do projeto. E1/E2/E5/E6 implementados não significam validação real
+concluída; E4 continua descartado.

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "fase": "desempenho_tentativa_tmpfs",
+  "status": "nao_verificado",
+  "motivo": "OSError na preparacao antes de qualquer medicao; errno nao foi preservado pelo primeiro dispatcher, causa exata nao verificada",
+  "comando": "uv run --no-sync python -m scripts.analise_motores.executar desempenho --workspace /tmp/fraus-analise-20261016 --cold 5 --warm 100 --aquecimentos 3",
+  "condicoes": {"duracao_comando_s": 5.70, "tmp_filesystem": "tmpfs", "tmp_total_bytes": 8245858304, "tmp_disponivel_apos_falha_bytes": 1649172480, "disco_home_disponivel_bytes": 131980120064},
+  "artefatos": [],
+  "medicoes": {"latencia": null, "motivo": "rodada nao iniciou; resultado.json externo ficou com zero bytes"},
+  "decisao": "demais rodadas em /home/joaopedro/.cache/fraus-analise-20261016, externo ao repositorio e em disco; sem apagar arquivos do dono; manifestos anteriores preservados com caminhos/condicoes originais"
+}

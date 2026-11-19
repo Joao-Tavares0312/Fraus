@@ -1,7 +1,7 @@
 # Conformidade regulatória — o Fraus e o EU AI Act
 
-> Escrito em 10/09/2026 e corrigido em 28/09/2026. Este documento existe
-> porque o Fraus **classifica emoção a partir de texto**. Ele descreve o escopo, o
+> Escrito em 10/09/2026, corrigido em 28/09/2026 e revisto no código em 16/11/2026.
+> Este documento existe porque o Fraus **classifica emoção a partir de texto**. Ele descreve o escopo, o
 > que o sistema infere, o que ele nunca decide sozinho e — a parte que virou
 > regra de código — **o que ele está proibido de fazer**.
 
@@ -27,7 +27,7 @@ de uma implantação comercial deve ser revisto por profissional qualificado.
 | **O que analisa** | transcrições de atendimento por chatbot, já encerradas |
 | **Sobre quem infere** | o **cliente** — e apenas o cliente |
 | **O que infere** | satisfação (score 0–100 → nota 0–10 → categoria NPS), emoção por mensagem, ironia por mensagem, indicadores agregados |
-| **Quando roda** | em lote, sobre conversa terminada. Nunca em tempo real durante o atendimento |
+| **Quando roda** | leitura retrospectiva de transcrições; o produto não emite alertas durante o atendimento. A entrada aceita `encerrada_em` ausente, portanto encerramento não é uma validação obrigatória do schema |
 | **O que decide sozinho** | **nada** |
 | **Base do modelo** | três BERTimbau fine-tunados + regressão logística, inferência local em CPU |
 
@@ -38,12 +38,14 @@ de uma implantação comercial deve ser revisto por profissional qualificado.
 Mesmo sem afirmar o enquadramento no Art. 50(3), inferência sobre emoção não
 deve ser escondida de quem é afetado nem de quem interpreta o resultado.
 
-**Como o Fraus cumpre:** toda tela onde a leitura de emoção aparece
-(`components/CabecasDeLeitura.tsx`, compartilhado pelo simulador e pela análise)
-carrega a etiqueta de exposição, em linguagem de gente, junto da nota
-metodológica que já qualificava o NPS como inferido. A obrigação de *informar o
-cliente final* é de quem opera o chatbot — o Fraus fornece o texto e diz que ela
-existe; ele não fala com o cliente.
+**O que o código oferece:** `dashboard/components/CabecasDeLeitura.tsx` traz
+a etiqueta de leitura automática de emoção e explicita que ela descreve o
+cliente. A ressalva depende das propriedades do componente; quando o painel
+se repete por mensagem, o aviso deve ser lido no contexto da tela, não como
+garantia automática de que cada número tenha texto próprio.
+A obrigação de informar o cliente final é de quem opera o chatbot; exibir
+uma ressalva na dashboard não demonstra que esse aviso tenha sido entregue
+ao titular.
 
 ### 3.2 Limite de finalidade: não pontuar trabalhadores
 
@@ -55,12 +57,14 @@ produto.
 
 > ### Regra: **o Fraus não pontua atendentes.**
 >
-> O atendente humano aparece no transcript — a escalação é parte do dado — e o
-> classificador de texto **recusa pontuar mensagem que não seja do cliente**
-> (`sinais/texto.py`; `qtd_humano` e `latencia_mediana_humano_s` são contagem e
-> relógio, nunca julgamento). "Score de performance por atendente" é a sugestão
-> mais recorrente em analytics de atendimento, e no Fraus ela está **fechada
-> por desenho**, não esquecida no backlog.
+> O atendente humano aparece no transcript — a escalação é parte do dado —,
+> mas `features_texto` seleciona apenas `conversa.mensagens_cliente`;
+> a atribuição por mensagem do `Motor` também reserva as cabeças para falas do cliente.
+> O classificador de baixo nível recebe textos, sem conhecer o autor: a
+> restrição está na seleção feita pelo pipeline, não numa recusa do modelo.
+> Contagens e latências humanas descrevem a estrutura do atendimento, não o
+> desempenho individual de um trabalhador. Não há tela ou rota de ranking ou
+> score individual por atendente no produto revisado.
 >
 > Vale com o mesmo peso das invariantes do `CLAUDE.md`: implementar isso não é
 > feature nova, é violação.
@@ -75,8 +79,8 @@ Onde o Fraus já está, hoje, em relação a cada uma:
 
 | Obrigação | Estado no Fraus |
 |---|---|
-| **Supervisão humana** | o sistema não decide nada. O analista curou o léxico (`sinais/curadoria.py`), move as faixas de NPS (`PUT /configuracoes`) e lê os transcritos. Nenhuma saída aciona ação automática sobre ninguém |
-| **Logging** | `entregas_webhook` registra toda entrega e toda recusa, com veredito e motivo; `auditoria_eventos` guarda eventos encadeados por SHA-256. O encadeamento detecta alteração no meio da cadeia, mas não a remoção dos eventos mais recentes nem a reescrita integral (não há âncora fora da tabela) |
+| **Supervisão humana** | o analista pode curar o léxico (`sinais/curadoria.py`), alterar as faixas de NPS (`PUT /configuracoes`) conforme permissão e ler transcritos. As saídas não acionam decisões sobre clientes ou trabalhadores |
+| **Logging** | `entregas_webhook` registra vereditos e motivos das entregas tratadas pela rota; recusas anteriores ao handler, como validação de schema, não são promessa de registro nessa tabela. `auditoria_eventos` encadeia eventos por SHA-256, sem âncora externa contra remoção do sufixo ou reescrita integral |
 | **Transparência** | etiqueta de estimativa em todo número inferido; limitações declaradas em tela e em `docs/treinamento.md` |
 | **Monitoramento pós-mercado** | `GET /saude/deriva` reporta quais features estão fora da faixa de distribuição em que o modelo foi treinado |
 | **Avaliação de conformidade** | não feita. É trabalho de quem for colocar isto em produção comercial, e está fora do escopo do TCC |
@@ -89,9 +93,10 @@ está de pé e do que não está.
 
 - **O NPS é inferido do texto, não perguntado.** O intervalo de confiança que a
   interface mostra cobre a **incerteza amostral** — não a incerteza do modelo.
-- **A cabeça de ironia é pouco confiável** e por isso **não pontua** desde
-  04/09/2026: no corpus de treino ela funciona como detector de sentimento
-  positivo. Continua sendo exibida, com a ressalva colada.
+- **A cabeça de ironia não entra no vetor** desde 04/09/2026: as features
+  mediram sentimento positivo no corpus do fusor da época. A cabeça continua
+  obrigatória e exibida por mensagem; sua qualidade em atendimento real não
+  foi validada por isso.
 - **O sinal de tempo é treinado em dados sintéticos**, calibrados por
   literatura, porque nenhum corpus público em português tem timestamps de
   diálogo. Desde 15/09/2026 a espera entra em `log1p` e pesa cada vez mais
@@ -101,6 +106,11 @@ está de pé e do que não está.
 - **Desprezo não é classe treinada**; é derivado da díade raiva + nojo.
 - **Ausência de dado nunca vira zero.** Conversa sem fala do cliente sai "sem
   sinal", em toda superfície.
+- **E2 implementado não é confiança validada.** O artefato conformal não está
+  na árvore revisada; cobertura empírica não foi demonstrada. E5 usa regras,
+  sem precisão/recall medidos em amostra real anotada.
+- **Modelos congelados desde 16/11/2026.** A decisão de não retreinar,
+  recalibrar ou promover candidatos não elimina essas limitações.
 
 ## 5. Fontes
 

@@ -28,9 +28,8 @@ export function classesDoNivel(nivel: Nivel): string {
 export const DOMINANTE_POR_TELA: Record<string, string> = {
   "/dashboard": "nps-x-latencia",
   "/dashboard/atendimentos": "tabela-de-atendimentos",
-  // A tela Modelo abria pelo simulador e enterrava no meio o que o avaliador
-  // precisa ler primeiro -- ver Task 7.
-  "/dashboard/modelo": "veredito-do-modelo",
+  // O explorador mostra o processamento; os vereditos permanecem como apoio.
+  "/dashboard/modelo": "explorador-do-modelo",
   "/dashboard/grafo": "canvas-do-grafo",
   "/dashboard/integracoes": "fontes",
   "/dashboard/configuracoes": "faixas-de-nps",

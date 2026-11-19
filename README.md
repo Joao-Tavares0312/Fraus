@@ -98,7 +98,7 @@ features](docs/treinamento.md#contrato-de-features).
 na dashboard, mas **saiu do vetor do fusor em 04/09/2026**: medida no próprio
 corpus de treino, ela funciona como detector de sentimento positivo, não de
 ironia (74% das resenhas satisfeitas marcadas como irônicas, contra 9% das
-insatisfeitas) — ver [pendência 1](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida)
+insatisfeitas) — ver o [histórico da limitação de ironia](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida)
 e [a decisão em docs/treinamento.md](docs/treinamento.md#a-ironia-sai-do-vetor-04092026).*
 
 O resultado é um score de 0 a 100 por atendimento, que vira nota 0–10 e categoria
@@ -235,6 +235,9 @@ vence RAG em acurácia e latência[^3].
 
 ## Documentação
 
+- [Banca e metodologia](docs/tese.md) — pergunta de pesquisa, método e evidências
+- [Usuários](docs/guia-de-uso.md) — analisar arquivos, conferir gravação e interpretar indicadores
+- [Desenvolvedores](docs/desenvolvimento.md) — ambiente local, contratos, testes e documentação
 - [Estado operacional — 30/09/2026](docs/notas/2026-09-30-operacao-producao.md) — análise persistida, sete abas de Operação, convites, permissões e evidências da publicação
 - [Handoff interno](docs/handoff.md) — estado atual e histórico de decisões
 - [Spec de design](docs/superpowers/specs/2026-08-13-dolos-design.md) — decisões e referências
@@ -990,174 +993,63 @@ a dashboard antes de resolver a hospedagem é uma opção honesta.
 
 ## Roadmap
 
-Onde o trabalho está. **Entregue** é o que existe no repositório e tem teste ou
-verificação por trás; **falta** está detalhado em [Pendências](#pendências), e a
-ordem lá é a ordem de importância.
+Onde o trabalho está. A fila ativa, em ordem, mora em [Pendências](#pendências);
+esta seção diz o que já existe e com que prova.
 
-### Estado atual — 30/09/2026
+**Modelos congelados por decisão do João, em 16/11/2026.** Nesta fila não entra
+retreino, troca de pesos ou de arquitetura, promoção de candidato nem
+calibração. Os três classificadores e o fusor continuam obrigatórios
+(invariantes 7 e 9), e as limitações científicas continuam sendo limitações,
+descritas em [Limitações conhecidas](#limitações-conhecidas) — congelar não as
+resolve.
 
-Análise persistida, Operação e convites estão mesclados e publicados. A suíte
-da `main` passou nos dois dialetos de banco. Contratos, validações e pendências
-de configuração estão na [referência interna](docs/notas/2026-09-30-operacao-producao.md).
+### Estado revisado — 16/11/2026
 
-### Revisão histórica — 17/09/2026
+Revisão por leitura do repositório. Nenhuma suíte, deploy ou consulta à
+produção rodou nela. Presença na árvore de trabalho não comprova merge nem
+publicação; o histórico local termina em `b97d052` (30/10/2026). As revisões
+de 17/09 e 30/09/2026, com o checklist de domínio do tempo e de ingestão
+genérica, ficam no histórico do Git deste arquivo, em
+[Pendências pós-deploy](docs/notas/2026-09-17-pendencias-pos-deploy.md) e na
+[referência de Operação](docs/notas/2026-09-30-operacao-producao.md).
 
-Revisão do projeto inteiro (testes rodados, API real e webhook exercitados com
-`curl`, front auditado). Esta revisão registra o estado daquela data; o estado
-operacional atual está acima. As pendências científicas exigem sua própria
-evidência de resolução e não são encerradas pela publicação de Operação.
+Legenda: **Entregue no código** — existe no repositório, com teste ou script de
+verificação; **Parcial** — uma parte entregue, outra não; **Pendente** — não
+encontrado no repositório; **Não verificado no ambiente** — depende de
+configuração externa que esta revisão não enxerga; **Fora da fila por
+decisão** — não será trabalhado agora, de propósito.
 
-**Verificado em 14/09/2026:** a API real (`motor: real`) e o webhook funcionam
-de ponta a ponta **com a mestra ligada** — cadastro de fonte, chave `frs_`,
-`POST /ingestao` (201), webhook assinado (201), duplicada (200), assinatura
-inválida (401), log de entregas. 205 testes de API/webhook/autenticação/vazão
-verdes. Suíte completa: **860 passed, 1 failed** (a falha é ambiente — `psycopg`
-ausente no venv; `uv sync --extra dev` resolve).
-
-#### P0 — ameaça a banca
-
-- [x] **Decidir o domínio do tempo no score** — **feito em 15/09/2026**: as
-  quatro features de espera entram no vetor em `log1p` (`FEATURES_EM_LOG`,
-  dentro de `vetorizar`), o fusor foi retreinado e `Fusor.carregar` recusa
-  artefato treinado em segundos crus. O teto p99 foi medido e recusado (fazia
-  3 h pesarem o mesmo que 10 min). O achado de origem: com 3 h de espera, a
-  latência pesava −85 contra +4,6 do texto, e o relógio empatava com o texto
-  em **411 s (6,9 min)** (`scripts/medir_dominio_do_tempo.py`); com `log1p` o
-  empate passa a 613 s e 3 h pesam 2,1× o texto, não mais 20×. Medições em
-  [docs/treinamento.md](docs/treinamento.md) e `docs/handoff.md`.
-- [ ] **Ironia ainda sai promotor** quando o relógio não contradiz — limite da
-  cabeça de texto, hoje marcado pela contestação. Declarar ou atacar.
-- [ ] **Retreinar a cabeça de ironia** (`notebooks/04_treino_ironia.ipynb`) e
-  apertar os limiares de `tests/test_ironia_dominio.py`.
-- [x] **Hospedagem sem VM e sem custo fixo** — concluída em 17/09/2026. Front e
-  API são projetos Vercel separados; modelos vêm do Oracle Object Storage e o
-  estado persiste no Supabase. Não depende mais de conseguir uma Ampere A1 nem
-  de manter a máquina local ligada. Ver [deploy](docs/deploy-vercel.md).
-
-#### P0 — desempenho pós-deploy
-
-A hospedagem resolveu disponibilidade, não latência. Medição de 17/09/2026:
-landing quente em 0,26–0,59 s, API quente em 0,17–0,66 s, mas cold start da API
-em **10,8 s**. A landing transfere cerca de **799 KB de JavaScript** em 12
-chunks, além de 71 KB de HTML. Diagnóstico completo em
-[Pendências pós-deploy](docs/notas/2026-09-17-pendencias-pos-deploy.md).
-
-- [x] **Separar plano de controle e motor.** `/saude`, autenticação e CRUD não
-  carregam os três BERTimbau. Um provedor thread-safe inicializa o motor apenas
-  quando usado, e `/saude/prontidao` expõe seu estado sem aquecê-lo.
-- [ ] **Tornar a landing independente da API.** Hoje ela consulta sessão e
-  disponibilidade de login antes de renderizar, perde cache de CDN e pode
-  pagar o cold start inteiro apenas para escolher o texto do CTA.
-- [ ] **Reduzir o JavaScript da landing.** Adiar partículas/WebGL e Motion,
-  definir orçamento de bundle e medir dispositivo móvel antes de preservar
-  animação puramente decorativa.
-- [ ] **Instrumentar latência.** Registrar cold/warm start, tempo de modelo,
-  banco e proxy; coletar Web Vitals. Sem decomposição, “site lento” volta a ser
-  impressão em vez de regressão verificável.
-
-#### P0 — ingestão genérica: analisar qualquer arquivo sem código por formato
-
-Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
-`transcricao`). O desenho proposto, **sem LLM em runtime** (invariante 1):
-
-- [x] **Camada leitor** — **feita em 14/09/2026** (`fraus/ingest/leitores.py`), só com biblioteca padrão: codificação utf-8→cp1252→latin-1, delimitador por consistência de largura (vence o `;` do Excel pt-BR com vírgula dentro de aspas), JSON/JSONL aninhado com herança do id do pai, WhatsApp Android/iOS. Pendente: MarkItDown para docx/pdf e CleverCSV/charset-normalizer só se um arquivo real vencer as regras. Desenho original: formato → tabela.
-  `charset-normalizer` (encoding), `CleverCSV` (dialeto, resolve o `;` do Excel
-  pt-BR), `openpyxl` (xlsx), `json` + `json_normalize` (JSON aninhado: Discord,
-  Telegram, Zendesk), parser próprio de WhatsApp `.txt` (**não** usar whatstk:
-  GPL-3.0), `MarkItDown` para docx/pdf (MIT, offline). Docling descartado
-  (baixa modelos, lento em CPU).
-- [x] **Camada mapeador** — **feita em 14/09/2026** (`fraus/ingest/mapeador.py`, `difflib` no lugar do `rapidfuzz`, atribuição gulosa no lugar da húngara; quem é cliente por recorrência entre conversas ou por quem abre). Desenho: tabela → `Conversa` com
-  confiança por papel (`conversa_id`, `autor`, `texto`, `enviada_em`, `canal`).
-  Nome de coluna por sinônimos pt/en com `rapidfuzz` + perfil de conteúdo
-  (coluna que parseia como data, poucos valores distintos = autor, texto longo
-  = mensagem, cardinalidade em blocos = id) + atribuição húngara.
-- [x] **Data ambígua** — **feita em 14/09/2026** (armadilha Totalk `MM/DD`): campo > 12 desempata; senão a
-  interpretação com menos saltos negativos na ordem das mensagens; no empate,
-  assume **dia/mês e avisa** (a prévia expõe `data_ambigua` e a tela permite
-  escolher a ordem), mas **não bloqueia**: registrar e importar gravam com
-  dia/mês se ninguém escolher. Data sem fuso vira **aviso visível**, nunca naive
-  silencioso (invariante 6). Sem horário, sem nota (§3.2 do handoff).
-- [x] **Perfis de mapeamento** — **feito em 14/09/2026**: tabela
-  `perfis_mapeamento` (só nomes de coluna e papéis, nunca conteúdo), chave =
-  assinatura das colunas sem ordem/caixa/acento, aplicado sozinho no próximo
-  arquivo e avisado. Gravar e apagar são rota administrativa, como o léxico.
-  **A Totalk NÃO virou perfil, por decisão:** o export dela exige lógica que
-  mapa de colunas não expressa (`De: X Para: Y`, assinatura `*Nome:*` separando
-  bot de atendente, id dentro de URL) — continua adaptador.
-- [x] **Prévia e confirmação** — **feitas em 14/09/2026**. `POST /analisar/previa`
-  (sem modelo, sem gravar: mapeamento sugerido, amostra censurada, avisos,
-  perfil casado); `/analisar/arquivo` aceita `mapeamento` e `ordem_data`
-  confirmados (nunca score — invariante 3); `GET/POST/DELETE
-  /perfis-mapeamento`. Na tela de Analisar, o painel **Conferir colunas**
-  aparece só quando as colunas foram inferidas: um seletor por papel com a
-  força da evidência (não "confiança" — não é probabilidade calibrada), a
-  ordem da data quando ambígua, as primeiras linhas e "lembrar este
-  mapeamento". Verificado na API real com Playwright, inclusive a 390px.
-- [x] **Prévia na importação em lote** — **feita em 15/09/2026**. A importação
-  lê qualquer formato pelo mesmo `extrair` da análise; colunas inferidas **só
-  gravam com perfil confirmado** (409 sem ele) e arquivo sem horário é recusado
-  (400). `POST /conversas/importar/previa` e a mesma conferência de colunas na
-  tela de Integrações. O corpo da importação segue só com `caminho`.
-- [x] **docx com tabela** — **feito em 15/09/2026**, sem MarkItDown: o
-  `python-docx` já instalado lê a tabela, que passa pelo mapeador e recebe nota
-  quando tem coluna de horário. Tabela sem cabeçalho (uma linha por fala) segue
-  como prosa, para não perder a primeira fala. **PDF com tabela fica de fora**:
-  exigiria extração de layout pesada, e PDF de atendimento raramente traz hora.
-- [ ] Fixtures de **exports reais** (Discord, Telegram, Zendesk, Blip) — os testes de 14/09 cobrem WhatsApp, JSON aninhado e CSV `;` em cp1252 sintéticos. Declarar o limite: "qualquer arquivo" = qualquer estrutura com
-  texto e autor identificáveis.
-
-#### P1
-
-- [x] **Branches** — **resolvidas em 14/09/2026**: #40, #41 e #42 mescladas;
-  `pendencias/sinais-invertidos-e-vazao-do-webhook` não tinha nada fora da main;
-  o único commit de `medicao/dominio-do-tempo` (o laudo
-  `scripts/medir_dominio_do_tempo.py`) foi trazido.
-- [x] **Webhook — lacunas de uso** — **feitas em 14/09/2026**: `PATCH
-  /integracoes/fontes/{id}` corrige `variavel_segredo` (e recusa nome que não
-  seja de variável de ambiente), com botão na tela; exemplo em Python que
-  calcula a assinatura no `ContratoDoWebhook`, **executado** por
-  `tests/test_exemplo_de_assinatura.py`; `scripts/smoke_integracoes.py`. O
-  reinício após trocar o segredo já estava documentado (passo 3).
-- [x] **Invariante 2** — **feita em 14/09/2026**: a barra de classes do
-  `Analisador` exige as três probabilidades, sem `?? 0`.
-- [x] **Documentação desatualizada** — **feita em 14/09/2026** (handoff e
-  tabela Entregue com 909/77 testes e contrato de 39).
-- [ ] **Site da documentação:** criar `DEPLOY_KEY_DOCS`, `REPO_DOCS` e
-  `FRAUS_URL_DASHBOARD` no repositório.
-
-#### P1 — visual
-
-- [x] **Piso de 11px** — **feito em 14/09/2026**, com guarda em
-  `lib/tipografia.test.ts`. As etiquetas "estimativa" estavam em 10px.
-- [ ] **Tema claro / modo apresentação para projetor** — decisão do dono do
-  projeto (DESIGN.md §8: tema é decisão dele). Não feito.
-- [x] **Foco de teclado** — contorno cheio de 2px em `:focus-visible` para quem
-  não desenhava anel próprio; `TabsContent` ganhou anel.
-- [x] **"NPS estimado"** sem asterisco de 9px; a nota virou frase direta.
-- [x] **Celular (390px)** — conferido com Playwright. Achados e corrigidos:
-  hidratação falhando em toda tela da dashboard abaixo de 768px; cabeçalho do
-  atendimento espremido; vitrine rolando 96px na horizontal (a armadilha 0 do
-  handoff media errado: `overflow-x: hidden` não barra rolagem programática).
-  O grafo cabe.
-- [x] **Contraste de texto atenuado** — `muted-foreground` a 60–70% saía
-  2,8–3,4:1 sobre o vidro; opacidade removida, guarda em
-  `lib/opacidade-de-texto.test.ts`.
-- [x] **Vitrine sem WebGL** — a página inteira caía; agora só o campo de
-  partículas some.
-
-#### P2
-
-- [x] ~~Agregados de léxico por classe e tempo mediano~~ — já existiam (`/lexico`, `/indicadores`, com recorte `de`/`ate`); o item estava desatualizado.
-- [ ] Decisões: empresa fictícia. (O pin do `scikit-learn==1.6.1` e a remoção
-  de `content/fraus` da raiz já foram feitos — ver [Pendências](#pendências).)
+| Frente | Estado | Evidência | Limite |
+|---|---|---|---|
+| Landing independente da API | Entregue no código | `dashboard/app/page.tsx` lê o snapshot local de `dashboard/lib/lp-nova/carregar.ts`; não consulta sessão nem API para renderizar | — |
+| Tema claro | Entregue no código | `dashboard/lib/tema.ts`, `dashboard/lib/tema.test.ts`, `dashboard/PRODUCT.md` | não foi testado em projetor físico |
+| Atividade desnecessária do front | Entregue no código | `dashboard/components/shell/SaudeProvider.tsx`, `dashboard/scripts/validar-atividade-playwright.mjs`; o handoff de 22/10/2026 registra pausa em aba oculta e deduplicação | prova local e datada |
+| Bundle e desempenho da LP | Parcial | carga sob demanda em `dashboard/components/lp-nova/Coreografia.tsx` | o handoff de 22/10/2026 não comprova ganho consistente de LCP; `dashboard/scripts/validar-lp-playwright.mjs` não tem orçamento de bytes nem de CLS |
+| Instrumentação de latência do backend | Entregue no código | `fraus/api/observabilidade.py` (Server-Timing e log JSON com cold start e etapas), `tests/test_observabilidade.py`, `scripts/medir_latencia_deploy.py` | — |
+| Web Vitals de campo e alarmes | Pendente; alarmes não verificados no ambiente | nenhum coletor de Web Vitals no front | alarmes no provedor não foram vistos |
+| Analisar: arrastar e pronto | Entregue no código | `fraus/ingest/arquivos.py`, `tests/test_analise_persistida.py`, `dashboard/lib/fluxo-analise.test.ts` | publicação registrada no handoff em 19/10/2026, não revalidada |
+| Integração com o TARS | Parcial | `dashboard/lib/tars.ts`, `dashboard/lib/tars.test.ts`, `tests/test_ingestao_tars.py`, [contrato](docs/integracao-tars.md) | o ID que o produtor envia expõe o `chat_id` e o voto não é enviado (lido no repositório do TARS, que não foi alterado) |
+| Modelo visível ao papel `usuario` | Entregue no código | `dashboard/app/dashboard/modelo/page.tsx`, `dashboard/lib/navegacao.ts`, `dashboard/PRODUCT.md` | não é rota anônima; a curadoria do léxico continua só `dev` |
+| Diferenciais E1, E2, E5 e E6 | Parcial | [relatório dos diferenciais](docs/diferenciais/relatorio.md) | implementados; E2 sem artefato conformal gerado, E5 sem precisão e recall em dado real, E1 e E6 não verificados no fusor real |
+| Diferencial E3 (declarado × inferido) | Pendente | — | exige o schema `nota_declarada`, não aprovado |
+| Diferencial E4 (benchmark contra LLM) | Fora da fila por decisão | descartado em 14/10/2026 | — |
+| Feedback declarado binário | Parcial | `feedback_declarado` (−1 ou 1) em `fraus/modelos.py`, `fraus/api/esquemas.py` e `fraus/api/registro.py`; `/indicadores` devolve `feedback_declarado_total` e `concordancia_com_feedback` (`fraus/api/rotas/indicadores.py`); `tests/test_credencial.py` | não muda o score, como deve; a dashboard não mostra a concordância e o TARS não envia o voto |
+| Exports reais (Discord, Telegram, Zendesk, Blip) | Pendente | `tests/test_leitores.py`, `tests/test_mapeador.py` e `tests/test_importacao_generica.py` usam dados construídos | nenhum corpus de export real autorizado |
+| Deploy da API e do site de docs | Não verificado no ambiente | `.github/workflows/api-deploy.yml`, `.github/workflows/docs.yml`; `scripts/smoke_deploy.py` confere saúde | secrets e configuração externa não foram vistos; o smoke não cobre o contrato funcional |
+| Recuperação do banco | Pendente | nenhum runbook nem ensaio de restauração no repositório | não prova ausência de backup no provedor |
+| Retreino, calibração e promoção de modelos | Fora da fila por decisão | decisão de 16/11/2026 | limitações em [Limitações conhecidas](#limitações-conhecidas) |
 
 ### Entregue
+
+Registro acumulado até 14/10/2026: cada linha vale na data que cita, e o que
+ela afirma sobre artefato ou produção não foi revalidado em 16/11/2026. O que
+entrou depois está no [estado revisado](#estado-revisado--16112026).
 
 | Frente | Estado | O que existe |
 |---|---|---|
 | **Modelo canônico e sinais** | ✅ | `Conversa`/`Mensagem`, as oito famílias de sinal (texto, emoji, tempo, emoção, léxico, ironia, estilo e incongruência), e o score 0–100 → nota 0–10 → categoria de NPS |
-| **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia no ar; a de **ironia não é confiável e, desde 04/09/2026, não pontua mais** — ver pendência 1 |
-| **Fusor** | ✅ ⚠️ | **contrato em 39 features desde 04/09/2026** e **artefato em dia desde 08/09/2026**: `n_features_in_ = 39`, classes `[0 1 2]`, acurácia **0,950** e F1-macro **0,950** (contra 0,943 do fusor de 38); regerado com a espera em `log1p` em 15/09/2026: acurácia **0,947** e F1-macro **0,947**. A API real sobe. O ⚠️ é outro: `incongruencia_situacao_negativa` entrou para alcançar a frase canônica e **não a alcançou** — ela continua saindo promotor sempre que o relógio não a contradiz — medido em 08/09/2026: 99,69 com 181 s de espera, 99,21 com 300 s (item 0 de [Falta](#falta)). A feature não nasceu morta — peso −0,193 no eixo satisfeito−insatisfeito —, só não é suficiente. Confira qualquer artefato com `uv run python scripts/conferir_fusor.py` |
+| **Três cabeças treinadas** | ✅ ⚠️ | satisfação, emoção (7 classes) e ironia treinadas e servidas segundo o registro de 30/09/2026 (estado atual dos artefatos não revalidado em 16/11/2026); a de **ironia não é confiável e, desde 04/09/2026, não pontua mais** — ver o [histórico da limitação de ironia](#1-retreinar-a-cabeça-de-ironia--vazamento-de-corpus-medido-dívida-assumida) |
+| **Fusor** | ✅ ⚠️ | **contrato em 39 features desde 04/09/2026**; registro de 08/09/2026: `n_features_in_ = 39`, classes `[0 1 2]`, acurácia **0,950** e F1-macro **0,950** (contra 0,943 do fusor de 38); regerado com a espera em `log1p` em 15/09/2026: acurácia **0,947** e F1-macro **0,947**. Nessas datas a API real subia com ele; o artefato atual não foi reconferido em 16/11/2026. O ⚠️ é outro: `incongruencia_situacao_negativa` entrou para alcançar a frase canônica e **não a alcançou** — ela continua saindo promotor sempre que o relógio não a contradiz — medido em 08/09/2026: 99,69 com 181 s de espera, 99,21 com 300 s (ver [Limitações conhecidas](#limitações-conhecidas)). A feature não nasceu morta — peso −0,193 no eixo satisfeito−insatisfeito —, só não é suficiente. Confira qualquer artefato com `uv run python scripts/conferir_fusor.py` |
 | **Ingestão** | ✅ | CSV de `dados_brutos/` (com contenção de caminho) e `POST /ingestao` pela rede, por chave de fonte |
 | **API modular** | ✅ | `main.py` só monta o app; um router por domínio, `Contexto` por injeção. O contrato HTTP foi verificado **byte a byte** no OpenAPI contra a versão anterior |
 | **Autenticação** | ✅ | mestra + chaves de acesso (`fra_`) + chaves de fonte (`frs_`), decisão **por requisição**, hash no banco, revogação na hora |
@@ -1174,70 +1066,15 @@ Hoje cada estrutura exige um adaptador à mão (`csv_driver`, `totalk`,
 | **Operação** | ✅ | sete abas: Radar, Equipe e escala, Jornadas, Investigações, Replay, Laboratório e Acessos; hipóteses e limites explícitos; comparação de fusores depende do artefato candidato |
 | **Equipes e convites** | ✅ | proprietário/gestor/membro, links com validade e limite, revogação e aceite transacional com JWT; escopo por canais e proteção do último proprietário |
 | **Escopo e auditoria** | ✅ | filtros por canal antes da paginação, exportação temporária, versão de sessão revalidada e eventos encadeados por hash |
-| **Hospedagem da aplicação real** | ✅ | dois projetos Vercel; pacote Python de **1,95 GB** em 30/09/2026; ONNX no build e Supabase persistente; rotas de Operação e proxy verificados; API tem publicação separada |
-| **Suíte** | ✅ | rodada local em 14/10/2026 (a partir da `main` em `cdaa9e2`): `uv run pytest -q` com **1.395 passed, 7 skipped, 1 deselected**; **351 testes** no front (42 arquivos) |
+| **Hospedagem da aplicação real** | ✅ | registro de 30/09/2026: dois projetos Vercel; pacote Python de **1,95 GB**; ONNX no build e Supabase persistente; rotas de Operação e proxy verificados naquela data; API tem publicação separada. Estado atual da produção não revalidado em 16/11/2026 |
+| **Suíte** | ✅ | rodada local em 14/10/2026 (a partir da `main` em `cdaa9e2`): `uv run pytest -q` com **1.395 passed, 7 skipped, 1 deselected**; **351 testes** no front (42 arquivos). Não rodada na revisão de 16/11/2026 |
 
 ### Falta
 
-Em ordem, com o detalhe em [Pendências](#pendências):
-
-0. **A ironia continua escapando do score — limitação declarada, e a tentativa
-   de conserto FALHOU.** A frase canônica do projeto, `"que atendimento
-   maravilhoso, so esperei 3 horas"`, sai **promotor sempre que o relógio não a
-   contradiz** — 99,69 com 181 s de espera, 99,21 com 300 s, medidos em
-   08/09/2026 contra a API real. (Com três horas *dentro do log* o relógio já
-   derruba o score sozinho — com o fusor em `log1p` de 15/09/2026, para 7,0
-   (nota 1, detrator), não mais para 0,00; os 99,9 são o caso rápido, que é real e
-   comum — o cliente ironiza sobre uma espera ocorrida **fora** daquele
-   atendimento. Desde 08/09/2026 a faixa do meio carrega a **contestação**, ver
-   [Limitações conhecidas](#limitações-conhecidas).)
-
-   A rota proposta foi implementada e treinada: `incongruencia_situacao_negativa`
-   (lista curada de situação negativa de atendimento, desenho em
-   [docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md](docs/superpowers/specs/2026-09-04-incongruencia-implicita-design.md))
-   entrou no vetor em 04/09/2026 e o fusor de 39 features foi treinado em
-   08/09/2026. **Não resolveu.** A feature funciona isoladamente — dispara na
-   frase canônica e ganhou peso −0,193 no eixo satisfeito−insatisfeito, não
-   nasceu morta —, mas uma feature binária com esse peso não vence as de texto
-   (`texto_prob_satisfeito_media` pesa +2,78) quando o BERTimbau lê a frase como
-   elogio sincero com 99% de confiança.
-
-   O diagnóstico honesto é que **o problema não está no vetor, está na cabeça de
-   texto**: nenhuma feature agregada de conversa reverte uma probabilidade
-   saturada por mensagem. Reconhecer isso vale mais para a banca do que mais uma
-   feature — é o limite do desenho, e ele está medido, não suposto. Reproduza com
-   `uv run python scripts/conferir_fusor.py` (seção 5, frases-sonda).
-1. **Retreinar a cabeça de ironia — dívida assumida, não mais bloqueio de
-   confiabilidade, mas continua obrigatória para a API subir.** O vazamento
-   está medido em `tests/test_ironia_dominio.py` (6 em 10 falas sinceras
-   marcadas como irônicas) e o gerador já foi corrigido; falta rodar
-   `notebooks/04_treino_ironia.ipynb` de novo. **A ironia NÃO entra mais no
-   score desde 04/09/2026** (item 0 acima) — o vazamento não se propaga mais
-   para a nota, mas a cabeça continua sendo lida por mensagem e exibida na
-   dashboard, então retreiná-la continua valendo a pena para essa leitura ser
-   confiável.
-2. ~~**Retreinar o fusor no contrato de 35.**~~ **RESOLVIDO em 24/08/2026.** O
-   contrato subiu para 35 em 21/08 e o artefato ficou para trás por três dias;
-   `modelos/fusor.joblib` era de 16 features e a API real não subia. O
-   `notebooks/02_treino_fusor.ipynb` rodou e o artefato novo bate as 35 chaves
-   de `NOMES_FEATURES` na ordem.
-
-   **O que veio junto, e é a parte que interessa:** a acurácia **caiu de 0,96
-   para 0,93**, e isso é o resultado saudável, não uma piora. O fusor de 16
-   features media um problema mais fácil; com dezenove features a mais, três
-   delas vindas de uma cabeça de ironia com vazamento conhecido (item 1), um
-   número menor é o esperado. A invariante 10 diz que acurácia alta demais é
-   sintoma — 0,93 com os pesos liderados por texto e emoji é o perfil de um
-   modelo que aprendeu, não de um que leu o relógio.
-
-   A ressalva do item 1 continua valendo e agora está **assumida nos pesos**:
-   este fusor foi treinado com a cabeça de ironia vazando, então retreinar a
-   ironia obriga a retreinar o fusor de novo.
-3. **Fixar a empresa fictícia** do trabalho — ela define volume, canais e o que
-   conta como bom tempo de resposta na apresentação.
-4. **Decisões em aberto** — tema claro para projetor de banca. (O pin do
-   `scikit-learn` no `pyproject.toml` e a remoção de `content/fraus` da raiz já
-   foram feitos.)
+A fila de prioridades é uma só e mora em [Pendências](#pendências). Modelos
+estão fora dela por decisão de 16/11/2026 (ver [Roadmap](#roadmap)); as
+limitações científicas que isso deixa de pé continuam descritas em
+[Limitações conhecidas](#limitações-conhecidas).
 
 Fora de escopo por decisão, não por falta de tempo: **k8s** (o deploy atual é
 serverless e não justifica um orquestrador). O **login de usuário**, que já
@@ -1433,10 +1270,89 @@ abre sem login, que é o modo local.
 
 ## Pendências
 
-O que falta, em ordem de importância. Cada item diz o que existe hoje e o que
-o desbloqueia.
+A fila ativa, em ordem de prioridade. Nenhum item reabre modelos: retreino,
+calibração, promoção e troca de pesos estão fora por decisão de 16/11/2026
+(ver [Roadmap](#roadmap)). É recomendação de trabalho futuro, não registro de
+execução; cada item diz quando conta como feito e do que depende.
 
-### ~~Hospedar a API sem depender da máquina local~~ — RESOLVIDO em 17/09/2026
+### Fila ativa — 16/11/2026
+
+#### P0 — Publicação e recuperação operacional
+
+- **(a) Publicação conferida por contrato.** Verificar a configuração dos
+  workflows de API e de docs e complementar a prova de saúde com o contrato da
+  API pelo proxy, registrando a versão publicada e o resultado. A configuração
+  externa (secrets, projetos) está **não verificada**, não comprovadamente
+  ausente. Pontos de partida: `.github/workflows/api-deploy.yml`,
+  `.github/workflows/docs.yml`, `scripts/smoke_deploy.py`,
+  `scripts/validar_operacao_real.py` e `docs/deploy-vercel.md`.
+- **(b) Backup e restauração do banco.** Documentar o procedimento e ensaiar a
+  recuperação num banco isolado, partindo do que o provedor já oferece — sem
+  desenhar agora um sistema novo de backup.
+- **Feito quando:** há relatório de publicação mostrando API e front em versões
+  compatíveis, e uma restauração comprovada sem sobrescrever produção.
+- **Depende de:** acesso aos projetos da Vercel e do Supabase e aos secrets do
+  repositório.
+
+#### P1 — Validação de uso com exports reais autorizados
+
+- Exercitar arquivo → prévia → gravação → filtros → detalhe, e o reenvio sem
+  duplicação, com o que já existe; montar fixtures anonimizadas dos formatos
+  efetivamente obtidos.
+- **Feito quando:** origem e anonimização declaradas, resultado esperado
+  conferido e falhas documentadas. Cobertura de Discord, Telegram, Zendesk ou
+  Blip só se afirma com o arquivo respectivo.
+- **Depende de:** exports reais com autorização de uso. Sem eles o item fica
+  bloqueado por dado; não se fabrica corpus.
+
+#### P1 — Fechar a integração com o TARS e o feedback declarado
+
+- **(a) Identificador.** O ID que o produtor envia expõe o `chat_id`. Corrigir
+  no repositório do TARS com plano de migração e deduplicação: reenvio com o ID
+  novo não pode duplicar atendimento já gravado, e apagar registro não é passo
+  de migração.
+- **(b) Feedback.** Completar o envio do voto pelo TARS e a leitura de
+  `feedback_declarado` e `concordancia_com_feedback` na dashboard. Voto ausente
+  aparece como ausência, e o score não muda.
+- “Resolveu” é feedback de resolução, não nota de NPS nem prova causal de
+  satisfação. Este item não cria `nota_declarada`; o E3 segue adiado, sem
+  schema aprovado.
+- **Feito quando:** contrato ponta a ponta comprovado, nenhum ID pessoal
+  exposto, voto ausente exibido como ausência e score preservado.
+- **Depende de:** trabalho no repositório do TARS.
+
+#### P2 — Medir desempenho do navegador e proteger orçamento
+
+- O Server-Timing do backend já existe (`fraus/api/observabilidade.py`).
+  Faltam Web Vitals de campo, orçamento de bytes e de CLS da LP atual e a
+  verificação dos alarmes.
+- A redução de JavaScript da LP antiga, de setembro, não conta como ganho da LP
+  atual; ganho de LCP só se afirma medido.
+- **Feito quando:** baseline e limites explícitos, medição reprodutível e coleta
+  sem texto de conversa.
+
+#### P2 — Contexto e ensaio da banca
+
+- Definir com o João a empresa fictícia, os canais e o volume; executar o
+  [roteiro da demonstração](docs/diferenciais/roteiro-demo.md) só com
+  capacidades realmente disponíveis. Ensaiar o tema claro no projetor, sem
+  encomendar “modo apresentação”.
+- Uma amostra real para os sinalizadores (E5) pode validar as regras
+  existentes, sem retreinar modelo; fonte e autorização são dependência
+  explícita.
+- **Feito quando:** o roteiro é reproduzível e separa dado sintético, inferência
+  e limitação.
+- **Depende de:** decisões do João.
+
+### Histórico — fora da fila ativa
+
+Registro datado, mantido pelo diagnóstico e pelas âncoras. Medições e comandos
+abaixo valem na data que citam. Onde o texto diz “falta rodar” ou convida a
+retreinar, essa era a instrução da época e **não é instrução vigente**: modelos
+estão fora da fila desde 16/11/2026. O estado atual dos artefatos e da
+produção não foi revalidado nesta revisão.
+
+#### ~~Hospedar a API sem depender da máquina local~~ — RESOLVIDO em 17/09/2026
 
 A limitação original era dupla: os checkpoints com PyTorch ultrapassavam o
 tamanho padrão de função, e a Oracle não oferecia capacidade Ampere A1 na
@@ -1452,7 +1368,7 @@ server-side. Isto retira do roadmap as pendências **“conseguir VM Oracle”**
 gratuito com RAM para PyTorch”**. Permanecem limites operacionais de cold start
 e cota gratuita, documentados em [Limitações conhecidas](#limitações-conhecidas).
 
-### 1. Retreinar a cabeça de ironia — vazamento de corpus MEDIDO, DÍVIDA ASSUMIDA
+#### 1. Retreinar a cabeça de ironia — vazamento de corpus MEDIDO, DÍVIDA ASSUMIDA
 
 **As três cabeças estão treinadas e no ar** (satisfação, emoção e ironia), e o
 `api_demo` carrega o motor real quando os pesos estão em `modelos/`. O dublê
@@ -1488,7 +1404,7 @@ saíram do vetor por causa disso — a ironia não pontua mais**, e este item
 passa a ser sobre a QUALIDADE da leitura por mensagem que a dashboard exibe,
 não sobre o score.
 
-### 2. ~~Retreinar o fusor no contrato vigente~~ — RESOLVIDO em 08/09/2026
+#### 2. ~~Retreinar o fusor no contrato vigente~~ — RESOLVIDO em 08/09/2026
 
 **O artefato está em dia com o contrato de 39 features.** O histórico abaixo fica
 como registro porque o mesmo descompasso aconteceu **quatro vezes** em três
@@ -1588,7 +1504,7 @@ banca:
   review de produto.
 - **E também não resolveu o que foi feita para resolver:** a frase canônica
   segue saindo promotor quando o relógio não a contradiz — 99,69 com 181 s de
-  espera. Ver item 0 de [Falta](#falta).
+  espera. Ver [Limitações conhecidas](#limitações-conhecidas).
 - **Três features têm sinal contra-intuitivo, e a investigação fechou em
   08/09/2026** — `texto_prob_satisfeito_ultima` (−0,49, esperado positivo),
   `emoji_frac_positivos` (−0,19, esperado positivo) e `emoji_frac_negativos`
@@ -1622,23 +1538,12 @@ o XED-pt cumpre no notebook 03 — e é o que falta para a ironia ter uma métri
 que não seja otimista por construção. Detalhes de corpus, rótulo e limitação em
 [docs/treinamento.md](docs/treinamento.md).
 
-### 3. Definição da empresa
-
-A spec ainda não fixa a empresa fictícia do trabalho, e ela atravessa a
-apresentação inteira: define o volume plausível de atendimentos, os canais e o
-que conta como bom tempo de resposta.
-
-### 4. Decisões em aberto
-
-- **Tema claro.** A dashboard é dark-only, herdado do chassi: `:root` e `.dark`
-  recebem os mesmos valores em `globals.css` e o `layout.tsx` renderiza sempre
-  com a classe `.dark`. Projetor de banca costuma lavar tema escuro, e adicionar
-  depois é retrabalho.
-
-Resolvidas: o **pin do `scikit-learn`** existe (`scikit-learn==1.6.1` no
-`pyproject.toml` e no `Dockerfile`, que é a versão que serializou o
-`fusor.joblib`; a venv local roda essa mesma), e **`content/fraus`** já saiu da
-árvore.
+Observação histórica: as antigas “decisões em aberto” já estavam resolvidas em
+parte — o **pin do `scikit-learn`** existe (`scikit-learn==1.6.1` no
+`pyproject.toml` e no `Dockerfile`, a versão que serializou o `fusor.joblib`) e
+**`content/fraus`** saiu da árvore. A empresa fictícia passou para a
+[fila ativa](#p2--contexto-e-ensaio-da-banca); o tema claro foi entregue (ver
+[estado revisado](#estado-revisado--16112026)).
 
 ## Desenvolvimento
 

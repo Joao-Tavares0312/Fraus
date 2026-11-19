@@ -427,14 +427,14 @@ export type CabecaDeModelo = {
   classes: string[];
   /** `null` antes do notebook exportar. Nunca zero. */
   metricas: MetricasTreino | null;
-  /** Se ela entra no fusor. O campo existe para o caso mudar de novo; hoje as
-   * tres cabecas valem `true`. */
+  /** Se a cabeca entra no fusor da ficha consultada. No contrato vigente,
+   * satisfacao e emocao pontuam; ironia e leitura por mensagem, fora do vetor. */
   pontua: boolean;
 };
 
 /** Resposta de `GET /modelo` -- a ficha do modelo. */
 export type FichaModelo = {
-  /** Peso GLOBAL de cada uma das 35 features. Nao e especifico de conversa. */
+  /** Peso GLOBAL das features observadas (contrato: 39). Nao e especifico de conversa. */
   importancias: Record<string, number>;
   /** `null` enquanto o notebook 01 nao exportou metricas.json. NUNCA zero. */
   metricas: MetricasTreino | null;
@@ -442,9 +442,8 @@ export type FichaModelo = {
   /**
    * As tres cabecas fine-tunadas, cada uma com a metrica que ELA mediu.
    *
-   * `pontua` diz se a cabeca entra no fusor -- hoje as tres valem `true`. O
-   * campo existe para o caso deixar de ser unanime de novo, e nao porque
-   * separa alguma hoje.
+   * `pontua` e a fonte do caminho de cada cabeca nesta ficha: nao presumir
+   * que as tres entram no fusor. Ironia permanece fora do vetor vigente.
    */
   cabecas: CabecaDeModelo[];
   /** Faixas de NPS lidas do SERVIDOR (fonte unica), nao digitadas no front. */

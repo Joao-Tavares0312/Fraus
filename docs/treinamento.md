@@ -1,33 +1,129 @@
 # Treinamento dos modelos do Fraus
 
-!!! note "Como ler esta página (30/09/2026)"
-    Ela é o **diário técnico do treino** e preserva a ordem em que as coisas
-    aconteceram, inclusive números que já foram superados. O estado **atual**
-    é: fusor de **39 features** (a ironia saiu do vetor em 04/09/2026 e
-    `incongruencia_situacao_negativa` entrou: 40 − 2 + 1), espera em `log1p` e
-    acurácia de 0,947 no holdout do notebook 02 — ver o
-    [cartão do modelo](cartao-do-modelo.md). As menções a 35, 38 e 40 features
-    abaixo são história, não o contrato vigente.
+!!! warning "Decisão vigente — 16/11/2026: modelos congelados"
+    Retreino, calibração, troca de pesos ou arquitetura e promoção estão fora
+    da fila por decisão do João. Os protocolos e comandos abaixo são registro
+    de pesquisa, não tarefas atuais. Os três classificadores e o fusor
+    compatível continuam obrigatórios; congelar modelos não resolve suas
+    limitações científicas nem autoriza contornar falha de carga.
 
-| # | Notebook | O que produz | GPU? | Estado |
-|---|---|---|---|---|
-| 1 | `notebooks/01_treino_bertimbau.ipynb` | `modelos/bertimbau-satisfacao/` — classificador de texto (3 classes), fine-tune do `neuralmind/bert-base-portuguese-cased` sobre o B2W-Reviews01 | **sim** | pronto |
-| 2 | `notebooks/02_treino_fusor.ipynb` | `modelos/fusor.joblib` e `modelos/importancias.json` — a regressao logistica que funde os sinais | nao | pronto |
-| 3 | `notebooks/03_treino_emocao.ipynb` | `modelos/bertimbau-emocao/` e `modelos/metricas_emocao.json` — classificador das sete classes de emocao | **sim** | pronto |
-| 4 | `notebooks/04_treino_ironia.ipynb` | `modelos/bertimbau-ironia/` e `modelos/metricas_ironia.json` — classificador binario de ironia | **sim** | pronto; o padrão (`ORIGEM = 'idpt_publico'`) baixa as fontes públicas originais, e o pedido aos organizadores do IDPT é alternativa |
-| 5 | `notebooks/05_treino_multitarefa.ipynb` | candidato ONNX com um encoder e três cabeças | **sim** | candidato, não promovido |
-| 6 | `notebooks/06_exportar_laya_onnx.ipynb` | ZIP do Laya em ONNX INT8 para o bundle externo da Vercel | nao | carregado quando `FRAUS_IRONIA_BACKEND=laya-onnx` (ver `deploy-vercel.md`) |
-| 7 | `notebooks/07_treino_laya.ipynb` | `modelos/laya-fraus` — fine-tune do Laya em emoção e ironia, comparado ao BERTimbau | **sim** | **histórico**: executado em 02/10/2026, não promovido; não roda de novo sem rever a receita |
+## Receita vigente de pesquisa — 26/10/2026
 
-O notebook 02 **depende do artefato do 01**: ele carrega o BERTimbau treinado para extrair o sinal de texto de cada conversa. A primeira celula do 02 falha com erro explicito se `modelos/bertimbau-satisfacao` nao estiver no Drive.
+!!! warning "Estado registrado em 26/10/2026, não revalidado nesta revisão"
+    Naquela investigação, a campanha fechada de nove rodadas (três cabeças ×
+    três sementes) e o experimento independente do fusor ficaram bloqueados
+    pela autenticação do Google Colab CLI. Nenhum resultado dessa campanha
+    foi produzido naquela sessão e nenhum peso ativo foi substituído.
+    Isso não afirma o estado de execuções posteriores ou de produção.
+    Veja [Generalização e evidências](generalizacao.md).
 
-Os notebooks 03 e 04 sao **independentes entre si e do 01** — treinam cabecas separadas, em corpora proprios. O 02 e que passa a depender dos tres, porque e ele que monta o vetor de features completo. Ordem de execucao: 01, 03 e 04 em qualquer ordem, e o 02 por ultimo.
+O contrato de inferência continua sendo **39 features de sete famílias**,
+quatro esperas em `log1p`, `StandardScaler` e `LogisticRegression`.
+Ironia é obrigatória na leitura por mensagem do motor, mas não entra no vetor.
+As três cabeças e um fusor compatível são necessários para predizer; a API
+pode subir antes da carga, sem oferecer fallback silencioso.
 
-O sinal lexico (`fraus/sinais/lexico.py`) **nao tem notebook**: o SentiLex-PT nao e treinado, e recurso pronto, versionado em `fraus/dados/sentilex_pt02.csv`. Ver [Sinal lexico](#sinal-lexico-sentilex-pt02) no fim.
+### Seleção sem abrir o teste
 
-**As tres cabecas BERTimbau e o `fusor.joblib` sao obrigatorios para servir predicao.** `fraus/api/main.py` sobe sem carrega-los: o `ProvedorDeMotor` carrega tudo na primeira rota de modelo (ou no aquecimento) e propaga o erro sem fallback — servir predicao sem modelo carregado e pior do que estar fora do ar. `scripts/api_demo.py` usa o motor real quando os pesos estao no disco e so cai no motor duble, anunciado no boot e em `/saude`, quando falta um artefato; ele nao serve para producao.
+`fraus/receita_treino.py` centraliza a receita dos notebooks 01, 03 e 04:
 
-O treino roda inteiramente no Google Colab, fora deste repositorio — nao ha teste automatizado local para essas etapas.
+1. Preparar divisão agrupada, deduplicada e auditada, com semente 42:
+   treino/validação/teste em 75/10/15; MultiPICo em 60/15/25.
+2. Executar sementes **13, 42 e 77**, até cinco épocas, LR `2e-5`, lote 32,
+   `max_length=192`, warmup 10%, weight decay `0,01` e early stopping de
+   paciência 2. A satisfação usa o treino B2W completo após a divisão, sem
+   teto arbitrário de exemplos e sem ConsumerBR auxiliar.
+3. `treinar_uma_semente` ajusta modelo e temperatura usando **treino e validação
+   apenas**. A seleção de checkpoint é por F1-macro de validação; não há
+   inferência nem métrica de teste nessa fase.
+4. Selecionar a semente mediana por `f1_macro_validacao` e gravar configuração
+   e seleção congeladas **antes** de abrir o teste.
+5. Só então chamar `avaliar_teste_final` para as três sementes. O fingerprint
+   deve coincidir com o manifesto esperado; divergência bloqueia a avaliação.
+   Reportar média e desvio amostral sem trocar a semente escolhida na validação.
+
+O `fraus_receita.json` preserva argumentos efetivos, melhor época, manifestos
+e histórico por época. A curva diagnóstica usa até 2.000 exemplos fixos de
+treino, estratificados com seed 42, em modo de avaliação, com a mesma perda
+ponderada da validação. Não se interpreta loss de minibatches com dropout
+como se fosse a mesma medida. `avaliacao_final.json` registra separadamente
+teste e hashes; exportar pesos, tokenizador, curvas, receitas e manifestos
+antes de descartar checkpoints.
+
+### Notebooks e escopo da campanha
+
+| # | Notebook | Papel no código | Situação documental em 16/11/2026 |
+|---|---|---|---|
+| 1 | `notebooks/01_treino_bertimbau.ipynb` | candidato de satisfação, três classes, BERTimbau sobre B2W por estrelas | instrumentado; fora da fila ativa |
+| 2 | `notebooks/02_treino_fusor.ipynb` | candidato de fusor, manifesto explícito e caches vinculados aos artefatos | experimento independente fora da fila ativa |
+| 3 | `notebooks/03_treino_emocao.ipynb` | candidato de emoção, sete classes, GoEmotions-PT | instrumentado; fora da fila ativa |
+| 4 | `notebooks/04_treino_ironia.ipynb` | candidato binário de ironia, **MultiPICo PT, sem IDPT auxiliar na campanha fechada** | instrumentado; fora da fila ativa |
+| 5 | `notebooks/05_treino_multitarefa.ipynb` | candidato ONNX com encoder compartilhado e três cabeças | fora desta campanha; não promovido |
+| 6 | `notebooks/06_exportar_laya_onnx.ipynb` | exportação de Laya para ONNX INT8 | fora desta campanha; não implica uso em produção |
+| 7 | `notebooks/07_treino_laya.ipynb` | comparação histórica de Laya com BERTimbau | histórico de 02/10/2026; não promovido |
+
+01, 03 e 04 são independentes entre si; o 02 usa as cabeças disponíveis para
+gerar sinais, mas somente texto e emoção são exigidos por `montar_features`.
+O motor completo também exige ironia. O léxico é recurso determinístico e
+versionado, não uma quarta cabeça treinada.
+
+Na execução pela CLI oficial, os notebooks aceitam `FRAUS_RAIZ`, `FRAUS_REPO`
+e `FRAUS_DADOS` para caminhos explícitos, sem montagem interativa do Drive.
+O modo interativo continua disponível. Todos os destinos de pesquisa são
+diretórios de **candidatos**, separados dos pesos ativos; executar a receita
+não autoriza promoção ou publicação. A campanha não é uma pendência ativa.
+
+### Auditoria e fusor com manifesto
+
+```bash
+# Caminhos de pesquisa escolhidos pelo operador; saída fora do site público.
+uv run python scripts/auditar_generalizacao.py \
+  --corpora dados/corpora --modelos modelos --saida resultados/auditoria.json
+```
+
+O relatório agregado e o manifesto privado registram normalização, grupos,
+rótulos, hashes e colisões, sem incorporar texto bruto às docs. Reconstruir
+splits hoje não comprova a origem de pesos antigos.
+
+O treino local do fusor exige `--manifesto`: não há mais divisão posicional
+implícita. O cache é vinculado ao manifesto, checkpoints e contrato de features;
+um nome de arquivo igual não autoriza reutilização. As ablações completo,
+somente texto e somente tempo ajustam seus scalers no treino e são avaliações
+experimentais, não modelos de runtime. O protocolo completo, incluindo a
+independência supervisionada das cabeças, está em [Generalização](generalizacao.md).
+
+Reserve o manifesto **antes do notebook 01**, que o recebe em
+`FRAUS_MANIFESTO_FUSOR`. As variáveis abaixo representam o CSV exato (`B2W`),
+um diretório externo ao repositório/checkpoints (`EXPERIMENTO`) e a raiz dos
+checkpoints candidatos (`CABECAS`). A segunda chamada só acontece após o
+treino e o congelamento dos candidatos:
+
+```bash
+uv run python scripts/retreinar_fusor_local.py \
+  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" --gerar-manifesto
+uv run python scripts/retreinar_fusor_local.py \
+  --b2w "$B2W" --manifesto "$EXPERIMENTO/manifesto.json" \
+  --modelos "$CABECAS" --backend torch \
+  --cache "$EXPERIMENTO/features.json" --saida "$EXPERIMENTO/candidato"
+```
+
+O manifesto versão 1 registra hash do CSV, contagem aceita pelo leitor,
+divisão agrupada 42 e, por lado, índices aceitos base zero, hashes de
+texto/grupo e rótulos de satisfação. O alvo do fusor continua sendo derivado
+da recomendação com precedência do neutro de três estrelas, não desses
+rótulos da cabeça.
+
+
+## Diário histórico — não é a receita de execução vigente
+
+O restante desta página preserva decisões, medições e procedimentos de suas
+respectivas datas. Menções a 16, 35, 38 ou 40 features, IDPT como padrão,
+cópia para diretório ativo, seleção antiga e métricas de holdouts antigos
+**não substituem o contrato do código descrito acima** nem reabrem a fila.
+A acurácia histórica 0,947 não identifica o checkpoint publicado hoje.
+Pesos globais e sanidades isoladas não provam
+ausência de vazamento ou de overfitting. Os números do
+[Cartão do modelo](cartao-do-modelo.md) continuam identificados como históricos.
 
 ## Como abrir no Colab
 
@@ -51,26 +147,15 @@ O notebook monta o Google Drive (`drive.mount('/content/drive')`) e usa dois dir
 - `/content/drive/MyDrive/fraus/checkpoints` — checkpoints intermediarios salvos pelo `Trainer` a cada epoca (`save_strategy="epoch"`, `save_total_limit=2`). Se a sessao cair, o proximo `Trainer.train()` pode retomar a partir do ultimo checkpoint salvo aqui.
 - `/content/drive/MyDrive/fraus/modelos/bertimbau-satisfacao` — destino final do modelo treinado, do tokenizador e do `metricas.json`, escritos na ultima celula do notebook.
 
-### Para onde copiar o artefato no repo local
+### Destino do artefato — procedimento histórico
 
-Depois que o notebook terminar (celula de avaliacao e export), baixe a pasta `fraus/modelos/bertimbau-satisfacao` do Google Drive e copie o conteudo para:
-
-```
-modelos/bertimbau-satisfacao/
-```
-
-na raiz deste repositorio. Os arquivos esperados sao:
-
-- `config.json`
-- `model.safetensors`
-- `tokenizer.json`
-- `tokenizer_config.json`
-- `special_tokens_map.json`
-- `metricas.json` — `{"acuracia": float, "f1_macro": float, "classes": ["insatisfeito", "neutro", "satisfeito"]}`
-
-`fraus/sinais/texto.py` carrega esse diretorio para servir o classificador — e o notebook 02 tambem, para extrair o sinal de texto das conversas de treino do fusor.
-
-**Importante:** `modelos/` esta no `.gitignore` deste repositorio. O artefato do modelo treinado (pesos, tokenizer, metricas) **nao vai para o git** — ele fica local, versionado apenas via o checkpoint no Drive.
+A receita antiga orientava copiar o resultado para
+`modelos/bertimbau-satisfacao/`, o diretório consumido pela inferência. Isso
+**não é instrução vigente**: o protocolo de pesquisa separa os candidatos dos
+pesos ativos e preserva tokenizador, `fraus_receita.json`, histórico,
+manifestos e `avaliacao_final.json` como um bundle identificado.
+`modelos/` não é versionado no Git; ter arquivos locais não comprova a cadeia
+de proveniência de um checkpoint antigo nem autoriza substituir o ativo.
 
 ### Mapeamento de rotulo
 
@@ -97,7 +182,9 @@ Roda DEPOIS do 01, sem GPU. O que ele faz, em sequencia:
 7. avalia num conjunto de teste separado — conversas geradas com outra semente e a partir de frases disjuntas — imprimindo acuracia e F1-macro;
 8. exporta `fusor.joblib` (via `Fusor.salvar`) e `importancias.json` (o retorno de `Fusor.importancias()`, que vira o grafico "qual sinal pesou mais" da apresentacao).
 
-Os dois arquivos saem em `/content/drive/MyDrive/fraus/modelos/`. Baixe para `modelos/` na raiz do repositorio local, ao lado de `bertimbau-satisfacao/`.
+O destino no Drive descrito nesta seção era o procedimento histórico.
+O notebook 02 atual delega ao script de experimento com manifesto explícito,
+saída de candidato e sem promoção, conforme o protocolo do início da página.
 
 ### Rotulo do fusor: `recommend_to_a_friend`
 
@@ -162,7 +249,7 @@ O mesmo teste de sanidade que expos o vazamento — mesmo texto, so mudando o re
 
 O contrato subiu de 16 para 35 features em 21/08 (emocao, lexico, ironia e estilo entraram no vetor) e o **artefato ficou tres dias para tras**. Nesse intervalo a API real nao subia: o `StandardScaler` de 16 rejeitava o vetor de 35 na carga. Falha alta e explicita, que e o comportamento que as invariantes 7 e 9 pedem — mas ainda assim tres dias de API parada por artefato desatualizado.
 
-O notebook 02 rodou de novo e o artefato daquele momento passou a ter `n_features_in_ = 35`, na ordem exata de `NOMES_FEATURES`. (Historico: o artefato vigente hoje tem 38 — ver as secoes de 03/09 e 04/09 abaixo.)
+O notebook 02 rodou de novo e o artefato daquele momento passou a ter `n_features_in_ = 35`, na ordem exata de `NOMES_FEATURES`. As seções posteriores registram a passagem por 38 e pelo contrato vigente de 39 features.
 
 **A acuracia caiu de 0,96 para 0,93, e a queda e o resultado saudavel.** O fusor de 16 features media um problema mais facil. Dezenove features novas entraram, tres delas vindas de uma cabeca de ironia com vazamento de corpus conhecido e nao consertado — um numero MENOR e o esperado. Pela regra desta secao, o que decide nao e o numero e sim onde os pesos foram parar:
 
@@ -180,7 +267,7 @@ O notebook 02 rodou de novo e o artefato daquele momento passou a ter `n_feature
 
 O topo continua sendo **texto e emoji**, e as features de tempo continuam no rodape, onde devem estar. As de emocao entram no meio da tabela com peso real sem deslocar o conteudo — `desprezo_derivado`, que e a diade calculada e nao uma classe do modelo, puxa 0,48. Nao ha sinal de vazamento novo.
 
-**A divida que este fusor assume.** Ele foi treinado com a cabeca de ironia vazando (ver a pendencia 1 do README: 6 em 10 frases sinceras saem marcadas como ironicas). `ironia_prob_media` e `ironia_prob_max` pesam 0,30 e 0,31 — nao e desprezivel. **Retreinar a ironia obriga a retreinar o fusor de novo**, e essa ordem esta registrada aqui para nao se perder.
+**A dívida que este fusor assumia.** Ele foi treinado com a cabeça de ironia vazando (6 em 10 frases sinceras saíam marcadas como irônicas). `ironia_prob_media` e `ironia_prob_max` pesavam 0,30 e 0,31. A recomendação de retreinar as duas partes pertencia àquele contrato: as duas features saíram do vetor em 04/09/2026. Não é uma instrução para os modelos congelados em 16/11/2026.
 
 **Teste de sanidade ponta a ponta**, com os tres BERTimbau carregados, sobre conversas do simulador: rotulo insatisfeito pontua ~0, neutro ~73–75, satisfeito ~99, e as tres categorias de NPS saem certas em 9 de 9. **Isso nao e evidencia de qualidade** — sao conversas do proprio gerador sintetico, o dominio em que o fusor foi treinado. O numero honesto continua sendo 0,93 no conjunto de teste separado, e a ressalva do topo desta secao continua valendo: as metricas do notebook 02 medem fusao no dominio sintetico, nao acerto em atendimento real.
 
@@ -264,7 +351,7 @@ entram sozinhas, sem editar o notebook. Isso ja era assim antes desta rodada
 importar de um ramo desatualizado do repositorio, nao de reimplementar a
 lista) — nao ha lista duplicada para divergir aqui.
 
-Passos, no Colab:
+Procedimento histórico de setembro, preservado como registro, não roteiro da campanha atual:
 
 1. Conferir que a celula do clone do repositorio (`RAMO`) aponta para `main`
    com a Task 5 mergeada, e rodar o notebook do inicio — sem tentar
@@ -326,12 +413,10 @@ Passos, no Colab:
    descuido: fica registrado aqui para o proximo leitor nao achar que a
    guarda promete "sinal nos tres rotulos" quando ela so promete "nao
    previsor unilateral de UM rotulo so". A guarda nao foi alterada.
-5. Copiar `fusor.joblib` e `importancias.json` para `modelos/` na raiz do
-   repositorio local (guardando o artefato anterior como `.bak-<N>`, onde N e
-   o numero de features dele) e entao, nesta ordem:
-   `uv run python scripts/conferir_fusor.py` e `uv run pytest -q` inteiro. O
-   laudo faz automaticamente os passos 3 e 4 desta lista — ver "Conferencia do
-   artefato" abaixo.
+5. A etapa histórica substituía os arquivos do diretório ativo e conferia o
+   artefato com `scripts/conferir_fusor.py` e a suíte de testes.
+   **Não repetir essa substituição na campanha atual**: candidatos, caches e
+   resultados ficam em destino externo, com manifesto explícito, sem promoção.
 
 ### A ironia sai do vetor (04/09/2026)
 
@@ -449,9 +534,10 @@ convivendo com situacao negativa de atendimento na mesma fala. E a unica das
 seis que alcanca a frase canonica do projeto, porque nao depende de um segundo
 termo polar no lexicon.
 
-**O retreino do notebook 02 e OBRIGATORIO antes de a API voltar a subir.** O
-artefato de 38 nao carrega mais: `Fusor.carregar` valida a dimensao e levanta
-`FusorIncompativelError`. Isso e o comportamento desejado, nao um bug.
+**Na mudança de 04/09/2026, o retreino do notebook 02 era obrigatório para
+produzir um artefato de 39 features.** O artefato de 38 não carrega:
+`Fusor.carregar` valida a dimensão e levanta `FusorIncompativelError`.
+Hoje, incompatibilidade é bloqueio operacional, não autorização para retreinar.
 
 Medido ANTES de aceitar, no B2W-Reviews01 (2000 resenhas por rotulo, semente
 20260904) -- que e o corpus que da o TEXTO do treino:
@@ -596,10 +682,10 @@ O desprezo e derivado da **diade primaria raiva + nojo**, que e como Plutchik (1
 
 Classificacao binaria: 0 nao-ironico, 1 ironico.
 
-> **19/10/2026: a cabeça vigente é a do MultiPICo-PT.** O notebook 04 passou a
+> **Registro de 19/10/2026: candidato MultiPICo-PT.** O notebook 04 passou a
 > treinar no MultiPICo (CC BY 4.0, pares post-resposta com irônico e não irônico
-> vindos das mesmas fontes) com a receita nova (`fraus.receita_treino`). Pareado
-> contra a cabeça do IDPT (`docs/notas/2026-10-19-benchmark-ironia.json`):
+> vindos das mesmas fontes) com `fraus.receita_treino`. A comparação histórica
+> abaixo foi contra a cabeça IDPT; ela não identifica o checkpoint publicado hoje:
 > MultiPICo F1 0,511 → 0,660, diferença +0,149 com IC 95% [+0,088; +0,210] e
 > McNemar p = 0,0002; régua de 20 frases 0,394 → 0,520 (falso positivo 7/10 →
 > 2/10; n pequeno, IC cruza zero). O baseline só de estilo dá 0,499 no teste: o
@@ -675,19 +761,19 @@ Consequencias:
 
 ### Candidato Laya
 
-O Laya multilíngue pode substituir apenas a cabeça de ironia, sem alterar
-satisfação, emoção ou o fusor. Ele é opt-in porque baixa aproximadamente 647 MB
-de pesos. O backend `laya` exige torch; o `laya-onnx` (30/09/2026) roda a mesma
-cabeça pelo ONNX Runtime, **sem PyTorch**, e é o que a API serverless usa quando
-o ZIP da Laya está configurado (ver `docs/deploy-vercel.md`, interno):
+O código permite usar Laya apenas na cabeça de ironia, sem substituir
+satisfação, emoção ou o fusor. A substituição está fora da fila atual.
+O backend `laya` exige torch; `laya-onnx` executa pelo ONNX Runtime sem
+PyTorch. O carregamento depende de artefato e configuração explícitos:
+esta descrição não confirma o backend publicado. Exemplo histórico:
 
 ```bash
 uv sync --extra laya
 FRAUS_IRONIA_BACKEND=laya uv run uvicorn fraus.api.main:app
 ```
 
-O checkpoint fica preso à revisão declarada em `FRAUS_LAYA_REVISAO`. Antes de
-promovê-lo, execute a mesma régua de transferência de domínio:
+O checkpoint fica preso à revisão declarada em `FRAUS_LAYA_REVISAO`. O
+procedimento histórico de avaliação de transferência era:
 
 ```bash
 uv run python scripts/validar_candidato_ironia.py --backend laya
@@ -712,11 +798,11 @@ exporta para ONNX e só adota INT8 se no máximo 1% das decisões mudar.
 
 A última célula grava `comparacao_modelos.json` (acurácia, F1-macro, matriz
 de confusão, VP/FP/FN/VN por classe, McNemar, IC e latência em CPU) e o mesmo
-laudo em Markdown. Copiado para `modelos/`, ele aparece na aba **Modelo →
-Comparação** da dashboard (`GET /modelo/comparacao`), que também lê uma fala
-com as cabeças carregadas no servidor, lado a lado. Cada leitura do Laya diz
-se o artefato do servidor é o treinado pelo notebook 07 ou o checkpoint base
-("Laya sem treino"): em produção é o base, que lê ironia e, a frio, emoção.
+laudo em Markdown. A aba **Modelo → Comparação** lê `GET /modelo/comparacao`
+e também permite consultar uma fala com as cabeças disponíveis no servidor.
+Cada leitura do Laya informa se o manifesto identifica treino pelo Fraus;
+isso não demonstra que seja o mesmo artefato do laudo histórico.
+O checkpoint efetivamente publicado não foi conferido nesta revisão.
 
 **Para o laudo chegar à produção** ele é versionado com o código, em
 `fraus/dados/comparacao_modelos.json`: `modelos/` fica fora do git e, na
@@ -726,9 +812,10 @@ Vercel, é trocada inteira pelo ZIP dos pesos. A rota serve o laudo de
 feita; ele aparece no topo da aba e do relatório. Os números do laudo nunca são
 editados à mão — laudo novo é notebook rodado de novo.
 
-Rode primeiro com `MODO_FUMACA = True`. O que foi pesquisado, o que foi medido
-localmente e o que ainda falta está na nota interna
-`docs/notas/2026-10-02-treino-laya.md`.
+O roteiro de 02/10 começava com `MODO_FUMACA = True`; não é próximo passo
+vigente. O notebook 07 está marcado como histórico e ainda usa IDPT e a
+divisão antiga, enquanto o 04 atual usa MultiPICo. Portanto, não se pode
+afirmar que os dois notebooks atuais compartilham os mesmos testes.
 
 ### Alternativas ao IDPT — levantamento de 14/08/2026
 
@@ -846,33 +933,34 @@ Agora cada notebook de treino (01, 03, 04) ajusta a temperatura **na
 validação**, via `fraus.receita_treino.ajustar_temperatura`, e grava o valor em
 `fraus_receita.json` dentro da pasta do modelo. O runtime
 (`fraus/sinais/texto.py` e `fraus/sinais/onnx.py`) aplica essa temperatura;
-artefato sem o arquivo continua com `T = 1,0`, então os modelos em produção não
-mudam de score.
+artefato sem o arquivo continua com `T = 1,0`. Isso descreve a leitura do
+artefato, não comprova quais pesos ou temperaturas estão publicados.
 
-**Temperature scaling não muda a decisão do modelo.** Dividir os logits pelo
-mesmo `T > 0` preserva o `argmax`: acurácia e F1 ficam idênticos, só a
-confiança declarada muda (ECE).
+**Temperature scaling não muda o argmax de uma cabeça.** Dividir seus logits
+pelo mesmo `T > 0` preserva acurácia e F1; muda as probabilidades e pode mudar
+o ECE. Como o fusor consome probabilidades, isso **pode alterar o score
+fundido** e não autoriza calibrar uma cabeça isoladamente em produção.
 
-**A ironia é o caso a não confundir.** Calibrar melhora o ECE dela, mas ela
-continua errando falas sinceras de atendimento. Temperatura ajusta *o quanto* o
-modelo se diz confiante, não *sobre o que*.
+**A ironia é o caso a não confundir.** Temperatura ajusta a confiança, não
+corrige por si só erros de domínio; melhora de ECE precisa ser medida.
+Calibração também está fora da fila desde 16/11/2026.
 
 ## Notebook 02 — a seção 10 é uma pendência, não uma etapa
 
-A saturação das features de tempo está descrita lá com a medição, o conserto
-(`winsorizar no p99` + `log1p` antes do scaler) e — o que mais importa — **o
-acoplamento**: a transformação precisa existir no notebook *e* no runtime, ou o
-score sai errado em silêncio. Um `fusor.joblib` treinado sem a compressão contra
-um runtime que comprime continua tendo `n_features_in_ = 39`, então
-`Fusor.carregar` **não pega** essa incompatibilidade.
+A seção histórica discutia `winsorizar no p99` + `log1p` antes do scaler.
+A decisão medida em 15/09/2026, abaixo, adotou **somente `log1p`**, hoje em
+`fraus.fusor.vetorizar`. A dimensão 39 sozinha não detecta mudança de escala;
+por isso `Fusor.carregar` também confere `fraus_escala_do_tempo` e recusa
+artefato em segundos crus. Essa pendência histórica não continua aberta.
 
 ### As três saídas, medidas em 15/09/2026 — decidido: só `log1p`
 
-O instrumento (hoje `scripts/retreinar_fusor_local.py`; a versão de medição
-está no commit `e719218`) reproduz este notebook localmente (mesmo
-B2W, mesmas sementes, mesmo `montar_features`, extração por ONNX) e **confere a
-reprodução antes de medir**: acurácia 0,9500 nos dois, score diferindo no
-máximo 0,0001 do `fusor.joblib` vigente. Nada foi promovido.
+O instrumento histórico `scripts/retreinar_fusor_local.py`, na versão de
+medição do commit `e719218`, reproduziu o notebook localmente (mesmo B2W,
+mesmas sementes e `montar_features`, extração por ONNX): acurácia 0,9500
+nos dois, score diferindo no máximo 0,0001 do fusor daquela data.
+O script atual exige manifesto agrupado e não faz essa comparação carregando
+o fusor ativo; os números desta seção não são nova reprodução.
 
 A coluna de espera é a frase canônica (texto 0,858 satisfeito, todo o resto na
 média do treino), com score, nota e categoria:
@@ -907,9 +995,9 @@ As três partes indivisíveis, feitas juntas:
    `FEATURES_EM_LOG`. As chaves continuam em segundos (atribuição, tela e deriva
    leem segundos); só o vetor que o scaler recebe é comprimido. Treino,
    pontuação, contribuição e deriva passam pela mesma função.
-2. **Artefato regerado** por `scripts/retreinar_fusor_local.py --promover`:
-   acurácia 0,9467, F1-macro 0,9469. O anterior ficou em
-   `modelos/fusor.joblib.bak-segundos`. O artefato agora carrega
+2. **Artefato regerado e promovido naquela data**, pela versão histórica do
+   script: acurácia 0,9467, F1-macro 0,9469. O anterior foi preservado como
+   backup. O protocolo atual não repete essa promoção. O artefato passou a carregar
    `fraus_escala_do_tempo = "log1p"`, e `Fusor.carregar` **recusa** artefato sem
    essa marca: é o caso que `n_features_in_` não pega.
 3. **Medição de categoria.** No teste do B2W, 27 notas e 6 de 300 categorias
@@ -921,7 +1009,7 @@ o texto em **613 s** (antes 411 s), e com 3 h pesa **2,1×** o texto (antes 20×
 Uma conversa sincera ("resolveu, muito obrigado") com 30 min de espera saía
 0,30; agora sai 55,3, ainda detrator. Com 3 h, 21,95 em vez de 0,00.
 
-**Quem tem o artefato em outro lugar precisa regerar** (a VM, o Drive): um
-`fusor.joblib` de antes de 15/09 não sobe mais, e isso é o comportamento
-correto da invariante 7.
+Esse registro explica por que um `fusor.joblib` anterior à mudança de escala
+é recusado. Não é instrução para sobrescrever pesos em outro ambiente:
+promoção e deploy são operações separadas, fora desta campanha.
 

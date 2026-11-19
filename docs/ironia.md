@@ -1,16 +1,31 @@
 # Ironia: corpus e Laya
 
+!!! warning "Revisão de 16/11/2026: registro histórico, modelos congelados"
+    Retreino, calibração, troca de encoder e promoção estão fora da fila por
+    decisão do João. As propostas de corpus, treinos e critérios de promoção
+    abaixo pertencem à investigação de outubro, não são tarefas atuais.
+    As medições foram preservadas; não demonstram qualidade em atendimento real.
+
+No código atual, `notebooks/04_treino_ironia.ipynb` usa **MultiPICo PT**
+como padrão, divisão agrupada por post e seleção pela validação via
+`fraus/receita_treino.py`. A campanha fechada não usa IDPT auxiliar.
+O notebook 07 continua histórico, com IDPT e divisão por autor: o roteiro de
+alteração de células abaixo não garante comparação com o 04 atual.
+O laudo versionado `fraus/dados/comparacao_modelos.json` é de **02/10/2026**,
+não da divisão corrigida medida em 08/10; suas ressalvas registram esse limite.
+Produção e artefatos publicados não foram revalidados nesta revisão.
+
 > **Estado em 08/10/2026.** O BERTimbau de ironia foi retreinado no notebook 04
 > com a divisão por autor corrigida (treino 28.365 linhas, 58,8% irônicas; teste
 > 4.778, 59,2%). Deu F1-macro de **0,994** no teste interno (0,991 só nos tweets)
 > e P(irônico) = **1,000** em frases neutras de atendimento, como "qual o prazo
 > de entrega do meu pedido" e "ok, obrigado". O modelo **não foi exportado** e o
-> Laya não foi treinado. Esta página explica por quê e o que fazer antes do
-> próximo treino. Medições e passos da sessão: nota interna
-> `docs/notas/2026-10-08-ironia-corpus.md`.
+> Laya não foi treinado naquela sessão. Esta página preserva o diagnóstico e
+> as propostas anteriores ao congelamento, não uma ordem de próximo treino.
 >
-> **Produção não muda:** a ironia em produção é lida pelo Laya sem treino
-> (`laya-onnx`) e não entra no vetor do Fusor.
+> O registro de 08/10 indicava Laya sem treino (`laya-onnx`) em produção.
+> Isso não confirma o backend publicado hoje. No contrato do código,
+> a ironia continua obrigatória por mensagem e não entra nas 39 features do fusor.
 
 ## Resumo: consertar o corpus antes de treinar o Laya
 
@@ -32,7 +47,7 @@ O pacote `laya==0.3.21` só faz inferência e não tem API de treino. O fine-tun
 
 As mudanças no notebook 07 (`notebooks/07_treino_laya.ipynb`) são estas, pela numeração "#" dos comentários das células:
 
-| Célula | Hoje | Para só ironia |
+| Célula | Estado do notebook 07 no roteiro de 08/10 | Alteração então proposta para só ironia |
 |---|---|---|
 | #2 (imports) | importa emoção e ironia | pode ficar; os nomes de emoção deixam de ser usados |
 | #4 (corpus de emoção) | GoEmotions-pt + XED-pt | **pular inteira**; define `dados_emocao`, `emocao_teste`, `frases_xed`, usados adiante |
@@ -98,8 +113,9 @@ A única vantagem estrutural do Laya para ironia é o vocabulário multilíngue,
 
 ## Régua de pares mínimos
 
-Estado: **rascunho pronto, anotação em andamento.** Spec em
-`docs/superpowers/specs/2026-10-08-regua-pares-ironia-design.md` (interno).
+Estado registrado em outubro: **rascunho pronto, anotação em andamento**.
+A continuidade da régua saiu da fila ativa em 16/11/2026; não foi conferida
+nova contagem de anotações nesta revisão.
 
 - 150 pares (elogio, reclamação, neutra), registro equilibrado conferido por
   `conferir_registro_equilibrado` e, par a par, mesma vírgula e mesmo número
@@ -128,14 +144,14 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
   do navegador, como o link de convite. Link vazado se revoga com
   `scripts/criar_link_anotacao.py --revogar <id>`; as respostas desse anotador
   saem do export.
-- **Critério de promoção de qualquer cabeça de ironia:** vencer o baseline só
+- **Critério de promoção proposto em outubro, fora da fila atual:** vencer o baseline só
   de estilo (`fraus/baseline_estilo.py`) em acurácia por par na régua, com IC
   95% da diferença excluindo zero. O teste interno do IDPT não entra. No
   laudo isso é o campo `candidato_vence_por_par` (limite inferior do IC da
   diferença acima de zero). `por_par_demonstrada` só diz que o IC exclui zero
   e também acende quando o candidato é significativamente pior; para promover,
   vale `candidato_vence_por_par`.
-- Depois da anotação: `uv run python scripts/exportar_anotacao.py respostas-fraus.json`
+- O roteiro posterior à anotação previa: `uv run python scripts/exportar_anotacao.py respostas-fraus.json`
   baixa `GET /anotacao/respostas` (só dev) e
   `uv run python scripts/consolidar_regua_ironia.py fraus/dados/anotacao_regua/anotador-claude-ai.json respostas-fraus.json`
   concatena os arquivos e consolida. Menos de 100 pares confirmados para o
@@ -150,6 +166,14 @@ Estado: **rascunho pronto, anotação em andamento.** Spec em
 
 ## Conclusão
 
-A pergunta "Laya ou BERTimbau, só ironia ou multitarefa" foi formulada sobre um corpus que não sustenta nenhuma das quatro respostas, porque nele o rótulo é a fonte. A decisão que de fato move o resultado vem antes do encoder. São três passos: trocar o `nao-ironico.csv` de #economia e as notícias por fala coloquial sincera, construir a régua de pares mínimos e comparar cada modelo com um baseline de estilo que não sabe nada de ironia. O Laya só-ironia continua valendo como experimento, como a célula (i) de um desenho controlado e não como conserto, e só depois de corrigir `laya_treinado_pelo_fraus` para que o produto não rotule um modelo treinado como "sem treino".
+A investigação de outubro concluiu que escolher encoder ou tarefa não
+resolvia um corpus cujo rótulo revelava a fonte. As propostas eram corrigir
+os negativos, construir a régua e comparar contra o baseline de estilo.
+O notebook 04 já mudou seu padrão para MultiPICo; isso não é, por si só,
+evidência de melhora dos pesos publicados.
 
-Para a banca, a meta de 100% se transforma num argumento a favor do projeto. Mostrar que o BERTimbau marca 0,99 no teste interno, que um classificador de pontuação e caixa alta chega perto disso, e que ambos caem para perto do acaso numa régua de pares mínimos é uma demonstração empírica da invariante 10 em ironia. Essa demonstração convence mais do que qualquer número alto. Promover o modelo depende de ele vencer o baseline de estilo na régua independente, com IC que exclua zero. O teste interno não serve para essa decisão.
+Para a banca, o contraste entre teste interno alto e fracasso de transferência
+continua ilustrando a invariante 10, sem prometer 100% de acerto. Vencer o
+baseline por par era um critério de pesquisa, não uma promoção autorizada.
+Desde 16/11/2026, nenhum dos treinos ou trocas de modelo propostos nesta
+página está na fila ativa; as limitações científicas permanecem.

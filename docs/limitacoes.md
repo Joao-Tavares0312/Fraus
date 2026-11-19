@@ -1,31 +1,69 @@
 # Limitações conhecidas
 
 Esta página existe porque um sistema que estima satisfação **precisa** declarar
-onde erra. Nada aqui é segredo, e nada aqui está escondido na tela: cada item
-tem contrapartida visível na interface.
+onde erra. As ressalvas da interface não substituem este inventário: nem toda
+limitação tem um indicador próprio em tela.
+
+## Generalização e proveniência — atualização de 26/10/2026
+
+O [relatório público de generalização](generalizacao.md) centraliza protocolo,
+baselines locais e limites de independência. As medições datadas abaixo são
+**históricas**: não identificam automaticamente os pesos publicados hoje.
+Uma resposta de saúde da API não demonstra inferência real nem proveniência
+do checkpoint.
+
+Há dependência por produto na antiga divisão posicional do fusor reconstruída
+agora, mas faltam curvas e manifestos antigos suficientes para diagnosticar
+overfitting dos pesos atuais. A campanha de três sementes por cabeça e o novo
+experimento do fusor não foram concluídos. Desde 16/11/2026, **modelos estão
+congelados por decisão do projeto**: sem retreino, calibração, promoção ou troca
+de pesos/arquitetura na fila ativa. O diagnóstico continua **inconclusivo**,
+não “sem overfitting”; congelar modelos não equivale a validar os existentes.
+
+A régua de `fraus/motor.py` combina a assinatura do fusor e
+`FORMULAS_DE_CORTESIA`; não inclui identidade dos checkpoints das cabeças nem
+backend. Comparar réguas ajuda a detectar mudanças cobertas por essa
+assinatura, mas não comprova que todo o pipeline permaneceu igual. A
+compatibilidade do artefato conformal com a régua herda esse limite.
+
+ConsumerBR e XED já foram consultados como benchmarks de transferência e não
+são testes virgens. No XED, F1-macro nas sete classes não é o mesmo indicador
+que F1-macro apenas nas classes presentes. A cabeça de ironia também tem
+baselines locais recentes, sem que isso converta a régua pequena em avaliação
+independente de atendimentos. Ver os resultados e respectivas condições em
+[Generalização](generalizacao.md), sem misturá-los às tabelas históricas.
+
+O novo manifesto/caches do fusor reduzem uma fonte de dependência, mas não
+comprovam retroativamente quais exemplos treinaram cabeças antigas. Sem essa
+cadeia, a independência do sistema completo não é verificável. Mesmo um teste
+agrupado correto de conversas sintéticas não valida acurácia em suporte real.
+
 
 ## Limitações operacionais do deploy gratuito
 
-A hospedagem da API deixou de ser pendência em 17/09/2026, mas “publicada” não
-significa “sem limites”. A função ONNX tem cerca de 1,95 GB (pacote
-publicado em 30/09/2026; eram 1,46 GB em 17/09) e usa Large Functions na
-Vercel. Depois de esfriar, o primeiro `/saude` observado levou
-10,8 s; requisições seguintes foram rápidas, mas não há garantia de latência.
+Os registros de publicação de setembro de 2026 descrevem uma API ONNX na
+Vercel com Large Functions. O pacote registrado em 30/09 tinha cerca de
+1,95 GB (1,46 GB em 17/09); um primeiro `/saude` após esfriar foi registrado
+em 10,8 s. São medições históricas, não um orçamento atual de latência nem
+uma conferência do provedor em 16/11/2026.
 
-**Cold start e "motor aquecendo".** A API é serverless: cada instância tem o
-próprio motor, e ele só ficava pronto depois da primeira predição. Desde
-30/09/2026 o motor aquece em segundo plano no boot da instância e a cada sonda
-de saúde, e um workflow sonda a API a cada 5 minutos. Isso **reduz** o cold
-start, mas não o elimina — a Vercel não garante que a sonda e o usuário caiam na
-mesma instância. Eliminá-lo exige um processo sempre ligado com pelo menos
-1,5–2 GB de RAM; o plano gratuito do Render (512 MB, dorme em 15 min) não
-serve, porque a API mede cerca de 1,06 GB de RSS com os três modelos.
+Cada instância serverless tem o próprio motor. O código dispara aquecimento
+em segundo plano no boot e nas sondas de saúde; há workflow com agenda de
+cinco minutos (`.github/workflows/api-aquecer.yml`). Isso não comprova que a
+agenda esteja ativa no provedor, nem elimina o cold start: a sonda e o usuário
+podem cair em instâncias diferentes. Os registros antigos de memória e tempo
+não dimensionam automaticamente um novo ambiente.
 
 Vercel Hobby, Supabase Free e Oracle Object Storage gratuito oferecem cotas,
 não SLA. Ao ultrapassá-las, a aplicação pode ser limitada ou pausada. O estado
-fica no Supabase; o Oracle participa do build, não da inferência. Uma restauração
-do projeto pode alterar a URI do pooler, e o transaction pooler precisa usar a
-porta indicada no painel (6543 no deploy atual).
+fica no banco; o armazenamento de modelos participa do build, não da
+inferência. A configuração externa, os backups e a recuperação do banco não
+foram revalidados nesta revisão.
+
+O backend já expõe `Server-Timing` e logs estruturados de latência
+(`fraus/api/observabilidade.py`), mas não há coleta de Web Vitals de campo no
+front nem orçamento atual de bytes/CLS da landing. Instrumentação de servidor
+não prova experiência rápida no navegador.
 
 Essas limitações são operacionais. Elas não alteram as limitações científicas
 abaixo e não autorizam apresentar a estimativa como NPS declarado.
@@ -39,10 +77,11 @@ proveniência. Apresentar como NPS declarado seria falso.
 
 **O intervalo de confiança cobre a incerteza AMOSTRAL, não a do modelo.** Ele
 responde "quantas conversas sustentam este número"; ele **não** responde "o
-quanto o modelo pode estar errado". A temperatura gravada no artefato
-(`fraus_receita.json`, desde 19/10/2026) calibra a confiança de cada cabeça,
-mas não entra neste intervalo. Um IC apresentado como se cobrisse o erro do modelo é pior que não ter
-IC nenhum, e por isso a ressalva está impressa junto do número, não só aqui.
+quanto o modelo pode estar errado". Os executores leem a temperatura de
+`fraus_receita.json` **quando o checkpoint a fornece**; sem esse arquivo, usam
+temperatura 1. Isso não comprova que os pesos em uso estejam calibrados, e não
+entra neste intervalo. Um IC apresentado como se cobrisse o erro do modelo é
+pior que não ter IC nenhum.
 
 O intervalo usa **Wald ajustado triangular AW(3,T)**: pseudocontagens de 0,75
 para cada extremo e 1,5 para neutros, com variância dividida por `n + 2`,
@@ -69,15 +108,17 @@ calibração (`fraus/calibracao.py`, `scripts/medir_calibracao.py`,
 classe**, sob permutabilidade com o conjunto de calibração. Ela **não vale**
 sob mudança de distribuição — e atendimento real é mudança de distribuição em
 relação ao holdout sintético do B2W —, e o sinal de tempo do fusor é sintético.
-A abstenção só marca: a conversa **continua no NPS e no CSAT**. Sem artefato
-calibrado para a régua vigente as rotas respondem 503, nunca um conjunto vazio
-fingindo confiança. Os números de ECE, cobertura e acurácia por abstenção ainda
-**não foram medidos**: não verificado — fusor log1p ausente na máquina de
-desenvolvimento em 14/10/2026. Por conversa, basta uma feature rara longe da
-média de treino (|z| > 4; por exemplo, features binárias com prevalência de
-treino abaixo de ~6%, ou contagens de turnos acima da faixa do simulador) para
-disparar o critério "deriva"; em tráfego real, portanto, ele deve disparar
-com frequência — honesto por construção, não medido.
+A abstenção só marca: a conversa **continua no NPS e no CSAT**. Na árvore
+consultada em 16/11/2026, `fraus/dados/conformal_fusor.json` **não existe**.
+Sem artefato compatível com a régua vigente, as rotas respondem 503; um detalhe
+pontuado com régua antiga pode responder 409. Não há conjunto vazio fingindo
+confiança. ECE, cobertura e acurácia por abstenção continuam **não verificadas**;
+a ausência de fusor `log1p` foi o bloqueio registrado em 14/10/2026, não uma
+inspeção do ambiente atual. No detalhe, a deriva pode adicionar um critério de
+abstenção, mas acima de 40 mensagens do cliente ela não é avaliada: a resposta
+declara esse limite. O agregado considera só conjunto vazio ou múltiplo, sem
+passagem pelo modelo. O limiar `|z| > 4` pode disparar por uma única feature
+rara; sua frequência em tráfego real não foi medida.
 
 ### Sinalizadores por regra (E5)
 
@@ -96,9 +137,10 @@ achado diz isso. No `abandono`, o falso positivo comum é a despedida do bot
 depois que o cliente já resolveu e saiu. Nenhuma regra lê o texto nem o relógio
 da fala do atendente: só a presença e a posição da primeira fala humana contam, e o
 autor da última mensagem (usado pelo `abandono`); o texto e o relógio da fala
-humana nunca são lidos para julgar, porque o Fraus não pontua atendentes. Os casos construídos (15) **verificam a
-implementação, não medem qualidade**; precisão e recall em dado real: **não
-verificado — fonte da amostra anotada pendente**.
+humana nunca são lidos para julgar, porque o Fraus não pontua atendentes.
+Os casos construídos **verificam a implementação, não medem qualidade**;
+precisão e recall em dado real: **não verificado — fonte da amostra anotada
+pendente**.
 
 ### Impacto por tema e deterioração (E6)
 
@@ -157,14 +199,17 @@ fusor em segundos crus, essa conversa dava `|z| = 124,9` em
 
 ## A cabeça de ironia é pouco confiável
 
-Ela reporta acurácia `1.0` no corpus gerado e erra **6 em 10** falas sinceras de
-atendimento, com 0,999 de confiança — vazamento de marcador de discurso no
-gerador, já corrigido no gerador e pendente de retreino.
+As medições antigas desta página se referem a um checkpoint treinado em corpus
+gerado, que reportava acurácia `1.0` e falhava em frases de atendimento com
+alta confiança. O atalho de marcador de discurso foi observado nesse contexto;
+ele **não diagnostica por si só a cabeça local ou publicada hoje**.
 
-**O vazamento não chega mais à nota**, porque a ironia saiu do vetor em
-04/09/2026 por um motivo diferente e mais grave (ver
-[Arquitetura](arquitetura.md)). Ela continua sendo exibida por mensagem, com a
-ressalva colada ao número.
+Os baselines de 26/10/2026 e a campanha diagnóstica proposta com MultiPICo
+estão em [Generalização](generalizacao.md); campanha proposta não é retreino
+executado. A ironia continua fora do vetor desde 04/09/2026 por outro motivo
+medido historicamente (ver [Arquitetura](arquitetura.md)), e é exibida por
+mensagem, com ressalva. Não há promessa de que detecte ironia corretamente em
+atendimentos reais.
 
 ---
 
@@ -179,20 +224,22 @@ que é raiva, não desprezo.
 
 ## Nenhuma feature agregada reverte uma probabilidade saturada
 
-A frase canônica — *"que atendimento maravilhoso, só esperei 3 horas"* — sai
-promotora sempre que o relógio não a contradiz.
+O registro histórico da frase canônica — *"que atendimento maravilhoso, só
+esperei 3 horas"* — mostrou uma saída promotora quando o relógio não a
+contradizia. Não é uma previsão universal para qualquer checkpoint.
 
-`incongruencia_situacao_negativa` foi criada para alcançá-la e tem peso
-**−0,193**; ela não vence os **+2,78** de `texto_prob_satisfeito_media` quando o
-BERTimbau lê a frase como elogio sincero.
+Na medição histórica, `incongruencia_situacao_negativa` tinha peso **−0,193**
+e não vencia os **+2,78** de `texto_prob_satisfeito_media`. Os coeficientes
+dependem do artefato; não foram reavaliados nesta revisão.
 
 Por isso a **contestação** (08/09/2026) **marca em vez de corrigir**: quando
 `score > 95` e `latencia_mediana_s > 180`, a tela avisa — e o atendimento
 **continua contando no NPS**, com teste provando isso. Tirá-lo do agregado
 esvaziaria o indicador em silêncio se o limiar estivesse mal calibrado.
 
-O limiar de score em 95 é o único número do projeto **sem procedência**, e está
-declarado assim no código e na spec. O de tempo vem de IJHCI 2025.
+O limiar de score em 95 não tem procedência empírica declarada; não é o único
+limiar heurístico do projeto (ver E5 e `fraus/explicacao.py`). O de tempo é
+atribuído à literatura IJHCI 2025.
 
 ---
 
@@ -203,8 +250,9 @@ tela não deve esconder:
 
 - **O efeito por família não soma a nota.** A soma exata mora no eixo do logit
   (intercepto + contribuições = log da razão entre classes); o score é uma
-  projeção não linear desses logits. Os pontos por família são uma leitura
-  aproximada, e a tela os trata como tal.
+  projeção não linear desses logits. Os pontos por família são um recálculo
+  exato com a família na média do treino, mas **não aditivo**; não são parcelas
+  que, somadas, reproduzem a nota.
 - **Contribuição é associação, não causa.** Um peso alto diz o que o modelo
   aprendeu a associar ao rótulo, não o que faria o cliente mudar de opinião.
 - **"Faixa de treino" quer dizer `|z| ≤ 4`** sobre média e desvio do scaler
@@ -222,11 +270,24 @@ tela não deve esconder:
 
 ## O que não dá para consertar sem corpus de atendimento real
 
-Duas coisas ficam condicionadas ao mesmo recurso que não existe publicamente em
-português — um corpus de **diálogo de atendimento** rotulado:
+O projeto não dispõe de corpus novo de **diálogo de atendimento** rotulado e
+com proveniência suficiente para validar estas duas frentes:
 
-1. **retreinar a cabeça de ironia** em domínio certo;
+1. **avaliar ironia no domínio certo**; retreino seria pesquisa futura, fora da
+   fila ativa por decisão de 16/11/2026;
 2. **a interação tempo × texto** como feature. Ela nasceria com o peso
    invertido: o texto vem do B2W, a latência sai de distribuição por rótulo, e
    satisfeito-e-lento está rotulado *satisfeito* por construção. Isso é leitura
    do corpus, não experimento.
+
+## Feedback observado não é validação completa
+
+O backend aceita `feedback_declarado` binário (`-1`/`1`) e comentário,
+sem mover o score. `GET /indicadores` informa o total com voto **e score** e a
+concordância com as categorias inferidas (positivo com promotor, negativo com
+detrator; neutro não conta como concordante). Esse cruzamento não mede
+causalidade nem transforma resolução declarada em NPS perguntado.
+
+O TARS ainda não envia esse voto, e a dashboard não apresenta o agregado de
+concordância. A comparação de nota declarada 0–10 com nota inferida (E3) não
+foi iniciada; não deve ser confundida com o contrato binário existente.
