@@ -32,10 +32,11 @@ das cabeças ou do backend. Um artefato conformal “da mesma régua” não pro
 que todo o pipeline permaneceu igual.
 
 O backend aceita `feedback_declarado` (`-1`/`1`) e comentário, sem alterar
-score (`fraus/modelos.py`, `fraus/api/registro.py`). `GET /indicadores` já
+score (`fraus/modelos.py`, `fraus/api/registro.py`). `GET /indicadores`
 retorna total com voto e score e concordância (positivo/promotor,
-negativo/detrator). A dashboard não apresenta esse agregado e o TARS não
-envia o voto. “Resolveu” não é nota NPS, nem validação causal da satisfação.
+negativo/detrator). Desde 19/11/2026 a dashboard mostra esse agregado com o
+denominador, e o TARS envia o voto (Tars #33). “Resolveu” não é nota NPS, nem
+validação causal da satisfação.
 
 ## O que vale para todas as entregas
 

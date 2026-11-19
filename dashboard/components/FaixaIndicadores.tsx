@@ -239,6 +239,10 @@ export function FaixaIndicadores({
             }
           />
         </motion.section>
+        <VotoDoCliente
+          votos={indicadores.votosComNota}
+          concordancia={indicadores.concordanciaComVoto}
+        />
       </div>
 
       {/* O METODO dos quatro indicadores vira UM aparato so, no pe da tela --
@@ -311,5 +315,48 @@ function ContencaoQueNaoConvenceu({
         Contenção alta com essa taxa alta é sucesso falso.
       </Explicacao>
     </span>
+  );
+}
+
+/**
+ * O voto do cliente ("Resolveu"/"Não resolveu", vindo do canal) contra a
+ * categoria inferida, numa linha abaixo dos quatro cartoes -- nao e quinto
+ * indicador: e evidencia OBSERVADA ao lado da estimativa, com o denominador
+ * colado. Nada e calculado aqui: contagem e fracao sao do servidor. `null`
+ * (plano B, API antiga) nao desenha nada -- "nao sei" nao e "nenhum voto".
+ */
+function VotoDoCliente({
+  votos,
+  concordancia,
+}: {
+  votos: number | null;
+  concordancia: number | null;
+}) {
+  if (votos === null) return null;
+  if (votos > 0 && concordancia === null) return null;
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+      <span className="font-medium text-foreground">Voto do cliente</span>
+      <span className="text-xs">observado</span>
+      {votos === 0 ? (
+        <span>Nenhum voto do cliente em atendimentos com nota neste período.</span>
+      ) : (
+        <span className="inline-flex items-center gap-1">
+          <span>
+            A estimativa concordou com{" "}
+            <strong className="num font-medium text-foreground">
+              {formatarNumero((concordancia as number) * 100)}%
+            </strong>{" "}
+            dos <span className="num">{votos}</span>{" "}
+            {votos === 1 ? "atendimento" : "atendimentos"} com voto e nota.
+          </span>
+          <Explicacao rotulo="Sobre o voto do cliente">
+            “Resolveu” é resposta de resolução, não nota de NPS. Concorda quando
+            “Resolveu” cai em promotor ou “Não resolveu” cai em detrator; neutro
+            conta como discordância. O voto nunca altera a nota.
+          </Explicacao>
+        </span>
+      )}
+    </p>
   );
 }

@@ -141,6 +141,9 @@ export default async function Pagina(props: PageProps<"/dashboard">) {
         comSinal:
           indicadoresDoServidor.dado.total_conversas -
           indicadoresDoServidor.dado.sem_sinal,
+        // API antiga sem os campos: "nao sei" (null), nunca "nenhum voto".
+        votosComNota: indicadoresDoServidor.dado.feedback_declarado_total ?? null,
+        concordanciaComVoto: indicadoresDoServidor.dado.concordancia_com_feedback ?? null,
       }
     : indicadoresDoPeriodo(resumos, detalhes);
 

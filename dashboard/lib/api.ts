@@ -127,6 +127,18 @@ export type Indicadores = {
   falso_containment?: number | null;
   /** Denominador do campo acima -- a tela diz "3 de 12", nao so o percentual. */
   contidos_com_score?: number;
+  /**
+   * Atendimentos do recorte com voto do cliente ("Resolveu"/"Não resolveu")
+   * E com nota -- o denominador da concordancia. Opcional: API anterior nao
+   * devolve, e `undefined` ali e "nao sei", nunca zero votos.
+   */
+  feedback_declarado_total?: number;
+  /**
+   * Fracao 0-1 dos atendimentos acima em que o voto e a categoria inferida
+   * concordam (resolveu -> promotor, nao resolveu -> detrator). `null` sem
+   * nenhum voto com nota.
+   */
+  concordancia_com_feedback?: number | null;
   total_conversas: number;
   sem_sinal: number;
   /**
@@ -287,6 +299,9 @@ export type Mensagem = {
 
 export type DetalheConversa = ResumoConversa & {
   mensagens: Mensagem[];
+  /** Voto do cliente no atendimento (1 resolveu, -1 nao resolveu); ausente sem voto. Nunca altera a nota. */
+  feedback_declarado?: -1 | 1 | null;
+  comentario_feedback?: string | null;
 };
 
 /**

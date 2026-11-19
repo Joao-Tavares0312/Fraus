@@ -47,7 +47,15 @@ export function ResumoDoAtendimento({
       ? `espera mediana ${formatarSegundos(mediana)} (${respostas} ${respostas === 1 ? "resposta" : "respostas"})`
       : null,
     conversa.escalou_para_humano ? "escalou para humano" : "contido no bot",
+    // Voto do canal, observado: fica nos fatos, ao lado do desfecho, e nunca
+    // perto da nota -- ele nao a altera.
+    conversa.feedback_declarado === 1
+      ? "cliente votou: resolveu"
+      : conversa.feedback_declarado === -1
+        ? "cliente votou: não resolveu"
+        : "sem voto do cliente",
   ].filter((fato): fato is string => fato !== null);
+  const comentario = conversa.comentario_feedback?.trim();
 
   return (
     <section
@@ -86,6 +94,12 @@ export function ResumoDoAtendimento({
         )}
       </div>
       <p className="num text-sm text-muted-foreground">{fatos.join(" · ")}</p>
+      {comentario ? (
+        <figure className="flex flex-col gap-0.5 text-sm">
+          <figcaption className="text-xs text-muted-foreground">Comentário do cliente</figcaption>
+          <blockquote className="border-l-2 border-dito pl-2 text-dito-texto">{comentario}</blockquote>
+        </figure>
+      ) : null}
       {semNota ? null : (
         <MarcaContestacao
           contestacao={conversa.contestacao}
