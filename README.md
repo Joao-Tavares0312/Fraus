@@ -323,7 +323,7 @@ Variáveis lidas só por scripts de operação e pelo CI, não pela API:
 
 | Variável | Padrão | O que faz |
 |---|---|---|
-| `FRAUS_SMOKE_URL` / `FRAUS_SMOKE_TOKEN` | (nenhum) | URL HTTPS e credencial de `scripts/smoke_deploy.py`, que confere `/saude` depois do deploy da API (o workflow `api-deploy.yml` as define) |
+| `FRAUS_SMOKE_URL` / `FRAUS_SMOKE_TOKEN` | (nenhum) | URL HTTPS e credencial de `scripts/smoke_deploy.py`, que confere `/saude` depois do deploy da API e, com o token, o contrato de `/indicadores` e `/indicadores/confianca` (o workflow `api-deploy.yml` as define) |
 | `FRAUS_MEDIR_TOKEN` | (nenhum) | credencial que `scripts/medir_latencia_deploy.py` manda em `Authorization`, ao lado de `FRAUS_MEDIR_URL` |
 | `FRAUS_DASHBOARD_URL` | `https://fraus-one.vercel.app` | base dos links que `scripts/criar_link_anotacao.py` imprime. **Não confundir** com `FRAUS_URL_DASHBOARD`, lida pelo `mkdocs.yml` para o link "← Dashboard" do site |
 
@@ -1031,7 +1031,7 @@ decisão** — não será trabalhado agora, de propósito.
 | Diferencial E4 (benchmark contra LLM) | Fora da fila por decisão | descartado em 14/10/2026 | — |
 | Feedback declarado binário | Implementado; poucos votos reais | `feedback_declarado` (−1 ou 1) em `fraus/modelos.py`, `fraus/api/esquemas.py` e `fraus/api/registro.py`; `/indicadores` devolve `feedback_declarado_total` e `concordancia_com_feedback` (`fraus/api/rotas/indicadores.py`); linha "Voto do cliente" em `dashboard/components/FaixaIndicadores.tsx`; TARS envia o voto desde o #33; `tests/test_ingestao_tars.py` | não muda o score, como deve; a concordância com poucos votos não valida o modelo |
 | Exports reais (Discord, Telegram, Zendesk, Blip) | Pendente | `tests/test_leitores.py`, `tests/test_mapeador.py` e `tests/test_importacao_generica.py` usam dados construídos | nenhum corpus de export real autorizado |
-| Deploy da API e do site de docs | Não verificado no ambiente | `.github/workflows/api-deploy.yml`, `.github/workflows/docs.yml`; `scripts/smoke_deploy.py` confere saúde | secrets e configuração externa não foram vistos; o smoke não cobre o contrato funcional |
+| Deploy da API e do site de docs | Workflow da API sem secrets; publicação manual pelo CLI | `.github/workflows/api-deploy.yml`, `.github/workflows/docs.yml`; `scripts/smoke_deploy.py` confere saúde e, com token, o contrato lido pela dashboard | em 19/11/2026 o `api-deploy.yml` falhou por `VERCEL_TOKEN` vazio no ambiente `production-api`; a API foi publicada pelo CLI |
 | Recuperação do banco | Pendente | nenhum runbook nem ensaio de restauração no repositório | não prova ausência de backup no provedor |
 | Retreino, calibração e promoção de modelos | Fora da fila por decisão | decisão de 16/11/2026 | limitações em [Limitações conhecidas](#limitações-conhecidas) |
 
