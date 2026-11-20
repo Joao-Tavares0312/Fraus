@@ -13,11 +13,7 @@ import hashlib
 import math
 from pathlib import Path
 
-import joblib
 import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
 from fraus.modelos import Conversa
 from fraus.sinais.emocao import features_emocao
@@ -305,6 +301,15 @@ def vetorizar(features: dict[str, float | None]) -> list[float]:
 
 class Fusor:
     def __init__(self) -> None:
+        # `sklearn` e `joblib` entram AQUI e nos dois metodos de disco, nao no
+        # topo do modulo: o import custa 1,4 s (medido em 20/11/2026) e este
+        # modulo e importado por toda a API -- `NOMES_FEATURES` e `FAMILIAS`
+        # moram nele. No topo, a funcao serverless que so le o banco pagava
+        # esse tempo antes da primeira resposta de cada instancia nova.
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+
         self._pipeline = Pipeline([
             ("escala", StandardScaler()),
             ("modelo", LogisticRegression(max_iter=1000)),
@@ -546,6 +551,8 @@ class Fusor:
         return dict(zip(NOMES_FEATURES, (float(v) for v in medias)))
 
     def salvar(self, caminho: Path) -> None:
+        import joblib
+
         joblib.dump(self._pipeline, caminho)
 
     @classmethod
@@ -563,6 +570,8 @@ class Fusor:
         primeira predicao -- precisa ser na CARGA, que e quando a API sobe.
         """
         fusor = cls()
+        import joblib
+
         fusor._pipeline = joblib.load(caminho)
 
         esperado = len(NOMES_FEATURES)

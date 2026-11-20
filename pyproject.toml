@@ -57,10 +57,12 @@ docs = [
 torch = ["torch>=2.3"]
 
 # RUNTIME do backend ONNX -- so o `onnxruntime`, que basta para PONTUAR.
-# Ele nao traz torch: a inferencia acontece no grafo exportado, e o tokenizador
-# do `transformers` funciona sem torch instalado. E o que permite uma imagem de
-# deploy sem os 497 MB do torch.
-onnx = ["onnxruntime>=1.20"]
+# Ele nao traz torch: a inferencia acontece no grafo exportado. E o que permite
+# uma imagem de deploy sem os 497 MB do torch.
+# `tokenizers` e importado direto pelo backend (le o `tokenizer.json` sem o
+# `import transformers`, que custava segundos no boot); declarado aqui para nao
+# depender de vir de carona.
+onnx = ["onnxruntime>=1.20", "tokenizers>=0.19"]
 
 # FERRAMENTA DE CONVERSAO, nunca de deploy. `optimum` exporta o checkpoint para
 # ONNX e o `onnxruntime.quantization` o quantiza -- os dois rodam UMA vez, na

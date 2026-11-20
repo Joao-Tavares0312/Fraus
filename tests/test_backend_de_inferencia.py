@@ -43,3 +43,22 @@ def test_importar_o_motor_nao_arrasta_o_torch():
         "sys.exit(1 if 'torch' in sys.modules else 0)"
     )
     assert subprocess.run([sys.executable, "-c", codigo]).returncode == 0
+
+
+def test_importar_a_api_nao_arrasta_o_sklearn_nem_o_transformers():
+    """O boot de uma instancia fria paga cada import antes da primeira resposta.
+
+    Medido em 20/11/2026: `sklearn` custava 1,4 s e `transformers` de 2 a 3,5 s,
+    os dois no caminho de TODA funcao -- inclusive a leve, que so le o banco.
+    O sklearn chega quando um `Fusor` e montado ou carregado; o transformers,
+    so no backend torch. Processo novo, pelo mesmo motivo do teste acima.
+    """
+    import subprocess
+
+    codigo = (
+        "import sys; import fraus.motor, fraus.api.main; "
+        "pesados = [m for m in ('sklearn', 'transformers') if m in sys.modules]; "
+        "print(pesados); sys.exit(1 if pesados else 0)"
+    )
+    resultado = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True)
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
