@@ -213,6 +213,13 @@ export type ResumoConversa = {
   id: string;
   canal: string;
   iniciada_em: string;
+  /**
+   * Quando o SERVIDOR gravou o atendimento ou o viu mudar (UTC). Diferente de
+   * `iniciada_em`, que e a hora da conversa. `null` em linha anterior a
+   * coluna e ausente em API antiga: nos dois casos nao se sabe, e a tela nao
+   * marca como novo.
+   */
+  recebida_em?: string | null;
   score: number | null;
   categoria: Categoria | null;
   /**

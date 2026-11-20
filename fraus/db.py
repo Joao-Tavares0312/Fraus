@@ -472,6 +472,11 @@ def _numero_do_ambiente(
     return valor
 
 
+def _agora_utc() -> str:
+    """O relogio de `recebida_em`. Funcao de modulo para o teste poder fixa-lo."""
+    return datetime.now(timezone.utc).isoformat()
+
+
 def _inicio_no_produto(conversa: Conversa) -> str:
     """O valor da COLUNA `iniciada_em`: o inicio no fuso do produto.
 
@@ -690,6 +695,10 @@ class Banco:
         ("conversas", "lexico_versao", "INTEGER"),
         # Assinatura do motor que pontuou (`Motor.regua`) -- ver `contar_defasadas`.
         ("conversas", "regua", "TEXT"),
+        # Quando o servidor gravou a conversa ou a viu MUDAR -- ver
+        # `_chegadas`. Linha anterior a coluna fica NULL: nao se sabe, e
+        # ausencia nao vira data (nem a da migracao, nem a da conversa).
+        ("conversas", "recebida_em", "TEXT"),
     )
 
     # Numero arbitrario e fixo: quem migra este esquema disputa ESTA trava.
@@ -752,6 +761,43 @@ class Banco:
                 (normalizado, linha["id"]),
             )
 
+    # Teto de ids por consulta em `_chegadas`: o SQLite limita os parametros de
+    # um comando, e o lote de uma analise pode passar de centenas de conversas.
+    _IDS_POR_CONSULTA = 500
+
+    def _chegadas(self, conexao, serializadas: dict[str, str]) -> dict[str, str | None]:
+        """A `recebida_em` de cada conversa prestes a ser gravada.
+
+        `recebida_em` responde "quando isto chegou ou mudou?", e e o que o
+        painel usa para marcar atendimento novo. `iniciada_em` nao serve: um
+        export de setembro enviado hoje comecou em setembro.
+
+        A hora so anda quando o PAYLOAD muda. Reenvio identico conserva a
+        anterior -- inclusive o NULL de linha antiga, que continua "nao se
+        sabe": o mesmo arquivo enviado duas vezes nao vira atendimento novo, e
+        o TARS, que reenvia o chat a cada turno, so renova quando ha fala nova.
+        Lida e gravada na MESMA transacao do upsert.
+        """
+        anteriores: dict[str, tuple[str, str | None]] = {}
+        ids = list(serializadas)
+        for inicio in range(0, len(ids), self._IDS_POR_CONSULTA):
+            parte = ids[inicio:inicio + self._IDS_POR_CONSULTA]
+            marcadores = ", ".join("?" for _ in parte)
+            for linha in conexao.execute(
+                f"SELECT id, payload, recebida_em FROM conversas WHERE id IN ({marcadores})",
+                tuple(parte),
+            ).fetchall():
+                anteriores[linha["id"]] = (linha["payload"], linha["recebida_em"])
+        agora = _agora_utc()
+        return {
+            ident: (
+                anteriores[ident][1]
+                if ident in anteriores and anteriores[ident][0] == payload
+                else agora
+            )
+            for ident, payload in serializadas.items()
+        }
+
     def salvar(
         self,
         conversa: Conversa,
@@ -766,12 +812,14 @@ class Banco:
         curadoria continua valendo -- e `None` ali significa exatamente o que
         significa numa linha de banco antigo: nao se sabe, logo defasada.
         """
+        payload = conversa.model_dump_json()
         with self._conectar() as conexao:
+            chegada = self._chegadas(conexao, {conversa.id: payload})[conversa.id]
             conexao.execute(
                 self._upsert(
                     "conversas",
                     ("id", "canal", "iniciada_em", "score", "categoria", "payload",
-                     "lexico_versao", "regua"),
+                     "lexico_versao", "regua", "recebida_em"),
                     ("id",),
                 ),
                 (
@@ -780,9 +828,10 @@ class Banco:
                     _inicio_no_produto(conversa),
                     score,
                     categoria,
-                    conversa.model_dump_json(),
+                    payload,
                     lexico_versao,
                     regua,
+                    chegada,
                 ),
             )
 
@@ -829,12 +878,14 @@ class Banco:
 
     def salvar_lote(self, registros: list, lexico_versao: int, regua: str | None) -> None:
         """Publica o lote completo em UMA transacao, nos dois dialetos."""
+        serializadas = {c.id: c.model_dump_json() for c, _, _ in registros}
         with self._conectar() as conexao:
+            chegadas = self._chegadas(conexao, serializadas)
             conexao.executemany(
                 self._upsert("conversas", ("id", "canal", "iniciada_em", "score",
-                    "categoria", "payload", "lexico_versao", "regua"), ("id",)),
+                    "categoria", "payload", "lexico_versao", "regua", "recebida_em"), ("id",)),
                 [(c.id, c.canal, _inicio_no_produto(c), score, categoria,
-                  c.model_dump_json(), lexico_versao, regua)
+                  serializadas[c.id], lexico_versao, regua, chegadas[c.id])
                  for c, score, categoria in registros],
             )
 
@@ -1112,7 +1163,8 @@ class Banco:
             parametros.append(deslocamento)
         with self._conectar() as conexao:
             linhas = conexao.execute(
-                "SELECT id, canal, iniciada_em, score, categoria, payload FROM conversas"
+                "SELECT id, canal, iniciada_em, score, categoria, recebida_em, payload "
+                "FROM conversas"
                 + onde
                 # `id` desempata: com `iniciada_em` igual (lote importado,
                 # relogio de minuto) o Postgres nao garante a mesma ordem entre
@@ -1125,7 +1177,9 @@ class Banco:
             (
                 {
                     chave: linha[chave]
-                    for chave in ("id", "canal", "iniciada_em", "score", "categoria")
+                    for chave in (
+                        "id", "canal", "iniciada_em", "score", "categoria", "recebida_em",
+                    )
                 },
                 Conversa(**json.loads(linha["payload"])),
             )
@@ -1140,6 +1194,14 @@ class Banco:
         if linha is None:
             return None
         return Conversa(**json.loads(linha["payload"])), linha["score"], linha["categoria"]
+
+    def chegada_da_conversa(self, conversa_id: str) -> str | None:
+        """`recebida_em` de uma conversa; `None` se ela e anterior a coluna."""
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT recebida_em FROM conversas WHERE id = ?", (conversa_id,)
+            ).fetchone()
+        return linha["recebida_em"] if linha is not None else None
 
     def apagar_conversa(self, conversa_id: str) -> bool:
         """Remove um atendimento gravado. Devolve se havia o que remover."""

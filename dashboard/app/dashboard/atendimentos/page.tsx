@@ -20,6 +20,7 @@ function paraLinha(resumo: ResumoConversa): LinhaConversa {
     canal: resumo.canal,
     data: formatarDataHora(resumo.iniciada_em),
     ordenacao: resumo.iniciada_em,
+    recebida_em: resumo.recebida_em ?? null,
     // A nota vem DERIVADA DO SERVIDOR em `/conversas`. Recalcular aqui ja
     // divergiu do Python nas fronteiras 6/7 e 8/9 (arredondamento bancario
     // contra meio-para-cima) e fazia a tabela exibir nota 7 ao lado da

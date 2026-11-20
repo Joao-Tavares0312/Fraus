@@ -50,6 +50,8 @@ import { cn } from "@/lib/utils";
 import { ausenciaNoFim } from "@/lib/ordenacao";
 import { limitarPagina } from "@/lib/paginacao";
 import { IconeDeAcao } from "@/components/IconeDeAcao";
+import { Badge } from "@/components/ui/badge";
+import { ehNovo, useVistoAte } from "@/lib/novidade";
 
 const LINHAS_POR_PAGINA = 12;
 
@@ -60,6 +62,8 @@ export type LinhaConversa = {
   data: string;
   /** Ordenacao usa o ISO, nao o texto. */
   ordenacao: string;
+  /** Quando chegou ao servidor; `null` = nao se sabe (nunca vira "novo"). */
+  recebida_em?: string | null;
   nota: number | null;
   categoria: Categoria | null;
   qtd_mensagens: number;
@@ -194,6 +198,7 @@ export function TabelaConversas({
   // reset some para TUDO, entao quem volta a pagina 1 passa a ser o gesto de
   // quem filtra ou reordena (`irParaAPrimeira`), que e quando faz sentido.
   const [pagina, setPagina] = useState(0);
+  const vistoAte = useVistoAte();
 
   /*
    * O comparador precisa saber o SENTIDO, e o motor nao o passa: `sortFn`
@@ -220,6 +225,18 @@ export function TabelaConversas({
                 >
                   {linha.id}
                 </Link>
+                {/* Texto, nao so cor: "novo" e estado de quem olha (chegou
+                    depois da ultima visita), nao medida do modelo -- por isso
+                    contorno neutro, sem ouro e sem as cores de categoria. */}
+                {ehNovo(linha.recebida_em, vistoAte) ? (
+                  <Badge
+                    variant="outline"
+                    className="ml-2 align-middle"
+                    title="Chegou ou foi atualizado depois da sua última visita a esta lista"
+                  >
+                    novo
+                  </Badge>
+                ) : null}
                 <Miudo>
                   {linha.canal} · <span className="num">{linha.data}</span>
                 </Miudo>
@@ -301,7 +318,7 @@ export function TabelaConversas({
           },
         }),
     ] as LegacyColumnDef<LinhaConversa>[];
-  }, [sufixoDeQuery, ordenacao]);
+  }, [sufixoDeQuery, ordenacao, vistoAte]);
 
   // Os recortes acontecem antes da tabela para que o contador, a paginacao e o
   // EXPORT falem todos do mesmo conjunto.

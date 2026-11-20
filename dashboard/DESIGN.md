@@ -380,6 +380,16 @@ passo; o endpoint de origem fica em **Método e ressalvas**, não na face do pai
   instância do provider. Isso não é cache de indicadores, sessão ou credencial;
   a cadência visível e os estados real/dublê/frio/erro permanecem os mesmos.
 
+- A dashboard aberta pergunta `GET /conversas/assinatura` a cada 15 s
+  (20/11/2026) e só relê os Server Components quando a resposta muda. Aba
+  oculta não pergunta; sonda que falha não vira releitura. É um agregado sem
+  transcrição, não cache de indicadores.
+- **Selo “novo”** na lista de atendimentos: `Badge` `outline` com a palavra
+  escrita, ao lado do id. Marca o que chegou ao servidor (`recebida_em`) depois
+  da última visita daquele navegador à lista; o marco fica no `localStorage` e
+  só avança ao sair. É estado de quem olha, não medida: sem ouro e sem cor de
+  categoria. Hora de chegada desconhecida nunca vira “novo”.
+
 ### Números, ausência e proveniência
 
 `ValorNumerico` recebe uma string já formatada, rótulo e ausência explícita.
