@@ -693,6 +693,7 @@ docs = [
 ]
 onnx = [
     { name = "onnxruntime" },
+    { name = "tokenizers" },
 ]
 torch = [
     { name = "torch" },
@@ -728,6 +729,7 @@ requires-dist = [
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "scikit-learn", specifier = "==1.6.1" },
+    { name = "tokenizers", marker = "extra == 'onnx'", specifier = ">=0.19" },
     { name = "torch", marker = "extra == 'conversao'", specifier = ">=2.3" },
     { name = "torch", marker = "extra == 'torch'", specifier = ">=2.3" },
     { name = "torch", marker = "extra == 'treino'", specifier = ">=2.3" },

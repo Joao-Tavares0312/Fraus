@@ -22,6 +22,7 @@ porque alguem quis reimplementar numpy: o `AutoModelForSequenceClassification`
 tambem devolve logits, e o softmax sempre morou do lado de fora.
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -56,6 +57,65 @@ def _softmax(logits: np.ndarray, temperatura: float = 1.0) -> np.ndarray:
     return exponenciais / exponenciais.sum(axis=-1, keepdims=True)
 
 
+class TokenizadorOnnx:
+    """O `tokenizer.json` do artefato, lido direto pela biblioteca `tokenizers`.
+
+    POR QUE NAO O `AutoTokenizer`. Ele so embrulha esta mesma biblioteca, e o
+    `import transformers` custava de 2 a 3,5 s num processo frio (medido em
+    20/11/2026) -- mais do que abrir uma sessao ONNX. Em serverless esse tempo
+    cai dentro da primeira requisicao de cada instancia nova.
+
+    O QUE TEM DE CONTINUAR IGUAL. A codificacao, id por id: trunca em
+    `TAMANHO_MAXIMO`, preenche ate o maior texto DO LOTE, a direita, com o
+    token de preenchimento do artefato. `tests/test_tokenizador_onnx.py`
+    compara com o `AutoTokenizer`; um id diferente mudaria a entrada do modelo
+    sem erro nenhum.
+
+    Chamavel como o anterior: lista de textos entra, dicionario de matrizes
+    `int64` sai. `encode_batch` e seguro entre threads; a configuracao so e
+    mexida aqui, no construtor.
+    """
+
+    def __init__(self, diretorio: Path) -> None:
+        from tokenizers import Tokenizer
+
+        diretorio = Path(diretorio)
+        arquivo = diretorio / "tokenizer.json"
+        if not arquivo.is_file():
+            raise FileNotFoundError(f"tokenizer.json nao encontrado em {diretorio}")
+        self._tokenizador = Tokenizer.from_file(str(arquivo))
+        preenchimento = self._token_de_preenchimento(diretorio)
+        identificador = self._tokenizador.token_to_id(preenchimento)
+        if identificador is None:
+            raise ValueError(
+                f"o vocabulario de {arquivo} nao tem o token de preenchimento {preenchimento!r}"
+            )
+        self._tokenizador.enable_truncation(max_length=TAMANHO_MAXIMO)
+        self._tokenizador.enable_padding(pad_id=identificador, pad_token=preenchimento)
+
+    @staticmethod
+    def _token_de_preenchimento(diretorio: Path) -> str:
+        """O `pad_token` que o artefato declara; `[PAD]` e o do BERT."""
+        for nome in ("tokenizer_config.json", "special_tokens_map.json"):
+            arquivo = diretorio / nome
+            if not arquivo.is_file():
+                continue
+            declarado = json.loads(arquivo.read_text(encoding="utf-8")).get("pad_token")
+            if isinstance(declarado, dict):
+                declarado = declarado.get("content")
+            if isinstance(declarado, str) and declarado:
+                return declarado
+        return "[PAD]"
+
+    def __call__(self, textos: list[str]) -> dict[str, np.ndarray]:
+        codificados = self._tokenizador.encode_batch(list(textos))
+        return {
+            "input_ids": np.array([c.ids for c in codificados], dtype=np.int64),
+            "token_type_ids": np.array([c.type_ids for c in codificados], dtype=np.int64),
+            "attention_mask": np.array([c.attention_mask for c in codificados], dtype=np.int64),
+        }
+
+
 class SessaoOnnx:
     """Um grafo ONNX quantizado mais o tokenizador dele.
 
@@ -76,9 +136,8 @@ class SessaoOnnx:
             )
         try:
             import onnxruntime
-            from transformers import AutoTokenizer
 
-            self._tokenizador = AutoTokenizer.from_pretrained(str(diretorio))
+            self._tokenizador = TokenizadorOnnx(diretorio)
             # Threads por passada. Ja nao precisa ser 1 por previsibilidade: o
             # `Motor` deixa entrar no modelo uma passada por vez (semaforo
             # `FRAUS_INFERENCIAS_SIMULTANEAS`), entao a passada que entra pode
@@ -122,13 +181,7 @@ class SessaoOnnx:
         """Probabilidades por texto, na ORDEM DE CLASSES do checkpoint."""
         if not textos:
             return []
-        codificado = self._tokenizador(
-            textos,
-            truncation=True,
-            max_length=TAMANHO_MAXIMO,
-            padding=True,
-            return_tensors="np",
-        )
+        codificado = self._tokenizador(textos)
         entradas = {
             nome: valor.astype(np.int64)
             for nome, valor in codificado.items()
@@ -168,13 +221,7 @@ class SessaoMultitarefaOnnx(SessaoOnnx):
     def prever_cabecas(self, textos: list[str]) -> dict[str, list[list[float]]]:
         if not textos:
             return {nome: [] for nome in self.SAIDAS}
-        codificado = self._tokenizador(
-            textos,
-            truncation=True,
-            max_length=TAMANHO_MAXIMO,
-            padding=True,
-            return_tensors="np",
-        )
+        codificado = self._tokenizador(textos)
         entradas = {
             nome: valor.astype(np.int64)
             for nome, valor in codificado.items()
