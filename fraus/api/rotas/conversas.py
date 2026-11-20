@@ -247,6 +247,25 @@ def progresso_da_repontuacao(request: Request) -> dict:
     return estado
 
 
+@router.get("/conversas/assinatura")
+def assinatura(ctx: Contexto = Depends(obter_contexto)) -> dict:
+    """Se o conjunto de atendimentos mudou -- a pergunta BARATA do painel.
+
+    O painel aberto so relia ao voltar o foco: atendimento que chegava pelo
+    TARS ficava invisivel ate alguem recarregar. Reler tudo de tempos em tempos
+    custaria quatro agregados por rodada; esta rota e um agregado so, sem
+    transcricao, e a tela rele o resto apenas quando a resposta muda.
+
+    `total` sozinho nao basta: o TARS reenvia o MESMO id a cada turno, e a
+    conversa que cresceu nao muda a contagem. A assinatura nao e hash do
+    conteudo (ver `Banco.assinatura_conversas`) e nao revela nada dele.
+
+    Declarada ACIMA das rotas `:path`, que casariam "assinatura" como id.
+    """
+    total, marca = ctx.banco.assinatura_conversas()
+    return {"total": total, "assinatura": f"{total}:{marca}"}
+
+
 @router.get("/conversas")
 def listar(
     de: str | None = None,
@@ -488,6 +507,10 @@ def detalhar(
     return _com_derivacoes(
         score,
         ctx.categoria_de(score, ctx.faixas_vigentes()),
-        {**conversa.model_dump(mode="json"), "score": score},
+        {
+            **conversa.model_dump(mode="json"),
+            "score": score,
+            "recebida_em": ctx.banco.chegada_da_conversa(conversa_id),
+        },
         conversa,
     )
