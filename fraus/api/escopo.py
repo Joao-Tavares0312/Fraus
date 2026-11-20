@@ -48,6 +48,9 @@ class BancoComEscopo:
         # A regra e a do Banco, restrita aos canais -- nunca uma copia dela.
         return self._banco.contar_defasadas(regua_vigente, canais=self._canais)
 
+    def contar_defasagens(self, regua_vigente=None):
+        return self._banco.contar_defasagens(regua_vigente, canais=self._canais)
+
     def salvar_lote(self, registros, lexico_versao, regua):
         if any(c.canal not in self._canais for c, _, _ in registros):
             raise HTTPException(403, "o lote inclui um canal fora do seu escopo")

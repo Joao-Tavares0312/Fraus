@@ -46,6 +46,10 @@ def indicadores(
         if conversa.feedback_declarado is not None and score is not None
     ]
     faixas = ctx.faixas_vigentes()
+    # As tres contagens de regua numa consulta so -- ver `Banco.contar_defasagens`.
+    com_lexico_antigo, total_no_banco, com_regua_antiga = ctx.banco.contar_defasagens(
+        ctx.regua_vigente()
+    )
     concordantes = sum(
         1
         for conversa, score in com_feedback
@@ -81,17 +85,13 @@ def indicadores(
         # banco, nao do recorte: um aviso que sumisse ao filtrar o periodo
         # esconderia o problema exatamente de quem estivesse investigando um
         # numero estranho.
-        **dict(
-            zip(
-                ("pontuadas_com_lexico_antigo", "total_no_banco"),
-                ctx.banco.contar_defasadas(),
-            )
-        ),
+        "pontuadas_com_lexico_antigo": com_lexico_antigo,
+        "total_no_banco": total_no_banco,
         # A mesma contagem somando troca de MODELO (retreino do fusor, regra da
         # cortesia) -- ver `Motor.regua`. Campo NOVO ao lado do antigo, e nao
         # no lugar dele: `pontuadas_com_lexico_antigo` tem consumidor e mudar o
         # que ele conta mudaria o sentido do numero em silencio.
-        "pontuadas_com_regua_antiga": ctx.banco.contar_defasadas(ctx.regua_vigente())[0],
+        "pontuadas_com_regua_antiga": com_regua_antiga,
     }
 
 
