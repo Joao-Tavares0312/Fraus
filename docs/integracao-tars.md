@@ -72,6 +72,22 @@ dias e até 50 chats; a rotina consulta um dia e até 30. A frequência configur
 no ambiente não foi conferida. Na **10ª falha seguida**, o código desativa o
 envio e alerta o operador; salvar a conexão de novo a reativa.
 
+O envio espera a resposta do Fraus por **30 segundos** (eram 10 até
+20/11/2026). `POST /ingestao` cai na função que carrega os três modelos; fria,
+ela levou cerca de 11 s só para ficar pronta, medidos em produção nesse dia.
+Como o envio não tem retentativa, o primeiro atendimento depois de um tempo
+parado estourava o prazo e só voltava na repescagem diária. Essa relação é
+inferida das duas medidas; não há registro de chegada anterior a 20/11 que a
+comprove caso a caso.
+
+No Fraus, cada atendimento gravado passa a ter `recebida_em`: a hora em que o
+servidor o gravou ou viu o conteúdo mudar. Reenvio idêntico não mexe nela, e
+repontuar também não. A dashboard aberta pergunta a `GET /conversas/assinatura`
+a cada 15 segundos, só com a aba visível, e relê a tela quando a resposta muda;
+em **Atendimentos**, o que chegou depois da última visita daquele navegador
+leva o selo **novo**. Atendimento gravado antes de 20/11/2026 não tem essa
+hora e nunca é marcado.
+
 Confira último envio, último erro e o resumo da tentativa no Tars. No Fraus,
 procure o canal `tars` em **Atendimentos**, no período das conversas. O bloco
 **Entregas** das fontes registra webhook assinado, não chamadas a `/ingestao`.
