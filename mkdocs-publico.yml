@@ -41,6 +41,12 @@ exclude_docs: |
   # Inventarios de limpeza: mesmo motivo -- arquivo, linha e decisao aberta.
   limpeza/
 
+  # Analise de motores de 16/10: o mapa das rotas com arquivo e linha, quais
+  # handlers disparam carga pesada sem teto, o plano da hospedagem e o estado
+  # da maquina local. Ficou no ar, fora do menu, ate 20/11/2026 -- pagina fora
+  # do `nav` continua sendo construida e respondendo por URL direta.
+  motores/
+
   # Estado, pendencias e a secao "a porta destrancada". Este e o arquivo cuja
   # publicacao contradiz diretamente a decisao de manter o repositorio
   # privado: ele descreve a arquitetura de autenticacao pelo lado de dentro.
