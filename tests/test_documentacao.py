@@ -116,6 +116,8 @@ FORA_DO_PUBLICO = {
     "cloud-run.md": "roteiro de deploy: Secret Manager, bucket e topologia",
     "auditoria/": "relatorios de auditoria com vulnerabilidades ainda abertas",
     "limpeza/": "inventarios de limpeza do repositorio, com arquivo e linha",
+    "motores/": "analise de motores: mapa das rotas com arquivo e linha, e quais "
+                "handlers disparam carga pesada sem teto",
 }
 
 
