@@ -315,7 +315,8 @@ def test_defasadas_com_escopo_contam_so_os_canais_e_numa_consulta(tmp_path):
 
     conexoes = []
     original = banco._conectar
-    banco._conectar = lambda: conexoes.append(1) or original()
+    # `_ler` passa `leitura=True`: o espiao repassa o que receber.
+    banco._conectar = lambda *args, **kwargs: conexoes.append(1) or original(*args, **kwargs)
     assert BancoComEscopo(banco, ["chat"]).contar_defasadas("r") == (1, 2)
     # A versao do lexico e a contagem: duas, e nao uma por conversa.
     assert len(conexoes) == 2

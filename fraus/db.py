@@ -387,8 +387,12 @@ class _ConexaoPostgres:
     devolvendo cursor e dicionario como antes.
     """
 
-    def __init__(self, conexao) -> None:
+    def __init__(self, conexao, leitura: bool = False) -> None:
         self._conexao = conexao
+        # Leitura de UM comando: sem transacao em volta. Ver `Banco._ler`.
+        self._leitura = leitura
+        if leitura:
+            conexao.autocommit = True
 
     def execute(self, sql: str, parametros=()):
         from fraus.api.observabilidade import medir
@@ -423,7 +427,13 @@ class _ConexaoPostgres:
         # no meio. Sem ele a conexao morta ficava emprestada para sempre, e o
         # teto do pool por instancia e dois.
         try:
-            if tipo is None:
+            if self._leitura:
+                # Nada a confirmar nem a desfazer: cada comando ja valeu
+                # sozinho. A conexao volta ao pool no modo de sempre, porque a
+                # proxima a pega-la pode ser uma escrita -- e trocar o modo e
+                # so um atributo do cliente, nao uma ida ao banco.
+                self._conexao.autocommit = False
+            elif tipo is None:
                 self._conexao.commit()
             else:
                 self._conexao.rollback()
@@ -579,7 +589,22 @@ class Banco:
                 )
         return self._pool
 
-    def _conectar(self):
+    def _ler(self):
+        """Conexao para UMA leitura, sem transacao em volta.
+
+        No Postgres, cada `with self._conectar()` custa tres idas ao banco:
+        BEGIN, o comando e COMMIT. Para um `SELECT` sozinho as duas de fora nao
+        protegem nada -- nao ha segundo comando para ser coerente com ele -- e
+        eram dois tercos do trafego de toda leitura (20/11/2026: `/indicadores`
+        mandava 27 comandos, 18 deles BEGIN/COMMIT).
+
+        SO para metodo de um comando de leitura. Quem escreve, ou le duas vezes
+        esperando o mesmo retrato, usa `_conectar`: la o erro no meio desfaz
+        tudo. No SQLite nao ha ida a rede e o comportamento e o de sempre.
+        """
+        return self._conectar(leitura=True)
+
+    def _conectar(self, leitura: bool = False):
         if self._postgres:
             inicio = perf_counter()
             contexto = self._obter_pool().connection()
@@ -595,7 +620,13 @@ class Banco:
             self._registrar_aquisicao(espera_ms, falhou=False)
             from fraus.api.observabilidade import somar_tempo
             somar_tempo("espera_pool", espera_ms)
-            conexao = _ConexaoPostgres(conexao_bruta)
+            try:
+                conexao = _ConexaoPostgres(conexao_bruta, leitura=leitura)
+            except Exception:
+                # Trocar o modo falhou (conexao morta): devolve ao pool, que a
+                # descarta, em vez de deixa-la emprestada para sempre.
+                contexto.__exit__(None, None, None)
+                raise
             conexao._contexto = contexto
             return conexao
         conexao = sqlite3.connect(self._caminho)
@@ -890,7 +921,7 @@ class Banco:
             )
 
     def documento(self, tipo: str, identificador: str) -> dict | None:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute("SELECT payload FROM operacao_registros WHERE tipo = ? AND id = ?", (tipo, identificador)).fetchone()
         return json.loads(linha["payload"]) if linha else None
 
@@ -1108,7 +1139,7 @@ class Banco:
         return {"integra": integra, "total": len(linhas), "eventos": [json.loads(l["payload"]) for l in linhas[-200:]], "metodo": "encadeamento SHA-256; nao e assinatura, nao protege contra reescrita integral e nao detecta a remocao dos eventos mais recentes (nao ha ancora fora da tabela)"}
 
     def listar(self) -> list[dict]:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linhas = conexao.execute(
                 "SELECT id, canal, iniciada_em, score, categoria FROM conversas "
                 f"ORDER BY {self._ordem('iniciada_em')} DESC"
@@ -1161,7 +1192,7 @@ class Banco:
             # aceita OFFSET depois de LIMIT; -1 e "sem teto" para ele.
             paginacao = " OFFSET ?" if self._postgres else " LIMIT -1 OFFSET ?"
             parametros.append(deslocamento)
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linhas = conexao.execute(
                 "SELECT id, canal, iniciada_em, score, categoria, recebida_em, payload "
                 "FROM conversas"
@@ -1187,7 +1218,7 @@ class Banco:
         ]
 
     def buscar(self, conversa_id: str) -> tuple[Conversa, float | None, str | None] | None:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT payload, score, categoria FROM conversas WHERE id = ?", (conversa_id,)
             ).fetchone()
@@ -1197,7 +1228,7 @@ class Banco:
 
     def chegada_da_conversa(self, conversa_id: str) -> str | None:
         """`recebida_em` de uma conversa; `None` se ela e anterior a coluna."""
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT recebida_em FROM conversas WHERE id = ?", (conversa_id,)
             ).fetchone()
@@ -1211,7 +1242,7 @@ class Banco:
 
     def regua_da_conversa(self, conversa_id: str) -> tuple[int | None, str | None] | None:
         """Versoes que produziram o score, sem desserializar a transcricao."""
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT lexico_versao, regua FROM conversas WHERE id = ?", (conversa_id,)
             ).fetchone()
@@ -1221,7 +1252,7 @@ class Banco:
 
     def ler_configuracoes(self) -> dict:
         """So o que foi de fato alterado. O padrao de fabrica nao mora no banco."""
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linhas = conexao.execute("SELECT chave, valor FROM configuracoes").fetchall()
         return {linha["chave"]: json.loads(linha["valor"]) for linha in linhas}
 
@@ -1246,14 +1277,14 @@ class Banco:
         return self.buscar_fonte(identificador)
 
     def listar_fontes(self) -> list[dict]:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linhas = conexao.execute(
                 f"SELECT * FROM fontes_integracao ORDER BY {self._ordem('criada_em')}, id"
             ).fetchall()
         return [self._fonte(linha) for linha in linhas]
 
     def buscar_fonte(self, identificador: int) -> dict | None:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT * FROM fontes_integracao WHERE id = ?", (identificador,)
             ).fetchone()
@@ -1291,7 +1322,7 @@ class Banco:
         Existe separado de `buscar_fonte` para que o hash nunca viaje dentro do
         dicionario que a API serializa -- ver `_fonte`.
         """
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT chave_hash FROM fontes_integracao WHERE id = ?", (identificador,)
             ).fetchone()
@@ -1507,14 +1538,14 @@ class Banco:
         que troque texto mantendo o tamanho exato passa sem ser vista, e o que
         envelhece nesse caso e so o `destaque` do vocabulario, nunca uma nota.
         """
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(payload)), 0) AS t FROM conversas"
             ).fetchone()
         return int(linha["n"]), int(linha["t"])
 
     def todas(self) -> list[tuple[Conversa, float | None]]:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linhas = conexao.execute("SELECT payload, score FROM conversas").fetchall()
         return [(Conversa(**json.loads(l["payload"])), l["score"]) for l in linhas]
 
@@ -1600,7 +1631,7 @@ class Banco:
 
     def hash_da_chave_acesso(self, identificador: int) -> str | None:
         """O unico caminho para ler o hash -- explicito no nome, uso unico."""
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT chave_hash FROM chaves_acesso WHERE id = ?", (identificador,)
             ).fetchone()
@@ -1648,7 +1679,7 @@ class Banco:
         }
 
     def buscar_usuario(self, identificador: int) -> dict | None:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT * FROM usuarios WHERE id = ?", (identificador,)
             ).fetchone()
@@ -1695,7 +1726,7 @@ class Banco:
 
     def hash_da_chave_mestra(self) -> str | None:
         """O unico caminho para ler o hash da mestra -- explicito no nome."""
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT chave_hash FROM chave_mestra WHERE id = 1"
             ).fetchone()
@@ -1740,7 +1771,7 @@ class Banco:
     CHAVE_VERSAO = "lexico_versao"
 
     def lexico_versao(self) -> int:
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT valor FROM configuracoes WHERE chave = ?", (self.CHAVE_VERSAO,)
             ).fetchone()
@@ -1862,7 +1893,7 @@ class Banco:
         """Monta o objeto que os sinais consomem. Lido a cada requisicao."""
         palavras: dict[str, int] = {}
         emojis: dict[str, float] = {}
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             for linha in conexao.execute("SELECT tipo, termo, peso FROM lexico_curado"):
                 if linha["tipo"] == "palavra":
                     palavras[linha["termo"]] = int(linha["peso"])
@@ -1891,11 +1922,45 @@ class Banco:
         chega por parametro: a repontuacao le a curadoria UMA vez, e perguntar
         a versao de novo aqui poderia responder outra."""
         regra, parametros = self._regra_de_defasagem(lexico_vigente, regua_vigente)
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linhas = conexao.execute(
                 f"SELECT id FROM conversas WHERE {regra}", parametros
             ).fetchall()
         return {linha["id"] for linha in linhas}
+
+    def contar_defasagens(
+        self, regua_vigente: str | None = None, canais=None
+    ) -> tuple[int, int, int]:
+        """(defasadas so pelo lexico, total, defasadas por lexico OU modelo).
+
+        Os tres numeros que `/indicadores` devolve, numa consulta. A rota
+        chamava `contar_defasadas` duas vezes -- com e sem regua -- e cada
+        chamada relia a versao do lexico: quatro leituras para dois numeros que
+        saem da mesma varredura. As regras sao as de `contar_defasadas`, pelo
+        mesmo `_regra_de_defasagem`; sem regua vigente o terceiro numero e o
+        primeiro, como la.
+        """
+        if canais is not None:
+            canais = sorted(set(canais))
+            if not canais:
+                return 0, 0, 0
+        versao = self.lexico_versao()
+        regra_lexico, p_lexico = self._regra_de_defasagem(versao, None)
+        regra_regua, p_regua = self._regra_de_defasagem(versao, regua_vigente)
+        parametros = (*p_lexico, *p_regua)
+        onde = ""
+        if canais is not None:
+            onde = f" WHERE canal IN ({', '.join('?' for _ in canais)})"
+            parametros = (*parametros, *canais)
+        with self._ler() as conexao:
+            linha = conexao.execute(
+                "SELECT COUNT(*) AS total, "
+                f"SUM(CASE WHEN {regra_lexico} THEN 1 ELSE 0 END) AS lexico, "
+                f"SUM(CASE WHEN {regra_regua} THEN 1 ELSE 0 END) AS regua "
+                "FROM conversas" + onde,
+                parametros,
+            ).fetchone()
+        return int(linha["lexico"] or 0), int(linha["total"] or 0), int(linha["regua"] or 0)
 
     def contar_defasadas(
         self, regua_vigente: str | None = None, canais=None
@@ -1935,7 +2000,7 @@ class Banco:
         if canais is not None:
             onde = f" WHERE canal IN ({', '.join('?' for _ in canais)})"
             parametros = (*parametros, *canais)
-        with self._conectar() as conexao:
+        with self._ler() as conexao:
             linha = conexao.execute(
                 "SELECT COUNT(*) AS total, "
                 f"SUM(CASE WHEN {regra_lexico} THEN 1 ELSE 0 END) AS defasadas "
